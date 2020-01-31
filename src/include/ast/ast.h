@@ -210,11 +210,6 @@ class File : public AstNode {
   const util::RegionVector<Decl *> &Declarations() const { return decls_; }
 
   /**
-   * @return The mutable list of declarations making up the file.
-   */
-  util::RegionVector<Decl *> *MutableDeclarations() { return &decls_; }
-
-  /**
    * Is the given node an AST File? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a file; false otherwise.
@@ -483,7 +478,7 @@ class BlockStmt : public Stmt {
   /**
    * @return The last statement in the block; null if the block is empty;
    */
-  Stmt *GetLast() { return (IsEmpty() ? nullptr : statements_.back()); }
+  Stmt *GetLast() const { return (IsEmpty() ? nullptr : statements_.back()); }
 
   /**
    * Is the given node an AST statement list? Needed as part of the custom AST RTTI infrastructure.
@@ -659,17 +654,17 @@ class IfStmt : public Stmt {
   /**
    * @return The if-condition.
    */
-  Expr *Condition() { return cond_; }
+  Expr *Condition() const { return cond_; }
 
   /**
    * @return The block of statements if the condition is true.
    */
-  BlockStmt *ThenStmt() { return then_stmt_; }
+  BlockStmt *ThenStmt() const { return then_stmt_; }
 
   /**
    * @return The else statement.
    */
-  Stmt *ElseStmt() { return else_stmt_; }
+  Stmt *ElseStmt() const { return else_stmt_; }
 
   /**
    * @return True if there is an else statement; false otherwise.
@@ -710,7 +705,7 @@ class ReturnStmt : public Stmt {
   /**
    * @return The expression representing the value that's to be returned.
    */
-  Expr *Ret() { return ret_; }
+  Expr *Ret() const { return ret_; }
 
   /**
    * Is the given node a return statement? Needed as part of the custom AST RTTI infrastructure.
@@ -822,17 +817,17 @@ class BinaryOpExpr : public Expr {
   /**
    * @return The parsing token representing the kind of binary operation. +, -, etc.
    */
-  parsing::Token::Type Op() { return op_; }
+  parsing::Token::Type Op() const { return op_; }
 
   /**
    * @return The left input to the binary expression.
    */
-  Expr *Left() { return left_; }
+  Expr *Left() const { return left_; }
 
   /**
    * @return The right input to the binary expression.
    */
-  Expr *Right() { return right_; }
+  Expr *Right() const { return right_; }
 
   /**
    * Is the given node a binary expression? Needed as part of the custom AST RTTI infrastructure.
@@ -884,7 +879,7 @@ class CallExpr : public Expr {
   /**
    * @return The function that's to be called.
    */
-  Expr *Function() { return func_; }
+  Expr *Function() const { return func_; }
 
   /**
    * @return A const-view of the arguments to the function.
@@ -941,17 +936,17 @@ class ComparisonOpExpr : public Expr {
   /**
    * @return The parsing token representing the kind of comparison, <, ==, etc.
    */
-  parsing::Token::Type Op() { return op_; }
+  parsing::Token::Type Op() const { return op_; }
 
   /**
    * @return The left input to the comparison.
    */
-  Expr *Left() { return left_; }
+  Expr *Left() const { return left_; }
 
   /**
    * @return The right input to the comparison.
    */
-  Expr *Right() { return right_; }
+  Expr *Right() const { return right_; }
 
   /**
    * Is this a comparison between an expression and a nil literal?
