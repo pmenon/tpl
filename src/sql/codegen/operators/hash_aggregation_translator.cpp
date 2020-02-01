@@ -51,8 +51,7 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
       codegen, "aggHashTable", codegen->BuiltinType(ast::BuiltinType::AggregationHashTable));
 }
 
-void HashAggregationTranslator::DefinePayloadStruct(
-    util::RegionVector<ast::StructDecl *> *top_level_structs) {
+void HashAggregationTranslator::DefinePayloadStruct(util::RegionVector<ast::StructDecl *> *decls) {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
 
@@ -69,19 +68,18 @@ void HashAggregationTranslator::DefinePayloadStruct(
   term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto field_name = codegen->MakeIdentifier(kAggregateTermAttrPrefix + std::to_string(term_idx));
-    auto type =
-        codegen->AggregateType(term->GetExpressionType(), term->GetChild(0)->GetReturnValueType());
+    auto type = codegen->AggregateType(term->GetExpressionType(), term->GetReturnValueType());
     fields.push_back(codegen->MakeField(field_name, type));
     term_idx++;
   }
 
   agg_payload_ =
       codegen->DeclareStruct(codegen->MakeFreshIdentifier("AggPayload"), std::move(fields));
-  top_level_structs->push_back(agg_payload_);
+  decls->push_back(agg_payload_);
 }
 
 void HashAggregationTranslator::DefineInputValuesStruct(
-    util::RegionVector<ast::StructDecl *> *top_level_structs) {
+    util::RegionVector<ast::StructDecl *> *decls) {
   const auto &agg_plan = GetPlanAs<planner::AggregatePlanNode>();
 
   auto codegen = GetCodeGen();
@@ -107,13 +105,12 @@ void HashAggregationTranslator::DefineInputValuesStruct(
 
   agg_values_ =
       codegen->DeclareStruct(codegen->MakeFreshIdentifier("AggValues"), std::move(fields));
-  top_level_structs->push_back(agg_values_);
+  decls->push_back(agg_values_);
 }
 
-void HashAggregationTranslator::DefineHelperStructs(
-    util::RegionVector<ast::StructDecl *> *top_level_decls) {
-  DefinePayloadStruct(top_level_decls);
-  DefineInputValuesStruct(top_level_decls);
+void HashAggregationTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
+  DefinePayloadStruct(decls);
+  DefineInputValuesStruct(decls);
 }
 
 void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *function) {

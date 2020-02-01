@@ -29,9 +29,9 @@ class HashAggregationTranslator : public OperatorTranslator {
 
   /**
    * Define the aggregation row structure.
-   * @param top_level_structs Where the defined structure will be registered.
+   * @param decls Where the defined structure will be registered.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *top_level_structs) override;
+  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
 
   /**
    * If the build-pipeline is parallel, we'll need to define the partition-merging function.
@@ -126,8 +126,8 @@ class HashAggregationTranslator : public OperatorTranslator {
   bool IsProducePipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
 
   // Declare the payload and input structures. Called from DefineHelperStructs().
-  void DefinePayloadStruct(util::RegionVector<ast::StructDecl *> *top_level_structs);
-  void DefineInputValuesStruct(util::RegionVector<ast::StructDecl *> *top_level_structs);
+  void DefinePayloadStruct(util::RegionVector<ast::StructDecl *> *decls);
+  void DefineInputValuesStruct(util::RegionVector<ast::StructDecl *> *decls);
 
   // Generate the overflow partition merging process.
   void GenerateKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *top_level_funcs);

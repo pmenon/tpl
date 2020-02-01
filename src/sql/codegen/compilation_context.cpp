@@ -4,8 +4,6 @@
 #include <atomic>
 #include <sstream>
 
-#include "spdlog/fmt/fmt.h"
-
 #include "ast/context.h"
 #include "common/exception.h"
 #include "common/macros.h"
@@ -59,7 +57,7 @@ CompilationContext::CompilationContext(ExecutableQuery *query, const Compilation
       query_state_type_name_(codegen_.MakeIdentifier("QueryState")) {}
 
 ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
-  const auto name = codegen_.MakeIdentifier(fmt::format("{}_Init", GetFunctionPrefix()));
+  const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
   for (auto &[_, op] : ops_) {
     op->InitializeQueryState();
@@ -68,7 +66,7 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
 }
 
 ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
-  const auto name = codegen_.MakeIdentifier(fmt::format("{}_TearDown", GetFunctionPrefix()));
+  const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_TearDown");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
   for (auto &[_, op] : ops_) {
     op->TearDownQueryState();
@@ -80,12 +78,12 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   exec_ctx_slot_ = query_state_.DeclareStateEntry(
       GetCodeGen(), "execCtx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
 
+  // Recursively prepare all translators for the query.
   Pipeline main_pipeline(this);
   Prepare(plan, &main_pipeline);
   query_state_.ConstructFinalType(&codegen_, query_state_type_name_);
 
-  // Step 1: Collect top-level structures and declarations. Top-level elements
-  //         are available to all query fragments.
+  // Collect top-level structures and declarations.
   util::RegionVector<ast::StructDecl *> top_level_structs(query_->GetContext()->GetRegion());
   util::RegionVector<ast::FunctionDecl *> top_level_funcs(query_->GetContext()->GetRegion());
   for (auto &[_, op] : ops_) {
@@ -107,7 +105,6 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   // Generate each pipeline.
   std::vector<Pipeline *> execution_order;
   main_pipeline.CollectDependencies(&execution_order);
-
   for (auto *pipeline : execution_order) {
     pipeline->GeneratePipeline(&main_builder);
   }

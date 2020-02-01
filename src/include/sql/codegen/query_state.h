@@ -80,33 +80,31 @@ class QueryState {
   /**
    * @return The query state pointer from the current code generation context.
    */
-  [[nodiscard]] ast::Expr *GetStatePointer(CodeGen *codegen) const {
-    return access_.GetStatePtr(codegen);
-  }
+  ast::Expr *GetStatePointer(CodeGen *codegen) const { return access_.GetStatePtr(codegen); }
 
   /**
    * Access an element in this state by its slot.
    * @param codegen The code generation instance.
    * @return The state entry at the given slot.
    */
-  [[nodiscard]] ast::Expr *GetStateEntry(CodeGen *codegen, Slot slot) const;
+  ast::Expr *GetStateEntry(CodeGen *codegen, Slot slot) const;
 
   /**
    * Get a pointer to the state element at the given slot.
    * @param codegen The code generation instance.
    * @return A pointer to the state entry at the given slot.
    */
-  [[nodiscard]] ast::Expr *GetStateEntryPtr(CodeGen *codegen, Slot slot) const;
+  ast::Expr *GetStateEntryPtr(CodeGen *codegen, Slot slot) const;
 
   /**
    * @return The finalized type of the runtime query state; null if the state hasn't been finalized.
    */
-  [[nodiscard]] ast::StructDecl *GetType() const { return state_type_; }
+  ast::StructDecl *GetType() const { return state_type_; }
 
   /**
    * @return The size of the constructed state type, in bytes. This is only possible
    */
-  [[nodiscard]] std::size_t GetSize() const;
+  std::size_t GetSize() const;
 
  private:
   // Metadata for a single state entry

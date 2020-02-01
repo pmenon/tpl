@@ -21,7 +21,6 @@ class CompilationContext;
 class WorkContext;
 class Pipeline;
 class PipelineContext;
-class TopLevelDeclarations;
 
 /**
  * The base class of all operator translators.
@@ -70,12 +69,10 @@ class TopLevelDeclarations;
  *
  * Helper functions:
  * -----------------
- * Operators may require the used oa helper functions of auxiliary intermediate structures in order
- * to simplify their logic. Helper functions and structures should be defined in both
- * DefineHelperStructs() and DefineHelperFunctions(), respectively. All helper structures and
- * functions are visible across the whole query and must be declared in the provided
- * TopLevelDeclarations container. These operations are guaranteed to be called exactly once per
- * operator in the query plan.
+ * Operators may require the use of helper functions or auxiliary structures in order to simplify
+ * their logic. Helper functions and structures should be defined in both DefineHelperStructs() and
+ * DefineHelperFunctions(), respectively. All helper structures and functions are visible across the
+ * whole query and must be declared in the provided input container.
  */
 class OperatorTranslator : public ColumnValueProvider {
  public:
@@ -101,16 +98,16 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * Define any helper structures required for processing. Ensure they're declared in the provided
    * declaration container.
-   * @param top_level_structs Query-level declarations.
+   * @param decls Query-level declarations.
    */
-  virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *top_level_structs) {}
+  virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {}
 
   /**
    * Define any helper functions required for processing. Ensure they're declared in the provided
    * declaration container.
-   * @param top_level_funcs Query-level declarations.
+   * @param decls Query-level declarations.
    */
-  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {}
+  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {}
 
   /**
    * Initialize all query state.
