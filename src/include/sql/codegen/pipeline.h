@@ -8,6 +8,7 @@
 #include "ast/identifier.h"
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"
 
 namespace tpl::sql::codegen {
@@ -25,14 +26,11 @@ class Pipeline;
  */
 class PipelineContext {
  public:
-  using Slot = uint32_t;
-
   /**
    * Create a new context in the given pipeline.
    * @param pipeline The pipeline the context represents.
-   * @param state_name The name of the pipeline state.
    */
-  PipelineContext(const Pipeline &pipeline, ast::Identifier state_name);
+  PipelineContext(const Pipeline &pipeline, ast::Identifier state_var, ast::Identifier state_type);
 
   /**
    * Declare an entry in the pipeline's state.
@@ -41,7 +39,7 @@ class PipelineContext {
    * @param type The type of the state.
    * @return The slot in the state that can be used to retrieve the state.
    */
-  PipelineContext::Slot DeclareStateEntry(CodeGen *codegen, const std::string &name,
+  StateDescriptor::Slot DeclareStateEntry(CodeGen *codegen, const std::string &name,
                                           ast::Expr *type);
 
   /**
@@ -54,17 +52,17 @@ class PipelineContext {
   /**
    * @return The value of the state element at the given slot in this pipeline's state.
    */
-  ast::Expr *GetThreadStateEntry(CodeGen *codegen, Slot slot) const;
+  ast::Expr *GetThreadStateEntry(CodeGen *codegen, StateDescriptor::Slot slot) const;
 
   /**
    * @return A pointer to the state element at the given slot in this pipeline's state.
    */
-  ast::Expr *GetThreadStateEntryPtr(CodeGen *codegen, Slot slot) const;
+  ast::Expr *GetThreadStateEntryPtr(CodeGen *codegen, StateDescriptor::Slot slot) const;
 
   /**
    * @return The byte offset of the stat element at the given slot in the pipeline state.
    */
-  ast::Expr *GetThreadStateEntryOffset(CodeGen *codegen, Slot slot) const;
+  ast::Expr *GetThreadStateEntryOffset(CodeGen *codegen, StateDescriptor::Slot slot) const;
 
   /**
    * @return True if the pipeline in this context is parallel; false otherwise.
@@ -76,40 +74,27 @@ class PipelineContext {
    */
   const Pipeline &GetPipeline() const { return pipeline_; }
 
-  /**
-   * RAII scope class to temporarily set the pipeline state pointer in this context.
-   */
-  class StateScope {
-   public:
-    /**
-     * Construct a scope object that sets the current pipeline state pointer to the provided value.
-     * The previous value is cached locally.
-     * @param pipeline_context The pipeline context.
-     * @param thread_state_ptr The state pointer to set.
-     */
-    StateScope(PipelineContext *pipeline_context, ast::Expr *thread_state_ptr);
+ private:
+  ast::Expr *GetPipelineStatePtr(CodeGen *codegen) const;
 
-    /**
-     * Destructor. The previous state pointer is restored in the pipeline context.
-     */
-    ~StateScope();
+  class StateAccess : public StateDescriptor::StateAccess {
+   public:
+    explicit StateAccess(PipelineContext *ctx) : ctx_(ctx) {}
+
+    ast::Expr *GetStatePtr(CodeGen *codegen) override { return ctx_->GetPipelineStatePtr(codegen); }
 
    private:
-    // The pipeline context.
     PipelineContext *ctx_;
-    // The previous state pointer.
-    ast::Expr *prev_thread_state_ptr_;
   };
 
  private:
   // The pipeline.
   const Pipeline &pipeline_;
-  // The name of the pipeline state.
-  ast::Identifier state_name_;
-  // The fields of the pipeline state.
-  std::vector<std::pair<ast::Identifier, ast::Expr *>> slots_;
-  // The current thread state pointer.
-  ast::Expr *thread_state_ptr_;
+  // The state variable; a pointer to the pipeline state.
+  ast::Identifier state_var_;
+  // State for the pipeline.
+  StateAccess pipeline_state_access_;
+  StateDescriptor pipeline_state_;
 };
 
 /**
@@ -275,8 +260,8 @@ class Pipeline {
   std::vector<Pipeline *> dependencies_;
 
   // Cache of common identifiers.
-  ast::Identifier pipeline_state_var_;
-  ast::Identifier pipeline_state_type_name_;
+  ast::Identifier state_var_;
+  ast::Identifier state_type_;
 };
 
 }  // namespace tpl::sql::codegen

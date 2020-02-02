@@ -7,9 +7,9 @@
 #include "common/macros.h"
 #include "common/settings.h"
 #include "logging/logger.h"
-#include "sql/codegen/executable_query_builder.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/executable_query_builder.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/work_context.h"
@@ -19,55 +19,43 @@ namespace tpl::sql::codegen {
 
 //===----------------------------------------------------------------------===//
 //
-// Pipeline Context - State Scope
-//
-//===----------------------------------------------------------------------===//
-
-PipelineContext::StateScope::StateScope(PipelineContext *pipeline_context,
-                                        ast::Expr *thread_state_ptr)
-    : ctx_(pipeline_context), prev_thread_state_ptr_(pipeline_context->thread_state_ptr_) {
-  ctx_->thread_state_ptr_ = thread_state_ptr;
-}
-
-PipelineContext::StateScope::~StateScope() { ctx_->thread_state_ptr_ = prev_thread_state_ptr_; }
-
-//===----------------------------------------------------------------------===//
-//
 // Pipeline Context
 //
 //===----------------------------------------------------------------------===//
 
-PipelineContext::PipelineContext(const Pipeline &pipeline, ast::Identifier state_name)
-    : pipeline_(pipeline), state_name_(state_name), thread_state_ptr_(nullptr) {}
+PipelineContext::PipelineContext(const Pipeline &pipeline, ast::Identifier state_var,
+                                 ast::Identifier state_type)
+    : pipeline_(pipeline),
+      state_var_(state_var),
+      pipeline_state_access_(this),
+      pipeline_state_(state_type, &pipeline_state_access_) {}
 
-PipelineContext::Slot PipelineContext::DeclareStateEntry(CodeGen *codegen, const std::string &name,
+ast::Expr *PipelineContext::GetPipelineStatePtr(CodeGen *codegen) const {
+  return codegen->MakeExpr(state_var_);
+}
+
+StateDescriptor::Slot PipelineContext::DeclareStateEntry(CodeGen *codegen, const std::string &name,
                                                          ast::Expr *type) {
-  const auto slot_id = slots_.size();
-  slots_.emplace_back(std::make_pair(codegen->MakeFreshIdentifier(name), type));
-  return slot_id;
+  return pipeline_state_.DeclareStateEntry(codegen, name, type);
 }
 
 ast::StructDecl *PipelineContext::ConstructPipelineStateType(CodeGen *codegen) {
-  auto fields = codegen->MakeEmptyFieldList();
-  for (auto &[name, type] : slots_) {
-    fields.push_back(codegen->MakeField(name, type));
-  }
-  return codegen->DeclareStruct(state_name_, std::move(fields));
+  return pipeline_state_.ConstructFinalType(codegen);
 }
 
 ast::Expr *PipelineContext::GetThreadStateEntry(CodeGen *codegen,
-                                                PipelineContext::Slot slot) const {
-  return codegen->AccessStructMember(thread_state_ptr_, slots_[slot].first);
+                                                const StateDescriptor::Slot slot) const {
+  return pipeline_state_.GetStateEntry(codegen, slot);
 }
 
 ast::Expr *PipelineContext::GetThreadStateEntryPtr(CodeGen *codegen,
-                                                   PipelineContext::Slot slot) const {
-  return codegen->AddressOf(GetThreadStateEntry(codegen, slot));
+                                                   const StateDescriptor::Slot slot) const {
+  return pipeline_state_.GetStateEntryPtr(codegen, slot);
 }
 
 ast::Expr *PipelineContext::GetThreadStateEntryOffset(CodeGen *codegen,
-                                                      PipelineContext::Slot slot) const {
-  return codegen->OffsetOf(state_name_, slots_[slot].first);
+                                                      const StateDescriptor::Slot slot) const {
+  return pipeline_state_.GetStateEntryOffset(codegen, slot);
 }
 
 bool PipelineContext::IsParallel() const { return pipeline_.IsParallel(); }
@@ -82,9 +70,9 @@ Pipeline::Pipeline(CompilationContext *ctx)
     : id_(ctx->RegisterPipeline(this)),
       compilation_context_(ctx),
       parallelism_(Parallelism::Flexible),
-      pipeline_state_var_(compilation_context_->GetCodeGen()->MakeIdentifier("pipelineState")),
-      pipeline_state_type_name_(
-          compilation_context_->GetCodeGen()->MakeIdentifier(fmt::format("P{}_State", id_))) {}
+      state_var_(compilation_context_->GetCodeGen()->MakeIdentifier("pipelineState")),
+      state_type_(compilation_context_->GetCodeGen()->MakeIdentifier("P" + std::to_string(id_) +
+                                                                     "_State")) {}
 
 Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism)
     : Pipeline(op->GetCompilationContext()) {
@@ -130,8 +118,8 @@ util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
   // The main query parameters.
   util::RegionVector<ast::FieldDecl *> query_params = compilation_context_->QueryParams();
   // Tag on the pipeline state.
-  ast::Expr *pipeline_state = codegen->PointerType(codegen->MakeExpr(pipeline_state_type_name_));
-  query_params.push_back(codegen->MakeField(pipeline_state_var_, pipeline_state));
+  ast::Expr *pipeline_state = codegen->PointerType(codegen->MakeExpr(state_type_));
+  query_params.push_back(codegen->MakeField(state_var_, pipeline_state));
   return query_params;
 }
 
@@ -198,9 +186,6 @@ ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction(
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen);
-    // Set the thread state.
-    PipelineContext::StateScope state_scope(pipeline_context,
-                                            codegen->MakeExpr(pipeline_state_var_));
     for (auto *op : steps_) {
       op->InitializePipelineState(*pipeline_context);
     }
@@ -216,9 +201,6 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction(
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen);
-    // Set the thread state.
-    PipelineContext::StateScope state_scope(pipeline_context,
-                                            codegen->MakeExpr(pipeline_state_var_));
     for (auto *op : steps_) {
       op->TearDownPipelineState(*pipeline_context);
     }
@@ -247,7 +229,7 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipel
       ast::Expr *exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
       ast::Identifier tls = codegen->MakeFreshIdentifier("tls");
       builder.Append(codegen->DeclareVarWithInit(tls, codegen->ExecCtxGetTLS(exec_ctx)));
-      builder.Append(codegen->TLSReset(codegen->MakeExpr(tls), pipeline_state_type_name_,
+      builder.Append(codegen->TLSReset(codegen->MakeExpr(tls), state_type_,
                                        GetSetupPipelineStateFunctionName(),
                                        GetTearDownPipelineStateFunctionName(), state_ptr));
     }
@@ -268,9 +250,7 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipel
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen);
-    // Set the state in this scope.
-    PipelineContext::StateScope state_scope(pipeline_context,
-                                            codegen->MakeExpr(pipeline_state_var_));
+    // Create the working context and push it through the pipeline.
     WorkContext work_context(compilation_context_, pipeline_context);
     (*Begin())->PerformPipelineWork(&work_context);
   }
@@ -325,7 +305,7 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction(
 }
 
 void Pipeline::GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const {
-  PipelineContext pipeline_context(*this, pipeline_state_type_name_);
+  PipelineContext pipeline_context(*this, state_var_, state_type_);
 
   // Collect all pipeline state and register it in the container.
   for (auto *op : steps_) {

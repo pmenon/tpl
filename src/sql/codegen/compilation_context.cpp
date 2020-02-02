@@ -45,6 +45,7 @@
 namespace tpl::sql::codegen {
 
 namespace {
+// A unique ID generator used to generate globally unique TPL function names.
 std::atomic<uint64_t> kUniqueIds{0};
 }  // namespace
 
@@ -54,7 +55,9 @@ CompilationContext::CompilationContext(ExecutableQuery *query, const Compilation
       mode_(mode),
       codegen_(query_->GetContext()),
       query_state_var_(codegen_.MakeIdentifier("queryState")),
-      query_state_type_name_(codegen_.MakeIdentifier("QueryState")) {}
+      query_state_type_name_(codegen_.MakeIdentifier("QueryState")),
+      query_state_access_(query_state_var_),
+      query_state_(query_state_type_name_, &query_state_access_) {}
 
 ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
@@ -81,7 +84,7 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   // Recursively prepare all translators for the query.
   Pipeline main_pipeline(this);
   Prepare(plan, &main_pipeline);
-  query_state_.ConstructFinalType(&codegen_, query_state_type_name_);
+  query_state_.ConstructFinalType(&codegen_);
 
   // Collect top-level structures and declarations.
   util::RegionVector<ast::StructDecl *> top_level_structs(query_->GetContext()->GetRegion());

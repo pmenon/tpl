@@ -38,7 +38,7 @@ ast::Expr *OperatorTranslator::GetMemoryPool() const {
   return GetCodeGen()->ExecCtxGetMemoryPool(GetExecutionContext());
 }
 
-ast::Expr *OperatorTranslator::GetQueryStateEntryPtr(QueryState::Slot slot) const {
+ast::Expr *OperatorTranslator::GetQueryStateEntryPtr(StateDescriptor::Slot slot) const {
   return compilation_context_->GetQueryState()->GetStateEntryPtr(GetCodeGen(), slot);
 }
 

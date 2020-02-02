@@ -2,7 +2,7 @@
 
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/query_state.h"
+#include "sql/codegen/state_descriptor.h"
 #include "sql/codegen/work_context.h"
 
 namespace tpl::sql::planner {
@@ -197,8 +197,8 @@ class HashAggregationTranslator : public OperatorTranslator {
   ast::FunctionDecl *merge_partitions_fn_;
 
   // The global and thread-local aggregation hash tables.
-  QueryState::Slot agg_ht_slot_;
-  PipelineContext::Slot tl_agg_ht_slot_;
+  StateDescriptor::Slot agg_ht_slot_;
+  StateDescriptor::Slot tl_agg_ht_slot_;
 };
 
 }  // namespace tpl::sql::codegen

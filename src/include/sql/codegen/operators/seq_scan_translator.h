@@ -134,7 +134,7 @@ class SeqScanTranslator : public OperatorTranslator {
   // The name of the declared VPI.
   ast::Identifier vpi_name_;
   // Where the filter manager exists.
-  PipelineContext::Slot fm_slot_;
+  StateDescriptor::Slot fm_slot_;
   // The list of filter manager clauses. Populated during helper function
   // definition, but only if there's a predicate.
   std::vector<std::vector<ast::Identifier>> filters_;

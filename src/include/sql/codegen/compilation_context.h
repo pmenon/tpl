@@ -10,7 +10,7 @@
 #include "sql/codegen/expression/expression_translator.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/query_state.h"
+#include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
 class AbstractPlanNode;
@@ -76,7 +76,7 @@ class CompilationContext {
   /**
    * @return The query state.
    */
-  QueryState *GetQueryState() { return &query_state_; }
+  StateDescriptor *GetQueryState() { return &query_state_; }
 
   /**
    * @return The translator for the given relational plan node; null if the provided plan node does
@@ -118,28 +118,46 @@ class CompilationContext {
   // Generate the query tear-down function.
   ast::FunctionDecl *GenerateTearDownFunction();
 
+  // Class to access the query state pointer.
+  class StateAccess : public StateDescriptor::StateAccess {
+   public:
+    explicit StateAccess(ast::Identifier query_state) : state_(query_state) {}
+
+    ast::Expr *GetStatePtr(CodeGen *codegen) override { return codegen->MakeExpr(state_); }
+
+   private:
+    ast::Identifier state_;
+  };
+
  private:
   // Unique ID used as a prefix for all generated functions to ensure uniqueness.
   uint64_t unique_id_;
+
   // The compiled query object we'll update.
   ExecutableQuery *query_;
+
   // The compilation mode.
   CompilationMode mode_;
+
   // The code generator instance.
   CodeGen codegen_;
-  // The query state and the slot in the state where the execution context is.
-  QueryState query_state_;
-  QueryState::Slot exec_ctx_slot_;
-  // The operator and expression translators.
-  std::unordered_map<const planner::AbstractPlanNode *, std::unique_ptr<OperatorTranslator>> ops_;
-  std::unordered_map<const planner::AbstractExpression *, std::unique_ptr<ExpressionTranslator>>
-      expressions_;
-  // The pipelines in this context in no specific order.
-  std::vector<Pipeline *> pipelines_;
 
   // Cached identifiers.
   ast::Identifier query_state_var_;
   ast::Identifier query_state_type_name_;
+
+  // The query state and the slot in the state where the execution context is.
+  StateAccess query_state_access_;
+  StateDescriptor query_state_;
+  StateDescriptor::Slot exec_ctx_slot_;
+
+  // The operator and expression translators.
+  std::unordered_map<const planner::AbstractPlanNode *, std::unique_ptr<OperatorTranslator>> ops_;
+  std::unordered_map<const planner::AbstractExpression *, std::unique_ptr<ExpressionTranslator>>
+      expressions_;
+
+  // The pipelines in this context in no specific order.
+  std::vector<Pipeline *> pipelines_;
 };
 
 }  // namespace tpl::sql::codegen

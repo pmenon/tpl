@@ -5,7 +5,7 @@
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/query_state.h"
+#include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
 class AbstractExpression;
@@ -171,8 +171,8 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // The slots in the global and thread-local state where this join's join hash
   // table is stored.
-  QueryState::Slot jht_slot_;
-  PipelineContext::Slot tl_jht_slot_;
+  StateDescriptor::Slot jht_slot_;
+  StateDescriptor::Slot tl_jht_slot_;
 
   // The build-row used to materialized results into the join hash table.
   ast::StructDecl *build_row_;

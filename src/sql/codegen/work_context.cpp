@@ -40,16 +40,16 @@ void WorkContext::Push() {
   (*pipeline_iter_)->PerformPipelineWork(this);
 }
 
-ast::Expr *WorkContext::GetThreadStateEntry(CodeGen *codegen, PipelineContext::Slot slot) const {
+ast::Expr *WorkContext::GetThreadStateEntry(CodeGen *codegen, StateDescriptor::Slot slot) const {
   return pipeline_context_->GetThreadStateEntry(codegen, slot);
 }
 
-ast::Expr *WorkContext::GetThreadStateEntryPtr(CodeGen *codegen, PipelineContext::Slot slot) const {
+ast::Expr *WorkContext::GetThreadStateEntryPtr(CodeGen *codegen, StateDescriptor::Slot slot) const {
   return pipeline_context_->GetThreadStateEntryPtr(codegen, slot);
 }
 
 ast::Expr *WorkContext::GetThreadStateEntryOffset(CodeGen *codegen,
-                                                  PipelineContext::Slot slot) const {
+                                                  StateDescriptor::Slot slot) const {
   return pipeline_context_->GetThreadStateEntryOffset(codegen, slot);
 }
 

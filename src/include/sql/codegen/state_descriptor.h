@@ -22,39 +22,42 @@ class CodeGen;
  * is not possible, nor should it ever be possible, to reference a state member through name. This
  * is because StateManager is allowed to rename the entries it contains to ensure uniqueness.
  */
-class QueryState {
+class StateDescriptor {
  public:
+  /**
+   * An opaque identifier used to access state elements in this descriptor.
+   */
   using Slot = uint32_t;
 
+  /**
+   * An interface to access a pointer to the query state in the current code generation context.
+   */
   class StateAccess {
    public:
+    /**
+     * Destructor.
+     */
     virtual ~StateAccess() = default;
-    virtual ast::Expr *GetStatePtr(CodeGen *codegen) const = 0;
+
+    /**
+     * @return A pointer to the query state. Subclasses override this to implement custom state
+     *         access logic.
+     */
+    virtual ast::Expr *GetStatePtr(CodeGen *codegen) = 0;
   };
 
-  class DefaultStateAccess : public StateAccess {
-   public:
-    ast::Expr *GetStatePtr(CodeGen *codegen) const override;
-  };
-
-  static const DefaultStateAccess kDefaultStateAccess;
-
   /**
-   * Create a new empty state.
+   * Create a new empty state using the provided name for the final constructed TPL type. The
+   * provided state accessor can be used to load an instance of this state in a given context.
+   * @param type_name The name to give the final constructed type for this state.
+   * @param access A generic accessor to an instance of this state, used to access state elements.
    */
-  QueryState();
-
-  /**
-   * Create a new empty state using the provided state accessor that's able to load the query state
-   * pointer in any given context.
-   * @param access The state accessor.
-   */
-  explicit QueryState(const StateAccess &access);
+  explicit StateDescriptor(ast::Identifier type_name, StateAccess *access);
 
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(QueryState);
+  DISALLOW_COPY_AND_MOVE(StateDescriptor);
 
   /**
    * Declare a state entry with the provided name and type in the execution runtime query state.
@@ -70,31 +73,27 @@ class QueryState {
    * @param codegen The code generation instance.
    * @return The finalized structure declaration.
    */
-  ast::StructDecl *ConstructFinalType(CodeGen *codegen, ast::Identifier name);
-
-  /**
-   * @return True if the state has been finalized and sealed.
-   */
-  bool IsSealed() const { return state_type_ != nullptr; }
+  ast::StructDecl *ConstructFinalType(CodeGen *codegen);
 
   /**
    * @return The query state pointer from the current code generation context.
    */
-  ast::Expr *GetStatePointer(CodeGen *codegen) const { return access_.GetStatePtr(codegen); }
+  ast::Expr *GetStatePointer(CodeGen *codegen) const { return access_->GetStatePtr(codegen); }
 
   /**
-   * Access an element in this state by its slot.
-   * @param codegen The code generation instance.
-   * @return The state entry at the given slot.
+   * @return The state entry at the given slot. The state is returned by value.
    */
   ast::Expr *GetStateEntry(CodeGen *codegen, Slot slot) const;
 
   /**
-   * Get a pointer to the state element at the given slot.
-   * @param codegen The code generation instance.
    * @return A pointer to the state entry at the given slot.
    */
   ast::Expr *GetStateEntryPtr(CodeGen *codegen, Slot slot) const;
+
+  /**
+   * @return The byte offset of the state element at the given slot in the state.
+   */
+  ast::Expr *GetStateEntryOffset(CodeGen *codegen, StateDescriptor::Slot slot) const;
 
   /**
    * @return The finalized type of the runtime query state; null if the state hasn't been finalized.
@@ -107,21 +106,21 @@ class QueryState {
   std::size_t GetSize() const;
 
  private:
-  // Metadata for a single state entry
+  // Metadata for a single state entry.
   struct SlotInfo {
-    // The declared name of the state in the struct. This is the name of the
-    // element as it actually appears in the struct after name collision
-    // resolution.
+    // The unique name of the element in the state.
     ast::Identifier name;
     // The type representation for the state.
     ast::Expr *type_repr;
     // Constructor.
-    SlotInfo(ast::Identifier _name, ast::Expr *_type_repr) : name(_name), type_repr(_type_repr) {}
+    SlotInfo(ast::Identifier name, ast::Expr *type_repr) : name(name), type_repr(type_repr) {}
   };
 
  private:
-  // State access object;
-  const StateAccess &access_;
+  // The name of the state type.
+  ast::Identifier name_;
+  // State access object.
+  StateAccess *access_;
   // All state metadata
   std::vector<SlotInfo> slots_;
   // The finalized type

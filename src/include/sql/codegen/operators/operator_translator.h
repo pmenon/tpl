@@ -7,7 +7,7 @@
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/expression/column_value_provider.h"
-#include "sql/codegen/query_state.h"
+#include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"
 
 namespace tpl::sql::planner {
@@ -207,7 +207,7 @@ class OperatorTranslator : public ColumnValueProvider {
   ast::Expr *GetQueryStatePtr() const;
 
   // Return a pointer to an entry in the query state at the given slot.
-  ast::Expr *GetQueryStateEntryPtr(QueryState::Slot slot) const;
+  ast::Expr *GetQueryStateEntryPtr(StateDescriptor::Slot slot) const;
 
   // Get the execution context pointer in the current function.
   ast::Expr *GetExecutionContext() const;

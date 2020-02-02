@@ -4,7 +4,7 @@
 
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/query_state.h"
+#include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
 class OrderByPlanNode;
@@ -158,8 +158,8 @@ class SortTranslator : public OperatorTranslator {
   Pipeline child_pipeline_;
 
   // Where the global and thread-local sorter instances are.
-  QueryState::Slot sorter_slot_;
-  PipelineContext::Slot tl_sorter_slot_;
+  StateDescriptor::Slot sorter_slot_;
+  StateDescriptor::Slot tl_sorter_slot_;
 
   // The struct representing the row-wise materialization into the sorter
   // instance. Each field in the row represents a column that is sent by the
