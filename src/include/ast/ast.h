@@ -950,8 +950,8 @@ class ComparisonOpExpr : public Expr {
 
   /**
    * Is this a comparison between an expression and a nil literal?
-   * @param[out] result If this is a literal nil comparison, result will point
-   *                    to the expression we're checking nil against
+   * @param[out] result If this is a literal nil comparison, result will point to the expression
+   *                    we're checking nil against, either the left or right input.
    * @return True if this is a nil comparison; false otherwise
    */
   bool IsLiteralCompareNil(Expr **result) const;
@@ -1117,7 +1117,7 @@ class ImplicitCastExpr : public Expr {
   /**
    * @return The input to the cast operation.
    */
-  Expr *Input() { return input_; }
+  Expr *Input() const { return input_; }
 
   /**
    * Is the given node an implicit cast? Needed as part of the custom AST RTTI infrastructure.
@@ -1357,12 +1357,12 @@ class UnaryOpExpr : public Expr {
   /**
    * @return The parsing token operator representing the unary operation.
    */
-  parsing::Token::Type Op() { return op_; }
+  parsing::Token::Type Op() const { return op_; }
 
   /**
    * @return The input expression to the unary operation.
    */
-  Expr *Input() { return expr_; }
+  Expr *Input() const { return expr_; }
 
   /**
    * Is the given node a unary expression? Needed as part of the custom AST RTTI infrastructure.
