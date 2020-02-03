@@ -56,9 +56,9 @@ CompilationContext::CompilationContext(ExecutableQuery *query, const Compilation
       mode_(mode),
       codegen_(query_->GetContext()),
       query_state_var_(codegen_.MakeIdentifier("queryState")),
-      query_state_type_name_(codegen_.MakeIdentifier("QueryState")),
-      query_state_access_(query_state_var_),
-      query_state_(query_state_type_name_, &query_state_access_) {}
+      query_state_type_(codegen_.MakeIdentifier("QueryState")),
+      query_state_(query_state_type_,
+                   [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }) {}
 
 ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
@@ -283,7 +283,7 @@ std::string CompilationContext::GetFunctionPrefix() const {
 }
 
 util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {
-  ast::Expr *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_name_));
+  ast::Expr *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_));
   ast::FieldDecl *field = codegen_.MakeField(query_state_var_, state_type);
   return codegen_.MakeFieldList({field});
 }

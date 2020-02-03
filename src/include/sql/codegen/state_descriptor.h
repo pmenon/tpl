@@ -24,22 +24,7 @@ class CodeGen;
  */
 class StateDescriptor {
  public:
-  /**
-   * An interface to access a pointer to the query state in the current code generation context.
-   */
-  class StateAccess {
-   public:
-    /**
-     * Destructor.
-     */
-    virtual ~StateAccess() = default;
-
-    /**
-     * @return A pointer to the query state. Subclasses override this to implement custom state
-     *         access logic.
-     */
-    virtual ast::Expr *GetStatePtr(CodeGen *codegen) = 0;
-  };
+  using InstanceProvider = std::function<ast::Expr *(CodeGen *)>;
 
   /**
    * Reference to an entry in a given state.
@@ -91,7 +76,7 @@ class StateDescriptor {
    * @param type_name The name to give the final constructed type for this state.
    * @param access A generic accessor to an instance of this state, used to access state elements.
    */
-  StateDescriptor(ast::Identifier type_name, StateAccess *access);
+  StateDescriptor(ast::Identifier type_name, InstanceProvider access);
 
   /**
    * This class cannot be copied or moved.
@@ -117,7 +102,7 @@ class StateDescriptor {
   /**
    * @return The query state pointer from the current code generation context.
    */
-  ast::Expr *GetStatePointer(CodeGen *codegen) const { return access_->GetStatePtr(codegen); }
+  ast::Expr *GetStatePointer(CodeGen *codegen) const { return access_(codegen); }
 
   /**
    * @return The name of this state's constructed TPL type.
@@ -149,7 +134,7 @@ class StateDescriptor {
   // The name of the state type.
   ast::Identifier name_;
   // State access object.
-  StateAccess *access_;
+  InstanceProvider access_;
   // All state metadata
   std::vector<SlotInfo> slots_;
   // The finalized type

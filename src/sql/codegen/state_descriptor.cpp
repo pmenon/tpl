@@ -1,5 +1,7 @@
 #include "sql/codegen/state_descriptor.h"
 
+#include <utility>
+
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/function_builder.h"
 
@@ -29,8 +31,8 @@ ast::Expr *StateDescriptor::Entry::OffsetFromState(CodeGen *codegen) const {
 //
 //===----------------------------------------------------------------------===//
 
-StateDescriptor::StateDescriptor(ast::Identifier name, StateDescriptor::StateAccess *access)
-    : name_(name), access_(access), state_type_(nullptr) {}
+StateDescriptor::StateDescriptor(ast::Identifier name, StateDescriptor::InstanceProvider access)
+    : name_(name), access_(std::move(access)), state_type_(nullptr) {}
 
 StateDescriptor::Entry StateDescriptor::DeclareStateEntry(CodeGen *codegen, const std::string &name,
                                                           ast::Expr *type_repr) {

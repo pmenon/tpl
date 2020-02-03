@@ -144,18 +144,6 @@ class Pipeline {
   StateDescriptor *GetPipelineState() { return &state_; }
 
  private:
-  ast::Expr *GetStatePtr(CodeGen *codegen) const;
-
-  // Class to access the pipeline state pointer.
-  class StateAccess : public StateDescriptor::StateAccess {
-   public:
-    StateAccess(Pipeline *pipeline) : pipeline_(pipeline) {}
-    ast::Expr *GetStatePtr(CodeGen *codegen) override { return pipeline_->GetStatePtr(codegen); }
-   private:
-    Pipeline *pipeline_;
-  };
-
- private:
   // Return the code generator instance.
   CodeGen *GetCodeGen();
 
@@ -202,9 +190,8 @@ class Pipeline {
   std::vector<Pipeline *> dependencies_;
 
   // Cache of common identifiers.
-  ast::Identifier state_var_;
+  ast::Identifier state_var_, state_type_;
   // The pipeline state.
-  StateAccess state_access_;
   StateDescriptor state_;
 };
 

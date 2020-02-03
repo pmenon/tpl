@@ -118,17 +118,6 @@ class CompilationContext {
   // Generate the query tear-down function.
   ast::FunctionDecl *GenerateTearDownFunction();
 
-  // Class to access the query state pointer.
-  class StateAccess : public StateDescriptor::StateAccess {
-   public:
-    explicit StateAccess(ast::Identifier query_state) : state_(query_state) {}
-
-    ast::Expr *GetStatePtr(CodeGen *codegen) override { return codegen->MakeExpr(state_); }
-
-   private:
-    ast::Identifier state_;
-  };
-
  private:
   // Unique ID used as a prefix for all generated functions to ensure uniqueness.
   uint64_t unique_id_;
@@ -144,10 +133,9 @@ class CompilationContext {
 
   // Cached identifiers.
   ast::Identifier query_state_var_;
-  ast::Identifier query_state_type_name_;
+  ast::Identifier query_state_type_;
 
   // The query state and the slot in the state where the execution context is.
-  StateAccess query_state_access_;
   StateDescriptor query_state_;
   StateDescriptor::Entry exec_ctx_;
 

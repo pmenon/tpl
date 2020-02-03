@@ -22,8 +22,8 @@ Pipeline::Pipeline(CompilationContext *ctx)
       compilation_context_(ctx),
       parallelism_(Parallelism::Parallel),
       state_var_(GetCodeGen()->MakeIdentifier("pipelineState")),
-      state_access_(this),
-      state_(GetCodeGen()->MakeIdentifier(fmt::format("P{}_State", id_)), &state_access_) {}
+      state_type_(GetCodeGen()->MakeIdentifier(fmt::format("P{}_State", id_))),
+      state_(state_type_, [this](CodeGen *codegen) { return codegen->MakeExpr(state_var_); }) {}
 
 Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism)
     : Pipeline(op->GetCompilationContext()) {
@@ -31,8 +31,6 @@ Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism)
 }
 
 CodeGen *Pipeline::GetCodeGen() { return compilation_context_->GetCodeGen(); }
-
-ast::Expr *Pipeline::GetStatePtr(CodeGen *codegen) const { return codegen->MakeExpr(state_var_); }
 
 void Pipeline::RegisterStep(OperatorTranslator *op, Parallelism parallelism) {
   steps_.push_back(op);
