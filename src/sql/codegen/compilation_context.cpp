@@ -63,8 +63,12 @@ CompilationContext::CompilationContext(ExecutableQuery *query, const Compilation
 ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
-  for (auto &[_, op] : ops_) {
-    op->InitializeQueryState(&builder);
+  {
+    // Request new scope for the function.
+    CodeGen::CodeScope code_scope(&codegen_);
+    for (auto &[_, op] : ops_) {
+      op->InitializeQueryState(&builder);
+    }
   }
   return builder.Finish();
 }
@@ -72,8 +76,12 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
 ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_TearDown");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
-  for (auto &[_, op] : ops_) {
-    op->TearDownQueryState(&builder);
+  {
+    // Request new scope for the function.
+    CodeGen::CodeScope code_scope(&codegen_);
+    for (auto &[_, op] : ops_) {
+      op->TearDownQueryState(&builder);
+    }
   }
   return builder.Finish();
 }

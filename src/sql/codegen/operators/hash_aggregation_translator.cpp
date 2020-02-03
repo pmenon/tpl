@@ -416,13 +416,13 @@ void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *work_conte
                                                          ast::Expr *agg_ht) const {
   CodeGen *codegen = GetCodeGen();
 
-  // var ahtIterBase: AHTIterator
-  ast::Identifier aht_iter_base = codegen->MakeFreshIdentifier("ahtIterBase");
+  // var iterBase: AHTIterator
+  ast::Identifier aht_iter_base = codegen->MakeFreshIdentifier("iterBase");
   ast::Expr *aht_iter_type = codegen->BuiltinType(ast::BuiltinType::AHTIterator);
   function->Append(codegen->DeclareVarNoInit(aht_iter_base, aht_iter_type));
 
   // var ahtIter = &ahtIterBase
-  ast::Identifier aht_iter = codegen->MakeFreshIdentifier("ahtIter");
+  ast::Identifier aht_iter = codegen->MakeFreshIdentifier("iter");
   ast::Expr *aht_iter_init = codegen->AddressOf(codegen->MakeExpr(aht_iter_base));
   function->Append(codegen->DeclareVarWithInit(aht_iter, aht_iter_init));
 

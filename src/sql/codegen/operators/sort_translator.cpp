@@ -170,7 +170,7 @@ void SortTranslator::ScanSorter(WorkContext *ctx, FunctionBuilder *function) con
   auto codegen = GetCodeGen();
 
   // var sorter_base: Sorter
-  auto base_iter_name = codegen->MakeFreshIdentifier("iter_base");
+  auto base_iter_name = codegen->MakeFreshIdentifier("iterBase");
   function->Append(codegen->DeclareVarNoInit(base_iter_name, ast::BuiltinType::SorterIterator));
 
   // var sorter = &sorter_base
