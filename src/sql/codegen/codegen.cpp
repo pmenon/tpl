@@ -568,7 +568,7 @@ ast::Expr *CodeGen::ExecCtxGetTLS(ast::Expr *exec_ctx) {
 
 ast::Expr *CodeGen::TLSIterate(ast::Expr *tls, ast::Expr *context, ast::Identifier func) {
   ast::Expr *call =
-      CallBuiltin(ast::Builtin::ExecutionContextGetTLS, {tls, context, MakeExpr(func)});
+      CallBuiltin(ast::Builtin::ThreadStateContainerIterate, {tls, context, MakeExpr(func)});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }

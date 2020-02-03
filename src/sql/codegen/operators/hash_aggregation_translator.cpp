@@ -54,6 +54,7 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
 void HashAggregationTranslator::DefinePayloadStruct(util::RegionVector<ast::StructDecl *> *decls) {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
+  fields.reserve(GetAggPlan().GetGroupByTerms().size() + GetAggPlan().GetAggregateTerms().size());
 
   // Create a field for every group by term.
   uint32_t term_idx = 0;
@@ -78,14 +79,13 @@ void HashAggregationTranslator::DefinePayloadStruct(util::RegionVector<ast::Stru
 
 void HashAggregationTranslator::DefineInputValuesStruct(
     util::RegionVector<ast::StructDecl *> *decls) {
-  const auto &agg_plan = GetPlanAs<planner::AggregatePlanNode>();
-
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
+  fields.reserve(GetAggPlan().GetGroupByTerms().size() + GetAggPlan().GetAggregateTerms().size());
 
   // Create a field for every group by term.
   uint32_t term_idx = 0;
-  for (const auto &term : agg_plan.GetGroupByTerms()) {
+  for (const auto &term : GetAggPlan().GetGroupByTerms()) {
     auto field_name = codegen->MakeIdentifier(kGroupByTermAttrPrefix + std::to_string(term_idx));
     auto type = codegen->TplType(term->GetReturnValueType());
     fields.push_back(codegen->MakeField(field_name, type));
@@ -94,7 +94,7 @@ void HashAggregationTranslator::DefineInputValuesStruct(
 
   // Create a field for every aggregate term.
   term_idx = 0;
-  for (const auto &term : agg_plan.GetAggregateTerms()) {
+  for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto field_name = codegen->MakeIdentifier(kAggregateTermAttrPrefix + std::to_string(term_idx));
     auto type = codegen->TplType(term->GetChild(0)->GetReturnValueType());
     fields.push_back(codegen->MakeField(field_name, type));
