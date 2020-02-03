@@ -41,8 +41,14 @@ ast::Expr *OperatorTranslator::GetMemoryPool() const {
 void OperatorTranslator::GetAllChildOutputFields(
     const uint32_t child_index, const std::string &field_name_prefix,
     util::RegionVector<ast::FieldDecl *> *fields) const {
-  auto codegen = GetCodeGen();
-  auto attr_idx = uint32_t{0};
+  CodeGen *codegen = GetCodeGen();
+
+  // Reserve now to reduce allocations.
+  const auto child_output_schema = GetPlan().GetChild(child_index)->GetOutputSchema();
+  fields->reserve(child_output_schema->NumColumns());
+
+  // Add columns to output.
+  uint32_t attr_idx = 0;
   for (const auto &col : GetPlan().GetChild(child_index)->GetOutputSchema()->GetColumns()) {
     auto field_name = codegen->MakeIdentifier(field_name_prefix + std::to_string(attr_idx++));
     auto type = codegen->TplType(col.GetExpr()->GetReturnValueType());

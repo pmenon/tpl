@@ -126,6 +126,11 @@ class OutputSchema {
    */
   const std::vector<Column> &GetColumns() const { return columns_; }
 
+  /**
+   * @return The number of output columns.
+   */
+  std::size_t NumColumns() const { return columns_.size(); }
+
  private:
   // The columns.
   std::vector<Column> columns_;
