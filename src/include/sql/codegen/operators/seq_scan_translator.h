@@ -116,10 +116,8 @@ class SeqScanTranslator : public OperatorTranslator {
   std::string_view GetTableName() const;
 
   // Generate a generic filter term.
-  void GenerateGenericTerm(FunctionBuilder *func,
-                           const planner::AbstractExpression *term,
-                           ast::Expr *vector_proj,
-                           ast::Expr *tid_list);
+  void GenerateGenericTerm(FunctionBuilder *func, const planner::AbstractExpression *term,
+                           ast::Expr *vector_proj, ast::Expr *tid_list);
 
   // Generate all filter clauses.
   void GenerateFilterClauseFunctions(util::RegionVector<ast::FunctionDecl *> *decls,
