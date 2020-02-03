@@ -204,9 +204,14 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
     if (IsParallel()) {
       Root()->LaunchWork(&builder, GetWorkFunctionName());
     } else {
-      auto state_ptr = builder.GetParameterByPosition(0);
-      auto thread_state_ptr = codegen->Const64(0);
-      builder.Append(codegen->Call(GetWorkFunctionName(), {state_ptr, thread_state_ptr}));
+      const auto gen_args = [&]() -> std::vector<ast::Expr *> {
+        ast::Expr *pipeline_state = codegen->MakeExpr(state_var_);
+        return {builder.GetParameterByPosition(0), codegen->AddressOf(pipeline_state)};
+      };
+      builder.Append(codegen->DeclareVarNoInit(state_var_, codegen->MakeExpr(state_.GetName())));
+      builder.Append(codegen->Call(GetSetupPipelineStateFunctionName(), gen_args()));
+      builder.Append(codegen->Call(GetWorkFunctionName(), gen_args()));
+      builder.Append(codegen->Call(GetTearDownPipelineStateFunctionName(), gen_args()));
     }
 
     // Let the operators perform some completion work in this pipeline.

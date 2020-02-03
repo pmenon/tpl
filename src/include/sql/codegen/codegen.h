@@ -411,6 +411,14 @@ class CodeGen {
                                 std::initializer_list<ast::Expr *> args) const;
 
   /**
+   * Generate a call to the provided function by name and with the provided arguments.
+   * @param func_name The name of the function to call.
+   * @param args The arguments to pass in the call.
+   */
+  [[nodiscard]] ast::Expr *Call(ast::Identifier func_name,
+                                const std::vector<ast::Expr *> &args) const;
+
+  /**
    * Generate a call to the provided builtin function and arguments.
    * @param builtin The builtin to call.
    * @param args The arguments to pass in the call.
@@ -1199,9 +1207,6 @@ class CodeGen {
 
   // Return the AST node factory.
   ast::AstNodeFactory *GetFactory();
-
-  // Build a call expression to a function with the provided name using the provided arguments.
-  ast::Expr *BuildCall(ast::Identifier func_name, std::initializer_list<ast::Expr *> args) const;
 
  private:
   // The context used to create AST nodes.

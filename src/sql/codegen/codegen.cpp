@@ -264,14 +264,6 @@ ast::Expr *CodeGen::PtrCast(ast::Identifier base_name, ast::Expr *arg) const {
   return PtrCast(MakeExpr(base_name), arg);
 }
 
-ast::Expr *CodeGen::BuildCall(ast::Identifier func_name,
-                              std::initializer_list<ast::Expr *> args) const {
-  // Create the call argument list
-  util::RegionVector<ast::Expr *> call_args(args, context_->GetRegion());
-  // Invoke the function
-  return context_->GetNodeFactory()->NewCallExpr(MakeExpr(func_name), std::move(call_args));
-}
-
 ast::Expr *CodeGen::BinaryOp(parsing::Token::Type op, ast::Expr *left, ast::Expr *right) const {
   TPL_ASSERT(parsing::Token::IsBinaryOp(op), "Provided operation isn't binary");
   return context_->GetNodeFactory()->NewBinaryOpExpr(position_, op, left, right);
@@ -302,7 +294,13 @@ ast::Stmt *CodeGen::Return(ast::Expr *ret) {
 }
 
 ast::Expr *CodeGen::Call(ast::Identifier func_name, std::initializer_list<ast::Expr *> args) const {
-  return BuildCall(func_name, args);
+  util::RegionVector<ast::Expr *> call_args(args, context_->GetRegion());
+  return context_->GetNodeFactory()->NewCallExpr(MakeExpr(func_name), std::move(call_args));
+}
+
+ast::Expr *CodeGen::Call(ast::Identifier func_name, const std::vector<ast::Expr *> &args) const {
+  util::RegionVector<ast::Expr *> call_args(args.begin(), args.end(), context_->GetRegion());
+  return context_->GetNodeFactory()->NewCallExpr(MakeExpr(func_name), std::move(call_args));
 }
 
 ast::Expr *CodeGen::CallBuiltin(ast::Builtin builtin,

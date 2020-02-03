@@ -119,6 +119,10 @@ TEST_F(SeqScanTranslatorTest, SimpleNLJ) {
                   // Left scan on 'small_1'
                   .AddChild(planner::SeqScanPlanNode::Builder()
                                 .SetTableOid(4)
+                                .SetScanPredicate(
+                                    // col0 <= 44
+                                    expr_maker.CompareLe(expr_maker.CVE(0, TypeId::Integer),
+                                                         expr_maker.Constant(44)))
                                 .SetOutputSchema(planner::OutputSchema::Builder()
                                                      .AddColumn(TypeId::Integer, false,
                                                                 expr_maker.CVE(0, TypeId::Integer))
