@@ -25,6 +25,7 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
       key_check_partial_fn_(GetCodeGen()->MakeFreshIdentifier("KeyCheckPartial")),
       merge_partitions_fn_(GetCodeGen()->MakeFreshIdentifier("MergePartitions")),
       build_pipeline_(this, Pipeline::Parallelism::Flexible) {
+  TPL_ASSERT(plan.GetGroupByTerms().empty(), "Hash aggregation should have grouping keys");
   TPL_ASSERT(plan.GetAggregateStrategyType() == planner::AggregateStrategyType::HASH,
              "Expected hash-based aggregation plan node");
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Hash aggregations should only have one child");
