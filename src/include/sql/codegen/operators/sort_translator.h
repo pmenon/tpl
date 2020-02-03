@@ -43,46 +43,39 @@ class SortTranslator : public OperatorTranslator {
   /**
    * Initialize the sorter instance.
    */
-  void InitializeQueryState() const override;
+  void InitializeQueryState(FunctionBuilder *function) const override;
 
   /**
    * Tear-down the sorter instance.
    */
-  void TearDownQueryState() const override;
-
-  /**
-   * If the given pipeline is for the build-side and is parallel, a thread-local sorter instance is
-   * declared in the pipeline state.
-   * @param pipeline_context The pipeline context.
-   */
-  void DeclarePipelineState(PipelineContext *pipeline_context) override;
+  void TearDownQueryState(FunctionBuilder *function) const override;
 
   /**
    * If the given pipeline is for the build-size and is parallel, initialize the thread-local sorter
    * instance we declared inside.
    * @param pipeline_context The pipeline context.
    */
-  void InitializePipelineState(const PipelineContext &pipeline_context) const override;
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * If the given pipeline is for the build-size and is parallel, destroy the thread-local sorter
    * instance we declared inside.
    * @param pipeline_context The pipeline context.
    */
-  void TearDownPipelineState(const PipelineContext &pipeline_context) const override;
+  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Sorters don't require any pre-pipeline logic.
    * @param pipeline_context The pipeline context.
    */
-  void BeginPipelineWork(const PipelineContext &pipeline_context) const override {}
+  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * Implement either the build-side or scan-side of the sort depending on the pipeline this context
    * contains.
    * @param ctx The context of the work.
    */
-  void PerformPipelineWork(WorkContext *ctx) const override;
+  void PerformPipelineWork(WorkContext *ctx, FunctionBuilder *function) const override;
 
   /**
    * If the given pipeline is for the build-side, we'll need to issue a sort. If the pipeline is
@@ -90,7 +83,7 @@ class SortTranslator : public OperatorTranslator {
    * a top-k sort.
    * @param pipeline_context The pipeline context.
    */
-  void FinishPipelineWork(const PipelineContext &pipeline_context) const override;
+  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Sorters are never launched in parallel, so this should never occur..
@@ -102,7 +95,9 @@ class SortTranslator : public OperatorTranslator {
   /**
    * Sorters are never launched in parallel, so this should never occur.
    */
-  void LaunchWork(ast::Identifier work_func_name) const override { UNREACHABLE("Impossible"); }
+  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override {
+    UNREACHABLE("Impossible");
+  }
 
   /**
    * @return
@@ -131,20 +126,20 @@ class SortTranslator : public OperatorTranslator {
   bool IsScanPipeline(const Pipeline &pipeline) const { return &GetScanPipeline() == &pipeline; }
 
   // Initialize and destroy the given sorter.
-  void InitializeSorter(ast::Expr *sorter_ptr) const;
-  void TearDownSorter(ast::Expr *sorter_ptr) const;
+  void InitializeSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const;
+  void TearDownSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const;
 
   // Access the attribute at the given index within the provided sort row.
   ast::Expr *GetSortRowAttribute(ast::Expr *sort_row, uint32_t attr_idx) const;
 
   // Called to scan the global sorter instance.
-  void ScanSorter(WorkContext *ctx) const;
+  void ScanSorter(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Insert tuple data into the provided sort row.
   void FillSortRow(WorkContext *ctx, ast::Expr *sort_row) const;
 
   // Called to insert the tuple in the context into the sorter instance.
-  void InsertIntoSorter(WorkContext *ctx) const;
+  void InsertIntoSorter(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Generate comparison function.
   void GenerateComparisonFunction(FunctionBuilder *builder);

@@ -11,8 +11,9 @@ ProjectionTranslator::ProjectionTranslator(const planner::ProjectionPlanNode &pl
                                            Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline) {}
 
-void ProjectionTranslator::PerformPipelineWork(WorkContext *work_context) const {
-  work_context->Push();
+void ProjectionTranslator::PerformPipelineWork(WorkContext *work_context,
+                                               FunctionBuilder *function) const {
+  work_context->Push(function);
 }
 
 ast::Expr *ProjectionTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,

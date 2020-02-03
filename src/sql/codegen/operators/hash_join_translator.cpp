@@ -19,8 +19,8 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline),
       build_row_var_(GetCodeGen()->MakeFreshIdentifier("buildRow")),
       build_row_type_(GetCodeGen()->MakeFreshIdentifier("BuildRow")),
-      left_pipeline_(this, Pipeline::Parallelism::Flexible) {
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Flexible);
+      left_pipeline_(this, Pipeline::Parallelism::Parallel) {
+  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
   pipeline->LinkSourcePipeline(LeftPipeline());
 
   compilation_context->Prepare(*plan.GetChild(0), LeftPipeline());
@@ -34,9 +34,15 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
     compilation_context->Prepare(*right_hash_key);
   }
 
-  auto codegen = GetCodeGen();
+  CodeGen *codegen = GetCodeGen();
+  ast::Expr *join_ht_type = codegen->BuiltinType(ast::BuiltinType::JoinHashTable);
   global_join_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      codegen, "joinHashTable", codegen->BuiltinType(ast::BuiltinType::JoinHashTable));
+      codegen, "joinHashTable", join_ht_type);
+
+  if (left_pipeline_.IsParallel()) {
+    local_join_ht_ = left_pipeline_.GetPipelineState()->DeclareStateEntry(codegen, "joinHashTable",
+                                                                          join_ht_type);
+  }
 }
 
 void HashJoinTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
@@ -49,43 +55,35 @@ void HashJoinTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl 
   decls->push_back(codegen->DeclareStruct(build_row_type_, std::move(fields)));
 }
 
-void HashJoinTranslator::InitializeJoinHashTable(ast::Expr *jht_ptr) const {
-  auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
-  func->Append(codegen->JoinHashTableInit(jht_ptr, GetMemoryPool(), build_row_type_));
+void HashJoinTranslator::InitializeJoinHashTable(FunctionBuilder *function,
+                                                 ast::Expr *jht_ptr) const {
+  function->Append(GetCodeGen()->JoinHashTableInit(jht_ptr, GetMemoryPool(), build_row_type_));
 }
 
-void HashJoinTranslator::TearDownJoinHashTable(ast::Expr *jht_ptr) const {
-  auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
-  func->Append(codegen->JoinHashTableFree(jht_ptr));
+void HashJoinTranslator::TearDownJoinHashTable(FunctionBuilder *function,
+                                               ast::Expr *jht_ptr) const {
+  function->Append(GetCodeGen()->JoinHashTableFree(jht_ptr));
 }
 
-void HashJoinTranslator::InitializeQueryState() const {
-  InitializeJoinHashTable(global_join_ht_.GetPtr(GetCodeGen()));
+void HashJoinTranslator::InitializeQueryState(FunctionBuilder *function) const {
+  InitializeJoinHashTable(function, global_join_ht_.GetPtr(GetCodeGen()));
 }
 
-void HashJoinTranslator::TearDownQueryState() const {
-  TearDownJoinHashTable(global_join_ht_.GetPtr(GetCodeGen()));
+void HashJoinTranslator::TearDownQueryState(FunctionBuilder *function) const {
+  TearDownJoinHashTable(function, global_join_ht_.GetPtr(GetCodeGen()));
 }
 
-void HashJoinTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
-  if (IsLeftPipeline(pipeline_context->GetPipeline()) && LeftPipeline()->IsParallel()) {
-    auto codegen = GetCodeGen();
-    local_join_ht_ = pipeline_context->DeclareStateEntry(
-        codegen, "joinHashTable", codegen->BuiltinType(ast::BuiltinType::JoinHashTable));
+void HashJoinTranslator::InitializePipelineState(const Pipeline &pipeline,
+                                                 FunctionBuilder *function) const {
+  if (IsLeftPipeline(pipeline) && LeftPipeline().IsParallel()) {
+    InitializeJoinHashTable(function, local_join_ht_.GetPtr(GetCodeGen()));
   }
 }
 
-void HashJoinTranslator::InitializePipelineState(const PipelineContext &pipeline_context) const {
-  if (IsLeftPipeline(pipeline_context.GetPipeline()) && LeftPipeline().IsParallel()) {
-    InitializeJoinHashTable(local_join_ht_.GetPtr(GetCodeGen()));
-  }
-}
-
-void HashJoinTranslator::TearDownPipelineState(const PipelineContext &pipeline_context) const {
-  if (IsLeftPipeline(pipeline_context.GetPipeline()) && LeftPipeline().IsParallel()) {
-    TearDownJoinHashTable(local_join_ht_.GetPtr(GetCodeGen()));
+void HashJoinTranslator::TearDownPipelineState(const Pipeline &pipeline,
+                                               FunctionBuilder *function) const {
+  if (IsLeftPipeline(pipeline) && LeftPipeline().IsParallel()) {
+    TearDownJoinHashTable(function, local_join_ht_.GetPtr(GetCodeGen()));
   }
 }
 
@@ -124,15 +122,15 @@ void HashJoinTranslator::FillBuildRow(WorkContext *ctx, ast::Expr *build_row) co
   }
 }
 
-void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx) const {
+void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx,
+                                                 FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
 
   const auto jht = ctx->GetPipeline().IsParallel() ? local_join_ht_ : global_join_ht_;
 
   // Insert into hash table.
   auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys());
-  func->Append(codegen->DeclareVarWithInit(
+  function->Append(codegen->DeclareVarWithInit(
       build_row_var_,
       codegen->JoinHashTableInsert(jht.GetPtr(codegen), hash_val, build_row_type_)));
 
@@ -140,16 +138,18 @@ void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx) const {
   FillBuildRow(ctx, codegen->MakeExpr(build_row_var_));
 }
 
-void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx) const {
+void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
 
+  // var entryIterBase: HashTableEntryIterator
   auto iter_name_base = codegen->MakeFreshIdentifier("entryIterBase");
-  func->Append(codegen->DeclareVarNoInit(iter_name_base, ast::BuiltinType::HashTableEntryIterator));
+  function->Append(
+      codegen->DeclareVarNoInit(iter_name_base, ast::BuiltinType::HashTableEntryIterator));
 
+  // var entryIter = &entryIterBase
   auto iter_name = codegen->MakeFreshIdentifier("entryIter");
-  func->Append(codegen->DeclareVarWithInit(iter_name,
-                                           codegen->AddressOf(codegen->MakeExpr(iter_name_base))));
+  function->Append(codegen->DeclareVarWithInit(
+      iter_name, codegen->AddressOf(codegen->MakeExpr(iter_name_base))));
 
   auto entry_iter = codegen->MakeExpr(iter_name);
   auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys());
@@ -161,41 +161,41 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx) const {
                   codegen->HTEntryIterHasNext(entry_iter), nullptr);
   {
     // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-    func->Append(codegen->DeclareVarWithInit(
+    function->Append(codegen->DeclareVarWithInit(
         build_row_var_, codegen->HTEntryIterGetRow(entry_iter, build_row_type_)));
 
     // Check predicate
     if (const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate()) {
       auto cond = ctx->DeriveValue(*join_predicate, this);
       If check_condition(codegen, cond);
-      ctx->Push();
+      ctx->Push(function);
     } else {
-      ctx->Push();
+      ctx->Push(function);
     }
   }
   entry_loop.EndLoop();
 }
 
-void HashJoinTranslator::PerformPipelineWork(WorkContext *ctx) const {
+void HashJoinTranslator::PerformPipelineWork(WorkContext *ctx, FunctionBuilder *function) const {
   if (IsLeftPipeline(ctx->GetPipeline())) {
-    InsertIntoJoinHashTable(ctx);
+    InsertIntoJoinHashTable(ctx, function);
   } else {
     TPL_ASSERT(IsRightPipeline(ctx->GetPipeline()), "Pipeline is unknown to join translator");
-    ProbeJoinHashTable(ctx);
+    ProbeJoinHashTable(ctx, function);
   }
 }
 
-void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_context) const {
-  if (IsLeftPipeline(pipeline_context.GetPipeline())) {
+void HashJoinTranslator::FinishPipelineWork(const Pipeline &pipeline,
+                                            FunctionBuilder *function) const {
+  if (IsLeftPipeline(pipeline)) {
     auto codegen = GetCodeGen();
-    auto func = codegen->CurrentFunction();
     auto jht = global_join_ht_.GetPtr(codegen);
     if (LeftPipeline().IsParallel()) {
       auto tls = GetThreadStateContainer();
       auto offset = local_join_ht_.OffsetFromState(codegen);
-      func->Append(codegen->JoinHashTableBuildParallel(jht, tls, offset));
+      function->Append(codegen->JoinHashTableBuildParallel(jht, tls, offset));
     } else {
-      func->Append(codegen->JoinHashTableBuild(jht));
+      function->Append(codegen->JoinHashTableBuild(jht));
     }
   }
 }

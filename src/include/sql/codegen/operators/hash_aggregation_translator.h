@@ -42,35 +42,29 @@ class HashAggregationTranslator : public OperatorTranslator {
   /**
    * Initialize the global aggregation hash table.
    */
-  void InitializeQueryState() const override;
+  void InitializeQueryState(FunctionBuilder *function) const override;
 
   /**
    * Destroy the global aggregation hash table.
    */
-  void TearDownQueryState() const override;
-
-  /**
-   * Declare a thread-local aggregation hash table if the context is for the build and is parallel.
-   * @param pipeline_context The pipeline context.
-   */
-  void DeclarePipelineState(PipelineContext *pipeline_context) override;
+  void TearDownQueryState(FunctionBuilder *function) const override;
 
   /**
    * Initialize the thread-local aggregation hash table, if needed.
    * @param pipeline_context The pipeline context.
    */
-  void InitializePipelineState(const PipelineContext &pipeline_context) const override;
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Tear-down and destroy the thread-local aggregation hash table, if needed.
    * @param pipeline_context The pipeline context.
    */
-  void TearDownPipelineState(const PipelineContext &pipeline_context) const override;
+  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Hash aggregations don't require any pre-pipeline work.
    */
-  void BeginPipelineWork(const PipelineContext &pipeline_context) const override {}
+  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * If the context pipeline is for the build-side, we'll aggregate the input into the aggregation
@@ -78,7 +72,7 @@ class HashAggregationTranslator : public OperatorTranslator {
    * hash table.
    * @param work_context The context.
    */
-  void PerformPipelineWork(WorkContext *work_context) const override;
+  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
 
   /**
    * If the provided context is for the build pipeline and we're performing a parallel aggregation,
@@ -86,7 +80,7 @@ class HashAggregationTranslator : public OperatorTranslator {
    * aggregation hash table.
    * @param pipeline_context The pipeline context.
    */
-  void FinishPipelineWork(const PipelineContext &pipeline_context) const override;
+  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * We'll issue a parallel partitioned scan over the aggregation hash table. In this case, the
@@ -100,7 +94,7 @@ class HashAggregationTranslator : public OperatorTranslator {
    * aggregation hash table.
    * @param work_func_name The name of the worker function to invoke.
    */
-  void LaunchWork(ast::Identifier work_func_name) const override;
+  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override;
 
   /**
    * @return The output of the child of this aggregation in the given context.
@@ -137,8 +131,8 @@ class HashAggregationTranslator : public OperatorTranslator {
 
   // Initialize and destroy the input aggregation hash table. These are called
   // from InitializeQueryState() and InitializePipelineState().
-  void InitializeAggregationHashTable(ast::Expr *agg_ht) const;
-  void TearDownAggregationHashTable(ast::Expr *agg_ht) const;
+  void InitializeAggregationHashTable(FunctionBuilder *function, ast::Expr *agg_ht) const;
+  void TearDownAggregationHashTable(FunctionBuilder *function, ast::Expr *agg_ht) const;
 
   // Access an attribute at the given index in the provided aggregate row.
   ast::Expr *GetGroupByTerm(ast::Identifier agg_row, uint32_t attr_idx) const;
@@ -163,10 +157,12 @@ class HashAggregationTranslator : public OperatorTranslator {
                         ast::Identifier agg_values) const;
 
   // Merge the input row into the aggregation hash table.
-  void UpdateAggregates(WorkContext *work_context, ast::Expr *agg_ht) const;
+  void UpdateAggregates(WorkContext *work_context, FunctionBuilder *function,
+                        ast::Expr *agg_ht) const;
 
   // Scan the final aggregation hash table.
-  void ScanAggregationHashTable(WorkContext *work_context, ast::Expr *agg_ht) const;
+  void ScanAggregationHashTable(WorkContext *work_context, FunctionBuilder *function,
+                                ast::Expr *agg_ht) const;
 
  private:
   // The name of the variable used to:

@@ -15,10 +15,9 @@ class AbstractExpression;
 
 namespace tpl::sql::codegen {
 
-class CodeGen;
 class CompilationContext;
+class FunctionBuilder;
 class Pipeline;
-class PipelineContext;
 
 /**
  * A work context carries information necessary for a pipeline along all operators within that
@@ -35,14 +34,6 @@ class WorkContext {
   WorkContext(CompilationContext *compilation_context, const Pipeline &pipeline);
 
   /**
-   * Create a context wrapping the provided compilation context (containing all operator and
-   * expression translators) and the pipeline the consumption occurs along.
-   * @param compilation_context The compilation context.
-   * @param pipeline_context The pipeline context the consumption occurs along.
-   */
-  WorkContext(CompilationContext *compilation_context, const PipelineContext *pipeline_context);
-
-  /**
    * Derive the value of the given expression.
    * @param expr The expression.
    * @return The TPL value of the expression.
@@ -52,8 +43,9 @@ class WorkContext {
 
   /**
    * Push this context through to the next step in the pipeline.
+   * @param function The function that's being built.
    */
-  void Push();
+  void Push(FunctionBuilder *function);
 
   /**
    * Clear any cached expression result values.
@@ -75,8 +67,6 @@ class WorkContext {
   CompilationContext *compilation_context_;
   // The pipeline that this context flows through.
   const Pipeline &pipeline_;
-  // The context of the consumption.
-  const PipelineContext *pipeline_context_;
   // Cache of expression results.
   std::unordered_map<const planner::AbstractExpression *, ast::Expr *> cache_;
   // The current pipeline step and last pipeline step.

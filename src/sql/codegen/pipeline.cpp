@@ -17,52 +17,22 @@
 
 namespace tpl::sql::codegen {
 
-//===----------------------------------------------------------------------===//
-//
-// Pipeline Context
-//
-//===----------------------------------------------------------------------===//
-
-PipelineContext::PipelineContext(const Pipeline &pipeline, ast::Identifier state_var,
-                                 ast::Identifier state_type)
-    : pipeline_(pipeline),
-      state_var_(state_var),
-      pipeline_state_access_(this),
-      pipeline_state_(state_type, &pipeline_state_access_) {}
-
-ast::Expr *PipelineContext::GetPipelineStatePtr(CodeGen *codegen) const {
-  return codegen->MakeExpr(state_var_);
-}
-
-StateDescriptor::Entry PipelineContext::DeclareStateEntry(CodeGen *codegen, const std::string &name,
-                                                          ast::Expr *type) {
-  return pipeline_state_.DeclareStateEntry(codegen, name, type);
-}
-
-ast::StructDecl *PipelineContext::ConstructPipelineStateType(CodeGen *codegen) {
-  return pipeline_state_.ConstructFinalType(codegen);
-}
-
-bool PipelineContext::IsParallel() const { return pipeline_.IsParallel(); }
-
-//===----------------------------------------------------------------------===//
-//
-// Pipeline
-//
-//===----------------------------------------------------------------------===//
-
 Pipeline::Pipeline(CompilationContext *ctx)
     : id_(ctx->RegisterPipeline(this)),
       compilation_context_(ctx),
-      parallelism_(Parallelism::Flexible),
-      state_var_(compilation_context_->GetCodeGen()->MakeIdentifier("pipelineState")),
-      state_type_(compilation_context_->GetCodeGen()->MakeIdentifier("P" + std::to_string(id_) +
-                                                                     "_State")) {}
+      parallelism_(Parallelism::Parallel),
+      state_var_(GetCodeGen()->MakeIdentifier("pipelineState")),
+      state_access_(this),
+      state_(GetCodeGen()->MakeIdentifier(fmt::format("P{}_State", id_)), &state_access_) {}
 
 Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism)
     : Pipeline(op->GetCompilationContext()) {
   RegisterStep(op, parallelism);
 }
+
+CodeGen *Pipeline::GetCodeGen() { return compilation_context_->GetCodeGen(); }
+
+ast::Expr *Pipeline::GetStatePtr(CodeGen *codegen) const { return codegen->MakeExpr(state_var_); }
 
 void Pipeline::RegisterStep(OperatorTranslator *op, Parallelism parallelism) {
   steps_.push_back(op);
@@ -103,52 +73,9 @@ util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
   // The main query parameters.
   util::RegionVector<ast::FieldDecl *> query_params = compilation_context_->QueryParams();
   // Tag on the pipeline state.
-  ast::Expr *pipeline_state = codegen->PointerType(codegen->MakeExpr(state_type_));
+  ast::Expr *pipeline_state = codegen->PointerType(codegen->MakeExpr(state_.GetName()));
   query_params.push_back(codegen->MakeField(state_var_, pipeline_state));
   return query_params;
-}
-
-void Pipeline::RegisterSource(OperatorTranslator *op, Pipeline::Parallelism parallelism) {
-  // Add the source to the pipeline.
-  RegisterStep(op, parallelism);
-
-  // Check parallel execution settings.
-  bool parallel_exec_disabled =
-      !Settings::Instance()->GetBool(Settings::Name::ParallelQueryExecution);
-
-  // Check if the consumer supports parallel execution.
-  bool parallel_consumer = true;
-
-  // We choose serial execution for one of four reasons:
-  //  1. If parallel execution is globally disabled.
-  //  2. If the consumer isn't parallel.
-  //  3. If the source of the pipeline explicitly requests serial execution.
-  //  4. If any other operator in the pipeline explicitly requested serial
-  //     execution.
-  if (parallel_exec_disabled || !parallel_consumer ||
-      parallelism == Pipeline::Parallelism::Serial ||
-      parallelism_ == Pipeline::Parallelism::Serial) {
-    parallelism_ = Pipeline::Parallelism::Serial;
-    return;
-  }
-
-  // At this point, the pipeline (including its source) is either entirely
-  // parallel or entirely flexible. For us, "flexible" parallelism isn't a real
-  // thing; it is neither parallel or serial. We make a conservative choice
-  // preferring serial execution unless the source specifically, clearly, and
-  // explicitly requested parallel execution.
-
-  if (parallelism == Pipeline::Parallelism::Flexible) {
-    LOG_WARN(
-        "Pipeline '{}' source ({}) chose Flexible parallelism rather than committing to Serial or "
-        "Parallel. A Serial execution mode was chosen to err on the side of caution.",
-        id_, planner::PlanNodeTypeToString(op->GetPlan().GetPlanNodeType()));
-    parallelism_ = Pipeline::Parallelism::Serial;
-  } else {
-    parallelism_ = Pipeline::Parallelism::Parallel;
-  }
-
-  LOG_INFO("Generated pipeline: {}", PrettyPrint());
 }
 
 void Pipeline::LinkSourcePipeline(Pipeline *dependency) {
@@ -163,8 +90,30 @@ void Pipeline::CollectDependencies(std::vector<Pipeline *> *deps) {
   deps->push_back(this);
 }
 
-ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction(
-    PipelineContext *pipeline_context) const {
+void Pipeline::Prepare() {
+  // Finalize the pipeline state.
+  state_.ConstructFinalType(GetCodeGen());
+
+  // Finalize the execution mode. We choose serial execution if ANY of the below
+  // conditions are satisfied:
+  //  1. If parallel execution is globally disabled.
+  //  2. If the consumer doesn't support parallel execution.
+  //  3. If ANY operator in the pipeline explicitly requested serial execution.
+
+  const bool parallel_exec_disabled =
+      !Settings::Instance()->GetBool(Settings::Name::ParallelQueryExecution);
+  const bool parallel_consumer = true;
+  if (parallel_exec_disabled || !parallel_consumer ||
+      parallelism_ == Pipeline::Parallelism::Serial) {
+    parallelism_ = Pipeline::Parallelism::Serial;
+  } else {
+    parallelism_ = Pipeline::Parallelism::Parallel;
+  }
+
+  LOG_INFO("Generated pipeline: {}", PrettyPrint());
+}
+
+ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction() const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = GetSetupPipelineStateFunctionName();
   FunctionBuilder builder(codegen, name, PipelineParams(), codegen->Nil());
@@ -172,14 +121,13 @@ ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction(
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen);
     for (auto *op : steps_) {
-      op->InitializePipelineState(*pipeline_context);
+      op->InitializePipelineState(*this, &builder);
     }
   }
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction(
-    PipelineContext *pipeline_context) const {
+ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction() const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = GetTearDownPipelineStateFunctionName();
   FunctionBuilder builder(codegen, name, PipelineParams(), codegen->Nil());
@@ -187,13 +135,13 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction(
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen);
     for (auto *op : steps_) {
-      op->TearDownPipelineState(*pipeline_context);
+      op->TearDownPipelineState(*this, &builder);
     }
   }
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipeline_context) const {
+ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction() const {
   auto codegen = compilation_context_->GetCodeGen();
   auto query_state = compilation_context_->GetQueryState();
   auto name = codegen->MakeIdentifier(ConstructPipelineFunctionName("Init"));
@@ -205,16 +153,13 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipel
     // be initialized at this point. To do so, we'll call @tlsReset() and pass
     // in the thread-local state initialization and tear-down functions.
     if (IsParallel()) {
-      TPL_ASSERT(pipeline_context->GetLocalState()->GetType() != nullptr,
-                 "Pipeline state has not been finalized yet");
-
       // var tls = @execCtxGetTLS(exec_ctx)
       // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
       ast::Expr *state_ptr = query_state->GetStatePointer(codegen);
       ast::Expr *exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
       ast::Identifier tls = codegen->MakeFreshIdentifier("tls");
       builder.Append(codegen->DeclareVarWithInit(tls, codegen->ExecCtxGetTLS(exec_ctx)));
-      builder.Append(codegen->TLSReset(codegen->MakeExpr(tls), state_type_,
+      builder.Append(codegen->TLSReset(codegen->MakeExpr(tls), state_.GetName(),
                                        GetSetupPipelineStateFunctionName(),
                                        GetTearDownPipelineStateFunctionName(), state_ptr));
     }
@@ -222,7 +167,7 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipel
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipeline_context) const {
+ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
   auto codegen = compilation_context_->GetCodeGen();
   auto params = PipelineParams();
 
@@ -236,13 +181,13 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipel
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen);
     // Create the working context and push it through the pipeline.
-    WorkContext work_context(compilation_context_, pipeline_context);
-    (*Begin())->PerformPipelineWork(&work_context);
+    WorkContext work_context(compilation_context_, *this);
+    Root()->PerformPipelineWork(&work_context, &builder);
   }
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeline_context) const {
+ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = codegen->MakeIdentifier(ConstructPipelineFunctionName("Run"));
   FunctionBuilder builder(codegen, name, compilation_context_->QueryParams(), codegen->Nil());
@@ -252,12 +197,12 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeli
 
     // Let the operators perform some initialization work in this pipeline.
     for (auto op : steps_) {
-      op->BeginPipelineWork(*pipeline_context);
+      op->BeginPipelineWork(*this, &builder);
     }
 
     // Launch pipeline work.
     if (IsParallel()) {
-      (*Begin())->LaunchWork(GetWorkFunctionName());
+      Root()->LaunchWork(&builder, GetWorkFunctionName());
     } else {
       auto state_ptr = builder.GetParameterByPosition(0);
       auto thread_state_ptr = codegen->Const64(0);
@@ -266,14 +211,13 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeli
 
     // Let the operators perform some completion work in this pipeline.
     for (auto op : steps_) {
-      op->FinishPipelineWork(*pipeline_context);
+      op->FinishPipelineWork(*this, &builder);
     }
   }
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction(
-    PipelineContext *pipeline_context) const {
+ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
   auto codegen = compilation_context_->GetCodeGen();
   auto name = codegen->MakeIdentifier(ConstructPipelineFunctionName("TearDown"));
   FunctionBuilder builder(codegen, name, compilation_context_->QueryParams(), codegen->Nil());
@@ -290,27 +234,20 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction(
 }
 
 void Pipeline::GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const {
-  PipelineContext pipeline_context(*this, state_var_, state_type_);
-
-  // Collect all pipeline state and register it in the container.
-  for (auto *op : steps_) {
-    op->DeclarePipelineState(&pipeline_context);
-  }
-
-  auto codegen = compilation_context_->GetCodeGen();
-  builder->DeclareStruct(pipeline_context.ConstructPipelineStateType(codegen));
+  // Declare the pipeline state.
+  builder->DeclareStruct(state_.GetType());
 
   // Generate pipeline state initialization and tear-down functions.
-  builder->DeclareFunction(GenerateSetupPipelineStateFunction(&pipeline_context));
-  builder->DeclareFunction(GenerateTearDownPipelineStateFunction(&pipeline_context));
+  builder->DeclareFunction(GenerateSetupPipelineStateFunction());
+  builder->DeclareFunction(GenerateTearDownPipelineStateFunction());
 
   // Generate main pipeline logic.
-  builder->DeclareFunction(GeneratePipelineWorkFunction(&pipeline_context));
+  builder->DeclareFunction(GeneratePipelineWorkFunction());
 
   // Register the main init, run, tear-down functions as steps, in that order.
-  builder->RegisterStep(GenerateInitPipelineFunction(&pipeline_context));
-  builder->RegisterStep(GenerateRunPipelineFunction(&pipeline_context));
-  builder->RegisterStep(GenerateTearDownPipelineFunction(&pipeline_context));
+  builder->RegisterStep(GenerateInitPipelineFunction());
+  builder->RegisterStep(GenerateRunPipelineFunction());
+  builder->RegisterStep(GenerateTearDownPipelineFunction());
 }
 
 std::string Pipeline::PrettyPrint() const {

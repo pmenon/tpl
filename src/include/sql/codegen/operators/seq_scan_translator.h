@@ -39,12 +39,12 @@ class SeqScanTranslator : public OperatorTranslator {
   /**
    * Sequential scans don't have any state.
    */
-  void InitializeQueryState() const override {}
+  void InitializeQueryState(FunctionBuilder *func) const override {}
 
   /**
    * Sequential scans don't have any state.
    */
-  void TearDownQueryState() const override {}
+  void TearDownQueryState(FunctionBuilder *func) const override {}
 
   /**
    * If the scan has a predicate, this function will define all clause functions.
@@ -53,35 +53,30 @@ class SeqScanTranslator : public OperatorTranslator {
   void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override;
 
   /**
-   * Declare a FilterManager if there's a scan predicate.
-   */
-  void DeclarePipelineState(PipelineContext *pipeline_context) override;
-
-  /**
    * Initialize the FilterManager if required.
    */
-  void InitializePipelineState(const PipelineContext &pipeline_context) const override;
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Sequential scans don't require any pre-pipeline logic.
    */
-  void BeginPipelineWork(const PipelineContext &pipeline_context) const override {}
+  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *func) const override {}
 
   /**
    * Generate the scan.
    * @param work_context The context of the work.
    */
-  void PerformPipelineWork(WorkContext *work_context) const override;
+  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
 
   /**
    * Sequential scans don't rely on any post-pipeline logic.
    */
-  void FinishPipelineWork(const PipelineContext &pipeline_context) const override {}
+  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *func) const override {}
 
   /**
    * Tear-down the FilterManager if required.
    */
-  void TearDownPipelineState(const PipelineContext &pipeline_context) const override;
+  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *func) const override;
 
   /**
    * @return The pipeline work function parameters. Just the *TVI.
@@ -90,9 +85,9 @@ class SeqScanTranslator : public OperatorTranslator {
 
   /**
    * Launch a parallel table scan.
-   * @param work_func_name The worker function that'll be called during the parallel scan.
+   * @param work_func The worker function that'll be called during the parallel scan.
    */
-  void LaunchWork(ast::Identifier work_func_name) const override;
+  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func) const override;
 
   /**
    * Sequential table scans do not have children.
@@ -116,7 +111,7 @@ class SeqScanTranslator : public OperatorTranslator {
   std::string_view GetTableName() const;
 
   // Generate a generic filter term.
-  void GenerateGenericTerm(FunctionBuilder *func, const planner::AbstractExpression *term,
+  void GenerateGenericTerm(FunctionBuilder *function, const planner::AbstractExpression *term,
                            ast::Expr *vector_proj, ast::Expr *tid_list);
 
   // Generate all filter clauses.
@@ -126,10 +121,10 @@ class SeqScanTranslator : public OperatorTranslator {
                                      bool seen_conjunction);
 
   // Perform a table scan using the provided table vector iterator pointer.
-  void ScanTable(WorkContext *ctx) const;
+  void ScanTable(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Generate a scan over the VPI.
-  void ScanVPI(WorkContext *ctx, ast::Expr *vpi) const;
+  void ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi, bool filtered) const;
 
  private:
   // The name of the declared TVI and VPI.

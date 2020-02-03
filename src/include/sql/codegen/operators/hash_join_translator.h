@@ -41,38 +41,31 @@ class HashJoinTranslator : public OperatorTranslator {
   /**
    * Initialize the global hash table.
    */
-  void InitializeQueryState() const override;
+  void InitializeQueryState(FunctionBuilder *function) const override;
 
   /**
    * Tear-down the global hash table.
    */
-  void TearDownQueryState() const override;
-
-  /**
-   * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
-   * declare a thread-local join hash table to support parallel hash table builds.
-   * @param pipeline_context The pipeline context.
-   */
-  void DeclarePipelineState(PipelineContext *pipeline_context) override;
+  void TearDownQueryState(FunctionBuilder *function) const override;
 
   /**
    * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
    * need to initialize the thread-local join hash table we've declared.
    * @param pipeline_context The pipeline context.
    */
-  void InitializePipelineState(const PipelineContext &pipeline_context) const override;
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
    * need to clean up and destroy the thread-local join hash table we've declared.
    * @param pipeline_context The pipeline context.
    */
-  void TearDownPipelineState(const PipelineContext &pipeline_context) const override;
+  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Hash-joins do not have any pre-pipeline work to do. Thus, this is a no-op.
    */
-  void BeginPipelineWork(const PipelineContext &pipeline_context) const override {}
+  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * Implement main join logic. If the context is coming from the left pipeline, the input tuples
@@ -80,14 +73,14 @@ class HashJoinTranslator : public OperatorTranslator {
    * the input tuples are probed in the join hash table.
    * @param ctx The context of the work.
    */
-  void PerformPipelineWork(WorkContext *ctx) const override;
+  void PerformPipelineWork(WorkContext *ctx, FunctionBuilder *function) const override;
 
   /**
    * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
    * issue a parallel join hash table construction at this point.
    * @param pipeline_context The pipeline context.
    */
-  void FinishPipelineWork(const PipelineContext &pipeline_context) const override;
+  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Hash-joins are never the root of a pipeline. Thus, this should never be called.
@@ -99,7 +92,7 @@ class HashJoinTranslator : public OperatorTranslator {
   /**
    * Hash-joins are never the root of a pipeline. Thus, this should never be called.
    */
-  void LaunchWork(ast::Identifier work_func_name) const override { UNREACHABLE("Impossible"); }
+  void LaunchWork(FunctionBuilder *, ast::Identifier) const override { UNREACHABLE("Impossible"); }
 
   /**
    *
@@ -134,10 +127,10 @@ class HashJoinTranslator : public OperatorTranslator {
   bool IsRightPipeline(const Pipeline &pipeline) const { return &RightPipeline() == &pipeline; }
 
   // Initialize the given join hash table instance, provided as a *JHT.
-  void InitializeJoinHashTable(ast::Expr *jht_ptr) const;
+  void InitializeJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;
 
   // Clean up and destroy the given join hash table instance, provided as a *JHT.
-  void TearDownJoinHashTable(ast::Expr *jht_ptr) const;
+  void TearDownJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;
 
   // Access an attribute at the given index in the provided build row.
   ast::Expr *GetBuildRowAttribute(ast::Expr *build_row, uint32_t attr_idx) const;
@@ -151,10 +144,10 @@ class HashJoinTranslator : public OperatorTranslator {
   void FillBuildRow(WorkContext *ctx, ast::Expr *build_row) const;
 
   // Input the tuple(s) in the provided context into the join hash table.
-  void InsertIntoJoinHashTable(WorkContext *ctx) const;
+  void InsertIntoJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Probe the join hash table with the input tuple(s).
-  void ProbeJoinHashTable(WorkContext *ctx) const;
+  void ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const;
 
  private:
   // The name of the materialized row when inserting or probing into join hash

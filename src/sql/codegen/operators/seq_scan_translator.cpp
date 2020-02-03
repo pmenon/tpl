@@ -21,9 +21,15 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline),
       tvi_var_(GetCodeGen()->MakeFreshIdentifier("tvi")),
       vpi_var_(GetCodeGen()->MakeFreshIdentifier("vpi")) {
-  pipeline->RegisterSource(this, Pipeline::Parallelism::Parallel);
-  if (plan.GetScanPredicate() != nullptr) {
+  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
+
+  // If there's a predicate, prepare the expression and register a filter manager.
+  if (HasPredicate()) {
     compilation_context->Prepare(*plan.GetScanPredicate());
+
+    ast::Expr *fm_type = GetCodeGen()->BuiltinType(ast::BuiltinType::FilterManager);
+    local_filter_manager_ =
+        pipeline->GetPipelineState()->DeclareStateEntry(GetCodeGen(), "filterManager", fm_type);
   }
 }
 
@@ -36,7 +42,7 @@ std::string_view SeqScanTranslator::GetTableName() const {
   return Catalog::Instance()->LookupTableById(table_oid)->GetName();
 }
 
-void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
+void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
                                             const planner::AbstractExpression *term,
                                             ast::Expr *vector_proj, ast::Expr *tid_list) {
   auto codegen = GetCodeGen();
@@ -44,8 +50,8 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
   // var vpiBase: VectorProjectionIterator
   // var vpi = &vpiBase
   auto vpi_base = codegen->MakeFreshIdentifier("vpiBase");
-  func->Append(codegen->DeclareVarNoInit(vpi_base, ast::BuiltinType::VectorProjectionIterator));
-  func->Append(
+  function->Append(codegen->DeclareVarNoInit(vpi_base, ast::BuiltinType::VectorProjectionIterator));
+  function->Append(
       codegen->DeclareVarWithInit(vpi_var_, codegen->AddressOf(codegen->MakeExpr(vpi_base))));
 
   auto vpi = codegen->MakeExpr(vpi_var_);
@@ -58,7 +64,7 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *func,
       WorkContext context(GetCompilationContext(), *GetPipeline());
       auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
       auto match = cond_translator->DeriveValue(&context, this);
-      func->Append(codegen->VPIMatch(vpi, match));
+      function->Append(codegen->VPIMatch(vpi, match));
     }
     vpi_loop.EndLoop();
   };
@@ -134,87 +140,81 @@ void SeqScanTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDe
   }
 }
 
-void SeqScanTranslator::ScanVPI(WorkContext *ctx, ast::Expr *vpi) const {
+void SeqScanTranslator::ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi,
+                                bool filtered) const {
   auto codegen = GetCodeGen();
-  Loop vpi_loop(codegen, nullptr, codegen->VPIHasNext(vpi, false),
-                codegen->MakeStmt(codegen->VPIAdvance(vpi, false)));
+  Loop vpi_loop(codegen, nullptr, codegen->VPIHasNext(vpi, filtered),
+                codegen->MakeStmt(codegen->VPIAdvance(vpi, filtered)));
   {
     // Push to parent.
-    ctx->Push();
+    ctx->Push(function);
   }
   vpi_loop.EndLoop();
 }
 
-void SeqScanTranslator::ScanTable(WorkContext *ctx) const {
+void SeqScanTranslator::ScanTable(WorkContext *ctx, FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
   auto tvi = codegen->MakeExpr(tvi_var_);
 
   Loop tvi_loop(codegen, codegen->TableIterAdvance(tvi));
   {
+    // var vpi = @tableIterGetVPI()
     auto vpi = codegen->MakeExpr(vpi_var_);
     func->Append(codegen->DeclareVarWithInit(vpi_var_, codegen->TableIterGetVPI(tvi)));
 
+    bool filtered = false;
     if (HasPredicate()) {
+      filtered = true;
       auto filter_manager = local_filter_manager_.GetPtr(codegen);
       func->Append(codegen->FilterManagerRunFilters(filter_manager, vpi));
     }
 
     if (!ctx->GetPipeline().IsVectorized()) {
-      ScanVPI(ctx, vpi);
+      ScanVPI(ctx, function, vpi, filtered);
     }
   }
   tvi_loop.EndLoop();
 
-  if (!ctx->GetPipeline().IsParallel()) {
+  if (!GetPipeline()->IsParallel()) {
     func->Append(codegen->TableIterClose(tvi));
   }
 }
 
-void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
+void SeqScanTranslator::InitializePipelineState(const Pipeline &pipeline,
+                                                FunctionBuilder *function) const {
   if (HasPredicate()) {
-    auto fm_type = GetCodeGen()->BuiltinType(ast::BuiltinType::FilterManager);
-    local_filter_manager_ = pipeline_context->DeclareStateEntry(GetCodeGen(), "filter", fm_type);
-  }
-}
-
-void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_context) const {
-  if (HasPredicate()) {
-    auto codegen = GetCodeGen();
-    auto func = codegen->CurrentFunction();
-    func->Append(codegen->FilterManagerInit(local_filter_manager_.GetPtr(codegen)));
-
+    CodeGen *codegen = GetCodeGen();
+    function->Append(codegen->FilterManagerInit(local_filter_manager_.GetPtr(codegen)));
     for (const auto &clause : filters_) {
-      func->Append(codegen->FilterManagerInsert(local_filter_manager_.GetPtr(codegen), clause));
+      function->Append(codegen->FilterManagerInsert(local_filter_manager_.GetPtr(codegen), clause));
     }
-
-    func->Append(codegen->FilterManagerFinalize(local_filter_manager_.GetPtr(codegen)));
+    function->Append(codegen->FilterManagerFinalize(local_filter_manager_.GetPtr(codegen)));
   }
 }
 
-void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_context) const {
+void SeqScanTranslator::TearDownPipelineState(const Pipeline &pipeline,
+                                              FunctionBuilder *function) const {
   if (HasPredicate()) {
-    auto codegen = GetCodeGen();
-    auto filter_manager = local_filter_manager_.GetPtr(codegen);
-    codegen->CurrentFunction()->Append(codegen->FilterManagerFree(filter_manager));
+    auto filter_manager = local_filter_manager_.GetPtr(GetCodeGen());
+    function->Append(GetCodeGen()->FilterManagerFree(filter_manager));
   }
 }
 
-void SeqScanTranslator::PerformPipelineWork(WorkContext *work_context) const {
-  auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
-
-  if (!work_context->GetPipeline().IsParallel()) {
+void SeqScanTranslator::PerformPipelineWork(WorkContext *work_context,
+                                            FunctionBuilder *function) const {
+  if (!GetPipeline()->IsParallel()) {
     // var tviBase: TableVectorIterator
     // var tvi = &tviBase
+    CodeGen *codegen = GetCodeGen();
     auto tvi_base = codegen->MakeFreshIdentifier("tviBase");
-    func->Append(codegen->DeclareVarNoInit(tvi_base, ast::BuiltinType::TableVectorIterator));
-    func->Append(
+    function->Append(codegen->DeclareVarNoInit(tvi_base, ast::BuiltinType::TableVectorIterator));
+    function->Append(
         codegen->DeclareVarWithInit(tvi_var_, codegen->AddressOf(codegen->MakeExpr(tvi_base))));
-    func->Append(codegen->TableIterInit(codegen->MakeExpr(tvi_var_), GetTableName()));
+    function->Append(codegen->TableIterInit(codegen->MakeExpr(tvi_var_), GetTableName()));
   }
 
-  ScanTable(work_context);
+  ScanTable(work_context, function);
 }
 
 util::RegionVector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const {
@@ -223,11 +223,9 @@ util::RegionVector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const 
   return codegen->MakeFieldList({codegen->MakeField(tvi_var_, tvi_type)});
 }
 
-void SeqScanTranslator::LaunchWork(ast::Identifier work_func_name) const {
-  auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
-  func->Append(codegen->IterateTableParallel(GetTableName(), GetQueryStatePtr(),
-                                             GetThreadStateContainer(), work_func_name));
+void SeqScanTranslator::LaunchWork(FunctionBuilder *function, ast::Identifier work_func) const {
+  function->Append(GetCodeGen()->IterateTableParallel(GetTableName(), GetQueryStatePtr(),
+                                                      GetThreadStateContainer(), work_func));
 }
 
 ast::Expr *SeqScanTranslator::GetTableColumn(uint16_t col_oid) const {

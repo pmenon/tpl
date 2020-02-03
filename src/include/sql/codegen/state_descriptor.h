@@ -120,6 +120,11 @@ class StateDescriptor {
   ast::Expr *GetStatePointer(CodeGen *codegen) const { return access_->GetStatePtr(codegen); }
 
   /**
+   * @return The name of this state's constructed TPL type.
+   */
+  ast::Identifier GetName() const { return name_; }
+
+  /**
    * @return The finalized type of the runtime query state; null if the state hasn't been finalized.
    */
   ast::StructDecl *GetType() const { return state_type_; }

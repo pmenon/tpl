@@ -25,43 +25,38 @@ class ProjectionTranslator : public OperatorTranslator {
   /**
    * Projections do not require any query state.
    */
-  void InitializeQueryState() const override {}
+  void InitializeQueryState(FunctionBuilder *) const override {}
 
   /**
    * Projections do not require any query state. Hence, this method is a no-op.
    */
-  void TearDownQueryState() const override {}
+  void TearDownQueryState(FunctionBuilder *) const override {}
 
   /**
    * Projections do not require any pipeline state. Hence, this method is a no-op.
    */
-  void DeclarePipelineState(PipelineContext *pipeline_context) override {}
-
-  /**
-   * Projections do not require any pipeline state. Hence, this method is a no-op.
-   */
-  void InitializePipelineState(const PipelineContext &pipeline_context) const override {}
+  void InitializePipelineState(const Pipeline &, FunctionBuilder *) const override {}
 
   /**
    * Projections do not require any pre-pipeline work.
    */
-  void BeginPipelineWork(const PipelineContext &pipeline_context) const override {}
+  void BeginPipelineWork(const Pipeline &, FunctionBuilder *) const override {}
 
   /**
    * Push the context through this operator to the next in the pipeline.
    * @param work_context The context.
    */
-  void PerformPipelineWork(WorkContext *work_context) const override;
+  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
 
   /**
    * Projections do not require any post-pipeline work.
    */
-  void FinishPipelineWork(const PipelineContext &pipeline_context) const override {}
+  void FinishPipelineWork(const Pipeline &, FunctionBuilder *) const override {}
 
   /**
    * Projections do not require any pipeline state. Hence, this method is a no-op.
    */
-  void TearDownPipelineState(const PipelineContext &pipeline_context) const override {}
+  void TearDownPipelineState(const Pipeline &, FunctionBuilder *) const override {}
 
   /**
    * Pipeline are never pipeline roots. Hence, this should never be called.
@@ -73,7 +68,7 @@ class ProjectionTranslator : public OperatorTranslator {
   /**
    * Pipelines are never pipeline roots. Hence, this should never be called.
    */
-  void LaunchWork(ast::Identifier work_func_name) const override {
+  void LaunchWork(FunctionBuilder *, ast::Identifier) const override {
     UNREACHABLE("Projections do not launch pipelines");
   }
 

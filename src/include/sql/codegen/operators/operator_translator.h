@@ -18,9 +18,9 @@ namespace tpl::sql::codegen {
 
 class CodeGen;
 class CompilationContext;
-class WorkContext;
+class FunctionBuilder;
 class Pipeline;
-class PipelineContext;
+class WorkContext;
 
 /**
  * The base class of all operator translators.
@@ -112,31 +112,25 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * Initialize all query state.
    */
-  virtual void InitializeQueryState() const = 0;
+  virtual void InitializeQueryState(FunctionBuilder *function) const = 0;
 
   /**
    * Tear down all query state.
    */
-  virtual void TearDownQueryState() const = 0;
-
-  /**
-   * Declare any pipeline-local state needed by this operator. The given context contains the
-   * pipeline that's being considered.
-   * @param pipeline_context The pipeline context.
-   */
-  virtual void DeclarePipelineState(PipelineContext *pipeline_context) = 0;
+  virtual void TearDownQueryState(FunctionBuilder *function) const = 0;
 
   /**
    * Initialize any declared pipeline-local state.
    * @param pipeline_context The pipeline context.
    */
-  virtual void InitializePipelineState(const PipelineContext &pipeline_context) const = 0;
+  virtual void InitializePipelineState(const Pipeline &pipeline,
+                                       FunctionBuilder *function) const = 0;
 
   /**
    * Perform any work required before beginning main pipeline work. This is executed by one thread.
    * @param pipeline_context The pipeline context.
    */
-  virtual void BeginPipelineWork(const PipelineContext &pipeline_context) const = 0;
+  virtual void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const = 0;
 
   /**
    * Perform the primary logic of a pipeline. This is where the operator's logic should be
@@ -155,19 +149,19 @@ class OperatorTranslator : public ColumnValueProvider {
    *     context sensitive. The context also provides a mechanism to cache expression results.
    * @param work_context The context of the work.
    */
-  virtual void PerformPipelineWork(WorkContext *work_context) const = 0;
+  virtual void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const = 0;
 
   /**
    * Perform any work required <b>after</b> the main pipeline work. This is executed by one thread.
    * @param pipeline_context The pipeline context.
    */
-  virtual void FinishPipelineWork(const PipelineContext &pipeline_context) const = 0;
+  virtual void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const = 0;
 
   /**
    * Tear down and destroy any pipeline-local state.
    * @param pipeline_context The pipeline context.
    */
-  virtual void TearDownPipelineState(const PipelineContext &pipeline_context) const = 0;
+  virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const = 0;
 
   /**
    * @return The list of extra fields added to the main work function. This is only called on
@@ -182,7 +176,7 @@ class OperatorTranslator : public ColumnValueProvider {
    * in parallel across a set of threads.
    * @param work_func_name The name of the work function that implements the pipeline logic.
    */
-  virtual void LaunchWork(ast::Identifier work_func_name) const = 0;
+  virtual void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const = 0;
 
   /**
    * @return The value (vector) of the attribute at the given index in this operator's output.

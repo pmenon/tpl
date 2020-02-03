@@ -19,69 +19,6 @@ class ExecutableQueryFragmentBuilder;
 class ExpressionTranslator;
 class OperatorTranslator;
 
-class Pipeline;
-
-/**
- * Ties together a pipeline instance and the struct representing the pipeline's state.
- */
-class PipelineContext {
- public:
-  /**
-   * Create a new context in the given pipeline.
-   * @param pipeline The pipeline the context represents.
-   */
-  PipelineContext(const Pipeline &pipeline, ast::Identifier state_var, ast::Identifier state_type);
-
-  /**
-   * Declare an entry in the pipeline's state.
-   * @param codegen The code generator instance.
-   * @param name The name of the state.
-   * @param type The type of the state.
-   * @return The slot in the state that can be used to retrieve the state.
-   */
-  StateDescriptor::Entry DeclareStateEntry(CodeGen *codegen, const std::string &name,
-                                           ast::Expr *type);
-
-  /**
-   * Seal and construct the pipeline-local state. After this, the state is unmodifiable.
-   * @param codegen The code generator instance.
-   * @return The local state type.
-   */
-  ast::StructDecl *ConstructPipelineStateType(CodeGen *codegen);
-
-  /**
-   * @return True if the pipeline in this context is parallel; false otherwise.
-   */
-  bool IsParallel() const;
-
-  /**
-   * @return The pipeline this context contains.
-   */
-  const Pipeline &GetPipeline() const { return pipeline_; }
-
- private:
-  ast::Expr *GetPipelineStatePtr(CodeGen *codegen) const;
-
-  class StateAccess : public StateDescriptor::StateAccess {
-   public:
-    explicit StateAccess(PipelineContext *ctx) : ctx_(ctx) {}
-
-    ast::Expr *GetStatePtr(CodeGen *codegen) override { return ctx_->GetPipelineStatePtr(codegen); }
-
-   private:
-    PipelineContext *ctx_;
-  };
-
- private:
-  // The pipeline.
-  const Pipeline &pipeline_;
-  // The state variable; a pointer to the pipeline state.
-  ast::Identifier state_var_;
-  // State for the pipeline.
-  StateAccess pipeline_state_access_;
-  StateDescriptor pipeline_state_;
-};
-
 /**
  * A pipeline represents an ordered sequence of relational operators that operate on tuple data
  * without explicit copying or materialization. Tuples are read at the start of the pipeline, pass
@@ -101,7 +38,7 @@ class Pipeline {
    * Flexible option should be used when both serial and parallel operation is supported, but no
    * preference is taken.
    */
-  enum class Parallelism : uint8_t { Serial = 0, Flexible = 1, Parallel = 2 };
+  enum class Parallelism : uint8_t { Serial = 0, Parallel = 2 };
 
   /**
    * Enum class representing whether the pipeline is vectorized.
@@ -135,14 +72,6 @@ class Pipeline {
   void RegisterExpression(ExpressionTranslator *expression);
 
   /**
-   * Register the given operator as the source of this pipeline. A source operator provides the
-   * pipeline with a flow of tuple batches (or tuples in TaaT mode).
-   * @param op The operator.
-   * @param parallelism The source operator's requested parallelism.
-   */
-  void RegisterSource(OperatorTranslator *op, Parallelism parallelism);
-
-  /**
    * Register the provided pipeline as a dependency for this pipeline. In other words, this pipeline
    * cannot begin until the provided pipeline completes.
    * @param dependency Another pipeline this pipeline is dependent on.
@@ -156,6 +85,11 @@ class Pipeline {
    * @param[out] deps The sorted list of pipelines to execute before this pipeline can begin.
    */
   void CollectDependencies(std::vector<Pipeline *> *deps);
+
+  /**
+   * Perform initialization logic before code generation.
+   */
+  void Prepare();
 
   /**
    * Generate all functions to execute this pipeline in the provided container.
@@ -189,22 +123,45 @@ class Pipeline {
   StepIterator End() const { return steps_.rend(); }
 
   /**
+   * @return The root/source of the pipeline.
+   */
+  OperatorTranslator *Root() const { return *Begin(); }
+
+  /**
    * Pretty print this pipeline's information.
    * @return A string containing pretty-printed information about this pipeline.
    */
   std::string PrettyPrint() const;
 
   /**
-   * @return A unique name for a function local to this pipeline.
-   */
-  std::string ConstructPipelineFunctionName(const std::string &func_name) const;
-
-  /**
    * @return Arguments common to all pipeline functions.
    */
   util::RegionVector<ast::FieldDecl *> PipelineParams() const;
 
+  /**
+   * @return This pipeline's state descriptor.
+   */
+  StateDescriptor *GetPipelineState() { return &state_; }
+
  private:
+  ast::Expr *GetStatePtr(CodeGen *codegen) const;
+
+  // Class to access the pipeline state pointer.
+  class StateAccess : public StateDescriptor::StateAccess {
+   public:
+    StateAccess(Pipeline *pipeline) : pipeline_(pipeline) {}
+    ast::Expr *GetStatePtr(CodeGen *codegen) override { return pipeline_->GetStatePtr(codegen); }
+   private:
+    Pipeline *pipeline_;
+  };
+
+ private:
+  // Return the code generator instance.
+  CodeGen *GetCodeGen();
+
+  // Create a unique name for a function local to this pipeline.
+  std::string ConstructPipelineFunctionName(const std::string &func_name) const;
+
   // Return the thread-local state initialization and tear-down function names.
   // This is needed when we invoke @tlsReset() from the pipeline initialization
   // function to setup the thread-local state.
@@ -213,22 +170,22 @@ class Pipeline {
   ast::Identifier GetWorkFunctionName() const;
 
   // Generate the pipeline state initialization logic.
-  ast::FunctionDecl *GenerateSetupPipelineStateFunction(PipelineContext *pipeline_context) const;
+  ast::FunctionDecl *GenerateSetupPipelineStateFunction() const;
 
   // Generate the pipeline state cleanup logic.
-  ast::FunctionDecl *GenerateTearDownPipelineStateFunction(PipelineContext *pipeline_context) const;
+  ast::FunctionDecl *GenerateTearDownPipelineStateFunction() const;
 
   // Generate pipeline initialization logic.
-  ast::FunctionDecl *GenerateInitPipelineFunction(PipelineContext *pipeline_context) const;
+  ast::FunctionDecl *GenerateInitPipelineFunction() const;
 
   // Generate the main pipeline work function.
-  ast::FunctionDecl *GeneratePipelineWorkFunction(PipelineContext *pipeline_context) const;
+  ast::FunctionDecl *GeneratePipelineWorkFunction() const;
 
   // Generate the main pipeline logic.
-  ast::FunctionDecl *GenerateRunPipelineFunction(PipelineContext *pipeline_context) const;
+  ast::FunctionDecl *GenerateRunPipelineFunction() const;
 
   // Generate pipeline tear-down logic.
-  ast::FunctionDecl *GenerateTearDownPipelineFunction(PipelineContext *pipeline_context) const;
+  ast::FunctionDecl *GenerateTearDownPipelineFunction() const;
 
  private:
   // A unique pipeline ID.
@@ -246,7 +203,9 @@ class Pipeline {
 
   // Cache of common identifiers.
   ast::Identifier state_var_;
-  ast::Identifier state_type_;
+  // The pipeline state.
+  StateAccess state_access_;
+  StateDescriptor state_;
 };
 
 }  // namespace tpl::sql::codegen

@@ -25,6 +25,7 @@
 #include "sql/codegen/operators/projection_translator.h"
 #include "sql/codegen/operators/seq_scan_translator.h"
 #include "sql/codegen/operators/sort_translator.h"
+#include "sql/codegen/operators/static_aggregation_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
@@ -63,7 +64,7 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
   for (auto &[_, op] : ops_) {
-    op->InitializeQueryState();
+    op->InitializeQueryState(&builder);
   }
   return builder.Finish();
 }
@@ -72,7 +73,7 @@ ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_TearDown");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
   for (auto &[_, op] : ops_) {
-    op->TearDownQueryState();
+    op->TearDownQueryState(&builder);
   }
   return builder.Finish();
 }
@@ -109,6 +110,7 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   std::vector<Pipeline *> execution_order;
   main_pipeline.CollectDependencies(&execution_order);
   for (auto *pipeline : execution_order) {
+    pipeline->Prepare();
     pipeline->GeneratePipeline(&main_builder);
   }
 
@@ -149,8 +151,11 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
       const auto &aggregation = static_cast<const planner::AggregatePlanNode &>(plan);
       if (aggregation.GetAggregateStrategyType() == planner::AggregateStrategyType::SORTED) {
         throw NotImplementedException("Code generation for sort-based aggregations");
+      } else if (aggregation.GetGroupByTerms().empty()) {
+        translator = std::make_unique<StaticAggregationTranslator>(aggregation, this, pipeline);
+      } else {
+        translator = std::make_unique<HashAggregationTranslator>(aggregation, this, pipeline);
       }
-      translator = std::make_unique<HashAggregationTranslator>(aggregation, this, pipeline);
       break;
     }
     case planner::PlanNodeType::HASHJOIN: {
