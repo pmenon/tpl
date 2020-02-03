@@ -186,8 +186,8 @@ class HashAggregationTranslator : public OperatorTranslator {
   Pipeline build_pipeline_;
 
   // The global and thread-local aggregation hash tables.
-  StateDescriptor::Slot global_agg_ht_slot_;
-  StateDescriptor::Slot local_agg_ht_slot_;
+  StateDescriptor::Entry global_agg_ht_;
+  StateDescriptor::Entry local_agg_ht_;
 };
 
 }  // namespace tpl::sql::codegen

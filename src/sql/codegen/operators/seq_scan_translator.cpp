@@ -156,7 +156,7 @@ void SeqScanTranslator::ScanTable(WorkContext *ctx) const {
     func->Append(codegen->DeclareVarWithInit(vpi_var_, codegen->TableIterGetVPI(tvi)));
 
     if (HasPredicate()) {
-      auto filter_manager = ctx->GetThreadStateEntryPtr(codegen, local_filter_manager_slot_);
+      auto filter_manager = local_filter_manager_.GetPtr(codegen);
       func->Append(codegen->FilterManagerRunFilters(filter_manager, vpi));
     }
 
@@ -174,8 +174,7 @@ void SeqScanTranslator::ScanTable(WorkContext *ctx) const {
 void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
   if (HasPredicate()) {
     auto fm_type = GetCodeGen()->BuiltinType(ast::BuiltinType::FilterManager);
-    local_filter_manager_slot_ =
-        pipeline_context->DeclareStateEntry(GetCodeGen(), "filter", fm_type);
+    local_filter_manager_ = pipeline_context->DeclareStateEntry(GetCodeGen(), "filter", fm_type);
   }
 }
 
@@ -183,22 +182,21 @@ void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_
   if (HasPredicate()) {
     auto codegen = GetCodeGen();
     auto func = codegen->CurrentFunction();
-    auto fm = pipeline_context.GetThreadStateEntryPtr(codegen, local_filter_manager_slot_);
-    func->Append(codegen->FilterManagerInit(fm));
+    func->Append(codegen->FilterManagerInit(local_filter_manager_.GetPtr(codegen)));
 
     for (const auto &clause : filters_) {
-      func->Append(codegen->FilterManagerInsert(fm, clause));
+      func->Append(codegen->FilterManagerInsert(local_filter_manager_.GetPtr(codegen), clause));
     }
 
-    func->Append(codegen->FilterManagerFinalize(fm));
+    func->Append(codegen->FilterManagerFinalize(local_filter_manager_.GetPtr(codegen)));
   }
 }
 
 void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_context) const {
   if (HasPredicate()) {
     auto codegen = GetCodeGen();
-    auto fm = pipeline_context.GetThreadStateEntryPtr(codegen, local_filter_manager_slot_);
-    codegen->CurrentFunction()->Append(codegen->FilterManagerFree(fm));
+    auto filter_manager = local_filter_manager_.GetPtr(codegen);
+    codegen->CurrentFunction()->Append(codegen->FilterManagerFree(filter_manager));
   }
 }
 

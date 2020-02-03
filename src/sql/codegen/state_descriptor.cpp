@@ -5,14 +5,39 @@
 
 namespace tpl::sql::codegen {
 
+//===----------------------------------------------------------------------===//
+//
+// State Entry
+//
+//===----------------------------------------------------------------------===//
+
+ast::Expr *StateDescriptor::Entry::Get(CodeGen *codegen) const {
+  return codegen->AccessStructMember(desc_->GetStatePointer(codegen), member_);
+}
+
+ast::Expr *StateDescriptor::Entry::GetPtr(CodeGen *codegen) const {
+  return codegen->AddressOf(Get(codegen));
+}
+
+ast::Expr *StateDescriptor::Entry::OffsetFromState(CodeGen *codegen) const {
+  return codegen->OffsetOf(desc_->GetType()->Name(), member_);
+}
+
+//===----------------------------------------------------------------------===//
+//
+// State Descriptor
+//
+//===----------------------------------------------------------------------===//
+
 StateDescriptor::StateDescriptor(ast::Identifier name, StateDescriptor::StateAccess *access)
     : name_(name), access_(access), state_type_(nullptr) {}
 
-StateDescriptor::Slot StateDescriptor::DeclareStateEntry(CodeGen *codegen, const std::string &name,
-                                                         ast::Expr *type_repr) {
+StateDescriptor::Entry StateDescriptor::DeclareStateEntry(CodeGen *codegen, const std::string &name,
+                                                          ast::Expr *type_repr) {
   TPL_ASSERT(state_type_ == nullptr, "Cannot add to state after it's been finalized");
-  slots_.emplace_back(codegen->MakeFreshIdentifier(name), type_repr);
-  return slots_.size() - 1;
+  ast::Identifier member = codegen->MakeFreshIdentifier(name);
+  slots_.emplace_back(member, type_repr);
+  return Entry(this, member);
 }
 
 ast::StructDecl *StateDescriptor::ConstructFinalType(CodeGen *codegen) {
@@ -30,21 +55,6 @@ ast::StructDecl *StateDescriptor::ConstructFinalType(CodeGen *codegen) {
 
   // Done
   return state_type_;
-}
-
-ast::Expr *StateDescriptor::GetStateEntry(CodeGen *codegen,
-                                          const StateDescriptor::Slot slot) const {
-  return codegen->AccessStructMember(GetStatePointer(codegen), slots_[slot].name);
-}
-
-ast::Expr *StateDescriptor::GetStateEntryPtr(CodeGen *codegen,
-                                             const StateDescriptor::Slot slot) const {
-  return codegen->AddressOf(GetStateEntry(codegen, slot));
-}
-
-ast::Expr *StateDescriptor::GetStateEntryOffset(CodeGen *codegen,
-                                                StateDescriptor::Slot slot) const {
-  return codegen->OffsetOf(name_, slots_[slot].name);
 }
 
 std::size_t StateDescriptor::GetSize() const {

@@ -137,7 +137,7 @@ class SeqScanTranslator : public OperatorTranslator {
   ast::Identifier vpi_var_;
 
   // Where the filter manager exists.
-  StateDescriptor::Slot local_filter_manager_slot_;
+  StateDescriptor::Entry local_filter_manager_;
 
   // The list of filter manager clauses. Populated during helper function
   // definition, but only if there's a predicate.

@@ -56,21 +56,6 @@ class WorkContext {
   void Push();
 
   /**
-   * @return The value of the state element at the given slot in this pipeline's state.
-   */
-  ast::Expr *GetThreadStateEntry(CodeGen *codegen, StateDescriptor::Slot slot) const;
-
-  /**
-   * @return A pointer to the state element at the given slot in this pipeline's state.
-   */
-  ast::Expr *GetThreadStateEntryPtr(CodeGen *codegen, StateDescriptor::Slot slot) const;
-
-  /**
-   * @return The byte offset of the stat element at the given slot in the pipeline state.
-   */
-  ast::Expr *GetThreadStateEntryOffset(CodeGen *codegen, StateDescriptor::Slot slot) const;
-
-  /**
    * Clear any cached expression result values.
    */
   void ClearExpressionCache();

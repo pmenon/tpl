@@ -35,7 +35,7 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   }
 
   auto codegen = GetCodeGen();
-  global_join_ht_slot_ = compilation_context->GetQueryState()->DeclareStateEntry(
+  global_join_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
       codegen, "joinHashTable", codegen->BuiltinType(ast::BuiltinType::JoinHashTable));
 }
 
@@ -62,32 +62,30 @@ void HashJoinTranslator::TearDownJoinHashTable(ast::Expr *jht_ptr) const {
 }
 
 void HashJoinTranslator::InitializeQueryState() const {
-  InitializeJoinHashTable(GetQueryStateEntryPtr(global_join_ht_slot_));
+  InitializeJoinHashTable(global_join_ht_.GetPtr(GetCodeGen()));
 }
 
 void HashJoinTranslator::TearDownQueryState() const {
-  TearDownJoinHashTable(GetQueryStateEntryPtr(global_join_ht_slot_));
+  TearDownJoinHashTable(global_join_ht_.GetPtr(GetCodeGen()));
 }
 
 void HashJoinTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
   if (IsLeftPipeline(pipeline_context->GetPipeline()) && LeftPipeline()->IsParallel()) {
     auto codegen = GetCodeGen();
-    local_join_ht_slot_ = pipeline_context->DeclareStateEntry(
+    local_join_ht_ = pipeline_context->DeclareStateEntry(
         codegen, "joinHashTable", codegen->BuiltinType(ast::BuiltinType::JoinHashTable));
   }
 }
 
 void HashJoinTranslator::InitializePipelineState(const PipelineContext &pipeline_context) const {
   if (IsLeftPipeline(pipeline_context.GetPipeline()) && LeftPipeline().IsParallel()) {
-    InitializeJoinHashTable(
-        pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), local_join_ht_slot_));
+    InitializeJoinHashTable(local_join_ht_.GetPtr(GetCodeGen()));
   }
 }
 
 void HashJoinTranslator::TearDownPipelineState(const PipelineContext &pipeline_context) const {
   if (IsLeftPipeline(pipeline_context.GetPipeline()) && LeftPipeline().IsParallel()) {
-    TearDownJoinHashTable(
-        pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), local_join_ht_slot_));
+    TearDownJoinHashTable(local_join_ht_.GetPtr(GetCodeGen()));
   }
 }
 
@@ -130,17 +128,13 @@ void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
 
-  ast::Expr *jht = nullptr;
-  if (ctx->GetPipeline().IsParallel()) {
-    jht = ctx->GetThreadStateEntryPtr(codegen, local_join_ht_slot_);
-  } else {
-    jht = GetQueryStateEntryPtr(global_join_ht_slot_);
-  }
+  const auto jht = ctx->GetPipeline().IsParallel() ? local_join_ht_ : global_join_ht_;
 
   // Insert into hash table.
   auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys());
   func->Append(codegen->DeclareVarWithInit(
-      build_row_var_, codegen->JoinHashTableInsert(jht, hash_val, build_row_type_)));
+      build_row_var_,
+      codegen->JoinHashTableInsert(jht.GetPtr(codegen), hash_val, build_row_type_)));
 
   // Fill row.
   FillBuildRow(ctx, codegen->MakeExpr(build_row_var_));
@@ -157,13 +151,13 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx) const {
   func->Append(codegen->DeclareVarWithInit(iter_name,
                                            codegen->AddressOf(codegen->MakeExpr(iter_name_base))));
 
-  auto jht = GetQueryStateEntryPtr(global_join_ht_slot_);
   auto entry_iter = codegen->MakeExpr(iter_name);
   auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys());
 
   // Loop over matches.
   Loop entry_loop(codegen,
-                  codegen->MakeStmt(codegen->JoinHashTableLookup(jht, entry_iter, hash_val)),
+                  codegen->MakeStmt(codegen->JoinHashTableLookup(global_join_ht_.GetPtr(codegen),
+                                                                 entry_iter, hash_val)),
                   codegen->HTEntryIterHasNext(entry_iter), nullptr);
   {
     // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
@@ -195,10 +189,10 @@ void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_cont
   if (IsLeftPipeline(pipeline_context.GetPipeline())) {
     auto codegen = GetCodeGen();
     auto func = codegen->CurrentFunction();
-    auto jht = GetQueryStateEntryPtr(global_join_ht_slot_);
+    auto jht = global_join_ht_.GetPtr(codegen);
     if (LeftPipeline().IsParallel()) {
       auto tls = GetThreadStateContainer();
-      auto offset = pipeline_context.GetThreadStateEntryOffset(codegen, local_join_ht_slot_);
+      auto offset = local_join_ht_.OffsetFromState(codegen);
       func->Append(codegen->JoinHashTableBuildParallel(jht, tls, offset));
     } else {
       func->Append(codegen->JoinHashTableBuild(jht));

@@ -34,28 +34,13 @@ ast::Expr *PipelineContext::GetPipelineStatePtr(CodeGen *codegen) const {
   return codegen->MakeExpr(state_var_);
 }
 
-StateDescriptor::Slot PipelineContext::DeclareStateEntry(CodeGen *codegen, const std::string &name,
-                                                         ast::Expr *type) {
+StateDescriptor::Entry PipelineContext::DeclareStateEntry(CodeGen *codegen, const std::string &name,
+                                                          ast::Expr *type) {
   return pipeline_state_.DeclareStateEntry(codegen, name, type);
 }
 
 ast::StructDecl *PipelineContext::ConstructPipelineStateType(CodeGen *codegen) {
   return pipeline_state_.ConstructFinalType(codegen);
-}
-
-ast::Expr *PipelineContext::GetThreadStateEntry(CodeGen *codegen,
-                                                const StateDescriptor::Slot slot) const {
-  return pipeline_state_.GetStateEntry(codegen, slot);
-}
-
-ast::Expr *PipelineContext::GetThreadStateEntryPtr(CodeGen *codegen,
-                                                   const StateDescriptor::Slot slot) const {
-  return pipeline_state_.GetStateEntryPtr(codegen, slot);
-}
-
-ast::Expr *PipelineContext::GetThreadStateEntryOffset(CodeGen *codegen,
-                                                      const StateDescriptor::Slot slot) const {
-  return pipeline_state_.GetStateEntryOffset(codegen, slot);
 }
 
 bool PipelineContext::IsParallel() const { return pipeline_.IsParallel(); }

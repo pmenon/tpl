@@ -25,11 +25,6 @@ class CodeGen;
 class StateDescriptor {
  public:
   /**
-   * An opaque identifier used to access state elements in this descriptor.
-   */
-  using Slot = uint32_t;
-
-  /**
    * An interface to access a pointer to the query state in the current code generation context.
    */
   class StateAccess {
@@ -47,12 +42,56 @@ class StateDescriptor {
   };
 
   /**
+   * Reference to an entry in a given state.
+   */
+  class Entry {
+   public:
+    /**
+     * An invalid entry.
+     */
+    Entry() : desc_(nullptr), member_() {}
+
+    /**
+     * A reference to an entry in the provide state instance.
+     * @param desc The state descriptor instance.
+     * @param member The entry slot.
+     */
+    Entry(StateDescriptor *desc, ast::Identifier member) : desc_(desc), member_(member) {}
+
+    /**
+     * @return True if this entry reference is valid; false otherwise.
+     */
+    bool IsValid() const { return desc_ != nullptr; }
+
+    /**
+     * @return The value of entry in its state.
+     */
+    ast::Expr *Get(CodeGen *codegen) const;
+
+    /**
+     * @return A pointer to this entry in its state.
+     */
+    ast::Expr *GetPtr(CodeGen *codegen) const;
+
+    /**
+     * @return The byte offset of this entry from the state it belongs to.
+     */
+    ast::Expr *OffsetFromState(CodeGen *codegen) const;
+
+   private:
+    // The state.
+    StateDescriptor *desc_;
+    // The member in the state to reference.
+    ast::Identifier member_;
+  };
+
+  /**
    * Create a new empty state using the provided name for the final constructed TPL type. The
    * provided state accessor can be used to load an instance of this state in a given context.
    * @param type_name The name to give the final constructed type for this state.
    * @param access A generic accessor to an instance of this state, used to access state elements.
    */
-  explicit StateDescriptor(ast::Identifier type_name, StateAccess *access);
+  StateDescriptor(ast::Identifier type_name, StateAccess *access);
 
   /**
    * This class cannot be copied or moved.
@@ -65,7 +104,7 @@ class StateDescriptor {
    * @param type_repr The TPL type representation of the element.
    * @return The slot where the inserted state exists.
    */
-  Slot DeclareStateEntry(CodeGen *codegen, const std::string &name, ast::Expr *type_repr);
+  Entry DeclareStateEntry(CodeGen *codegen, const std::string &name, ast::Expr *type_repr);
 
   /**
    * Seal the state and build the final structure. After this point, additional state elements
@@ -79,21 +118,6 @@ class StateDescriptor {
    * @return The query state pointer from the current code generation context.
    */
   ast::Expr *GetStatePointer(CodeGen *codegen) const { return access_->GetStatePtr(codegen); }
-
-  /**
-   * @return The state entry at the given slot. The state is returned by value.
-   */
-  ast::Expr *GetStateEntry(CodeGen *codegen, Slot slot) const;
-
-  /**
-   * @return A pointer to the state entry at the given slot.
-   */
-  ast::Expr *GetStateEntryPtr(CodeGen *codegen, Slot slot) const;
-
-  /**
-   * @return The byte offset of the state element at the given slot in the state.
-   */
-  ast::Expr *GetStateEntryOffset(CodeGen *codegen, StateDescriptor::Slot slot) const;
 
   /**
    * @return The finalized type of the runtime query state; null if the state hasn't been finalized.

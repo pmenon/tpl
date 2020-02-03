@@ -160,8 +160,8 @@ class SortTranslator : public OperatorTranslator {
   Pipeline child_pipeline_;
 
   // Where the global and thread-local sorter instances are.
-  StateDescriptor::Slot global_sorter_slot_;
-  StateDescriptor::Slot local_sorter_slot_;
+  StateDescriptor::Entry global_sorter_;
+  StateDescriptor::Entry local_sorter_;
 
   enum class CurrentRow { Child, Lhs, Rhs };
   CurrentRow current_row_;

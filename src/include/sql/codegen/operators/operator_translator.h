@@ -206,9 +206,6 @@ class OperatorTranslator : public ColumnValueProvider {
   // Get a pointer to the query state.
   ast::Expr *GetQueryStatePtr() const;
 
-  // Return a pointer to an entry in the query state at the given slot.
-  ast::Expr *GetQueryStateEntryPtr(StateDescriptor::Slot slot) const;
-
   // Get the execution context pointer in the current function.
   ast::Expr *GetExecutionContext() const;
 

@@ -39,8 +39,8 @@ class PipelineContext {
    * @param type The type of the state.
    * @return The slot in the state that can be used to retrieve the state.
    */
-  StateDescriptor::Slot DeclareStateEntry(CodeGen *codegen, const std::string &name,
-                                          ast::Expr *type);
+  StateDescriptor::Entry DeclareStateEntry(CodeGen *codegen, const std::string &name,
+                                           ast::Expr *type);
 
   /**
    * Seal and construct the pipeline-local state. After this, the state is unmodifiable.
@@ -48,21 +48,6 @@ class PipelineContext {
    * @return The local state type.
    */
   ast::StructDecl *ConstructPipelineStateType(CodeGen *codegen);
-
-  /**
-   * @return The value of the state element at the given slot in this pipeline's state.
-   */
-  ast::Expr *GetThreadStateEntry(CodeGen *codegen, StateDescriptor::Slot slot) const;
-
-  /**
-   * @return A pointer to the state element at the given slot in this pipeline's state.
-   */
-  ast::Expr *GetThreadStateEntryPtr(CodeGen *codegen, StateDescriptor::Slot slot) const;
-
-  /**
-   * @return The byte offset of the stat element at the given slot in the pipeline state.
-   */
-  ast::Expr *GetThreadStateEntryOffset(CodeGen *codegen, StateDescriptor::Slot slot) const;
 
   /**
    * @return True if the pipeline in this context is parallel; false otherwise.

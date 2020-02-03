@@ -78,7 +78,7 @@ ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
 }
 
 void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
-  exec_ctx_slot_ = query_state_.DeclareStateEntry(
+  exec_ctx_ = query_state_.DeclareStateEntry(
       GetCodeGen(), "execCtx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
 
   // Recursively prepare all translators for the query.
@@ -276,7 +276,7 @@ util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {
 }
 
 ast::Expr *CompilationContext::GetExecutionContextPtrFromQueryState() {
-  return query_state_.GetStateEntry(&codegen_, exec_ctx_slot_);
+  return exec_ctx_.Get(&codegen_);
 }
 
 }  // namespace tpl::sql::codegen

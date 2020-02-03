@@ -47,7 +47,7 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
   }
 
   auto codegen = GetCodeGen();
-  global_agg_ht_slot_ = compilation_context->GetQueryState()->DeclareStateEntry(
+  global_agg_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
       codegen, "aggHashTable", codegen->BuiltinType(ast::BuiltinType::AggregationHashTable));
 }
 
@@ -246,17 +246,17 @@ void HashAggregationTranslator::TearDownAggregationHashTable(ast::Expr *agg_ht) 
 }
 
 void HashAggregationTranslator::InitializeQueryState() const {
-  InitializeAggregationHashTable(GetQueryStateEntryPtr(global_agg_ht_slot_));
+  InitializeAggregationHashTable(global_agg_ht_.GetPtr(GetCodeGen()));
 }
 
 void HashAggregationTranslator::TearDownQueryState() const {
-  TearDownAggregationHashTable(GetQueryStateEntryPtr(global_agg_ht_slot_));
+  TearDownAggregationHashTable(global_agg_ht_.GetPtr(GetCodeGen()));
 }
 
 void HashAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
   if (IsBuildPipeline(pipeline_context->GetPipeline()) && build_pipeline_.IsParallel()) {
     auto codegen = GetCodeGen();
-    local_agg_ht_slot_ = pipeline_context->DeclareStateEntry(
+    local_agg_ht_ = pipeline_context->DeclareStateEntry(
         codegen, "aggHashTable", codegen->BuiltinType(ast::BuiltinType::AggregationHashTable));
   }
 }
@@ -264,16 +264,14 @@ void HashAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline_c
 void HashAggregationTranslator::InitializePipelineState(
     const PipelineContext &pipeline_context) const {
   if (IsBuildPipeline(pipeline_context.GetPipeline()) && build_pipeline_.IsParallel()) {
-    InitializeAggregationHashTable(
-        pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), local_agg_ht_slot_));
+    InitializeAggregationHashTable(local_agg_ht_.GetPtr(GetCodeGen()));
   }
 }
 
 void HashAggregationTranslator::TearDownPipelineState(
     const PipelineContext &pipeline_context) const {
   if (IsBuildPipeline(pipeline_context.GetPipeline()) && build_pipeline_.IsParallel()) {
-    TearDownAggregationHashTable(
-        pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), local_agg_ht_slot_));
+    TearDownAggregationHashTable(local_agg_ht_.GetPtr(GetCodeGen()));
   }
 }
 
@@ -457,12 +455,8 @@ void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *work_conte
 void HashAggregationTranslator::PerformPipelineWork(WorkContext *work_context) const {
   auto codegen = GetCodeGen();
   if (IsBuildPipeline(work_context->GetPipeline())) {
-    if (build_pipeline_.IsParallel()) {
-      auto agg_ht = work_context->GetThreadStateEntryPtr(codegen, local_agg_ht_slot_);
-      UpdateAggregates(work_context, agg_ht);
-    } else {
-      UpdateAggregates(work_context, GetQueryStateEntryPtr(global_agg_ht_slot_));
-    }
+    const auto &agg_ht = build_pipeline_.IsParallel() ? local_agg_ht_ : global_agg_ht_;
+    UpdateAggregates(work_context, agg_ht.GetPtr(codegen));
   } else {
     TPL_ASSERT(IsProducePipeline(work_context->GetPipeline()),
                "Pipeline is unknown to hash aggregation translator");
@@ -475,7 +469,7 @@ void HashAggregationTranslator::PerformPipelineWork(WorkContext *work_context) c
       auto agg_ht = codegen->CurrentFunction()->GetParameterByPosition(agg_ht_param_position);
       ScanAggregationHashTable(work_context, agg_ht);
     } else {
-      ScanAggregationHashTable(work_context, GetQueryStateEntryPtr(global_agg_ht_slot_));
+      ScanAggregationHashTable(work_context, global_agg_ht_.GetPtr(codegen));
     }
   }
 }
@@ -484,9 +478,9 @@ void HashAggregationTranslator::FinishPipelineWork(const PipelineContext &pipeli
   if (IsBuildPipeline(pipeline_context.GetPipeline()) && build_pipeline_.IsParallel()) {
     auto codegen = GetCodeGen();
     auto function = codegen->CurrentFunction();
-    auto global_agg_ht = GetQueryStateEntryPtr(global_agg_ht_slot_);
+    auto global_agg_ht = global_agg_ht_.GetPtr(codegen);
     auto thread_state_container = GetThreadStateContainer();
-    auto tl_agg_ht_offset = pipeline_context.GetThreadStateEntryOffset(codegen, local_agg_ht_slot_);
+    auto tl_agg_ht_offset = local_agg_ht_.OffsetFromState(codegen);
     function->Append(codegen->AggHashTableMovePartitions(global_agg_ht, thread_state_container,
                                                          tl_agg_ht_offset, merge_partitions_fn_));
   }
@@ -522,7 +516,7 @@ void HashAggregationTranslator::LaunchWork(ast::Identifier work_func_name) const
              "Should not issue parallel scan if pipeline isn't parallelized.");
   auto codegen = GetCodeGen();
   auto function = codegen->CurrentFunction();
-  function->Append(codegen->AggHashTableParallelScan(GetQueryStateEntryPtr(global_agg_ht_slot_),
+  function->Append(codegen->AggHashTableParallelScan(global_agg_ht_.GetPtr(codegen),
                                                      GetQueryStatePtr(), GetThreadStateContainer(),
                                                      work_func_name));
 }
