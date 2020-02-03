@@ -35,7 +35,7 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   }
 
   auto codegen = GetCodeGen();
-  jht_slot_ = compilation_context->GetQueryState()->DeclareStateEntry(
+  global_join_ht_slot_ = compilation_context->GetQueryState()->DeclareStateEntry(
       codegen, "joinHashTable", codegen->BuiltinType(ast::BuiltinType::JoinHashTable));
 }
 
@@ -63,30 +63,32 @@ void HashJoinTranslator::TearDownJoinHashTable(ast::Expr *jht_ptr) const {
 }
 
 void HashJoinTranslator::InitializeQueryState() const {
-  InitializeJoinHashTable(GetQueryStateEntryPtr(jht_slot_));
+  InitializeJoinHashTable(GetQueryStateEntryPtr(global_join_ht_slot_));
 }
 
 void HashJoinTranslator::TearDownQueryState() const {
-  TearDownJoinHashTable(GetQueryStateEntryPtr(jht_slot_));
+  TearDownJoinHashTable(GetQueryStateEntryPtr(global_join_ht_slot_));
 }
 
 void HashJoinTranslator::DeclarePipelineState(PipelineContext *pipeline_context) {
   if (IsLeftPipeline(pipeline_context->GetPipeline()) && LeftPipeline()->IsParallel()) {
     auto codegen = GetCodeGen();
-    tl_jht_slot_ = pipeline_context->DeclareStateEntry(
+    local_join_ht_slot_ = pipeline_context->DeclareStateEntry(
         codegen, "joinHashTable", codegen->BuiltinType(ast::BuiltinType::JoinHashTable));
   }
 }
 
 void HashJoinTranslator::InitializePipelineState(const PipelineContext &pipeline_context) const {
   if (IsLeftPipeline(pipeline_context.GetPipeline()) && LeftPipeline().IsParallel()) {
-    InitializeJoinHashTable(pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), tl_jht_slot_));
+    InitializeJoinHashTable(
+        pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), local_join_ht_slot_));
   }
 }
 
 void HashJoinTranslator::TearDownPipelineState(const PipelineContext &pipeline_context) const {
   if (IsLeftPipeline(pipeline_context.GetPipeline()) && LeftPipeline().IsParallel()) {
-    TearDownJoinHashTable(pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), tl_jht_slot_));
+    TearDownJoinHashTable(
+        pipeline_context.GetThreadStateEntryPtr(GetCodeGen(), local_join_ht_slot_));
   }
 }
 
@@ -131,9 +133,9 @@ void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx) const {
 
   ast::Expr *jht = nullptr;
   if (ctx->GetPipeline().IsParallel()) {
-    jht = ctx->GetThreadStateEntryPtr(codegen, tl_jht_slot_);
+    jht = ctx->GetThreadStateEntryPtr(codegen, local_join_ht_slot_);
   } else {
-    jht = GetQueryStateEntryPtr(jht_slot_);
+    jht = GetQueryStateEntryPtr(global_join_ht_slot_);
   }
 
   // Insert into hash table.
@@ -156,7 +158,7 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx) const {
   func->Append(codegen->DeclareVarWithInit(iter_name,
                                            codegen->AddressOf(codegen->MakeExpr(iter_name_base))));
 
-  auto jht = GetQueryStateEntryPtr(jht_slot_);
+  auto jht = GetQueryStateEntryPtr(global_join_ht_slot_);
   auto entry_iter = codegen->MakeExpr(iter_name);
   auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys());
 
@@ -194,10 +196,10 @@ void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_cont
   if (IsLeftPipeline(pipeline_context.GetPipeline())) {
     auto codegen = GetCodeGen();
     auto func = codegen->CurrentFunction();
-    auto jht = GetQueryStateEntryPtr(jht_slot_);
+    auto jht = GetQueryStateEntryPtr(global_join_ht_slot_);
     if (LeftPipeline().IsParallel()) {
       auto tls = GetThreadStateContainer();
-      auto offset = pipeline_context.GetThreadStateEntryOffset(codegen, tl_jht_slot_);
+      auto offset = pipeline_context.GetThreadStateEntryOffset(codegen, local_join_ht_slot_);
       func->Append(codegen->JoinHashTableBuildParallel(jht, tls, offset));
     } else {
       func->Append(codegen->JoinHashTableBuild(jht));

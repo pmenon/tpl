@@ -172,8 +172,8 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // The slots in the global and thread-local state where this join's join hash
   // table is stored.
-  StateDescriptor::Slot jht_slot_;
-  StateDescriptor::Slot tl_jht_slot_;
+  StateDescriptor::Slot global_join_ht_slot_;
+  StateDescriptor::Slot local_join_ht_slot_;
 };
 
 }  // namespace tpl::sql::codegen

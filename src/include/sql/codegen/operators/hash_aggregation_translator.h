@@ -130,11 +130,10 @@ class HashAggregationTranslator : public OperatorTranslator {
   void DefineInputValuesStruct(util::RegionVector<ast::StructDecl *> *decls);
 
   // Generate the overflow partition merging process.
-  void GenerateKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *top_level_funcs);
-  void GeneratePartialKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *top_level_funcs);
-  void GenerateMergeOverflowPartitionsFunction(
-      util::RegionVector<ast::FunctionDecl *> *top_level_funcs);
-  void MergeOverflowPartitions(FunctionBuilder *function);
+  void GenerateKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *decls);
+  void GeneratePartialKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *decls);
+  void GenerateMergeOverflowPartitionsFunction(util::RegionVector<ast::FunctionDecl *> *decls);
+  void MergeOverflowPartitions(FunctionBuilder *function, ast::Expr *agg_ht, ast::Expr *iter);
 
   // Initialize and destroy the input aggregation hash table. These are called
   // from InitializeQueryState() and InitializePipelineState().
@@ -187,8 +186,8 @@ class HashAggregationTranslator : public OperatorTranslator {
   Pipeline build_pipeline_;
 
   // The global and thread-local aggregation hash tables.
-  StateDescriptor::Slot agg_ht_slot_;
-  StateDescriptor::Slot tl_agg_ht_slot_;
+  StateDescriptor::Slot global_agg_ht_slot_;
+  StateDescriptor::Slot local_agg_ht_slot_;
 };
 
 }  // namespace tpl::sql::codegen
