@@ -603,44 +603,46 @@ ast::Expr *CodeGen::Hash(const std::vector<ast::Expr *> &values) {
 // Joins
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::JoinHashTableInit(ast::Expr *jht, ast::Expr *mem_pool,
+ast::Expr *CodeGen::JoinHashTableInit(ast::Expr *join_hash_table, ast::Expr *mem_pool,
                                       ast::Identifier build_row_type_name) {
-  ast::Expr *call =
-      CallBuiltin(ast::Builtin::JoinHashTableInit, {jht, mem_pool, SizeOf(build_row_type_name)});
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableInit,
+                                {join_hash_table, mem_pool, SizeOf(build_row_type_name)});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableInsert(ast::Expr *jht, ast::Expr *hash_val,
+ast::Expr *CodeGen::JoinHashTableInsert(ast::Expr *join_hash_table, ast::Expr *hash_val,
                                         ast::Identifier tuple_type_name) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableInsert, {jht, hash_val});
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableInsert, {join_hash_table, hash_val});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return PtrCast(tuple_type_name, call);
 }
 
-ast::Expr *CodeGen::JoinHashTableBuild(ast::Expr *jht) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableBuild, {jht});
+ast::Expr *CodeGen::JoinHashTableBuild(ast::Expr *join_hash_table) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableBuild, {join_hash_table});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableBuildParallel(ast::Expr *jht, ast::Expr *thread_state_container,
+ast::Expr *CodeGen::JoinHashTableBuildParallel(ast::Expr *join_hash_table,
+                                               ast::Expr *thread_state_container,
                                                ast::Expr *offset) {
-  ast::Expr *call =
-      CallBuiltin(ast::Builtin::JoinHashTableBuildParallel, {jht, thread_state_container, offset});
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableBuildParallel,
+                                {join_hash_table, thread_state_container, offset});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableLookup(ast::Expr *jht, ast::Expr *entry_iter,
+ast::Expr *CodeGen::JoinHashTableLookup(ast::Expr *join_hash_table, ast::Expr *entry_iter,
                                         ast::Expr *hash_val) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableLookup, {jht, entry_iter, hash_val});
+  ast::Expr *call =
+      CallBuiltin(ast::Builtin::JoinHashTableLookup, {join_hash_table, entry_iter, hash_val});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableFree(ast::Expr *jht) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableFree, {jht});
+ast::Expr *CodeGen::JoinHashTableFree(ast::Expr *join_hash_table) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableFree, {join_hash_table});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
@@ -651,10 +653,10 @@ ast::Expr *CodeGen::HTEntryIterHasNext(ast::Expr *iter) {
   return call;
 }
 
-ast::Expr *CodeGen::HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) {
+ast::Expr *CodeGen::HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type) {
   ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryIterGetRow, {iter});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());
-  return PtrCast(row_type_name, call);
+  return PtrCast(row_type, call);
 }
 
 // ---------------------------------------------------------

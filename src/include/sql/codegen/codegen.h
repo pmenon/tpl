@@ -706,43 +706,43 @@ class CodeGen {
   /**
    * Call @joinHTInit(). Initialize the provided join hash table using a memory pool and storing
    * the build-row structures with the provided name.
-   * @param jht The join hash table.
+   * @param join_hash_table The join hash table.
    * @param mem_pool The memory pool.
    * @param build_row_type_name The name of the materialized build-side row in the hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableInit(ast::Expr *jht, ast::Expr *mem_pool,
+  [[nodiscard]] ast::Expr *JoinHashTableInit(ast::Expr *join_hash_table, ast::Expr *mem_pool,
                                              ast::Identifier build_row_type_name);
 
   /**
    * Call @joinHTInsert(). Allocates a new tuple in the join hash table with the given hash value.
    * The returned value is a pointer to an element with the given type.
-   * @param jht The join hash table.
+   * @param join_hash_table The join hash table.
    * @param hash_val The hash value of the tuple that's to be inserted.
    * @param tuple_type_name The name of the struct type representing the tuple to be inserted.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableInsert(ast::Expr *jht, ast::Expr *hash_val,
+  [[nodiscard]] ast::Expr *JoinHashTableInsert(ast::Expr *join_hash_table, ast::Expr *hash_val,
                                                ast::Identifier tuple_type_name);
 
   /**
    * Call @joinHTBuild(). Performs the hash table build step of a hash join. Called on the provided
    * join hash table expected to be a *JoinHashTable.
-   * @param jht The pointer to the join hash table.
+   * @param join_hash_table The pointer to the join hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableBuild(ast::Expr *jht);
+  [[nodiscard]] ast::Expr *JoinHashTableBuild(ast::Expr *join_hash_table);
 
   /**
    * Call @joinHTBuildParallel(). Performs the parallel hash table build step of a hash join. Called
    * on the provided global join hash table (expected to be a *JoinHashTable), and a pointer to the
    * thread state container where thread-local join hash tables are stored at the given offset.
-   * @param jht The global join hash table.
+   * @param join_hash_table The global join hash table.
    * @param thread_state_container The thread state container.
    * @param offset The offset in the thread state container where thread-local tables are.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableBuildParallel(ast::Expr *jht,
+  [[nodiscard]] ast::Expr *JoinHashTableBuildParallel(ast::Expr *join_hash_table,
                                                       ast::Expr *thread_state_container,
                                                       ast::Expr *offset);
 
@@ -751,20 +751,20 @@ class CodeGen {
    * provided hash value. The provided iterator will provide tuples in the hash table that match the
    * provided hash, but may not match on key (i.e., it may offer false positives). It is the
    * responsibility of the user to resolve such hash collisions.
-   * @param jht The join hash table.
+   * @param join_hash_table The join hash table.
    * @param entry_iter An iterator over a list of entries.
    * @param hash_val The hash value of the probe key.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableLookup(ast::Expr *jht, ast::Expr *entry_iter,
+  [[nodiscard]] ast::Expr *JoinHashTableLookup(ast::Expr *join_hash_table, ast::Expr *entry_iter,
                                                ast::Expr *hash_val);
 
   /**
    * Call @joinHTFree(). Cleanup and destroy the provided join hash table instance.
-   * @param jht The join hash table.
+   * @param join_hash_table The join hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableFree(ast::Expr *jht);
+  [[nodiscard]] ast::Expr *JoinHashTableFree(ast::Expr *join_hash_table);
 
   /**
    * Call @htEntryIterHasNext(). Determine if the provided iterator has more entries. Entries
@@ -777,10 +777,10 @@ class CodeGen {
    * Call @htEntryIterGetRow(). Retrieves a pointer to the current row the iterator is positioned at
    * casted to the provided row type.
    * @param iter The iterator.
-   * @param row_type_name The name of the struct type the row is expected to be.
+   * @param row_type The name of the struct type the row is expected to be.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type_name);
+  [[nodiscard]] ast::Expr *HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type);
 
   // -------------------------------------------------------
   //
