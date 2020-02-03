@@ -164,7 +164,8 @@ class HashJoinTranslator : public OperatorTranslator {
  private:
   // The name of the materialized row when inserting or probing into join hash
   // table.
-  ast::Identifier build_row_name_;
+  ast::Identifier build_row_var_;
+  ast::Identifier build_row_type_;
 
   // The left build-side pipeline.
   Pipeline left_pipeline_;
@@ -173,9 +174,6 @@ class HashJoinTranslator : public OperatorTranslator {
   // table is stored.
   StateDescriptor::Slot jht_slot_;
   StateDescriptor::Slot tl_jht_slot_;
-
-  // The build-row used to materialized results into the join hash table.
-  ast::StructDecl *build_row_;
 };
 
 }  // namespace tpl::sql::codegen

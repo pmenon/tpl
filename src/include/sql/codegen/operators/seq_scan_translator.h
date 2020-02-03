@@ -116,25 +116,31 @@ class SeqScanTranslator : public OperatorTranslator {
   std::string_view GetTableName() const;
 
   // Generate a generic filter term.
-  void GenerateGenericTerm(FunctionBuilder *func, const planner::AbstractExpression *term);
+  void GenerateGenericTerm(FunctionBuilder *func,
+                           const planner::AbstractExpression *term,
+                           ast::Expr *vector_proj,
+                           ast::Expr *tid_list);
 
   // Generate all filter clauses.
-  void GenerateFilterClauseFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs,
+  void GenerateFilterClauseFunctions(util::RegionVector<ast::FunctionDecl *> *decls,
                                      const planner::AbstractExpression *predicate,
                                      std::vector<ast::Identifier> *curr_clause,
                                      bool seen_conjunction);
 
   // Perform a table scan using the provided table vector iterator pointer.
-  void ScanTable(WorkContext *ctx, ast::Expr *tvi, bool close_iter) const;
+  void ScanTable(WorkContext *ctx) const;
 
   // Generate a scan over the VPI.
   void ScanVPI(WorkContext *ctx, ast::Expr *vpi) const;
 
  private:
-  // The name of the declared VPI.
-  ast::Identifier vpi_name_;
+  // The name of the declared TVI and VPI.
+  ast::Identifier tvi_var_;
+  ast::Identifier vpi_var_;
+
   // Where the filter manager exists.
-  StateDescriptor::Slot fm_slot_;
+  StateDescriptor::Slot local_filter_manager_slot_;
+
   // The list of filter manager clauses. Populated during helper function
   // definition, but only if there's a predicate.
   std::vector<std::vector<ast::Identifier>> filters_;

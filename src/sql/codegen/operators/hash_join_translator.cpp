@@ -17,9 +17,9 @@ const char *kBuildRowAttrPrefix = "attr";
 HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
                                        CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      build_row_name_(GetCodeGen()->MakeFreshIdentifier("buildRow")),
-      left_pipeline_(this, Pipeline::Parallelism::Flexible),
-      build_row_(nullptr) {
+      build_row_var_(GetCodeGen()->MakeFreshIdentifier("buildRow")),
+      build_row_type_(GetCodeGen()->MakeFreshIdentifier("BuildRow")),
+      left_pipeline_(this, Pipeline::Parallelism::Flexible) {
   pipeline->RegisterStep(this, Pipeline::Parallelism::Flexible);
   pipeline->LinkSourcePipeline(LeftPipeline());
 
@@ -47,14 +47,13 @@ void HashJoinTranslator::DefineHelperStructs(
   if (GetPlanAs<planner::HashJoinPlanNode>().RequiresLeftMark()) {
     fields.push_back(codegen->MakeField(codegen->MakeFreshIdentifier("mark"), codegen->BoolType()));
   }
-  build_row_ = codegen->DeclareStruct(codegen->MakeFreshIdentifier("BuildRow"), std::move(fields));
-  top_level_structs->push_back(build_row_);
+  top_level_structs->push_back(codegen->DeclareStruct(build_row_type_, std::move(fields)));
 }
 
 void HashJoinTranslator::InitializeJoinHashTable(ast::Expr *jht_ptr) const {
   auto codegen = GetCodeGen();
   auto func = codegen->CurrentFunction();
-  func->Append(codegen->JoinHashTableInit(jht_ptr, GetMemoryPool(), build_row_->Name()));
+  func->Append(codegen->JoinHashTableInit(jht_ptr, GetMemoryPool(), build_row_type_));
 }
 
 void HashJoinTranslator::TearDownJoinHashTable(ast::Expr *jht_ptr) const {
@@ -140,10 +139,10 @@ void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx) const {
   // Insert into hash table.
   auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys());
   func->Append(codegen->DeclareVarWithInit(
-      build_row_name_, codegen->JoinHashTableInsert(jht, hash_val, build_row_->Name())));
+      build_row_var_, codegen->JoinHashTableInsert(jht, hash_val, build_row_type_)));
 
   // Fill row.
-  FillBuildRow(ctx, codegen->MakeExpr(build_row_name_));
+  FillBuildRow(ctx, codegen->MakeExpr(build_row_var_));
 }
 
 void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx) const {
@@ -168,7 +167,7 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx) const {
   {
     // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
     func->Append(codegen->DeclareVarWithInit(
-        build_row_name_, codegen->HTEntryIterGetRow(entry_iter, build_row_->Name())));
+        build_row_var_, codegen->HTEntryIterGetRow(entry_iter, build_row_type_)));
 
     // Check predicate
     if (const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate()) {
@@ -209,7 +208,7 @@ void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_cont
 ast::Expr *HashJoinTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                                               uint32_t attr_idx) const {
   if (IsRightPipeline(work_context->GetPipeline()) && child_idx == 0) {
-    return GetBuildRowAttribute(GetCodeGen()->MakeExpr(build_row_name_), attr_idx);
+    return GetBuildRowAttribute(GetCodeGen()->MakeExpr(build_row_var_), attr_idx);
   } else {
     const auto child = GetPlan().GetChild(child_idx);
     const auto child_translator = GetCompilationContext()->LookupTranslator(*child);

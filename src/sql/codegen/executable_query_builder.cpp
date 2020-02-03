@@ -1,6 +1,7 @@
 #include "sql/codegen/executable_query_builder.h"
 
 #include <iostream>
+#include <ast/ast_pretty_print.h>
 
 #include "ast/ast_node_factory.h"
 #include "ast/context.h"
@@ -46,6 +47,8 @@ std::unique_ptr<ExecutableQuery::Fragment> ExecutableQueryFragmentBuilder::Compi
 
   // The file we'll compile.
   ast::File *generated_file = ctx_->GetNodeFactory()->NewFile({0, 0}, std::move(decls));
+
+  ast::AstPrettyPrint::Dump(std::cout, generated_file);
 
   // Compile it!
   compiler::Compiler::Input input("", ctx_, generated_file);

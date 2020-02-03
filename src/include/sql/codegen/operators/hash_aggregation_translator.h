@@ -173,28 +173,18 @@ class HashAggregationTranslator : public OperatorTranslator {
   // The name of the variable used to:
   // 1. Materialize an input row and insert into the aggregation hash table.
   // 2. Read from an iterator when iterating over all aggregates.
-  ast::Identifier agg_row_var_name_;
+  ast::Identifier agg_row_var_;
+  // The names of the payload and input values struct.
+  ast::Identifier agg_payload_type_;
+  ast::Identifier agg_values_type_;
+  // The names of the full key-check function, the partial key check function
+  // and the overflow partition merging functions, respectively.
+  ast::Identifier key_check_fn_;
+  ast::Identifier key_check_partial_fn_;
+  ast::Identifier merge_partitions_fn_;
 
   // The build pipeline.
   Pipeline build_pipeline_;
-
-  // The declaration of the struct used as the payload in the aggregation table.
-  ast::StructDecl *agg_payload_;
-  // The declaration of the struct used to materialize input before merging into
-  // the aggregation hash table.
-  ast::StructDecl *agg_values_;
-
-  // The function that checks the equality of keys.
-  ast::FunctionDecl *key_check_fn_;
-
-  // The function that performs a partial key check between two partial
-  // aggregate payload entries. This is only generated and used in parallel
-  // aggregations.
-  ast::FunctionDecl *key_check_partial_fn_;
-
-  // The function that merges overflow partitions into a primary aggregation
-  // hash table. This is only generated and used in parallel aggregations.
-  ast::FunctionDecl *merge_partitions_fn_;
 
   // The global and thread-local aggregation hash tables.
   StateDescriptor::Slot agg_ht_slot_;

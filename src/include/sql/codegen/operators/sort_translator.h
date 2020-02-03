@@ -152,22 +152,16 @@ class SortTranslator : public OperatorTranslator {
  private:
   // The name of the materialized sort row when inserting into sorter or pulling
   // from an iterator.
-  ast::Identifier sort_row_var_name_;
+  ast::Identifier sort_row_var_;
+  ast::Identifier sort_row_type_;
+  ast::Identifier compare_func_;
 
   // Build-side pipeline.
   Pipeline child_pipeline_;
 
   // Where the global and thread-local sorter instances are.
-  StateDescriptor::Slot sorter_slot_;
-  StateDescriptor::Slot tl_sorter_slot_;
-
-  // The struct representing the row-wise materialization into the sorter
-  // instance. Each field in the row represents a column that is sent by the
-  // child operator.
-  ast::StructDecl *sort_row_;
-
-  // The comparison function.
-  ast::FunctionDecl *cmp_func_;
+  StateDescriptor::Slot global_sorter_slot_;
+  StateDescriptor::Slot local_sorter_slot_;
 
   enum class CurrentRow { Child, Lhs, Rhs };
   CurrentRow current_row_;
