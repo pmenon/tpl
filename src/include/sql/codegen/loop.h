@@ -29,14 +29,24 @@ class Loop {
    * @param condition The loop condition.
    * @param next The next statements.
    */
-  Loop(CodeGen *codegen, ast::Stmt *init, ast::Expr *condition, ast::Stmt *next);
+  explicit Loop(CodeGen *codegen, ast::Stmt *init, ast::Expr *condition, ast::Stmt *next);
+
+  /**
+   * Create a loop. This is the same as above, but the initial and next expressions are converted
+   * into TPL statements.
+   * @param codegen The code generator.
+   * @param init The initialization expression.
+   * @param condition The loop condition.
+   * @param next The next statements.
+   */
+  explicit Loop(CodeGen *codegen, ast::Expr *init, ast::Expr *condition, ast::Expr *next);
 
   /**
    * Create a while-loop.
    * @param codegen The code generator instance.
    * @param condition The loop condition.
    */
-  Loop(CodeGen *codegen, ast::Expr *condition);
+  explicit Loop(CodeGen *codegen, ast::Expr *condition);
 
   /**
    * Create an infinite loop.

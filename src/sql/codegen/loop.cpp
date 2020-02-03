@@ -23,9 +23,16 @@ Loop::Loop(CodeGen *codegen, ast::Stmt *init, ast::Expr *condition, ast::Stmt *n
   func->statements_ = loop_body_;
 }
 
-Loop::Loop(CodeGen *codegen, ast::Expr *condition) : Loop(codegen, nullptr, condition, nullptr) {}
+// Convert initial and next expressions to statements.
+Loop::Loop(CodeGen *codegen, ast::Expr *init, ast::Expr *condition, ast::Expr *next)
+    : Loop(codegen, codegen->MakeStmt(init), condition, codegen->MakeStmt(next)) {}
 
-Loop::Loop(CodeGen *codegen) : Loop(codegen, nullptr, nullptr, nullptr) {}
+// Static cast to disambiguate constructor.
+Loop::Loop(CodeGen *codegen, ast::Expr *condition)
+    : Loop(codegen, static_cast<ast::Stmt *>(nullptr), condition, nullptr) {}
+
+// Static cast to disambiguate constructor.
+Loop::Loop(CodeGen *codegen) : Loop(codegen, static_cast<ast::Stmt *>(nullptr), nullptr, nullptr) {}
 
 Loop::~Loop() { EndLoop(); }
 
