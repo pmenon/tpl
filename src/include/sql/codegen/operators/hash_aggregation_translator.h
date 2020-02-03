@@ -35,9 +35,9 @@ class HashAggregationTranslator : public OperatorTranslator {
 
   /**
    * If the build-pipeline is parallel, we'll need to define the partition-merging function.
-   * @param top_level_funcs Where the defined functions will be registered.
+   * @param decls Where the defined functions will be registered.
    */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override;
+  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override;
 
   /**
    * Initialize the global aggregation hash table.

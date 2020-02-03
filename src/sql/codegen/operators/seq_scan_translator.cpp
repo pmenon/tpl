@@ -125,12 +125,11 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(
   decls->push_back(builder.Finish());
 }
 
-void SeqScanTranslator::DefineHelperFunctions(
-    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
+void SeqScanTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
   if (HasPredicate()) {
     std::vector<ast::Identifier> curr_clause;
     auto root_expr = GetPlanAs<planner::SeqScanPlanNode>().GetScanPredicate();
-    GenerateFilterClauseFunctions(top_level_funcs, root_expr, &curr_clause, false);
+    GenerateFilterClauseFunctions(decls, root_expr, &curr_clause, false);
     filters_.emplace_back(std::move(curr_clause));
   }
 }

@@ -33,15 +33,10 @@ class HashJoinTranslator : public OperatorTranslator {
 
   /**
    * Declare the build-row struct used to materialized tuples from the build side of the join.
-   * @param top_level_structs The top-level declarations for the query. The build-row struct will be
+   * @param decls The top-level declarations for the query. The build-row struct will be
    *                        registered here after it's been constructed.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *top_level_structs) override;
-
-  /**
-   * Hash-joins don't rely on any helper functions.
-   */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override {}
+  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
 
   /**
    * Initialize the global hash table.

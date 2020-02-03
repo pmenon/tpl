@@ -38,11 +38,11 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
       codegen, "sorter", codegen->BuiltinType(ast::BuiltinType::Sorter));
 }
 
-void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *top_level_structs) {
+void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kSortRowAttrPrefix, &fields);
-  top_level_structs->push_back(codegen->DeclareStruct(sort_row_type_, std::move(fields)));
+  decls->push_back(codegen->DeclareStruct(sort_row_type_, std::move(fields)));
 }
 
 void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
@@ -70,8 +70,7 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
   current_row_ = CurrentRow::Child;
 }
 
-void SortTranslator::DefineHelperFunctions(
-    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
+void SortTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
   auto codegen = GetCodeGen();
   auto params = codegen->MakeFieldList({
       codegen->MakeField(codegen->MakeIdentifier("lhs"), codegen->PointerType(sort_row_type_)),
@@ -82,7 +81,7 @@ void SortTranslator::DefineHelperFunctions(
     // Generate body.
     GenerateComparisonFunction(&builder);
   }
-  top_level_funcs->push_back(builder.Finish(codegen->Const32(0)));
+  decls->push_back(builder.Finish(codegen->Const32(0)));
 }
 
 void SortTranslator::InitializeSorter(ast::Expr *sorter_ptr) const {

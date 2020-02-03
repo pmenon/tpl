@@ -39,15 +39,14 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
       codegen, "joinHashTable", codegen->BuiltinType(ast::BuiltinType::JoinHashTable));
 }
 
-void HashJoinTranslator::DefineHelperStructs(
-    util::RegionVector<ast::StructDecl *> *top_level_structs) {
+void HashJoinTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kBuildRowAttrPrefix, &fields);
   if (GetPlanAs<planner::HashJoinPlanNode>().RequiresLeftMark()) {
     fields.push_back(codegen->MakeField(codegen->MakeFreshIdentifier("mark"), codegen->BoolType()));
   }
-  top_level_structs->push_back(codegen->DeclareStruct(build_row_type_, std::move(fields)));
+  decls->push_back(codegen->DeclareStruct(build_row_type_, std::move(fields)));
 }
 
 void HashJoinTranslator::InitializeJoinHashTable(ast::Expr *jht_ptr) const {

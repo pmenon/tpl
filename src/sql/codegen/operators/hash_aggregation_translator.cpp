@@ -225,12 +225,12 @@ void HashAggregationTranslator::GenerateKeyCheckFunction(
 }
 
 void HashAggregationTranslator::DefineHelperFunctions(
-    util::RegionVector<ast::FunctionDecl *> *top_level_funcs) {
+    util::RegionVector<ast::FunctionDecl *> *decls) {
   if (build_pipeline_.IsParallel()) {
-    GeneratePartialKeyCheckFunction(top_level_funcs);
-    GenerateMergeOverflowPartitionsFunction(top_level_funcs);
+    GeneratePartialKeyCheckFunction(decls);
+    GenerateMergeOverflowPartitionsFunction(decls);
   }
-  GenerateKeyCheckFunction(top_level_funcs);
+  GenerateKeyCheckFunction(decls);
 }
 
 void HashAggregationTranslator::InitializeAggregationHashTable(ast::Expr *agg_ht) const {

@@ -48,9 +48,9 @@ class SeqScanTranslator : public OperatorTranslator {
 
   /**
    * If the scan has a predicate, this function will define all clause functions.
-   * @param top_level_funcs The top-level declarations.
+   * @param decls The top-level declarations.
    */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override;
+  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override;
 
   /**
    * Declare a FilterManager if there's a scan predicate.
