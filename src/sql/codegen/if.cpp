@@ -5,25 +5,24 @@
 
 namespace tpl::sql::codegen {
 
-If::If(CodeGen *codegen, ast::Expr *condition)
-    : codegen_(codegen),
-      position_(codegen_->GetPosition()),
+If::If(FunctionBuilder *function, ast::Expr *condition)
+    : function_(function),
+      position_(function_->GetCodeGen()->GetPosition()),
       prev_func_stmt_list_(nullptr),
       condition_(condition),
-      then_stmts_(codegen_->MakeEmptyBlock()),
+      then_stmts_(function_->GetCodeGen()->MakeEmptyBlock()),
       else_stmts_(nullptr),
       completed_(false) {
   TPL_ASSERT(codegen_->CurrentFunction() != nullptr, "Not within a function!");
-  auto func = codegen_->CurrentFunction();
-  prev_func_stmt_list_ = func->statements_;
-  func->statements_ = then_stmts_;
+  prev_func_stmt_list_ = function_->statements_;
+  function_->statements_ = then_stmts_;
 }
 
 If::~If() { EndIf(); }
 
 void If::Else() {
-  else_stmts_ = codegen_->MakeEmptyBlock();
-  codegen_->CurrentFunction()->statements_ = else_stmts_;
+  else_stmts_ = function_->GetCodeGen()->MakeEmptyBlock();
+  function_->statements_ = else_stmts_;
 }
 
 void If::EndIf() {
@@ -32,12 +31,12 @@ void If::EndIf() {
   }
 
   TPL_ASSERT(codegen_->CurrentFunction() != nullptr, "Not within a function!");
-  auto func = codegen_->CurrentFunction();
-  func->statements_ = prev_func_stmt_list_;
+  function_->statements_ = prev_func_stmt_list_;
 
   // Create and append the if statement.
-  auto if_stmt = codegen_->GetFactory()->NewIfStmt(position_, condition_, then_stmts_, else_stmts_);
-  func->Append(if_stmt);
+  auto codegen = function_->GetCodeGen();
+  auto if_stmt = codegen->GetFactory()->NewIfStmt(position_, condition_, then_stmts_, else_stmts_);
+  function_->Append(if_stmt);
 
   // Done.
   completed_ = true;

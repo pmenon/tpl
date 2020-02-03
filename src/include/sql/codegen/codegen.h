@@ -22,9 +22,6 @@
 
 namespace tpl::sql::codegen {
 
-class ExecutableQueryFragmentBuilder;
-class FunctionBuilder;
-
 /**
  * Bundles convenience methods needed by other classes during code generation.
  */
@@ -1174,11 +1171,6 @@ class CodeGen {
   ast::FieldDecl *MakeField(ast::Identifier name, ast::Expr *type) const;
 
   /**
-   * @return The current function being built.
-   */
-  FunctionBuilder *CurrentFunction() const { return curr_function_; }
-
-  /**
    * @return The current source code position.
    */
   const SourcePosition &GetPosition() const { return position_; }
@@ -1213,8 +1205,6 @@ class CodeGen {
   ast::Context *context_;
   // The current position in the source.
   SourcePosition position_;
-  // The current function we're generating.
-  FunctionBuilder *curr_function_;
   // Cache of code scopes.
   uint32_t num_cached_scopes_;
   std::array<std::unique_ptr<Scope>, kDefaultScopeCacheSize> scope_cache_ = {nullptr};

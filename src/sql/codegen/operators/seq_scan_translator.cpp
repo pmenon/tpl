@@ -56,7 +56,7 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
 
   auto vpi = codegen->MakeExpr(vpi_var_);
   auto gen_body = [&](const bool is_filtered) {
-    Loop vpi_loop(codegen,
+    Loop vpi_loop(function,
                   codegen->MakeStmt(codegen->VPIInit(vpi, vector_proj, tid_list)),  // @vpiInit()
                   codegen->VPIHasNext(vpi, is_filtered),                            // @vpiHasNext()
                   codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));        // @vpiAdvance()
@@ -69,7 +69,7 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
     vpi_loop.EndLoop();
   };
 
-  If check_filtered(codegen, codegen->VPIIsFiltered(vpi));
+  If check_filtered(function, codegen->VPIIsFiltered(vpi));
   gen_body(true);
   check_filtered.Else();
   gen_body(false);
@@ -142,8 +142,8 @@ void SeqScanTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDe
 
 void SeqScanTranslator::ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi,
                                 bool filtered) const {
-  auto codegen = GetCodeGen();
-  Loop vpi_loop(codegen, nullptr, codegen->VPIHasNext(vpi, filtered),
+  CodeGen *codegen = GetCodeGen();
+  Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi, filtered),
                 codegen->MakeStmt(codegen->VPIAdvance(vpi, filtered)));
   {
     // Push to parent.
@@ -153,21 +153,19 @@ void SeqScanTranslator::ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast
 }
 
 void SeqScanTranslator::ScanTable(WorkContext *ctx, FunctionBuilder *function) const {
-  auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
-  auto tvi = codegen->MakeExpr(tvi_var_);
-
-  Loop tvi_loop(codegen, codegen->TableIterAdvance(tvi));
+  CodeGen *codegen = GetCodeGen();
+  Loop tvi_loop(function, codegen->TableIterAdvance(codegen->MakeExpr(tvi_var_)));
   {
     // var vpi = @tableIterGetVPI()
     auto vpi = codegen->MakeExpr(vpi_var_);
-    func->Append(codegen->DeclareVarWithInit(vpi_var_, codegen->TableIterGetVPI(tvi)));
+    function->Append(codegen->DeclareVarWithInit(
+        vpi_var_, codegen->TableIterGetVPI(codegen->MakeExpr(tvi_var_))));
 
     bool filtered = false;
     if (HasPredicate()) {
       filtered = true;
       auto filter_manager = local_filter_manager_.GetPtr(codegen);
-      func->Append(codegen->FilterManagerRunFilters(filter_manager, vpi));
+      function->Append(codegen->FilterManagerRunFilters(filter_manager, vpi));
     }
 
     if (!ctx->GetPipeline().IsVectorized()) {
@@ -177,7 +175,7 @@ void SeqScanTranslator::ScanTable(WorkContext *ctx, FunctionBuilder *function) c
   tvi_loop.EndLoop();
 
   if (!GetPipeline()->IsParallel()) {
-    func->Append(codegen->TableIterClose(tvi));
+    function->Append(codegen->TableIterClose(codegen->MakeExpr(tvi_var_)));
   }
 }
 

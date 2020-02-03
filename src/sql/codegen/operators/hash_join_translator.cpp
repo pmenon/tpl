@@ -88,9 +88,9 @@ void HashJoinTranslator::TearDownPipelineState(const Pipeline &pipeline,
 }
 
 ast::Expr *HashJoinTranslator::HashKeys(
-    WorkContext *ctx, const std::vector<const planner::AbstractExpression *> &hash_keys) const {
+    WorkContext *ctx, FunctionBuilder *function,
+    const std::vector<const planner::AbstractExpression *> &hash_keys) const {
   auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
 
   std::vector<ast::Expr *> key_values;
   key_values.reserve(hash_keys.size());
@@ -98,8 +98,8 @@ ast::Expr *HashJoinTranslator::HashKeys(
     key_values.push_back(ctx->DeriveValue(*hash_key, this));
   }
 
-  auto hash_val_name = codegen->MakeFreshIdentifier("hashVal");
-  func->Append(codegen->DeclareVarWithInit(hash_val_name, codegen->Hash(key_values)));
+  ast::Identifier hash_val_name = codegen->MakeFreshIdentifier("hashVal");
+  function->Append(codegen->DeclareVarWithInit(hash_val_name, codegen->Hash(key_values)));
 
   return codegen->MakeExpr(hash_val_name);
 }
@@ -110,32 +110,33 @@ ast::Expr *HashJoinTranslator::GetBuildRowAttribute(ast::Expr *build_row, uint32
   return codegen->AccessStructMember(build_row, attr_name);
 }
 
-void HashJoinTranslator::FillBuildRow(WorkContext *ctx, ast::Expr *build_row) const {
-  auto codegen = GetCodeGen();
-  auto func = codegen->CurrentFunction();
-
+void HashJoinTranslator::FillBuildRow(WorkContext *ctx, FunctionBuilder *function,
+                                      ast::Expr *build_row) const {
+  CodeGen *codegen = GetCodeGen();
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
-    auto lhs = GetBuildRowAttribute(build_row, attr_idx);
-    auto rhs = GetChildOutput(ctx, 0, attr_idx);
-    func->Append(codegen->Assign(lhs, rhs));
+    ast::Expr *lhs = GetBuildRowAttribute(build_row, attr_idx);
+    ast::Expr *rhs = GetChildOutput(ctx, 0, attr_idx);
+    function->Append(codegen->Assign(lhs, rhs));
   }
 }
 
 void HashJoinTranslator::InsertIntoJoinHashTable(WorkContext *ctx,
                                                  FunctionBuilder *function) const {
-  auto codegen = GetCodeGen();
+  CodeGen *codegen = GetCodeGen();
 
-  const auto jht = ctx->GetPipeline().IsParallel() ? local_join_ht_ : global_join_ht_;
+  const auto join_ht = ctx->GetPipeline().IsParallel() ? local_join_ht_ : global_join_ht_;
 
-  // Insert into hash table.
-  auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys());
+  // var hashVal = @hash(...)
+  auto hash_val = HashKeys(ctx, function, GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys());
+
+  // var buildRow = @joinHTInsert(...)
   function->Append(codegen->DeclareVarWithInit(
       build_row_var_,
-      codegen->JoinHashTableInsert(jht.GetPtr(codegen), hash_val, build_row_type_)));
+      codegen->JoinHashTableInsert(join_ht.GetPtr(codegen), hash_val, build_row_type_)));
 
   // Fill row.
-  FillBuildRow(ctx, codegen->MakeExpr(build_row_var_));
+  FillBuildRow(ctx, function, codegen->MakeExpr(build_row_var_));
 }
 
 void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const {
@@ -152,10 +153,11 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *f
       iter_name, codegen->AddressOf(codegen->MakeExpr(iter_name_base))));
 
   auto entry_iter = codegen->MakeExpr(iter_name);
-  auto hash_val = HashKeys(ctx, GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys());
+  auto hash_val =
+      HashKeys(ctx, function, GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys());
 
   // Loop over matches.
-  Loop entry_loop(codegen,
+  Loop entry_loop(function,
                   codegen->MakeStmt(codegen->JoinHashTableLookup(global_join_ht_.GetPtr(codegen),
                                                                  entry_iter, hash_val)),
                   codegen->HTEntryIterHasNext(entry_iter), nullptr);
@@ -167,7 +169,7 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *f
     // Check predicate
     if (const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate()) {
       auto cond = ctx->DeriveValue(*join_predicate, this);
-      If check_condition(codegen, cond);
+      If check_condition(function, cond);
       ctx->Push(function);
     } else {
       ctx->Push(function);

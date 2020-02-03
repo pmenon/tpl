@@ -122,7 +122,7 @@ void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *functio
                                                         ast::Expr *agg_ht, ast::Expr *iter) {
   auto codegen = GetCodeGen();
 
-  Loop loop(codegen, nullptr, codegen->AggPartitionIteratorHasNext(iter),
+  Loop loop(function, nullptr, codegen->AggPartitionIteratorHasNext(iter),
             codegen->MakeStmt(codegen->AggPartitionIteratorNext(iter)));
   {
     // Get hash from overflow entry.
@@ -142,7 +142,7 @@ void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *functio
         codegen->AggHashTableLookup(agg_ht, codegen->MakeExpr(hash_val), key_check_partial_fn_,
                                     codegen->MakeExpr(partial_row), agg_payload_type_)));
 
-    If check_found(codegen, codegen->IsNilPointer(codegen->MakeExpr(lookup_result)));
+    If check_found(function, codegen->IsNilPointer(codegen->MakeExpr(lookup_result)));
     {
       // Link entry.
       auto entry = codegen->AggPartitionIteratorGetRowEntry(iter);
@@ -177,7 +177,7 @@ void HashAggregationTranslator::GeneratePartialKeyCheckFunction(
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetGroupByTerms().size(); term_idx++) {
       auto lhs = GetGroupByTerm(lhs_arg, term_idx);
       auto rhs = GetGroupByTerm(rhs_arg, term_idx);
-      If check_match(codegen, codegen->Compare(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
+      If check_match(&builder, codegen->Compare(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
       builder.Append(codegen->Return(codegen->ConstBool(false)));
     }
     builder.Append(codegen->Return(codegen->ConstBool(true)));
@@ -225,7 +225,7 @@ void HashAggregationTranslator::GenerateKeyCheckFunction(
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetGroupByTerms().size(); term_idx++) {
       auto lhs = GetGroupByTerm(agg_payload, term_idx);
       auto rhs = GetGroupByTerm(agg_values, term_idx);
-      If check_match(codegen, codegen->Compare(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
+      If check_match(&builder, codegen->Compare(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
       builder.Append(codegen->Return(codegen->ConstBool(false)));
     }
     builder.Append(codegen->Return(codegen->ConstBool(true)));
@@ -400,7 +400,7 @@ void HashAggregationTranslator::UpdateAggregates(WorkContext *work_context,
   auto agg_values = FillInputValues(function, work_context);
   auto hash_val = HashInputKeys(function, agg_values->Name());
   auto agg_payload = PerformLookup(function, agg_ht, hash_val->Name(), agg_values->Name());
-  If check_new_agg(codegen, codegen->IsNilPointer(codegen->MakeExpr(agg_payload->Name())));
+  If check_new_agg(function, codegen->IsNilPointer(codegen->MakeExpr(agg_payload->Name())));
   {
     ConstructNewAggregate(function, agg_ht, agg_payload->Name(), agg_values->Name(),
                           hash_val->Name());
@@ -414,20 +414,20 @@ void HashAggregationTranslator::UpdateAggregates(WorkContext *work_context,
 void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *work_context,
                                                          FunctionBuilder *function,
                                                          ast::Expr *agg_ht) const {
-  auto codegen = GetCodeGen();
+  CodeGen *codegen = GetCodeGen();
 
   // var ahtIterBase: AHTIterator
-  auto aht_iter_base = codegen->MakeFreshIdentifier("ahtIterBase");
-  function->Append(codegen->DeclareVarNoInit(aht_iter_base,
-                                             codegen->BuiltinType(ast::BuiltinType::AHTIterator)));
+  ast::Identifier aht_iter_base = codegen->MakeFreshIdentifier("ahtIterBase");
+  ast::Expr *aht_iter_type = codegen->BuiltinType(ast::BuiltinType::AHTIterator);
+  function->Append(codegen->DeclareVarNoInit(aht_iter_base, aht_iter_type));
 
   // var ahtIter = &ahtIterBase
-  auto aht_iter = codegen->MakeFreshIdentifier("ahtIter");
-  function->Append(
-      codegen->DeclareVarWithInit(aht_iter, codegen->AddressOf(codegen->MakeExpr(aht_iter_base))));
+  ast::Identifier aht_iter = codegen->MakeFreshIdentifier("ahtIter");
+  ast::Expr *aht_iter_init = codegen->AddressOf(codegen->MakeExpr(aht_iter_base));
+  function->Append(codegen->DeclareVarWithInit(aht_iter, aht_iter_init));
 
   Loop loop(
-      codegen,
+      function,
       codegen->MakeStmt(codegen->AggHashTableIteratorInit(codegen->MakeExpr(aht_iter), agg_ht)),
       codegen->AggHashTableIteratorHasNext(codegen->MakeExpr(aht_iter)),
       codegen->MakeStmt(codegen->AggHashTableIteratorNext(codegen->MakeExpr(aht_iter))));
@@ -439,7 +439,7 @@ void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *work_conte
 
     // Check having clause.
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
-      If check_having(codegen, work_context->DeriveValue(*having, this));
+      If check_having(function, work_context->DeriveValue(*having, this));
       work_context->Push(function);
     } else {
       work_context->Push(function);
@@ -465,8 +465,8 @@ void HashAggregationTranslator::PerformPipelineWork(WorkContext *work_context,
       // this case, the aggregation hash table we're to scan is provided as a
       // function parameter; specifically, the last argument in the worker
       // function which we're generating right now. Pull it out.
-      auto agg_ht_param_position = GetCompilationContext()->QueryParams().size();
-      auto agg_ht = codegen->CurrentFunction()->GetParameterByPosition(agg_ht_param_position);
+      auto agg_ht_param_position = GetPipeline()->PipelineParams().size();
+      auto agg_ht = function->GetParameterByPosition(agg_ht_param_position);
       ScanAggregationHashTable(work_context, function, agg_ht);
     } else {
       ScanAggregationHashTable(work_context, function, global_agg_ht_.GetPtr(codegen));

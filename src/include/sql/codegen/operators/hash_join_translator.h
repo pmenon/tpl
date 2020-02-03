@@ -137,11 +137,11 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // Evaluate the provided hash keys in the provided context and return the
   // results in the provided results output vector.
-  ast::Expr *HashKeys(WorkContext *ctx,
+  ast::Expr *HashKeys(WorkContext *ctx, FunctionBuilder *function,
                       const std::vector<const planner::AbstractExpression *> &hash_keys) const;
 
   // Fill the build row with the columns from the given context.
-  void FillBuildRow(WorkContext *ctx, ast::Expr *build_row) const;
+  void FillBuildRow(WorkContext *ctx, FunctionBuilder *function, ast::Expr *build_row) const;
 
   // Input the tuple(s) in the provided context into the join hash table.
   void InsertIntoJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const;

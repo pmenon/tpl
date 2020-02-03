@@ -20,6 +20,8 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline),
       sort_row_var_(GetCodeGen()->MakeFreshIdentifier("sortRow")),
       sort_row_type_(GetCodeGen()->MakeFreshIdentifier("SortRow")),
+      lhs_row_(GetCodeGen()->MakeIdentifier("lhs")),
+      rhs_row_(GetCodeGen()->MakeIdentifier("rhs")),
       compare_func_(GetCodeGen()->MakeFreshIdentifier("Compare")),
       child_pipeline_(this, Pipeline::Parallelism::Parallel),
       current_row_(CurrentRow::Child) {
@@ -53,9 +55,9 @@ void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *
   decls->push_back(codegen->DeclareStruct(sort_row_type_, std::move(fields)));
 }
 
-void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
-  auto codegen = GetCodeGen();
-  auto context = WorkContext(GetCompilationContext(), *GetBuildPipeline());
+void SortTranslator::GenerateComparisonFunction(FunctionBuilder *function) {
+  CodeGen *codegen = GetCodeGen();
+  WorkContext context(GetCompilationContext(), *GetBuildPipeline());
 
   int32_t ret_value;
   for (const auto &[expr, sort_order] : GetPlanAs<planner::OrderByPlanNode>().GetSortKeys()) {
@@ -69,8 +71,11 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
       ast::Expr *lhs = context.DeriveValue(*expr, this);
       current_row_ = CurrentRow::Rhs;
       ast::Expr *rhs = context.DeriveValue(*expr, this);
-      If check_comparison(codegen, codegen->Compare(tok, lhs, rhs));
-      builder->Append(codegen->Return(codegen->Const32(ret_value)));
+      If check_comparison(function, codegen->Compare(tok, lhs, rhs));
+      {
+        // Return the appropriate value based on ordering.
+        function->Append(codegen->Return(codegen->Const32(ret_value)));
+      }
       check_comparison.EndIf();
       ret_value = -ret_value;
     }
@@ -81,8 +86,8 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *builder) {
 void SortTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
   auto codegen = GetCodeGen();
   auto params = codegen->MakeFieldList({
-      codegen->MakeField(codegen->MakeIdentifier("lhs"), codegen->PointerType(sort_row_type_)),
-      codegen->MakeField(codegen->MakeIdentifier("rhs"), codegen->PointerType(sort_row_type_)),
+      codegen->MakeField(lhs_row_, codegen->PointerType(sort_row_type_)),
+      codegen->MakeField(rhs_row_, codegen->PointerType(sort_row_type_)),
   });
   FunctionBuilder builder(codegen, compare_func_, std::move(params), codegen->Int32Type());
   {
@@ -129,13 +134,14 @@ ast::Expr *SortTranslator::GetSortRowAttribute(ast::Expr *sort_row, uint32_t att
   return codegen->AccessStructMember(sort_row, attr_name);
 }
 
-void SortTranslator::FillSortRow(WorkContext *ctx, ast::Expr *sort_row) const {
-  auto codegen = GetCodeGen();
+void SortTranslator::FillSortRow(WorkContext *ctx, FunctionBuilder *function,
+                                 ast::Expr *sort_row) const {
+  CodeGen *codegen = GetCodeGen();
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
-    auto lhs = GetSortRowAttribute(sort_row, attr_idx);
-    auto rhs = GetChildOutput(ctx, 0, attr_idx);
-    codegen->CurrentFunction()->Append(codegen->Assign(lhs, rhs));
+    ast::Expr *lhs = GetSortRowAttribute(sort_row, attr_idx);
+    ast::Expr *rhs = GetChildOutput(ctx, 0, attr_idx);
+    function->Append(codegen->Assign(lhs, rhs));
   }
 }
 
@@ -151,12 +157,12 @@ void SortTranslator::InsertIntoSorter(WorkContext *ctx, FunctionBuilder *functio
     function->Append(codegen->DeclareVarWithInit(
         sort_row_var_,
         codegen->SorterInsertTopK(sorter.GetPtr(codegen), sort_row_type_, top_k_val)));
-    FillSortRow(ctx, sort_row);
+    FillSortRow(ctx, function, sort_row);
     function->Append(codegen->SorterInsertTopKFinish(sorter.GetPtr(codegen), top_k_val));
   } else {
     function->Append(codegen->DeclareVarWithInit(
         sort_row_var_, codegen->SorterInsert(sorter.GetPtr(codegen), sort_row_type_)));
-    FillSortRow(ctx, sort_row);
+    FillSortRow(ctx, function, sort_row);
   }
 }
 
@@ -174,7 +180,7 @@ void SortTranslator::ScanSorter(WorkContext *ctx, FunctionBuilder *function) con
       iter_name, codegen->AddressOf(codegen->MakeExpr(base_iter_name))));
 
   auto sorter = global_sorter_.GetPtr(codegen);
-  Loop loop(codegen,
+  Loop loop(function,
             codegen->MakeStmt(codegen->SorterIterInit(iter, sorter)),  // @sorterIterInit();
             codegen->SorterIterHasNext(iter),                          // @sorterIterHasNext();
             codegen->MakeStmt(codegen->SorterIterNext(iter)));         // @sorterIterNext();
@@ -228,15 +234,12 @@ ast::Expr *SortTranslator::GetChildOutput(WorkContext *work_context, UNUSED uint
     return GetSortRowAttribute(GetCodeGen()->MakeExpr(sort_row_var_), attr_idx);
   } else {
     TPL_ASSERT(IsBuildPipeline(work_context->GetPipeline()), "Pipeline not known to sorter");
+    CodeGen *codegen = GetCodeGen();
     switch (current_row_) {
-      case CurrentRow::Lhs: {
-        auto func = GetCodeGen()->CurrentFunction();
-        return GetSortRowAttribute(func->GetParameterByPosition(0), attr_idx);
-      }
-      case CurrentRow::Rhs: {
-        auto func = GetCodeGen()->CurrentFunction();
-        return GetSortRowAttribute(func->GetParameterByPosition(1), attr_idx);
-      }
+      case CurrentRow::Lhs:
+        return GetSortRowAttribute(codegen->MakeExpr(lhs_row_), attr_idx);
+      case CurrentRow::Rhs:
+        return GetSortRowAttribute(codegen->MakeExpr(rhs_row_), attr_idx);
       case CurrentRow::Child: {
         auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
         return child_translator->GetOutput(work_context, attr_idx);

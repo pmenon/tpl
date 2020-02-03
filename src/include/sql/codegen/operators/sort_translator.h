@@ -136,19 +136,20 @@ class SortTranslator : public OperatorTranslator {
   void ScanSorter(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Insert tuple data into the provided sort row.
-  void FillSortRow(WorkContext *ctx, ast::Expr *sort_row) const;
+  void FillSortRow(WorkContext *ctx, FunctionBuilder *function, ast::Expr *sort_row) const;
 
   // Called to insert the tuple in the context into the sorter instance.
   void InsertIntoSorter(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Generate comparison function.
-  void GenerateComparisonFunction(FunctionBuilder *builder);
+  void GenerateComparisonFunction(FunctionBuilder *function);
 
  private:
   // The name of the materialized sort row when inserting into sorter or pulling
   // from an iterator.
   ast::Identifier sort_row_var_;
   ast::Identifier sort_row_type_;
+  ast::Identifier lhs_row_, rhs_row_;
   ast::Identifier compare_func_;
 
   // Build-side pipeline.

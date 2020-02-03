@@ -5,7 +5,7 @@
 
 namespace tpl::sql::codegen {
 
-class CodeGen;
+class FunctionBuilder;
 
 /**
  * Helper class to generate TPL if-then-else statements. Immediately after construction, anything
@@ -29,10 +29,10 @@ class If {
  public:
   /**
    * Create a new if-statement using the provided boolean if-condition.
-   * @param codegen The code generator instance.
+   * @param function The function this if statement is appended to.
    * @param condition The boolean condition.
    */
-  If(CodeGen *codegen, ast::Expr *condition);
+  If(FunctionBuilder *function, ast::Expr *condition);
 
   /**
    * Destructor will complete the statement.
@@ -51,8 +51,8 @@ class If {
   void EndIf();
 
  private:
-  // The code generator instance.
-  CodeGen *codegen_;
+  // The function to append this if statement to.
+  FunctionBuilder *function_;
   // The start position;
   const SourcePosition position_;
   // Previous function statement list.

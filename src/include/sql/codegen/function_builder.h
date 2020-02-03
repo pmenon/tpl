@@ -71,6 +71,11 @@ class FunctionBuilder {
    */
   ast::FunctionDecl *GetConstructedFunction() const { return decl_; }
 
+  /**
+   * @return The code generator instance.
+   */
+  CodeGen *GetCodeGen() const { return codegen_; }
+
  private:
   // The code generation instance.
   CodeGen *codegen_;

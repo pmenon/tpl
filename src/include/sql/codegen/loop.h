@@ -5,7 +5,7 @@
 
 namespace tpl::sql::codegen {
 
-class CodeGen;
+class FunctionBuilder;
 
 /**
  * Helper class to generate TPL loops. Immediately after construction, statements appended to the
@@ -29,30 +29,20 @@ class Loop {
    * @param condition The loop condition.
    * @param next The next statements.
    */
-  explicit Loop(CodeGen *codegen, ast::Stmt *init, ast::Expr *condition, ast::Stmt *next);
-
-  /**
-   * Create a loop. This is the same as above, but the initial and next expressions are converted
-   * into TPL statements.
-   * @param codegen The code generator.
-   * @param init The initialization expression.
-   * @param condition The loop condition.
-   * @param next The next statements.
-   */
-  explicit Loop(CodeGen *codegen, ast::Expr *init, ast::Expr *condition, ast::Expr *next);
+  explicit Loop(FunctionBuilder *function, ast::Stmt *init, ast::Expr *condition, ast::Stmt *next);
 
   /**
    * Create a while-loop.
    * @param codegen The code generator instance.
    * @param condition The loop condition.
    */
-  explicit Loop(CodeGen *codegen, ast::Expr *condition);
+  explicit Loop(FunctionBuilder *function, ast::Expr *condition);
 
   /**
    * Create an infinite loop.
    * @param codegen The code generator instance.
    */
-  explicit Loop(CodeGen *codegen);
+  explicit Loop(FunctionBuilder *function);
 
   /**
    * Destructor.
@@ -65,8 +55,8 @@ class Loop {
   void EndLoop();
 
  private:
-  // The code generator instance.
-  CodeGen *codegen_;
+  // The function this loop is appended to.
+  FunctionBuilder *function_;
   // The loop position.
   const SourcePosition position_;
   // The previous list of statements.

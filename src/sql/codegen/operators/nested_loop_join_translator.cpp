@@ -30,7 +30,7 @@ void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *work_context,
                                                    FunctionBuilder *function) const {
   const auto *predicate = GetPlanAs<planner::NestedLoopJoinPlanNode>().GetJoinPredicate();
   if (predicate != nullptr) {
-    If cond(GetCodeGen(), work_context->DeriveValue(*predicate, this));
+    If cond(function, work_context->DeriveValue(*predicate, this));
     {
       // Valid tuple. Push to next operator in pipeline.
       work_context->Push(function);

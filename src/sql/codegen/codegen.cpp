@@ -40,7 +40,6 @@ std::string CodeGen::Scope::GetFreshName(const std::string &name) {
 CodeGen::CodeGen(ast::Context *context)
     : context_(context),
       position_{0, 0},
-      curr_function_(nullptr),
       num_cached_scopes_(0),
       scope_(nullptr) {
   for (auto &scope : scope_cache_) {
