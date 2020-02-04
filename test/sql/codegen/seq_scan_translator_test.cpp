@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "tbb/tbb.h"
+
 #include "sql/catalog.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/execution_context.h"
@@ -25,6 +27,9 @@ class SeqScanTranslatorTest : public SqlBasedTest {
   void SetUp() override { SqlBasedTest::SetUp(); }
   static void SetUpTestSuite() { tpl::vm::LLVMEngine::Initialize(); }
   static void TearDownTestSuite() { tpl::vm::LLVMEngine::Shutdown(); }
+
+ private:
+  tbb::task_scheduler_init anonymous_;
 };
 
 TEST_F(SeqScanTranslatorTest, SimpleScan) {
