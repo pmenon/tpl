@@ -159,7 +159,8 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
       const auto &aggregation = static_cast<const planner::AggregatePlanNode &>(plan);
       if (aggregation.GetAggregateStrategyType() == planner::AggregateStrategyType::SORTED) {
         throw NotImplementedException("Code generation for sort-based aggregations");
-      } else if (aggregation.GetGroupByTerms().empty()) {
+      }
+      if (aggregation.GetGroupByTerms().empty()) {
         translator = std::make_unique<StaticAggregationTranslator>(aggregation, this, pipeline);
       } else {
         translator = std::make_unique<HashAggregationTranslator>(aggregation, this, pipeline);

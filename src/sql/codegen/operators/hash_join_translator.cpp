@@ -206,11 +206,11 @@ ast::Expr *HashJoinTranslator::GetChildOutput(WorkContext *work_context, uint32_
                                               uint32_t attr_idx) const {
   if (IsRightPipeline(work_context->GetPipeline()) && child_idx == 0) {
     return GetBuildRowAttribute(GetCodeGen()->MakeExpr(build_row_var_), attr_idx);
-  } else {
-    const auto child = GetPlan().GetChild(child_idx);
-    const auto child_translator = GetCompilationContext()->LookupTranslator(*child);
-    return child_translator->GetOutput(work_context, attr_idx);
   }
+
+  const auto child = GetPlan().GetChild(child_idx);
+  const auto child_translator = GetCompilationContext()->LookupTranslator(*child);
+  return child_translator->GetOutput(work_context, attr_idx);
 }
 
 }  // namespace tpl::sql::codegen

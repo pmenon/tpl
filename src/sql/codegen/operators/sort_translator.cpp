@@ -211,9 +211,9 @@ void SortTranslator::FinishPipelineWork(const Pipeline &pipeline, FunctionBuilde
     CodeGen *codegen = GetCodeGen();
     ast::Expr *sorter_ptr = global_sorter_.GetPtr(codegen);
     if (GetBuildPipeline().IsParallel()) {
-      // Build pipeline is parallel, we need to issue a parallel sort. Depending
-      // on whether a limit was provided, we either issue a SortParallel() or a
-      // SortParallelTopK().
+      // Build pipeline is parallel, so we need to issue a parallel sort. Issue
+      // a SortParallel() or a SortParallelTopK() depending on whether a limit
+      // was provided in the plan.
       ast::Expr *offset = local_sorter_.OffsetFromState(codegen);
       if (const auto &plan = GetPlanAs<planner::OrderByPlanNode>(); plan.HasLimit()) {
         const std::size_t top_k = plan.GetOffset() + plan.GetLimit();
@@ -232,21 +232,20 @@ ast::Expr *SortTranslator::GetChildOutput(WorkContext *work_context, UNUSED uint
                                           uint32_t attr_idx) const {
   if (IsScanPipeline(work_context->GetPipeline())) {
     return GetSortRowAttribute(GetCodeGen()->MakeExpr(sort_row_var_), attr_idx);
-  } else {
-    TPL_ASSERT(IsBuildPipeline(work_context->GetPipeline()), "Pipeline not known to sorter");
-    CodeGen *codegen = GetCodeGen();
-    switch (current_row_) {
-      case CurrentRow::Lhs:
-        return GetSortRowAttribute(codegen->MakeExpr(lhs_row_), attr_idx);
-      case CurrentRow::Rhs:
-        return GetSortRowAttribute(codegen->MakeExpr(rhs_row_), attr_idx);
-      case CurrentRow::Child: {
-        auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
-        return child_translator->GetOutput(work_context, attr_idx);
-      }
+  }
+
+  TPL_ASSERT(IsBuildPipeline(work_context->GetPipeline()), "Pipeline not known to sorter");
+  switch (current_row_) {
+    case CurrentRow::Lhs:
+      return GetSortRowAttribute(GetCodeGen()->MakeExpr(lhs_row_), attr_idx);
+    case CurrentRow::Rhs:
+      return GetSortRowAttribute(GetCodeGen()->MakeExpr(rhs_row_), attr_idx);
+    case CurrentRow::Child: {
+      auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
+      return child_translator->GetOutput(work_context, attr_idx);
     }
   }
-  return nullptr;
+  UNREACHABLE("Impossible output row option");
 }
 
 }  // namespace tpl::sql::codegen

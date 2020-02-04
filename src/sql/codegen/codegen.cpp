@@ -38,10 +38,7 @@ std::string CodeGen::Scope::GetFreshName(const std::string &name) {
 //===----------------------------------------------------------------------===//
 
 CodeGen::CodeGen(ast::Context *context)
-    : context_(context),
-      position_{0, 0},
-      num_cached_scopes_(0),
-      scope_(nullptr) {
+    : context_(context), position_{0, 0}, num_cached_scopes_(0), scope_(nullptr) {
   for (auto &scope : scope_cache_) {
     scope = std::make_unique<Scope>(nullptr);
   }
@@ -226,9 +223,8 @@ ast::Expr *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId ret_t
       TPL_ASSERT(IsTypeNumeric(ret_type), "Only arithmetic types have sums.");
       if (IsTypeIntegral(ret_type)) {
         return BuiltinType(ast::BuiltinType::IntegerSumAggregate);
-      } else {
-        return BuiltinType(ast::BuiltinType::RealSumAggregate);
       }
+      return BuiltinType(ast::BuiltinType::RealSumAggregate);
     default: {
       UNREACHABLE("AggregateType() should only be called with aggregates.");
     }
