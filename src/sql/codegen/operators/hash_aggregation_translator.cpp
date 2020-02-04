@@ -293,19 +293,18 @@ ast::Expr *HashAggregationTranslator::GetAggregateTermPtr(ast::Identifier agg_ro
   return GetCodeGen()->AddressOf(GetAggregateTerm(agg_row, attr_idx));
 }
 
-ast::VariableDecl *HashAggregationTranslator::FillInputValues(FunctionBuilder *function,
-                                                              WorkContext *ctx) const {
+ast::Identifier HashAggregationTranslator::FillInputValues(FunctionBuilder *function,
+                                                           WorkContext *ctx) const {
   auto codegen = GetCodeGen();
 
   // var aggValues : AggValues
-  auto agg_values = codegen->DeclareVarNoInit(codegen->MakeFreshIdentifier("aggValues"),
-                                              codegen->MakeExpr(agg_values_type_));
-  function->Append(agg_values);
+  auto agg_values = codegen->MakeFreshIdentifier("aggValues");
+  function->Append(codegen->DeclareVarNoInit(agg_values, codegen->MakeExpr(agg_values_type_)));
 
   // Populate the grouping terms.
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetGroupByTerms()) {
-    auto lhs = GetGroupByTerm(agg_values->Name(), term_idx);
+    auto lhs = GetGroupByTerm(agg_values, term_idx);
     auto rhs = ctx->DeriveValue(*term, this);
     function->Append(codegen->Assign(lhs, rhs));
     term_idx++;
@@ -314,7 +313,7 @@ ast::VariableDecl *HashAggregationTranslator::FillInputValues(FunctionBuilder *f
   // Populate the raw aggregate values.
   term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto lhs = GetAggregateTerm(agg_values->Name(), term_idx);
+    auto lhs = GetAggregateTerm(agg_values, term_idx);
     auto rhs = ctx->DeriveValue(*term->GetChild(0), this);
     function->Append(codegen->Assign(lhs, rhs));
     term_idx++;
@@ -323,8 +322,8 @@ ast::VariableDecl *HashAggregationTranslator::FillInputValues(FunctionBuilder *f
   return agg_values;
 }
 
-ast::VariableDecl *HashAggregationTranslator::HashInputKeys(FunctionBuilder *function,
-                                                            ast::Identifier agg_values) const {
+ast::Identifier HashAggregationTranslator::HashInputKeys(FunctionBuilder *function,
+                                                         ast::Identifier agg_values) const {
   std::vector<ast::Expr *> keys;
   for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetGroupByTerms().size(); term_idx++) {
     keys.push_back(GetGroupByTerm(agg_values, term_idx));
@@ -332,26 +331,22 @@ ast::VariableDecl *HashAggregationTranslator::HashInputKeys(FunctionBuilder *fun
 
   // var hashVal = @hash(...)
   auto codegen = GetCodeGen();
-  auto hash_val =
-      codegen->DeclareVarWithInit(codegen->MakeFreshIdentifier("hashVal"), codegen->Hash(keys));
-  function->Append(hash_val);
-
+  auto hash_val = codegen->MakeFreshIdentifier("hashVal");
+  function->Append(codegen->DeclareVarWithInit(hash_val, codegen->Hash(keys)));
   return hash_val;
 }
 
-ast::VariableDecl *HashAggregationTranslator::PerformLookup(FunctionBuilder *function,
-                                                            ast::Expr *agg_ht,
-                                                            ast::Identifier hash_val,
-                                                            ast::Identifier agg_values) const {
+ast::Identifier HashAggregationTranslator::PerformLookup(FunctionBuilder *function,
+                                                         ast::Expr *agg_ht,
+                                                         ast::Identifier hash_val,
+                                                         ast::Identifier agg_values) const {
   auto codegen = GetCodeGen();
   // var aggPayload = @ptrCast(*AggPayload, @aggHTLookup())
-  auto lookup_result = codegen->AggHashTableLookup(
-      agg_ht, codegen->MakeExpr(hash_val), key_check_fn_,
-      codegen->AddressOf(codegen->MakeExpr(agg_values)), agg_payload_type_);
-  auto agg_payload =
-      codegen->DeclareVarWithInit(codegen->MakeFreshIdentifier("aggPayload"), lookup_result);
-  function->Append(agg_payload);
-
+  auto lookup_call = codegen->AggHashTableLookup(agg_ht, codegen->MakeExpr(hash_val), key_check_fn_,
+                                                 codegen->AddressOf(codegen->MakeExpr(agg_values)),
+                                                 agg_payload_type_);
+  auto agg_payload = codegen->MakeFreshIdentifier("aggPayload");
+  function->Append(codegen->DeclareVarWithInit(agg_payload, lookup_call));
   return agg_payload;
 }
 
@@ -398,17 +393,15 @@ void HashAggregationTranslator::UpdateAggregates(WorkContext *work_context,
   auto codegen = GetCodeGen();
 
   auto agg_values = FillInputValues(function, work_context);
-  auto hash_val = HashInputKeys(function, agg_values->Name());
-  auto agg_payload = PerformLookup(function, agg_ht, hash_val->Name(), agg_values->Name());
-  If check_new_agg(function, codegen->IsNilPointer(codegen->MakeExpr(agg_payload->Name())));
-  {
-    ConstructNewAggregate(function, agg_ht, agg_payload->Name(), agg_values->Name(),
-                          hash_val->Name());
-  }
+  auto hash_val = HashInputKeys(function, agg_values);
+  auto agg_payload = PerformLookup(function, agg_ht, hash_val, agg_values);
+
+  If check_new_agg(function, codegen->IsNilPointer(codegen->MakeExpr(agg_payload)));
+  ConstructNewAggregate(function, agg_ht, agg_payload, agg_values, hash_val);
   check_new_agg.EndIf();
 
   // Advance aggregate.
-  AdvanceAggregate(function, agg_payload->Name(), agg_values->Name());
+  AdvanceAggregate(function, agg_payload, agg_values);
 }
 
 void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *work_context,

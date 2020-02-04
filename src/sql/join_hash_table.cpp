@@ -55,6 +55,11 @@ void JoinHashTable::BuildChainingHashTable() {
 
   // Bulk-load the, now correctly sized, generic hash table using a non-concurrent algorithm.
   chaining_hash_table_.InsertBatch<false>(&entries_);
+
+#ifndef NDEBUG
+  const auto [min, max, avg] = chaining_hash_table_.GetChainLengthStats();
+  LOG_DEBUG("ChainingHashTable chain stats: min={}, max={}, avg={}", min, max, avg);
+#endif
 }
 
 // ---------------------------------------------------------

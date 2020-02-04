@@ -146,10 +146,10 @@ class HashAggregationTranslator : public OperatorTranslator {
   //   2b. Performing lookup.
   // 3. Initializing new aggregates.
   // 4. Advancing existing aggregates.
-  ast::VariableDecl *FillInputValues(FunctionBuilder *function, WorkContext *ctx) const;
-  ast::VariableDecl *HashInputKeys(FunctionBuilder *function, ast::Identifier agg_values) const;
-  ast::VariableDecl *PerformLookup(FunctionBuilder *function, ast::Expr *agg_ht,
-                                   ast::Identifier hash_val, ast::Identifier agg_values) const;
+  ast::Identifier FillInputValues(FunctionBuilder *function, WorkContext *ctx) const;
+  ast::Identifier HashInputKeys(FunctionBuilder *function, ast::Identifier agg_values) const;
+  ast::Identifier PerformLookup(FunctionBuilder *function, ast::Expr *agg_ht,
+                                ast::Identifier hash_val, ast::Identifier agg_values) const;
   void ConstructNewAggregate(FunctionBuilder *function, ast::Expr *agg_ht,
                              ast::Identifier agg_payload, ast::Identifier agg_values,
                              ast::Identifier hash_val) const;
