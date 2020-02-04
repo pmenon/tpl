@@ -94,11 +94,11 @@ class ChainingHashTable {
    * @pre The input hash value @em hash should match what's stored in @em entry.
    *
    * @tparam Concurrent Is the insert occurring concurrently with other inserts.
-   * @param new_entry The entry to insert.
+   * @param entry The entry to insert.
    * @param hash The hash value of the entry.
    */
   template <bool Concurrent>
-  void Insert(HashTableEntry *new_entry);
+  void Insert(HashTableEntry *entry);
 
   /**
    * Insert a list of entries into this hash table.
@@ -193,11 +193,11 @@ class ChainingHashTable {
 
   // Insert an entry into the hash table without tagging the entry.
   template <bool Concurrent>
-  void InsertUntagged(HashTableEntry *new_entry, hash_t hash);
+  void InsertUntagged(HashTableEntry *entry, hash_t hash);
 
   // Insert an entry into the hash table using a tagged pointers.
   template <bool Concurrent>
-  void InsertTagged(HashTableEntry *new_entry, hash_t hash);
+  void InsertTagged(HashTableEntry *entry, hash_t hash);
 
   // Insert a list of entries into the hash table.
   template <bool Prefetch, bool Concurrent, typename Allocator>
@@ -286,40 +286,43 @@ inline void ChainingHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void ChainingHashTable<UseTags>::InsertUntagged(HashTableEntry *new_entry, hash_t hash) {
+inline void ChainingHashTable<UseTags>::InsertUntagged(HashTableEntry *const entry,
+                                                       const hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
-  TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
+  TPL_ASSERT(entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
     HashTableEntry *old_entry = entries_[pos];
     do {
-      new_entry->next = old_entry;
-    } while (!COMPARE_EXCHANGE_WEAK(entries_ + pos, &old_entry, new_entry));
+      entry->next = old_entry;
+    } while (!COMPARE_EXCHANGE_WEAK(entries_ + pos, &old_entry, entry));
   } else {
-    new_entry->next = entries_[pos];
-    entries_[pos] = new_entry;
+    entry->next = entries_[pos];
+    entries_[pos] = entry;
   }
 }
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void ChainingHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry, hash_t hash) {
+inline void ChainingHashTable<UseTags>::InsertTagged(HashTableEntry *const entry,
+                                                     const hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
-  TPL_ASSERT(new_entry->hash == hash, "Hash value not set in entry!");
+  TPL_ASSERT(entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
     HashTableEntry *old_entry = entries_[pos];
+    HashTableEntry *new_entry = nullptr;
     do {
-      new_entry->next = UntagPointer(old_entry);    // Un-tag the old entry
-      new_entry = UpdateTag(old_entry, new_entry);  // Tag the new entry
+      entry->next = UntagPointer(old_entry);    // Un-tag the old entry
+      new_entry = UpdateTag(old_entry, entry);  // Tag the new entry
     } while (!COMPARE_EXCHANGE_WEAK(entries_ + pos, &old_entry, new_entry));
   } else {
-    new_entry->next = UntagPointer(entries_[pos]);
-    entries_[pos] = UpdateTag(entries_[pos], new_entry);
+    entry->next = UntagPointer(entries_[pos]);
+    entries_[pos] = UpdateTag(entries_[pos], entry);
   }
 }
 
@@ -327,11 +330,11 @@ inline void ChainingHashTable<UseTags>::InsertTagged(HashTableEntry *new_entry, 
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void ChainingHashTable<UseTags>::Insert(HashTableEntry *new_entry) {
+inline void ChainingHashTable<UseTags>::Insert(HashTableEntry *const entry) {
   if constexpr (UseTags) {
-    InsertTagged<Concurrent>(new_entry, new_entry->hash);
+    InsertTagged<Concurrent>(entry, entry->hash);
   } else {
-    InsertUntagged<Concurrent>(new_entry, new_entry->hash);
+    InsertUntagged<Concurrent>(entry, entry->hash);
   }
 
   // Update element count
