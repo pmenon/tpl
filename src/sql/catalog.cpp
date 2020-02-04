@@ -248,7 +248,6 @@ void InitTable(const TableInsertMeta &table_meta, Table *table) {
     TPL_ASSERT(num_vals != 0, "Can't have empty columns.");
     for (const auto &col_meta : table_meta.col_meta) {
       auto [data, null_bitmap] = GenerateColumnData(col_meta, num_vals);
-      // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
       columns.emplace_back(col_meta.sql_type, data, null_bitmap, num_vals);
     }
 

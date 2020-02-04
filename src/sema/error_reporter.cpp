@@ -4,13 +4,11 @@
 #include <string>
 
 #include "ast/type.h"
-#include "ast/type_visitor.h"
 
 namespace tpl::sema {
 
 namespace {
 #define F(id, str, arg_types) str,
-// NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
 constexpr const char *kErrorStrings[] = {MESSAGE_LIST(F)};
 #undef F
 
