@@ -1375,13 +1375,14 @@ void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
     }
     case ast::Builtin::SorterSortParallel:
     case ast::Builtin::SorterSortTopKParallel: {
+      // Second argument is the *ThreadStateContainer.
       const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
       if (!IsPointerToSpecificBuiltin(call_args[1]->GetType(), tls_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(tls_kind)->PointerTo());
         return;
       }
 
-      // Third argument must be a 32-bit integer representing the offset
+      // Third argument must be a 32-bit integer representing the offset.
       ast::Type *uint_type = GetBuiltinType(ast::BuiltinType::Uint32);
       if (call_args[2]->GetType() != uint_type) {
         ReportIncorrectCallArg(call, 2, uint_type);
@@ -1389,7 +1390,11 @@ void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
       }
 
       // If it's for top-k, the last argument must be the top-k value
-      if (builtin == ast::Builtin::SorterSortTopKParallel) {
+      if (builtin == ast::Builtin::SorterSortParallel) {
+        if (!CheckArgCount(call, 3)) {
+          return;
+        }
+      } else {
         if (!CheckArgCount(call, 4)) {
           return;
         }

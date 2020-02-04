@@ -857,7 +857,7 @@ ast::Expr *CodeGen::SortParallel(ast::Expr *sorter, ast::Expr *tls, ast::Expr *o
 ast::Expr *CodeGen::SortTopKParallel(ast::Expr *sorter, ast::Expr *tls, ast::Expr *offset,
                                      std::size_t top_k) {
   ast::Expr *call =
-      CallBuiltin(ast::Builtin::SorterSortParallel, {sorter, tls, offset, Const64(top_k)});
+      CallBuiltin(ast::Builtin::SorterSortTopKParallel, {sorter, tls, offset, Const64(top_k)});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }
