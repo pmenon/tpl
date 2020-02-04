@@ -1346,6 +1346,11 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin) {
       call->SetArgument(
           1, ImplCastExprToType(call->Arguments()[1], uint_type, ast::CastKind::IntegralCast));
     }
+  } else {
+    // Regular sorter insert, expect one argument.
+    if (!CheckArgCount(call, 1)) {
+      return;
+    }
   }
 
   // This call returns a pointer to the allocated tuple
