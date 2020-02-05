@@ -128,41 +128,40 @@ void SortTranslator::TearDownPipelineState(const Pipeline &pipeline,
   }
 }
 
-ast::Expr *SortTranslator::GetSortRowAttribute(ast::Expr *sort_row, uint32_t attr_idx) const {
-  auto codegen = GetCodeGen();
-  auto attr_name = codegen->MakeIdentifier(kSortRowAttrPrefix + std::to_string(attr_idx));
-  return codegen->AccessStructMember(sort_row, attr_name);
+ast::Expr *SortTranslator::GetSortRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const {
+  CodeGen *codegen = GetCodeGen();
+  ast::Identifier attr_name =
+      codegen->MakeIdentifier(kSortRowAttrPrefix + std::to_string(attr_idx));
+  return codegen->AccessStructMember(codegen->MakeExpr(sort_row), attr_name);
 }
 
-void SortTranslator::FillSortRow(WorkContext *ctx, FunctionBuilder *function,
-                                 ast::Expr *sort_row) const {
+void SortTranslator::FillSortRow(WorkContext *ctx, FunctionBuilder *function) const {
   CodeGen *codegen = GetCodeGen();
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
-    ast::Expr *lhs = GetSortRowAttribute(sort_row, attr_idx);
+    ast::Expr *lhs = GetSortRowAttribute(sort_row_var_, attr_idx);
     ast::Expr *rhs = GetChildOutput(ctx, 0, attr_idx);
     function->Append(codegen->Assign(lhs, rhs));
   }
 }
 
 void SortTranslator::InsertIntoSorter(WorkContext *ctx, FunctionBuilder *function) const {
-  auto codegen = GetCodeGen();
+  CodeGen *codegen = GetCodeGen();
 
   // Collect correct sorter instance.
   const auto sorter = ctx->GetPipeline().IsParallel() ? local_sorter_ : global_sorter_;
+  ast::Expr *sorter_ptr = sorter.GetPtr(codegen);
 
-  auto sort_row = codegen->MakeExpr(sort_row_var_);
   if (const auto &plan = GetPlanAs<planner::OrderByPlanNode>(); plan.HasLimit()) {
-    const auto top_k_val = plan.GetOffset() + plan.GetLimit();
-    function->Append(codegen->DeclareVarWithInit(
-        sort_row_var_,
-        codegen->SorterInsertTopK(sorter.GetPtr(codegen), sort_row_type_, top_k_val)));
-    FillSortRow(ctx, function, sort_row);
-    function->Append(codegen->SorterInsertTopKFinish(sorter.GetPtr(codegen), top_k_val));
+    const std::size_t top_k = plan.GetOffset() + plan.GetLimit();
+    ast::Expr *insert_call = codegen->SorterInsertTopK(sorter_ptr, sort_row_type_, top_k);
+    function->Append(codegen->DeclareVarWithInit(sort_row_var_, insert_call));
+    FillSortRow(ctx, function);
+    function->Append(codegen->SorterInsertTopKFinish(sorter.GetPtr(codegen), top_k));
   } else {
-    function->Append(codegen->DeclareVarWithInit(
-        sort_row_var_, codegen->SorterInsert(sorter.GetPtr(codegen), sort_row_type_)));
-    FillSortRow(ctx, function, sort_row);
+    ast::Expr *insert_call = codegen->SorterInsert(sorter_ptr, sort_row_type_);
+    function->Append(codegen->DeclareVarWithInit(sort_row_var_, insert_call));
+    FillSortRow(ctx, function);
   }
 }
 
@@ -231,15 +230,15 @@ void SortTranslator::FinishPipelineWork(const Pipeline &pipeline, FunctionBuilde
 ast::Expr *SortTranslator::GetChildOutput(WorkContext *work_context, UNUSED uint32_t child_idx,
                                           uint32_t attr_idx) const {
   if (IsScanPipeline(work_context->GetPipeline())) {
-    return GetSortRowAttribute(GetCodeGen()->MakeExpr(sort_row_var_), attr_idx);
+    return GetSortRowAttribute(sort_row_var_, attr_idx);
   }
 
   TPL_ASSERT(IsBuildPipeline(work_context->GetPipeline()), "Pipeline not known to sorter");
   switch (current_row_) {
     case CurrentRow::Lhs:
-      return GetSortRowAttribute(GetCodeGen()->MakeExpr(lhs_row_), attr_idx);
+      return GetSortRowAttribute(lhs_row_, attr_idx);
     case CurrentRow::Rhs:
-      return GetSortRowAttribute(GetCodeGen()->MakeExpr(rhs_row_), attr_idx);
+      return GetSortRowAttribute(rhs_row_, attr_idx);
     case CurrentRow::Child: {
       auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
       return child_translator->GetOutput(work_context, attr_idx);

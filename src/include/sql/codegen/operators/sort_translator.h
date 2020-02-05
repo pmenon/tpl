@@ -130,13 +130,13 @@ class SortTranslator : public OperatorTranslator {
   void TearDownSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const;
 
   // Access the attribute at the given index within the provided sort row.
-  ast::Expr *GetSortRowAttribute(ast::Expr *sort_row, uint32_t attr_idx) const;
+  ast::Expr *GetSortRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const;
 
   // Called to scan the global sorter instance.
   void ScanSorter(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Insert tuple data into the provided sort row.
-  void FillSortRow(WorkContext *ctx, FunctionBuilder *function, ast::Expr *sort_row) const;
+  void FillSortRow(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Called to insert the tuple in the context into the sorter instance.
   void InsertIntoSorter(WorkContext *ctx, FunctionBuilder *function) const;
