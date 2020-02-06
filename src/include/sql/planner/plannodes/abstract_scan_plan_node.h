@@ -50,11 +50,6 @@ class AbstractScanPlanNode : public AbstractPlanNode {
         scan_predicate_(predicate) {}
 
  public:
-  /**
-   * Default constructor used for deserialization
-   */
-  AbstractScanPlanNode() = default;
-
   DISALLOW_COPY_AND_MOVE(AbstractScanPlanNode)
 
   /**
