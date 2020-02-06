@@ -171,6 +171,11 @@ class VectorProjectionIterator {
   void SetValue(uint32_t col_idx, T val, bool null);
 
   /**
+   * @return The current position in the vector projection.
+   */
+  uint32_t GetPosition() const;
+
+  /**
    * Set the current iterator position.
    * @tparam IsFiltered Is this VPI filtered?
    * @param idx The index the iteration should jump to
@@ -348,6 +353,8 @@ inline void VectorProjectionIterator::SetValue(uint32_t col_idx, const T val, bo
     reinterpret_cast<T *>(col_vector->data_)[curr_idx_] = val;
   }
 }
+
+inline uint32_t VectorProjectionIterator::GetPosition() const { return curr_idx_; }
 
 template <bool Filtered>
 inline void VectorProjectionIterator::SetPosition(uint32_t idx) {
