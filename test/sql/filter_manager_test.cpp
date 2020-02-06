@@ -6,104 +6,162 @@
 #include "sql/filter_manager.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/vector_filter_executor.h"
-#include "util/sql_test_harness.h"
+#include "util/test_harness.h"
 
 namespace tpl::sql {
 
-class FilterManagerTest : public SqlBasedTest {};
+class FilterManagerTest : public TplTest {};
 
 enum Col : uint8_t { A = 0, B = 1, C = 2, D = 3 };
 
 using namespace std::chrono_literals;  // NOLINT
 
-// 0.025% selective
-void ColA_Lt_500(VectorProjection *vp, TupleIdList *tids) {
-  VectorFilterExecutor::SelectLessThanVal(vp, Col::A, GenericValue::CreateInteger(500), tids);
-}
+TEST_F(FilterManagerTest, ConjunctionTest) {
+  // Create a filter that implements: colA < 500 AND colB < 9
+  FilterManager filter;
+  filter.StartNewClause();
+  filter.InsertClauseTerms({[](auto *vp, auto *tids) {
+                              VectorFilterExecutor::SelectLessThanVal(
+                                  vp, Col::A, GenericValue::CreateInteger(500), tids);
+                            },
+                            [](auto *vp, auto *tids) {
+                              VectorFilterExecutor::SelectLessThanVal(
+                                  vp, Col::B, GenericValue::CreateInteger(9), tids);
+                            }});
+  filter.Finalize();
 
-// 90% selective
-void ColB_Lt_9(VectorProjection *vp, TupleIdList *tids) {
-  VectorFilterExecutor::SelectLessThanVal(vp, Col::B, GenericValue::CreateInteger(9), tids);
-}
+  // Create some random data.
+  VectorProjection vp;
+  vp.Initialize({TypeId::Integer, TypeId::Integer});
+  vp.Reset(kDefaultVectorSize);
+  VectorOps::Generate(vp.GetColumn(Col::A), 0, 1);
+  VectorOps::Generate(vp.GetColumn(Col::B), 0, 1);
 
-// 90% selective tuple-at-a-time filter
-void ColB_Lt_9_TaaT(VectorProjection *vp, TupleIdList *tids) {
-  VectorProjectionIterator iter(vp, tids);
-  iter.RunFilter([&]() {
-    bool null = false;
-    auto col_b = *iter.GetValue<int32_t, false>(Col::B, &null);
-    return col_b < 9;
+  // Run the filters
+  VectorProjectionIterator vpi(&vp);
+  filter.RunFilters(&vpi);
+
+  // Check
+  EXPECT_TRUE(vpi.IsFiltered());
+  EXPECT_FALSE(vpi.IsEmpty());
+  vpi.ForEach([&]() {
+    auto cola = *vpi.GetValue<int32_t, false>(Col::A, nullptr);
+    auto colb = *vpi.GetValue<int32_t, false>(Col::B, nullptr);
+    EXPECT_TRUE(cola < 500 && colb < 9);
   });
 }
 
-TEST_F(FilterManagerTest, ConjunctionTest) {
-  FilterManager filter;
-  filter.StartNewClause();
-  filter.InsertClauseTerms({ColA_Lt_500, ColB_Lt_9});
-  filter.Finalize();
-
-  TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
-  for (tvi.Init(); tvi.Advance();) {
-    auto *vpi = tvi.GetVectorProjectionIterator();
-
-    // Run the filters
-    filter.RunFilters(vpi);
-
-    // Check
-    vpi->ForEach([vpi]() {
-      auto cola = *vpi->GetValue<int32_t, false>(Col::A, nullptr);
-      auto colb = *vpi->GetValue<int32_t, false>(Col::B, nullptr);
-      EXPECT_LT(cola, 500);
-      EXPECT_LT(colb, 9);
-    });
-  }
-}
-
 TEST_F(FilterManagerTest, DisjunctionTest) {
+  // Create a filter that implements: colA < 500 OR colB < 9
   FilterManager filter;
   filter.StartNewClause();
-  filter.InsertClauseTerm(ColA_Lt_500);
+  filter.InsertClauseTerm([](auto *vp, auto *tids) {
+    VectorFilterExecutor::SelectLessThanVal(vp, Col::A, GenericValue::CreateInteger(500), tids);
+  });
   filter.StartNewClause();
-  filter.InsertClauseTerm(ColB_Lt_9);
+  filter.InsertClauseTerm([](auto *vp, auto *tids) {
+    VectorFilterExecutor::SelectLessThanVal(vp, Col::B, GenericValue::CreateInteger(9), tids);
+  });
   filter.Finalize();
 
-  TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
-  for (tvi.Init(); tvi.Advance();) {
-    auto *vpi = tvi.GetVectorProjectionIterator();
+  // Create some random data.
+  VectorProjection vp;
+  vp.Initialize({TypeId::Integer, TypeId::Integer});
+  vp.Reset(kDefaultVectorSize);
+  VectorOps::Generate(vp.GetColumn(Col::A), 0, 1);
+  VectorOps::Generate(vp.GetColumn(Col::B), 0, 1);
 
-    // Run the filters
-    filter.RunFilters(vpi);
+  // Run the filters
+  VectorProjectionIterator vpi(&vp);
+  filter.RunFilters(&vpi);
 
-    // Check
-    vpi->ForEach([vpi]() {
-      auto cola = *vpi->GetValue<int32_t, false>(Col::A, nullptr);
-      auto colb = *vpi->GetValue<int32_t, false>(Col::B, nullptr);
-      EXPECT_TRUE(cola < 500 || colb < 9);
-    });
-  }
+  // Check
+  EXPECT_TRUE(vpi.IsFiltered());
+  EXPECT_FALSE(vpi.IsEmpty());
+  vpi.ForEach([&]() {
+    auto cola = *vpi.GetValue<int32_t, false>(Col::A, nullptr);
+    auto colb = *vpi.GetValue<int32_t, false>(Col::B, nullptr);
+    EXPECT_TRUE(cola < 500 || colb < 9);
+  });
 }
 
 TEST_F(FilterManagerTest, MixedTaatVaatFilterTest) {
+  // Create a filter that implements: colA < 500 AND colB < 9
+  // The filter on column colB is implemented using a tuple-at-a-time filter.
+  // Thus, the filter is a mixed VaaT and TaaT filter.
   FilterManager filter;
   filter.StartNewClause();
-  filter.InsertClauseTerms({ColB_Lt_9_TaaT, ColA_Lt_500});
+  filter.InsertClauseTerms(
+      {[](auto *vp, auto *tids) {
+         VectorFilterExecutor::SelectLessThanVal(vp, Col::A, GenericValue::CreateInteger(500),
+                                                 tids);
+       },
+       [](auto *vp, auto *tids) {
+         VectorProjectionIterator iter(vp, tids);
+         iter.RunFilter([&]() { return *iter.GetValue<int32_t, false>(Col::B, nullptr) < 9; });
+       }});
   filter.Finalize();
 
-  TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
-  for (tvi.Init(); tvi.Advance();) {
-    auto *vpi = tvi.GetVectorProjectionIterator();
+  // Create some random data.
+  VectorProjection vp;
+  vp.Initialize({TypeId::Integer, TypeId::Integer});
+  vp.Reset(kDefaultVectorSize);
+  VectorOps::Generate(vp.GetColumn(Col::A), 0, 1);
+  VectorOps::Generate(vp.GetColumn(Col::B), 0, 1);
 
-    // Run the filters
-    filter.RunFilters(vpi);
+  // Run the filters
+  VectorProjectionIterator vpi(&vp);
+  filter.RunFilters(&vpi);
 
-    // Check
-    vpi->ForEach([vpi]() {
-      auto cola = *vpi->GetValue<int32_t, false>(Col::A, nullptr);
-      auto colb = *vpi->GetValue<int32_t, false>(Col::B, nullptr);
-      EXPECT_LT(cola, 500);
-      EXPECT_LT(colb, 9);
-    });
+  // Check
+  EXPECT_TRUE(vpi.IsFiltered());
+  EXPECT_FALSE(vpi.IsEmpty());
+  vpi.ForEach([&]() {
+    auto cola = *vpi.GetValue<int32_t, false>(Col::A, nullptr);
+    auto colb = *vpi.GetValue<int32_t, false>(Col::B, nullptr);
+    EXPECT_TRUE(cola < 500 && colb < 9);
+  });
+}
+
+TEST_F(FilterManagerTest, AdaptiveCheckTest) {
+  // Create a filter that implements: colA < 500 AND colB < 9
+  FilterManager filter;
+  filter.StartNewClause();
+  filter.InsertClauseTerms({[](auto *vp, auto *tids) {
+                              std::this_thread::sleep_for(1us);  // Fake a sleep.
+                              const auto val = GenericValue::CreateInteger(500);
+                              VectorFilterExecutor::SelectLessThanVal(vp, Col::A, val, tids);
+                            },
+                            [](auto *vp, auto *tids) {
+                              const auto val = GenericValue::CreateInteger(9);
+                              VectorFilterExecutor::SelectLessThanVal(vp, Col::B, val, tids);
+                            }});
+  filter.Finalize();
+
+  // Create some random data.
+  VectorProjection vp;
+  vp.Initialize({TypeId::Integer, TypeId::Integer});
+  vp.Reset(kDefaultVectorSize);
+  VectorOps::Generate(vp.GetColumn(Col::A), 0, 1);
+  VectorOps::Generate(vp.GetColumn(Col::B), 0, 1);
+
+  for (uint32_t i = 0; i < 100; i++) {
+    // Remove any lingering filter.
+    vp.Reset(kDefaultVectorSize);
+
+    // Create an iterator and filter it.
+    VectorProjectionIterator vpi(&vp);
+    filter.RunFilters(&vpi);
   }
+
+  // After a while, at least one re sampling should have occurred. At that time,
+  // the manager should have realized that the second filter (1) is more selective
+  // and (2) runs faster (due to now having a fake sleep).
+  EXPECT_EQ(1, filter.GetClauseCount());
+  const auto clause = filter.GetOptimalClauseOrder()[0];
+  EXPECT_GT(clause->GetResampleCount(), 1);
+  EXPECT_EQ(1, clause->GetOptimalTermOrder()[0]);
+  EXPECT_EQ(0, clause->GetOptimalTermOrder()[1]);
 }
 
 #if 0

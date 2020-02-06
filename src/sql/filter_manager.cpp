@@ -5,6 +5,7 @@
 #include "ips4o/ips4o.hpp"
 
 #include "common/settings.h"
+#include "logging/logger.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/timer.h"
 
@@ -17,7 +18,10 @@ namespace tpl::sql {
 //===----------------------------------------------------------------------===//
 
 FilterManager::Clause::Clause(const float stat_sample_freq)
-    : sample_freq_(stat_sample_freq),
+    : input_copy_(kDefaultVectorSize),
+      temp_(kDefaultVectorSize),
+      sample_freq_(stat_sample_freq),
+      sample_count_(0),
 #ifndef NDEBUG
       // In DEBUG mode, use a fixed seed so we get repeatable randomness
       gen_(0),
@@ -29,9 +33,8 @@ FilterManager::Clause::Clause(const float stat_sample_freq)
 
 void FilterManager::Clause::Finalize() {
   // The initial "best" ordering of terms is the order they were inserted into
-  // the filter manager, which also happens to be, presumably, the order the
-  // optimizer provided in the physical plan. Let's stick with it now and
-  // revisit during runtime.
+  // the filter manager and, presumably, the order the optimizer provided in
+  // the physical plan. Let's stick with it now and revisit during runtime.
   optimal_term_order_.resize(terms_.size());
   std::iota(optimal_term_order_.begin(), optimal_term_order_.end(), 0);
 }
@@ -55,24 +58,36 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
   if (!ShouldReRank()) {
     for (const auto &term_idx : optimal_term_order_) {
       terms_[term_idx].fn(vector_projection, tid_list);
+      if (tid_list->IsEmpty()) break;
     }
     return;
   }
 
-  double selectivity = tid_list->ComputeSelectivity();
+  input_copy_.Resize(tid_list->GetCapacity());
+  temp_.Resize(tid_list->GetCapacity());
+  input_copy_.AssignFrom(*tid_list);
+
+  const double selectivity = tid_list->ComputeSelectivity();
+
   for (const auto term_idx : optimal_term_order_) {
+    temp_.AssignFrom(input_copy_);
     Clause::Term &term = terms_[term_idx];
-    const double exec_ns = util::Time<std::nano>([&] { term.fn(vector_projection, tid_list); });
-    const double new_selectivity = tid_list->ComputeSelectivity();
-    term.rank = (1.0f - (selectivity - new_selectivity)) / exec_ns;
-    selectivity = new_selectivity;
+    const double exec_ns = util::Time<std::nano>([&] { term.fn(vector_projection, &temp_); });
+    const double term_selectivity = temp_.ComputeSelectivity();
+    term.rank = (1.0F - (selectivity - term_selectivity)) / exec_ns;
+    LOG_TRACE("Term {}: selectivity={:05.2f}, exec ns.: {}, rank: {:.8f}", term_idx,
+              term_selectivity * 100.0F, exec_ns, term.rank);
+    tid_list->IntersectWith(temp_);
   }
 
-  // Re-rank
+  // Re-rank.
   ips4o::sort(optimal_term_order_.begin(), optimal_term_order_.end(),
               [&](const auto term_idx1, const auto term_idx2) {
                 return terms_[term_idx1].rank < terms_[term_idx2].rank;
               });
+
+  // Update sample count.
+  sample_count_++;
 }
 
 //===----------------------------------------------------------------------===//
@@ -86,8 +101,6 @@ FilterManager::FilterManager()
       output_list_(kDefaultVectorSize),
       tmp_list_(kDefaultVectorSize),
       finalized_(false) {}
-
-FilterManager::~FilterManager() = default;
 
 void FilterManager::StartNewClause() {
   TPL_ASSERT(!finalized_, "Cannot modify filter manager after finalization");
@@ -176,6 +189,14 @@ void FilterManager::RunFilters(VectorProjectionIterator *vpi) {
   VectorProjection *vector_projection = vpi->GetVectorProjection();
   RunFilters(vector_projection);
   vpi->SetVectorProjection(vector_projection);
+}
+
+std::vector<const FilterManager::Clause *> FilterManager::GetOptimalClauseOrder() const {
+  std::vector<const Clause *> opt(clauses_.size());
+  for (uint32_t i = 0; i < clauses_.size(); i++) {
+    opt[i] = &clauses_[optimal_clause_order_[i]];
+  }
+  return opt;
 }
 
 }  // namespace tpl::sql

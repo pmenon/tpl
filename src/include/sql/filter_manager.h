@@ -25,7 +25,7 @@ class VectorProjectionIterator;
  * FilterManager filter;
  * filter.StartNewClause();
  * filter.InsertClauseFilter(Clause0Term0);
- * // Remaining clauses and terms ..
+ * // Remaining clauses and terms ...
  * filter.Finalize();
  *
  * // Once finalized, the filter can be applied to projections
@@ -76,35 +76,46 @@ class FilterManager {
     void RunFilter(VectorProjection *vector_projection, TupleIdList *tid_list);
 
     /**
-     * @return The number of terms.
+     * @return The number of times the clause has samples its terms' selectivities.
+     * */
+    uint32_t GetResampleCount() const { return sample_count_; }
+
+    /**
+     * @return The order of application of the terms in this clause the filter manage believes is
+     *         currently optimal. This order may change over the course of its usage.
      */
-    uint32_t GetTermCount() const { return terms_.size(); }
+    const std::vector<uint32_t> &GetOptimalTermOrder() const { return optimal_term_order_; }
 
    private:
-    // Indicates if statistics for all terms should be recollected
+    // Indicates if statistics for all terms should be recollected.
     bool ShouldReRank();
 
-    // A term in the clause
+    // A term in the clause.
     struct Term {
-      // The function implementing the term
+      // The function implementing the term.
       MatchFn fn;
-      // The current rank
+      // The current rank.
       double rank;
-      // Create a new term with no rank
+      // Create a new term with no rank.
       explicit Term(MatchFn term_fn) : fn(term_fn), rank(0.0) {}
     };
 
    private:
-    // The terms (i.e., factors) of the conjunction
+    // The terms (i.e., factors) of the conjunction.
     std::vector<Term> terms_;
 
-    // The optimal order to execute the terms
+    // The optimal order to execute the terms.
     std::vector<uint32_t> optimal_term_order_;
 
-    // Frequency at which to sample stats, a number in the range [0.0, 1.0]
-    float sample_freq_;
+    // Temporary lists used during re-sampling.
+    TupleIdList input_copy_, temp_;
 
-    // Random number generator
+    // Frequency at which to sample stats, a number in the range [0.0, 1.0].
+    float sample_freq_;
+    // The number of times samples have been collected.
+    uint32_t sample_count_;
+
+    // Random number generator.
     std::mt19937 gen_;
     std::uniform_real_distribution<float> dist_;
   };
@@ -113,11 +124,6 @@ class FilterManager {
    * Construct an empty filter.
    */
   FilterManager();
-
-  /**
-   * Destructor.
-   */
-  ~FilterManager();
 
   /**
    * This class cannot be copied or moved.
@@ -167,6 +173,12 @@ class FilterManager {
    * @return The number of clauses in this filter.
    */
   uint32_t GetClauseCount() const { return clauses_.size(); }
+
+  /**
+   * @return The ordering of clauses this manager believe is currently optimal. This ordering may
+   *         change over the course of a manager's use.
+   */
+  std::vector<const Clause *> GetOptimalClauseOrder() const;
 
  private:
   // The clauses in the filter
