@@ -171,21 +171,15 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     uint32_t displacement = 0;
     uint32_t local_idx = 0;
 
-    //
     // The first argument to the TBC function is a pointer to the return value.
     // If the function returns a non-void value, insert the pointer now.
-    //
-
     if (const ast::Type *return_type = func_type->GetReturnType(); !return_type->IsNilType()) {
       displacement = util::MathUtil::AlignTo(return_type->GetSize(), sizeof(intptr_t));
       mov(ptr[rsp + displacement], rsp);
       local_idx++;
     }
 
-    //
-    // Now comes all the input arguments
-    //
-
+    // Now push all input arguments.
     for (uint32_t idx = 0; idx < func_type->GetNumParams(); idx++, local_idx++) {
       const auto &local_info = func_.GetLocals()[local_idx];
       auto use_64bit_reg = static_cast<uint32_t>(local_info.GetSize() > sizeof(uint32_t));
