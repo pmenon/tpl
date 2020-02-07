@@ -57,7 +57,7 @@ Module::Module(std::unique_ptr<BytecodeModule> bytecode_module,
   if (jit_module_ == nullptr) {
     const auto num_functions = bytecode_module_->GetFunctionCount();
     for (uint32_t idx = 0; idx < num_functions; idx++) {
-      functions_[idx] = bytecode_trampolines_[idx].code();
+      functions_[idx] = bytecode_trampolines_[idx].GetCode();
     }
   } else {
     const auto num_functions = bytecode_module_->GetFunctionCount();
@@ -228,7 +228,7 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
 
 }  // namespace
 
-void Module::CreateFunctionTrampoline(const FunctionInfo &func, Trampoline &trampoline) {
+void Module::CreateFunctionTrampoline(const FunctionInfo &func, Trampoline *trampoline) {
   // Allocate memory
   std::error_code error;
   uint32_t flags =
@@ -250,39 +250,40 @@ void Module::CreateFunctionTrampoline(const FunctionInfo &func, Trampoline &tram
                                                   llvm::sys::Memory::ProtectionFlags::MF_EXEC);
 
   // Done
-  trampoline = Trampoline(llvm::sys::OwningMemoryBlock(mem));
+  *trampoline = Trampoline(llvm::sys::OwningMemoryBlock(mem));
 }
 
 void Module::CreateFunctionTrampoline(FunctionId func_id) {
-  // If a trampoline has already been setup, don't bother
-  if (bytecode_trampolines_[func_id].code() != nullptr) {
+  // If a trampoline has already been setup, don't bother.
+  if (bytecode_trampolines_[func_id].GetCode() != nullptr) {
     LOG_DEBUG("Function {} has a trampoline; will not recreate", func_id);
     return;
   }
 
-  // Lookup the function
-  const auto *func_info = GetFuncInfoById(func_id);
-
-  // Create the trampoline for the function
+  // Create the trampoline for the function.
   Trampoline trampoline;
-  CreateFunctionTrampoline(*func_info, trampoline);
+  const auto *func_info = GetFuncInfoById(func_id);
+  CreateFunctionTrampoline(*func_info, &trampoline);
 
-  // Mark available
+  // Mark available.
   bytecode_trampolines_[func_id] = std::move(trampoline);
 }
 
 void Module::CompileToMachineCode() {
   std::call_once(compiled_flag_, [this]() {
-    // If the module has already been compiled, nothing to do.
+    // Exit if the module has already been compiled. This might happen if
+    // requested to execute in adaptive mode by concurrent threads.
     if (jit_module_ != nullptr) {
       return;
     }
 
-    // JIT
+    // JIT the module.
     LLVMEngine::CompilerOptions options;
     jit_module_ = LLVMEngine::Compile(*bytecode_module_, options);
 
-    // Setup function pointers
+    // JIT completed successfully. For each function in the module, pull out its
+    // compiled implementation into the function cache, atomically replacing any
+    // previous implementation.
     for (const auto &func_info : bytecode_module_->GetFunctionsInfo()) {
       auto *jit_function = jit_module_->GetFunctionPointer(func_info.GetName());
       TPL_ASSERT(jit_function != nullptr, "Missing function in compiled module!");

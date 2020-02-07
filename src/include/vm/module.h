@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>  // NOLINT
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -113,10 +113,8 @@ class Module {
   const BytecodeModule *GetBytecodeModule() const { return bytecode_module_.get(); }
 
  private:
-  friend class VM;
-
-  // Accesses the trampoline functions
-  friend class BytecodeTrampolineTest;
+  friend class VM;                      // For the VM to access raw bytecode.
+  friend class BytecodeTrampolineTest;  // For the tests to check private methods.
 
   // This class encapsulates the ability to asynchronously JIT compile a module.
   class AsyncCompileTask;
@@ -126,43 +124,42 @@ class Module {
   // to arrange and adjust call arguments from the C/C++ ABI to the TPL ABI.
   class Trampoline {
    public:
-    // Create an empty/uninitialized trampoline
+    // Create an empty/uninitialized trampoline.
     Trampoline() = default;
 
-    // Create a trampoline over the given memory block
+    // Create a trampoline over the given memory block.
     explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) noexcept : mem_(std::move(mem)) {}
 
-    // Move assignment
+    // Move assignment.
     Trampoline &operator=(Trampoline &&other) noexcept {
       mem_ = std::move(other.mem_);
       return *this;
     }
 
-    // Access the trampoline code
-    void *code() const { return mem_.base(); }
+    // Access the raw trampoline code.
+    void *GetCode() const { return mem_.base(); }
 
    private:
-    // Memory region where the trampoline's code is
+    // Memory region where the trampoline's code resides.
     llvm::sys::OwningMemoryBlock mem_;
   };
 
-  // Create a trampoline function for the function with id @em func_id
+  // Create a trampoline function for the function with the provided ID.
   void CreateFunctionTrampoline(FunctionId func_id);
 
-  // Generate a trampoline for the function
-  void CreateFunctionTrampoline(const FunctionInfo &func, Trampoline &trampoline);
+  // Generate a trampoline for the function.
+  void CreateFunctionTrampoline(const FunctionInfo &func, Trampoline *trampoline);
 
-  // Access the raw bytecode trampoline function
+  // Access the bytecode trampoline for the function with the given ID.
   void *GetBytecodeImpl(const FunctionId func_id) const {
-    return bytecode_trampolines_[func_id].code();
+    return bytecode_trampolines_[func_id].GetCode();
   }
 
-  // Access the compiled implementation of the function with the given ID
+  // Access the compiled implementation of the function with the given ID.
   void *GetCompiledImpl(const FunctionId func_id) const {
     if (jit_module_ == nullptr) {
       return nullptr;
     }
-
     const auto *func_info = GetFuncInfoById(func_id);
     return jit_module_->GetFunctionPointer(func_info->GetName());
   }
@@ -177,16 +174,20 @@ class Module {
  private:
   // The module containing all TBC (i.e., bytecode) for the TPL program.
   std::unique_ptr<BytecodeModule> bytecode_module_;
+
   // The module containing compiled machine code for the TPL program.
   std::unique_ptr<LLVMEngine::CompiledModule> jit_module_;
+
   // Function pointers for all functions defined in the TPL program. Pointers
   // may point into bytecode stub functions (i.e., interpreted implementations),
   // or into compiled machine-code implementations.
   std::unique_ptr<std::atomic<void *>[]> functions_;
-  // Trampolines for all bytecode functions.
+
+  // Trampolines for all bytecode functions. There is one for each function in
+  // program. Initially, all function pointers point into these trampolines.
   std::unique_ptr<Trampoline[]> bytecode_trampolines_;
-  // Compilation flag used to ensure compilation occurs only once, even under
-  // concurrent invocations.
+
+  // Flag to indicate if the JIT compilation has occurred.
   std::once_flag compiled_flag_;
 };
 
