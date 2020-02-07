@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>  // NOLINT
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -177,16 +177,20 @@ class Module {
  private:
   // The module containing all TBC (i.e., bytecode) for the TPL program.
   std::unique_ptr<BytecodeModule> bytecode_module_;
+
   // The module containing compiled machine code for the TPL program.
   std::unique_ptr<LLVMEngine::CompiledModule> jit_module_;
+
   // Function pointers for all functions defined in the TPL program. Pointers
   // may point into bytecode stub functions (i.e., interpreted implementations),
   // or into compiled machine-code implementations.
   std::unique_ptr<std::atomic<void *>[]> functions_;
-  // Trampolines for all bytecode functions.
+
+  // Trampolines for all bytecode functions. There is one for each function in
+  // program. Initially, all function pointers point into these trampolines.
   std::unique_ptr<Trampoline[]> bytecode_trampolines_;
-  // Compilation flag used to ensure compilation occurs only once, even under
-  // concurrent invocations.
+
+  // Flag to indicate if the JIT compilation has occurred.
   std::once_flag compiled_flag_;
 };
 
