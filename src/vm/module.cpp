@@ -223,28 +223,30 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
 }  // namespace
 
 void Module::CreateFunctionTrampoline(const FunctionInfo &func, Trampoline *trampoline) {
-  // Allocate memory
+  // TODO(pmenon): Is 4KB too large? Should it be dynamic?
+  static constexpr std::size_t kDefaultCodeSize = 4 * KB;
+
+  // Allocate memory for the trampoline.
   std::error_code error;
-  uint32_t flags =
-      llvm::sys::Memory::ProtectionFlags::MF_READ | llvm::sys::Memory::ProtectionFlags::MF_WRITE;
-  llvm::sys::MemoryBlock mem =
-      llvm::sys::Memory::allocateMappedMemory(1 << 12, nullptr, flags, error);
+  const int32_t rw_flags = llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE;
+  llvm::sys::MemoryBlock memory =
+      llvm::sys::Memory::allocateMappedMemory(kDefaultCodeSize, nullptr, rw_flags, error);
   if (error) {
     LOG_ERROR("There was an error allocating executable memory {}", error.message());
     return;
   }
 
-  // Generate code
-  TrampolineGenerator generator(*this, func, mem.base());
+  // Generate code!
+  TrampolineGenerator generator(*this, func, memory.base());
   generator.Generate();
 
   // Now that the code's been generated and finalized, let's remove write
   // protections and just make is read+exec.
-  llvm::sys::Memory::protectMappedMemory(mem, llvm::sys::Memory::ProtectionFlags::MF_READ |
-                                                  llvm::sys::Memory::ProtectionFlags::MF_EXEC);
+  const int32_t rx_flags = llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_EXEC;
+  llvm::sys::Memory::protectMappedMemory(memory, rx_flags);
 
-  // Done
-  *trampoline = Trampoline(llvm::sys::OwningMemoryBlock(mem));
+  // Done.
+  *trampoline = Trampoline(llvm::sys::OwningMemoryBlock(memory));
 }
 
 void Module::CreateFunctionTrampoline(FunctionId func_id) {

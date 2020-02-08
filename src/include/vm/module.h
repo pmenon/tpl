@@ -128,13 +128,7 @@ class Module {
     Trampoline() = default;
 
     // Create a trampoline over the given memory block.
-    explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) noexcept : mem_(std::move(mem)) {}
-
-    // Move assignment.
-    Trampoline &operator=(Trampoline &&other) noexcept {
-      mem_ = std::move(other.mem_);
-      return *this;
-    }
+    explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) : mem_(std::move(mem)) {}
 
     // Access the raw trampoline code.
     void *GetCode() const { return mem_.base(); }
