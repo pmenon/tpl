@@ -93,9 +93,14 @@ enum class LogicalJoinType {
   RIGHT = 2,                  // right
   INNER = 3,                  // inner
   OUTER = 4,                  // outer
-  SEMI = 5,                   // IN+Subquery is SEMI
-  ANTI = 6                    // anti
+  SEMI = 5,                   // returns a row ONLY if it has a join partner, no duplicates
+  ANTI = 6                    // returns a row ONLY if it has NO join partner, no duplicates
 };
+
+/**
+ * @return A string representation for the provided join type.
+ */
+std::string JoinTypeToString(LogicalJoinType type);
 
 //===--------------------------------------------------------------------===//
 // Set Operation Types

@@ -79,4 +79,24 @@ std::string PlanNodeTypeToString(PlanNodeType type) {
   UNREACHABLE("Impossible to reach. All plan node types handled.");
 }
 
+std::string JoinTypeToString(LogicalJoinType type) {
+  switch (type) {
+    case LogicalJoinType::INVALID:
+      return "Invalid";
+    case LogicalJoinType::LEFT:
+      return "Left";
+    case LogicalJoinType::RIGHT:
+      return "Right";
+    case LogicalJoinType::INNER:
+      return "Inner";
+    case LogicalJoinType::OUTER:
+      return "Outer";
+    case LogicalJoinType::SEMI:
+      return "Semi";
+    case LogicalJoinType::ANTI:
+      return "Anti";
+  }
+  UNREACHABLE("Impossible to reach. All join types handled.");
+}
+
 }  // namespace tpl::sql::planner
