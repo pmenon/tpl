@@ -229,25 +229,29 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
       break;
     }
     case ast::Builtin::AggHashTableProcessBatch: {
-      if (!CheckArgCount(call, 7)) {
+      if (!CheckArgCount(call, 6)) {
         return;
       }
-      // Second argument is the VPIs
-      const auto vpi_kind = ast::BuiltinType::Uint64;
-      if (!args[1]->GetType()->IsPointerType() ||
-          IsPointerToSpecificBuiltin(args[1]->GetType()->GetPointeeType(), vpi_kind)) {
+      // Second argument is the input VPI.
+      const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
+      if (!IsPointerToSpecificBuiltin(args[1]->GetType(), vpi_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(vpi_kind)->PointerTo());
         return;
       }
-      // Third, fourth, fifth, and sixth are all functions
-      if (!AreAllFunctions(args[2]->GetType(), args[3]->GetType(), args[4]->GetType(),
-                           args[5]->GetType())) {
-        ReportIncorrectCallArg(call, 2, "function");
+      // Third argument is an array of key columns.
+      if (auto array_type = args[2]->GetType()->SafeAs<ast::ArrayType>();
+          array_type == nullptr || !array_type->HasKnownLength()) {
+        ReportIncorrectCallArg(call, 2, "array with known length");
         return;
       }
-      // Last arg must be a boolean
-      if (!args[6]->GetType()->IsBoolType()) {
-        ReportIncorrectCallArg(call, 6, GetBuiltinType(ast::BuiltinType::Bool));
+      // Fourth and fifth argument is the initialization and advance functions.
+      if (!AreAllFunctions(args[3]->GetType(), args[4]->GetType())) {
+        ReportIncorrectCallArg(call, 3, "function");
+        return;
+      }
+      // Last arg must be a boolean.
+      if (!args[5]->GetType()->IsBoolType()) {
+        ReportIncorrectCallArg(call, 5, GetBuiltinType(ast::BuiltinType::Bool));
         return;
       }
       call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
@@ -987,6 +991,13 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       call->SetType(GetBuiltinType(ast::BuiltinType::StringVal));
       break;
     }
+    case ast::Builtin::VPIGetPointer: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
+      break;
+    }
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
@@ -1578,6 +1589,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate:
     case ast::Builtin::VPIGetString:
+    case ast::Builtin::VPIGetPointer:
     case ast::Builtin::VPISetBool:
     case ast::Builtin::VPISetTinyInt:
     case ast::Builtin::VPISetSmallInt:

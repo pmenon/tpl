@@ -363,6 +363,13 @@ GEN_VPI_SET(String, StringVal, tpl::sql::VarlenEntry);
 #undef GEN_VPI_SET
 #undef GEN_VPI_GET
 
+VM_OP_HOT void OpVPIGetPointer(byte **out, tpl::sql::VectorProjectionIterator *const vpi,
+                               const uint32_t col_idx) {
+  auto *ptr = vpi->GetValue<byte *, false>(col_idx, nullptr);
+  TPL_ASSERT(ptr != nullptr, "Null data pointer when trying to read attribute");
+  *out = *ptr;
+}
+
 // ---------------------------------------------------------
 // Hashing
 // ---------------------------------------------------------
@@ -614,11 +621,11 @@ VM_OP_HOT void OpAggregationHashTableLookup(byte **result,
 
 VM_OP_HOT void OpAggregationHashTableProcessBatch(
     tpl::sql::AggregationHashTable *const agg_hash_table, tpl::sql::VectorProjectionIterator *vpi,
-    const tpl::sql::AggregationHashTable::HashFn hash_fn,
-    const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn,
-    const tpl::sql::AggregationHashTable::VectorInitAggFn init_agg_fn,
-    const tpl::sql::AggregationHashTable::VectorAdvanceAggFn merge_agg_fn, const bool partitioned) {
-  // agg_hash_table->ProcessBatch(vpi, hash_fn, key_eq_fn, init_agg_fn, merge_agg_fn, partitioned);
+    const uint32_t num_keys, const uint32_t key_cols[],
+    const tpl::sql::AggregationHashTable::VectorInitAggFn init_fn,
+    const tpl::sql::AggregationHashTable::VectorAdvanceAggFn advance_fn, const bool partitioned) {
+  agg_hash_table->ProcessBatch(vpi, {key_cols, key_cols + num_keys}, init_fn, advance_fn,
+                               partitioned);
 }
 
 VM_OP_HOT void OpAggregationHashTableTransferPartitions(

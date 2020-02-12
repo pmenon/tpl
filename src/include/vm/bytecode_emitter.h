@@ -129,17 +129,13 @@ class BytecodeEmitter {
   // Insert a filter flavor into the filter manager builder
   void EmitFilterManagerInsertFilter(LocalVar filter_manager, FunctionId func);
 
-  // Check if a hash table entry iterator has more rows
-  void EmitHashTableEntryIteratorHasNext(LocalVar has_next, LocalVar ht_entry_iter,
-                                         FunctionId key_eq, LocalVar ctx, LocalVar probe_tuple);
-
   // Lookup a single entry in the aggregation hash table
   void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash, FunctionId key_eq_fn,
                               LocalVar arg);
 
   // Emit code to process a batch of input into the aggregation hash table
-  void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar iters, FunctionId hash_fn,
-                                    FunctionId key_eq_fn, FunctionId init_agg_fn,
+  void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar vpi, uint32_t num_keys,
+                                    LocalVar key_cols, FunctionId init_agg_fn,
                                     FunctionId merge_agg_fn, LocalVar partitioned);
 
   // Emit code to move thread-local data into main agg table

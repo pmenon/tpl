@@ -701,6 +701,7 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
     GEN_CASE(VPIGetDouble, Bytecode::VPIGetDouble);
     GEN_CASE(VPIGetDate, Bytecode::VPIGetDate);
     GEN_CASE(VPIGetString, Bytecode::VPIGetString);
+    GEN_CASE(VPIGetPointer, Bytecode::VPIGetPointer);
       // clang-format on
 #undef GEN_CASE
 
@@ -903,17 +904,15 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
     }
     case ast::Builtin::AggHashTableProcessBatch: {
       LocalVar agg_ht = VisitExpressionForRValue(call->Arguments()[0]);
-      LocalVar iters = VisitExpressionForRValue(call->Arguments()[1]);
-      auto hash_fn =
-          LookupFuncIdByName(call->Arguments()[2]->As<ast::IdentifierExpr>()->Name().GetData());
-      auto key_eq_fn =
-          LookupFuncIdByName(call->Arguments()[3]->As<ast::IdentifierExpr>()->Name().GetData());
+      LocalVar vpi = VisitExpressionForRValue(call->Arguments()[1]);
+      uint32_t num_keys = call->Arguments()[2]->GetType()->As<ast::ArrayType>()->GetLength();
+      LocalVar key_cols = VisitExpressionForLValue(call->Arguments()[2]);
       auto init_agg_fn =
-          LookupFuncIdByName(call->Arguments()[4]->As<ast::IdentifierExpr>()->Name().GetData());
+          LookupFuncIdByName(call->Arguments()[3]->As<ast::IdentifierExpr>()->Name().GetData());
       auto merge_agg_fn =
-          LookupFuncIdByName(call->Arguments()[5]->As<ast::IdentifierExpr>()->Name().GetData());
-      LocalVar partitioned = VisitExpressionForRValue(call->Arguments()[6]);
-      GetEmitter()->EmitAggHashTableProcessBatch(agg_ht, iters, hash_fn, key_eq_fn, init_agg_fn,
+          LookupFuncIdByName(call->Arguments()[4]->As<ast::IdentifierExpr>()->Name().GetData());
+      LocalVar partitioned = VisitExpressionForRValue(call->Arguments()[5]);
+      GetEmitter()->EmitAggHashTableProcessBatch(agg_ht, vpi, num_keys, key_cols, init_agg_fn,
                                                  merge_agg_fn, partitioned);
       break;
     }
@@ -1544,6 +1543,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate:
     case ast::Builtin::VPIGetString:
+    case ast::Builtin::VPIGetPointer:
     case ast::Builtin::VPISetBool:
     case ast::Builtin::VPISetTinyInt:
     case ast::Builtin::VPISetSmallInt:

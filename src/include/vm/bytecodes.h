@@ -142,6 +142,7 @@ namespace tpl::vm {
   F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPIGetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPIGetPointer, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetBoolNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetTinyIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
@@ -266,8 +267,8 @@ namespace tpl::vm {
   F(AggregationHashTableLinkHashTableEntry, OperandType::Local, OperandType::Local)                                    \
   F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
       OperandType::Local)                                                                                              \
-  F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::FunctionId,                 \
-      OperandType::FunctionId, OperandType::FunctionId, OperandType::FunctionId, OperandType::Local)                   \
+  F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local,  \
+      OperandType::FunctionId, OperandType::FunctionId, OperandType::Local)                                            \
   F(AggregationHashTableTransferPartitions, OperandType::Local, OperandType::Local, OperandType::Local,                \
       OperandType::FunctionId)                                                                                         \
   F(AggregationHashTableParallelPartitionedScan, OperandType::Local, OperandType::Local, OperandType::Local,           \

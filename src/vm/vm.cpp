@@ -697,6 +697,14 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_VPI_ACCESS(String, sql::StringVal)
 #undef GEN_VPI_ACCESS
 
+  OP(VPIGetPointer) : {
+    auto result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    auto col_idx = READ_UIMM4();
+    OpVPIGetPointer(result, vpi, col_idx);
+    DISPATCH_NEXT();
+  }
+
   // ------------------------------------------------------
   // Hashing
   // ------------------------------------------------------
@@ -1012,22 +1020,18 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(AggregationHashTableProcessBatch) : {
     auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    auto hash_fn_id = READ_FUNC_ID();
-    auto key_eq_fn_id = READ_FUNC_ID();
+    auto num_keys = READ_UIMM4();
+    auto key_cols = frame->LocalAt<uint32_t *>(READ_LOCAL_ID());
     auto init_agg_fn_id = READ_FUNC_ID();
     auto merge_agg_fn_id = READ_FUNC_ID();
     auto partitioned = frame->LocalAt<bool>(READ_LOCAL_ID());
 
-    auto hash_fn = reinterpret_cast<sql::AggregationHashTable::HashFn>(
-        module_->GetRawFunctionImpl(hash_fn_id));
-    auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
-        module_->GetRawFunctionImpl(key_eq_fn_id));
     auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::VectorInitAggFn>(
         module_->GetRawFunctionImpl(init_agg_fn_id));
-    auto advance_agg_fn = reinterpret_cast<sql::AggregationHashTable::VectorAdvanceAggFn>(
+    auto merge_agg_fn = reinterpret_cast<sql::AggregationHashTable::VectorAdvanceAggFn>(
         module_->GetRawFunctionImpl(merge_agg_fn_id));
-    OpAggregationHashTableProcessBatch(agg_hash_table, vpi, hash_fn, key_eq_fn, init_agg_fn,
-                                       advance_agg_fn, partitioned);
+    OpAggregationHashTableProcessBatch(agg_hash_table, vpi, num_keys, key_cols, init_agg_fn,
+                                       merge_agg_fn, partitioned);
     DISPATCH_NEXT();
   }
 

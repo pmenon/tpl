@@ -306,15 +306,6 @@ void BytecodeEmitter::EmitFilterManagerInsertFilter(LocalVar filter_manager, Fun
   EmitAll(Bytecode::FilterManagerInsertFilter, filter_manager, func);
 }
 
-void BytecodeEmitter::EmitHashTableEntryIteratorHasNext(LocalVar has_next, LocalVar ht_entry_iter,
-                                                        FunctionId key_eq, LocalVar ctx,
-                                                        LocalVar probe_tuple) {
-  TPL_ASSERT(Bytecodes::NumOperands(Bytecode::HashTableEntryIteratorHasNext) == 5,
-             "HashTableEntryIteratorHasNext expects 5 bytecodes");
-  EmitAll(Bytecode::HashTableEntryIteratorHasNext, has_next, ht_entry_iter, key_eq, ctx,
-          probe_tuple);
-}
-
 void BytecodeEmitter::EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash,
                                              FunctionId key_eq_fn, LocalVar arg) {
   TPL_ASSERT(Bytecodes::NumOperands(Bytecode::AggregationHashTableLookup) == 5,
@@ -322,12 +313,11 @@ void BytecodeEmitter::EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, Loc
   EmitAll(Bytecode::AggregationHashTableLookup, dest, agg_ht, hash, key_eq_fn, arg);
 }
 
-void BytecodeEmitter::EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar iters,
-                                                   FunctionId hash_fn, FunctionId key_eq_fn,
-                                                   FunctionId init_agg_fn, FunctionId merge_agg_fn,
-                                                   LocalVar partitioned) {
-  EmitAll(Bytecode::AggregationHashTableProcessBatch, agg_ht, iters, hash_fn, key_eq_fn,
-          init_agg_fn, merge_agg_fn, partitioned);
+void BytecodeEmitter::EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar vpi, uint32_t num_keys,
+                                                   LocalVar key_cols, FunctionId init_agg_fn,
+                                                   FunctionId merge_agg_fn, LocalVar partitioned) {
+  EmitAll(Bytecode::AggregationHashTableProcessBatch, agg_ht, vpi, num_keys, key_cols, init_agg_fn,
+          merge_agg_fn, partitioned);
 }
 
 void BytecodeEmitter::EmitAggHashTableMovePartitions(LocalVar agg_ht, LocalVar tls,

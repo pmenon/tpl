@@ -56,6 +56,7 @@ namespace tpl::ast {
   F(VPIGetDouble, vpiGetDouble)                                 \
   F(VPIGetDate, vpiGetDate)                                     \
   F(VPIGetString, vpiGetString)                                 \
+  F(VPIGetPointer, vpiGetPointer)                               \
   F(VPISetBool, vpiSetBool)                                     \
   F(VPISetTinyInt, vpiSetTinyInt)                               \
   F(VPISetSmallInt, vpiSetSmallInt)                             \
@@ -172,7 +173,7 @@ enum class Builtin : uint8_t {
 class Builtins : public AllStatic {
  public:
   // The total number of builtin functions
-  static const uint32_t kBuiltinsCount = static_cast<uint32_t>(Builtin ::Last) + 1;
+  static const uint32_t kBuiltinsCount = static_cast<uint32_t>(Builtin::Last) + 1;
 
   /**
    * @return The total number of builtin functions.
