@@ -80,14 +80,14 @@ void PrettyPrintFuncInfo(std::ostream &os, const FunctionInfo &func) {
 }
 
 void PrettyPrintFuncCode(std::ostream &os, const BytecodeModule &module, const FunctionInfo &func,
-                         BytecodeIterator &iter) {
+                         BytecodeIterator *iter) {
   const uint32_t max_inst_len = Bytecodes::MaxBytecodeNameLength();
-  for (; !iter.Done(); iter.Advance()) {
-    Bytecode bytecode = iter.CurrentBytecode();
+  for (; !iter->Done(); iter->Advance()) {
+    Bytecode bytecode = iter->CurrentBytecode();
 
     // Print common bytecode info
     os << "  0x" << std::right << std::setfill('0') << std::setw(8) << std::hex
-       << iter.GetPosition();
+       << iter->GetPosition();
     os << std::setfill(' ') << "    " << std::dec << std::setw(max_inst_len) << std::left
        << Bytecodes::ToString(bytecode);
 
@@ -109,65 +109,65 @@ void PrettyPrintFuncCode(std::ostream &os, const BytecodeModule &module, const F
           break;
         }
         case OperandType::Imm1: {
-          auto imm = iter.GetImmediateIntegerOperand(i);
+          auto imm = iter->GetImmediateIntegerOperand(i);
           os << "i8=" << imm;
           break;
         }
         case OperandType::Imm2: {
-          auto imm = iter.GetImmediateIntegerOperand(i);
+          auto imm = iter->GetImmediateIntegerOperand(i);
           os << "i16=" << imm;
           break;
         }
         case OperandType::Imm4: {
-          auto imm = iter.GetImmediateIntegerOperand(i);
+          auto imm = iter->GetImmediateIntegerOperand(i);
           os << "i32=" << imm;
           break;
         }
         case OperandType::Imm8: {
-          auto imm = iter.GetImmediateIntegerOperand(i);
+          auto imm = iter->GetImmediateIntegerOperand(i);
           os << "i64=" << imm;
           break;
         }
         case OperandType::Imm4F: {
-          auto imm = iter.GetImmediateFloatOperand(i);
+          auto imm = iter->GetImmediateFloatOperand(i);
           os << "f32=" << std::fixed << std::setprecision(2) << imm << std::dec;
           break;
         }
         case OperandType::Imm8F: {
-          auto imm = iter.GetImmediateFloatOperand(i);
+          auto imm = iter->GetImmediateFloatOperand(i);
           os << "f64=" << std::fixed << std::setprecision(2) << imm << std::dec;
           break;
         }
         case OperandType::UImm2: {
-          auto imm = iter.GetUnsignedImmediateIntegerOperand(i);
+          auto imm = iter->GetUnsignedImmediateIntegerOperand(i);
           os << "u16=" << imm;
           break;
         }
         case OperandType::UImm4: {
-          auto imm = iter.GetUnsignedImmediateIntegerOperand(i);
+          auto imm = iter->GetUnsignedImmediateIntegerOperand(i);
           os << "u32=" << imm;
           break;
         }
         case OperandType::JumpOffset: {
-          auto target = iter.GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, i) +
-                        iter.GetJumpOffsetOperand(i);
+          auto target = iter->GetPosition() + Bytecodes::GetNthOperandOffset(bytecode, i) +
+                        iter->GetJumpOffsetOperand(i);
           os << "target=0x" << std::right << std::setfill('0') << std::setw(6) << std::hex << target
              << std::dec;
           break;
         }
         case OperandType::Local: {
-          print_local(iter.GetLocalOperand(i));
+          print_local(iter->GetLocalOperand(i));
           break;
         }
         case OperandType::StaticLocal: {
-          auto sl_offset = iter.GetStaticLocalOperand(i);
+          auto sl_offset = iter->GetStaticLocalOperand(i);
           auto sl_info = module.LookupStaticInfoByOffset(sl_offset.GetOffset());
           os << "data=" << sl_info->GetName();
           break;
         }
         case OperandType::LocalCount: {
           std::vector<LocalVar> locals;
-          uint16_t n = iter.GetLocalCountOperand(i, &locals);
+          uint16_t n = iter->GetLocalCountOperand(i, &locals);
           for (uint16_t j = 0; j < n; j++) {
             print_local(locals[j]);
             os << "  ";
@@ -175,7 +175,7 @@ void PrettyPrintFuncCode(std::ostream &os, const BytecodeModule &module, const F
           break;
         }
         case OperandType::FunctionId: {
-          auto target = module.GetFuncInfoById(iter.GetFunctionIdOperand(i));
+          auto target = module.GetFuncInfoById(iter->GetFunctionIdOperand(i));
           os << "func=<" << target->GetName() << ">";
           break;
         }
@@ -191,8 +191,8 @@ void PrettyPrintFunc(std::ostream &os, const BytecodeModule &module, const Funct
 
   os << std::endl;
 
-  auto iter = module.BytecodeForFunction(func);
-  PrettyPrintFuncCode(os, module, func, iter);
+  BytecodeIterator iter = module.GetBytecodeForFunction(func);
+  PrettyPrintFuncCode(os, module, func, &iter);
 
   os << std::endl;
 }

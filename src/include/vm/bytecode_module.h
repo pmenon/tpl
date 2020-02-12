@@ -36,8 +36,8 @@ class BytecodeModule {
   DISALLOW_COPY_AND_MOVE(BytecodeModule);
 
   /**
-   * Look up a TPL function in this module by its ID.
-   * @return A pointer to the function's info if it exists; null otherwise.
+   * @return A pointer to the metadata of the function with the provided ID. No check is made to
+   *         ensure the function is valid or belongs to this module.
    */
   const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
     // Function IDs are dense, so the given ID must be in the range [0, # functions)
@@ -46,35 +46,36 @@ class BytecodeModule {
   }
 
   /**
-   * Lookup and retrieve the metadata for a TPL function whose name is @em name.
-   * @param name The name of the function to lookup.
-   * @return A pointer to the function's info if it exists; NULL otherwise.
+   * @return A pointer to the metadata of the TPL function with the provided name in this module. If
+   *         no such function exists, a NULL pointer is returned.
    */
   const FunctionInfo *LookupFuncInfoByName(const std::string &name) const {
-    const auto iter =
-        std::find_if(functions_.begin(), functions_.end(),
-                     [&](const FunctionInfo &info) { return info.GetName() == name; });
-    return iter == functions_.end() ? nullptr : &*iter;
+    for (const FunctionInfo &info : functions_) {
+      if (info.GetName() == name) {
+        return &info;
+      }
+    }
+    return nullptr;
   }
 
   /**
-   * Lookup and retrieve the metadata for a static local whose offset is @em offset into the data
-   * section of this module.
-   * @param offset The offset of the static local in bytes in the data section.
-   * @return The metadata for the static if one exists at the offset; NULL otherwise.
+   * @return A pointer to the metadata of the static local variable at the provided offset. If no
+   *         such static local exists, a NULL pointer is returned.
    */
   const LocalInfo *LookupStaticInfoByOffset(const uint32_t offset) const {
-    const auto iter =
-        std::find_if(static_locals_.begin(), static_locals_.end(),
-                     [&](const LocalInfo &info) { return info.GetOffset() == offset; });
-    return iter == static_locals_.end() ? nullptr : &*iter;
+    for (const LocalInfo &info : static_locals_) {
+      if (info.GetOffset() == offset) {
+        return &info;
+      }
+    }
+    return nullptr;
   }
 
   /**
    * @return An iterator over the bytecode for the function @em func.
    */
-  BytecodeIterator BytecodeForFunction(const FunctionInfo &func) const {
-    auto [start, end] = func.GetBytecodeRange();
+  BytecodeIterator GetBytecodeForFunction(const FunctionInfo &func) const {
+    const auto [start, end] = func.GetBytecodeRange();
     return BytecodeIterator(code_, start, end);
   }
 
@@ -118,6 +119,10 @@ class BytecodeModule {
   friend class VM;
   friend class LLVMEngine;
 
+  // Access the raw bytecode for the given function. Unlike the public
+  // GetBytecodeForFunction(), this function doesn't return an iterator. It
+  // returns a pointer the raw underlying bytecode. It's used by the VM to
+  // execute functions.
   const uint8_t *AccessBytecodeForFunctionRaw(const FunctionInfo &func) const {
     TPL_ASSERT(GetFuncInfoById(func.GetId()) == &func, "Function not in module!");
     auto [start, _] = func.GetBytecodeRange();
@@ -125,7 +130,7 @@ class BytecodeModule {
     return &code_[start];
   }
 
-  // Access a const-view of some static-local's data by its offset
+  // Access a const-view of some static-local's data by its offset.
   const uint8_t *AccessStaticLocalDataRaw(const uint32_t offset) const {
 #ifndef NDEBUG
     // In DEBUG mode, make sure the offset we're about to access corresponds to a valid static value
@@ -138,16 +143,21 @@ class BytecodeModule {
     return &data_[offset];
   }
 
-  // Access a const-view of a static-local's data
+  // Access a const-view of a static-local's data.
   const uint8_t *AccessStaticLocalDataRaw(const LocalVar local) const {
     return AccessStaticLocalDataRaw(local.GetOffset());
   }
 
  private:
+  // The name of the module.
   const std::string name_;
+  // The raw bytecode for ALL functions store contiguously.
   const std::vector<uint8_t> code_;
+  // The raw static data for ALL static data stored contiguously.
   const std::vector<uint8_t> data_;
+  // Metadata for all functions.
   const std::vector<FunctionInfo> functions_;
+  // Metadata for all static data.
   const std::vector<LocalInfo> static_locals_;
 };
 
