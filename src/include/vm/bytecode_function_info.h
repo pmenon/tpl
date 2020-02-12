@@ -39,8 +39,7 @@ class LocalInfo {
   enum class Kind : uint8_t { Var, Parameter };
 
   /**
-   * Construct a local with the given, name, type, offset and kind
-   *
+   * Construct a local with the given, name, type, offset and kind.
    * @param name The name of the local.
    * @param type The TPL type of the local.
    * @param offset The offset of the local in the TBC bytecode.
@@ -74,19 +73,15 @@ class LocalInfo {
   uint32_t GetSize() const noexcept { return size_; }
 
  private:
-  // The name of the local
+  // The name of the local.
   std::string name_;
-
-  // The TPL type of the local
+  // The TPL type of the local.
   ast::Type *type_;
-
-  // The offset (in bytes) of the local from the start of function's frame
+  // The offset (in bytes) of the local from the start of function's frame.
   uint32_t offset_;
-
-  // The size (in bytes) of the local
+  // The size (in bytes) of the local.
   uint32_t size_;
-
-  // The kind of the local
+  // The "kind" of the local.
   Kind kind_;
 };
 
@@ -127,16 +122,16 @@ class LocalVar {
   uint32_t GetOffset() const { return LocalOffsetField::Decode(bitfield_); }
 
   /**
-   * Encode this local variable into an instruction stream
-   * @return The encoded value (and its addressing mode)
+   * Encode this local variable into an instruction stream.
+   * @return The encoded value (and its addressing mode).
    */
   uint32_t Encode() const { return bitfield_; }
 
   /**
-   * Decode the provided value from an instruction stream into a local variable
-   * that captures its offset and addressing more.
-   * @param encoded_var The encoded value of the variable
-   * @return The LocalVar representation
+   * Decode the provided value from an instruction stream into a local variable that captures its
+   * offset and addressing more.
+   * @param encoded_var The encoded value of the variable.
+   * @return The LocalVar representation.
    */
   static LocalVar Decode(uint32_t encoded_var) { return LocalVar(encoded_var); }
 
@@ -156,9 +151,9 @@ class LocalVar {
   bool IsInvalid() const { return GetOffset() == kInvalidOffset; }
 
   /**
-   * Is this local variable equal to @em other
-   * @param other The variable to check against
-   * @return True if equal; false otherwise
+   * Is this local variable equal to the provided local variable.
+   * @param other The variable to check against.
+   * @return True if equal; false otherwise.
    */
   bool operator==(const LocalVar &other) const noexcept {
     return GetOffset() == other.GetOffset() && GetAddressMode() == other.GetAddressMode();
@@ -192,28 +187,27 @@ class FunctionInfo {
   static constexpr FunctionId kInvalidFuncId = std::numeric_limits<uint16_t>::max();
 
   /**
-   * Construct a function with the given ID and name @em name
-   * @param id The ID of the function
-   * @param name The name of the function in the module
-   * @param func_type The TPL type of the function
+   * Construct a function with the given ID and name @em name.
+   * @param id The ID of the function.
+   * @param name The name of the function in the module.
+   * @param func_type The TPL type of the function.
    */
   FunctionInfo(FunctionId id, std::string name, ast::FunctionType *func_type);
 
   /**
-   * Allocate a new function parameter
-   * @param type The TPL type of the parameter
-   * @param name The name of the parameter
-   * @return A (logical) pointer to the input parameter
+   * Allocate a new function parameter.
+   * @param type The TPL type of the parameter.
+   * @param name The name of the parameter.
+   * @return A (logical) pointer to the input parameter.
    */
   LocalVar NewParameterLocal(ast::Type *type, const std::string &name);
 
   /**
    * Allocate a new local variable with type @em type and name @em name. This returns a LocalVar
-   * object with the Address addressing mode (i.e., a pointer to the variable).
-   * @param type The TPL type of the variable
-   * @param name The name of the variable. If no name is given, the variable is assigned a
-   *             synthesized one.
-   * @return A (logical) pointer to the local variable
+   * object with the 'Address' addressing mode (i.e., a pointer to the variable).
+   * @param type The TPL type of the variable.
+   * @param name The optional name of the variable. If no name is provided, one is synthesized.
+   * @return A (logical) pointer to the local variable.
    */
   LocalVar NewLocal(ast::Type *type, const std::string &name = "");
 
@@ -224,24 +218,24 @@ class FunctionInfo {
   LocalVar GetReturnValueLocal() const;
 
   /**
-   * Lookup a local variable by name
-   * @param name The name of the local variable
-   * @return A (logical) pointer to the local variable
+   * Lookup a local variable by name.
+   * @param name The name of the local variable.
+   * @return A (logical) pointer to the local variable.
    */
   LocalVar LookupLocal(const std::string &name) const;
 
   /**
-   * Lookup the information for a local variable in this function by its name
-   * @param name The name of the local variable to find
-   * @return A possibly null pointer to the local's information
+   * Lookup the information for a local variable in this function by its name.
+   * @param name The name of the local variable to find.
+   * @return A possibly null pointer to the local's information.
    */
   const LocalInfo *LookupLocalInfoByName(const std::string &name) const;
 
   /**
    * Lookup the information for a local variable in this function by the variable's offset in the
-   * function's execution frame
-   * @param local The offset in bytes of the local
-   * @return A possible nullptr to the local's information
+   * function's execution frame.
+   * @param local The offset in bytes of the local.
+   * @return A possible nullptr to the local's information.
    */
   const LocalInfo *LookupLocalInfoByOffset(uint32_t offset) const;
 
@@ -276,8 +270,7 @@ class FunctionInfo {
   std::size_t GetFrameSize() const noexcept { return frame_size_; }
 
   /**
-   * @return The byte position where the first input argument exists in the function's local
-   *         execution frame
+   * @return The byte position of the first input argument in the function's local execution frame.
    */
   std::size_t GetParamsStartPos() const noexcept { return params_start_pos_; }
 
@@ -297,35 +290,35 @@ class FunctionInfo {
   // Mark the range of bytecode for this function in its module. This is set
   // by the BytecodeGenerator during code generation after this function's
   // bytecode range has been discovered.
-  void set_bytecode_range(std::size_t start_offset, std::size_t end_offset) {
+  void SetBytecodeRange(std::size_t start_offset, std::size_t end_offset) {
     // Functions must have, at least, one bytecode instruction (i.e., RETURN)
     TPL_ASSERT(start_offset < end_offset, "Starting offset must be smaller than ending offset");
     bytecode_range_ = std::make_pair(start_offset, end_offset);
   }
 
-  // Allocate a new local variable in the function
+  // Allocate a new local variable in the function.
   LocalVar NewLocal(ast::Type *type, const std::string &name, LocalInfo::Kind kind);
 
  private:
   // The ID of the function in the module. IDs are unique within a module.
   FunctionId id_;
-  // The name of the function
+  // The name of the function.
   std::string name_;
-  // The TPL function type of this function
+  // The TPL function type of this function.
   ast::FunctionType *func_type_;
-  // The range of bytecode for this function in the module's bytecode array
+  // The range of bytecode for this function in the module's bytecode array.
   std::pair<std::size_t, std::size_t> bytecode_range_;
-  // List of all locals visible to this function
+  // List of all locals visible to this function.
   std::vector<LocalInfo> locals_;
-  // The size (in bytes) of this function's frame
+  // The size (in bytes) of this function's frame.
   std::size_t frame_size_;
-  // The start position within the frame where the first input argument is
+  // The start position within the frame where the first input argument is.
   std::size_t params_start_pos_;
-  // The size (in bytes) of all input arguments (including alignment)
+  // The size (in bytes) of all input arguments (including alignment).
   std::size_t params_size_;
-  // The number of input parameters
+  // The number of input parameters.
   uint32_t num_params_;
-  // The number of temporary variables
+  // The number of temporary variables.
   uint32_t num_temps_;
 };
 

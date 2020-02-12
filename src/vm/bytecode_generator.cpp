@@ -126,7 +126,7 @@ class BytecodeGenerator::BytecodePositionScope {
 
   ~BytecodePositionScope() {
     const std::size_t end_offset = generator_->GetEmitter()->GetPosition();
-    func_->set_bytecode_range(start_offset_, end_offset);
+    func_->SetBytecodeRange(start_offset_, end_offset);
   }
 
  private:
