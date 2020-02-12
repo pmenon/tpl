@@ -24,6 +24,9 @@ void VectorProjection::InitializeEmpty(const std::vector<TypeId> &col_types) {
   for (uint32_t i = 0; i < col_types.size(); i++) {
     columns_[i] = std::make_unique<Vector>(col_types[i]);
   }
+
+  // Reset the cached TID list to NULL indicating all TIDs are active.
+  filter_ = nullptr;
 }
 
 void VectorProjection::Initialize(const std::vector<TypeId> &col_types) {
@@ -124,12 +127,38 @@ void VectorProjection::Pack() {
   }
 }
 
+void VectorProjection::ProjectColumns(const std::vector<uint32_t> &cols,
+                                      VectorProjection *result) const {
+  std::vector<TypeId> schema(cols.size());
+  for (uint32_t i = 0; i < cols.size(); i++) {
+    schema[i] = GetColumn(cols[i])->GetTypeId();
+  }
+
+  // Create the resulting projection.
+  result->InitializeEmpty(schema);
+
+  // Create referencing vectors for each projected vector.
+  for (uint32_t i = 0; i < cols.size(); i++) {
+    result->GetColumn(i)->Reference(GetColumn(cols[i]));
+  }
+
+  // Copy active TIDs and refresh the result's filtration status.
+  CopySelectionsTo(&result->owned_tid_list_);
+  result->RefreshFilteredTupleIdList();
+}
+
 void VectorProjection::Hash(const std::vector<uint32_t> &cols, Vector *result) const {
   TPL_ASSERT(!cols.empty(), "Must provide at least one column to hash.");
   VectorOps::Hash(*GetColumn(cols[0]), result);
   for (uint32_t i = 1; i < cols.size(); i++) {
     VectorOps::HashCombine(*GetColumn(cols[i]), result);
   }
+}
+
+void VectorProjection::Hash(Vector *result) const {
+  std::vector<uint32_t> cols(GetColumnCount());
+  std::iota(cols.begin(), cols.end(), 0);
+  Hash(cols, result);
 }
 
 std::string VectorProjection::ToString() const {

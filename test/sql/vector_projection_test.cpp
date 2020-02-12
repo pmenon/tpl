@@ -245,4 +245,53 @@ TEST_F(VectorProjectionTest, Pack) {
   }
 }
 
+TEST_F(VectorProjectionTest, ProjectColumns) {
+  // Create a vector projection with [tiny_int, small_int, integer] columns.
+  // col0 = [0,1,2,3,4,5,6,7,8,9]
+  // col1 = [10,11,12,13,14,15,16,17,18,19]
+  // col2 = [20,21,22,23,24,25,26,27,28,29]
+  VectorProjection vector_projection;
+  vector_projection.Initialize({TypeId::TinyInt, TypeId::SmallInt, TypeId::Integer});
+  vector_projection.Reset(10);
+  VectorOps::Generate(vector_projection.GetColumn(0), 0, 1);
+  VectorOps::Generate(vector_projection.GetColumn(1), 10, 1);
+  VectorOps::Generate(vector_projection.GetColumn(2), 20, 1);
+
+  // Apply simple filter.
+  TupleIdList tid_list(vector_projection.GetTotalTupleCount());
+  tid_list = {0, 1, 2, 3, 9};
+  vector_projection.SetFilteredSelections(tid_list);
+
+  // Project only the first small integer column.
+  VectorProjection col_1_projection;
+  vector_projection.ProjectColumns({1}, &col_1_projection);
+  EXPECT_EQ(1, col_1_projection.GetColumnCount());
+  EXPECT_EQ(TypeId::SmallInt, col_1_projection.GetColumn(0)->GetTypeId());
+  EXPECT_FALSE(col_1_projection.IsEmpty());
+  EXPECT_TRUE(col_1_projection.IsFiltered());
+  EXPECT_EQ(vector_projection.GetTotalTupleCount(), col_1_projection.GetTotalTupleCount());
+  EXPECT_EQ(vector_projection.GetSelectedTupleCount(), col_1_projection.GetSelectedTupleCount());
+  // Check vector contents.
+  auto col1 = col_1_projection.GetColumn(0);
+  EXPECT_EQ(GenericValue::CreateSmallInt(10), col1->GetValue(0));
+  EXPECT_EQ(GenericValue::CreateSmallInt(11), col1->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateSmallInt(12), col1->GetValue(2));
+  EXPECT_EQ(GenericValue::CreateSmallInt(13), col1->GetValue(3));
+  EXPECT_EQ(GenericValue::CreateSmallInt(19), col1->GetValue(4));
+  col_1_projection.CheckIntegrity();
+
+  // Try on an unfiltered vector projection.
+  vector_projection.Reset(10);
+  VectorProjection col_0_2_projection;
+  vector_projection.ProjectColumns({0, 2}, &col_0_2_projection);
+  EXPECT_EQ(2, col_0_2_projection.GetColumnCount());
+  EXPECT_EQ(TypeId::TinyInt, col_0_2_projection.GetColumn(0)->GetTypeId());
+  EXPECT_EQ(TypeId::Integer, col_0_2_projection.GetColumn(1)->GetTypeId());
+  EXPECT_FALSE(col_0_2_projection.IsEmpty());
+  EXPECT_FALSE(col_0_2_projection.IsFiltered());
+  EXPECT_EQ(vector_projection.GetTotalTupleCount(), col_0_2_projection.GetTotalTupleCount());
+  EXPECT_EQ(vector_projection.GetSelectedTupleCount(), col_0_2_projection.GetSelectedTupleCount());
+  col_0_2_projection.CheckIntegrity();
+}
+
 }  // namespace tpl::sql

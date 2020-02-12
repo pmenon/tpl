@@ -189,11 +189,27 @@ class VectorProjection {
   void Pack();
 
   /**
+   * Project in the columns whose indexes are in the provided input vector into the provided result
+   * vector projection. The output result projection is guaranteed to have the same shape (size and
+   * filter status) as this projection, but all column vectors are **references** to this vector
+   * projection. Any existing data in the output vector projection is cleaned up.
+   * @param cols The indexes of the columns to project into the output projection.
+   * @param[out] result The output vector projection.
+   */
+  void ProjectColumns(const std::vector<uint32_t> &cols, VectorProjection *result) const;
+
+  /**
    * Hash the columns whose indexes are in @em cols and store the result in @em result.
    * @param cols The indexes of the columns to hash.
    * @param[out] result The output vector containing the result of the hash computation.
    */
   void Hash(const std::vector<uint32_t> &cols, Vector *result) const;
+
+  /**
+   * Hash all column data storing the result in @em result.
+   * @param[out] result The output vector containing the result of the hash computation.
+   */
+  void Hash(Vector *result) const;
 
   /**
    * @return The number of columns in the projection.
