@@ -560,7 +560,7 @@ void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
   // We use this vector as a stack for DFS traversal
   llvm::SmallVector<std::size_t, 16> bb_begin_positions = {0};
 
-  for (auto iter = tpl_module_.BytecodeForFunction(func_info); !bb_begin_positions.empty();) {
+  for (auto iter = tpl_module_.GetBytecodeForFunction(func_info); !bb_begin_positions.empty();) {
     std::size_t begin_pos = bb_begin_positions.back();
     bb_begin_positions.pop_back();
 
@@ -664,7 +664,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
   ir_builder->CreateBr(first_bb);
   ir_builder->SetInsertPoint(first_bb);
 
-  for (auto iter = tpl_module_.BytecodeForFunction(func_info); !iter.Done(); iter.Advance()) {
+  for (auto iter = tpl_module_.GetBytecodeForFunction(func_info); !iter.Done(); iter.Advance()) {
     Bytecode bytecode = iter.CurrentBytecode();
 
     // Collect arguments
