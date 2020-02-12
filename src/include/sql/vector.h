@@ -309,10 +309,10 @@ class Vector {
   void Reference(byte *data, const uint32_t *null_mask, uint64_t size);
 
   /**
-   * Create a vector that references data held (and owned!) by another vector.
+   * Change this vector to reference data held (and potentially owned) by the provided vector.
    * @param other The vector to reference.
    */
-  void Reference(Vector *other);
+  void Reference(const Vector *other);
 
   /**
    * Packing (or compressing) a vector rearranges this vector's contents by contiguously storing

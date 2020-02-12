@@ -273,7 +273,7 @@ void Vector::Reference(byte *data, const uint32_t *null_mask, uint64_t size) {
   }
 }
 
-void Vector::Reference(Vector *other) {
+void Vector::Reference(const Vector *other) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   type_ = other->type_;
   count_ = other->count_;
