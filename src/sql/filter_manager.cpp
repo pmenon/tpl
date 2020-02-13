@@ -48,8 +48,9 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
   //
   //   rank = (1 - selectivity) / cost
   //
-  // We use the elapsed time as a proxy for a term's cost. For now, we don't
-  // calculate a per-tuple cost.
+  // Selectivity of a term is computed based on the input/output TID list. Cost
+  // is computed by timing the filtering term function and evenly amortizing
+  // across all input tuples.
 
   if (!ShouldReRank()) {
     for (const auto &term_idx : optimal_term_order_) {
@@ -63,16 +64,17 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
   temp_.Resize(tid_list->GetCapacity());
   input_copy_.AssignFrom(*tid_list);
 
-  const double input_selectivity = tid_list->ComputeSelectivity();
-
+  const auto tuple_count = tid_list->GetTupleCount();
+  const auto input_selectivity = tid_list->ComputeSelectivity();
   for (const auto term_idx : optimal_term_order_) {
     temp_.AssignFrom(input_copy_);
     auto term = &terms_[term_idx];
     const auto exec_ns = util::Time<std::nano>([&] { term->fn(vector_projection, &temp_); });
     const auto term_selectivity = temp_.ComputeSelectivity();
-    term->rank = (1.0F - (input_selectivity - term_selectivity)) / exec_ns;
-    LOG_TRACE("Term {}: selectivity={:05.2f}, exec ns.: {}, rank: {:.8f}", term_idx,
-              term_selectivity * 100.0F, exec_ns, term->rank);
+    const auto term_cost = exec_ns / tuple_count;
+    term->rank = (input_selectivity - term_selectivity) / term_cost;
+    LOG_TRACE("Term {}: selectivity={:04.3f}, cost: {}, rank: {:.8f}", term_idx, term_selectivity,
+              term_cost, term->rank);
     tid_list->IntersectWith(temp_);
   }
 
