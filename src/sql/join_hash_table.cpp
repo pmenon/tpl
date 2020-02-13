@@ -274,7 +274,6 @@ void JoinHashTable::ReorderOverflowEntries() {
   const uint64_t overflow_start_idx = num_main_entries;
   const uint64_t no_overflow = std::numeric_limits<uint64_t>::max();
 
-  //
   // General idea:
   // -------------
   // This function reorders the overflow entries in-place. The high-level idea
@@ -288,29 +287,24 @@ void JoinHashTable::ReorderOverflowEntries() {
   // index in the entries array where overflow elements for the entry belongs.
   // We begin by clearing these counts (which were modified earlier when
   // rearranging the main entries).
-  //
 
   for (uint64_t idx = 0; idx < num_main_entries; idx++) {
     EntryAt(idx)->overflow_count = 0;
   }
 
-  //
   // If there arne't any overflow entries, we can early exit. We just NULLed
   // overflow pointers in all main arena entries in the loop above.
-  //
 
   if (num_overflow_entries == 0) {
     return;
   }
 
-  //
   // Step 2:
   // -------
   // Now iterate over the overflow entries (in vectors) and update the overflow
   // count for each overflow entry's parent. At the end of this process if a
   // main arena entry has an overflow chain the "overflow count" will count the
   // length of the chain.
-  //
 
   HashTableEntry *parents[kDefaultVectorSize];
 
@@ -337,7 +331,6 @@ void JoinHashTable::ReorderOverflowEntries() {
     }
   }
 
-  //
   // Step 3:
   // -------
   // Now iterate over all main arena entries and compute a prefix sum of the
@@ -345,7 +338,6 @@ void JoinHashTable::ReorderOverflowEntries() {
   // overflow, the "overflow count" will be one greater than the index of the
   // last overflow entry in the overflow chain. We use these indexes in the last
   // step when assigning overflow entries to their final locations.
-  //
 
   for (uint64_t idx = 0, count = 0; idx < num_main_entries; idx++) {
     HashTableEntry *entry = EntryAt(idx);
@@ -353,13 +345,11 @@ void JoinHashTable::ReorderOverflowEntries() {
     entry->overflow_count = (entry->overflow_count == 0 ? no_overflow : num_main_entries + count);
   }
 
-  //
   // Step 4:
   // ------
   // Buffer N overflow entries into a reorder buffer and find each's main arena
   // parent. Use the "overflow count" in the main arena entry as the destination
   // index to write the overflow entry into.
-  //
 
   ReorderBuffer reorder_buf(&entries_, kDefaultVectorSize, overflow_start_idx, num_entries);
   while (reorder_buf.Fill()) {
@@ -415,7 +405,6 @@ void JoinHashTable::ReorderOverflowEntries() {
     reorder_buf.Reset(buf_write_idx);
   }
 
-  //
   // Step 5:
   // -------
   // Final chain hookup. We decompose this into two parts: one loop for the main
@@ -428,7 +417,6 @@ void JoinHashTable::ReorderOverflowEntries() {
   // For the overflow entries, we connect all overflow entries mapping to the
   // same CHT slot. At this point, entries with the same CHT slot are guaranteed
   // to be store contiguously.
-  //
 
   for (uint64_t idx = 0; idx < num_main_entries; idx++) {
     HashTableEntry *entry = EntryAt(idx);

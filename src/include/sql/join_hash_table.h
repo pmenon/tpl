@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <numeric>
 #include <vector>
 
 #include "sql/bloom_filter.h"
@@ -142,17 +141,18 @@ class JoinHashTable {
    * @return The total number of elements in the table, including duplicates.
    */
   uint64_t GetTupleCount() const {
-    // We don't know if this table was built in parallel. To be sure, we acquire the latch before
-    // checking the owned entries vector. This isn't a performance-critical function, so acquiring
-    // the latch shouldn't be a problem.
-
+    // We don't know if this hash table was built in parallel. To be safe, we
+    // acquire the lock before checking the owned entries vector. This isn't a
+    // performance critical function, so locking should be okay ...
     util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
     if (!owned_.empty()) {
-      return std::accumulate(owned_.begin(), owned_.end(), uint64_t{0},
-                             [](auto c, const auto &entries) { return c + entries.size(); });
+      uint64_t count = 0;
+      for (const auto &entries : owned_) {
+        count += entries.size();
+      }
+      return count;
     }
 
-    // Not built in parallel, check the entry vector.
     return entries_.size();
   }
 
@@ -215,7 +215,8 @@ class JoinHashTable {
   // To protect concurrent access to 'owned_entries_'.
   mutable util::SpinLatch owned_latch_;
 
-  // List of entries this hash table has taken ownership of. Protected by 'owned_latch_'.
+  // List of entries this hash table has taken ownership of.
+  // Protected by 'owned_latch_'.
   MemPoolVector<decltype(entries_)> owned_;
 
   // The chaining hash table.
