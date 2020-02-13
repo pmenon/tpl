@@ -53,7 +53,7 @@ void insertionSort(const It begin, const It end, Comp comp) {
     IPS4O_ASSUME_NOT(begin >= end);
 
     for (It it = begin + 1; it < end; ++it) {
-        auto val = std::move(*it);
+        typename std::iterator_traits<It>::value_type val = std::move(*it);
         if (comp(val, *begin)) {
             std::move_backward(begin, it, it + 1);
             *begin = std::move(val);
@@ -75,6 +75,32 @@ template <class It, class Comp>
 inline void baseCaseSort(It begin, It end, Comp&& comp) {
     if (begin == end) return;
     detail::insertionSort(std::move(begin), std::move(end), std::forward<Comp>(comp));
+}
+
+template <class It, class Comp>
+inline bool sortedCaseSort(It begin, It end, Comp&& comp) {
+  if (begin == end) {
+    return true;
+  }
+  
+  // If last element is not smaller than first element,
+  // test if input is sorted (input is not reverse sorted).
+  if (!comp(*(end - 1), *begin)) {
+    if (std::is_sorted(begin, end, comp)) {
+      return true;
+    }
+  } else {
+    // Check whether the input is reverse sorted.
+    for (It it = begin; (it + 1) != end; ++it) {
+      if (comp(*it , *(it + 1))) {
+        return false;
+      }
+    }
+    std::reverse(begin, end);
+    return true;
+  }
+
+  return false;
 }
 
 
