@@ -21,7 +21,8 @@ template <typename T>
 class StaticVector : public Vector {
  public:
   /**
-   * Create a new empty static vector. The initial size
+   * Create a new empty static vector. The capacity and size of the vector is determined by the
+   * default vector size constant, usually 2048. Like Vector, the initial count is 0.
    */
   StaticVector() : Vector(tpl::sql::GetTypeId<T>()) {
     // Arrange for the vector to reference the inlined data.
