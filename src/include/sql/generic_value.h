@@ -65,18 +65,16 @@ class GenericValue {
   /**
    * @return True if this value is equal @em that. Note that this is NOT SQL equality!
    */
-  bool operator==(const GenericValue &that) const { return this->Equals(that); }
+  bool operator==(const GenericValue &that) const { return Equals(that); }
 
   /**
    * @return True if this value is not equal to @em that. Note that this is NOT SQL inequality!
    */
   bool operator!=(const GenericValue &that) const { return !(*this == that); }
 
-  //===--------------------------------------------------------------------===//
-  //
+  // -------------------------------------------------------
   // Static factory methods
-  //
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
 
   /**
    * Create a NULL value.
@@ -198,9 +196,9 @@ class GenericValue {
 
   /**
    * Create a generic value from a runtime value.
-   * @param type_id
-   * @param val
-   * @return
+   * @param type_id The type of the runtime value.
+   * @param val The true SQL value.
+   * @return The generic value equivalent to the provided explicit runtime value.
    */
   static GenericValue CreateFromRuntimeValue(TypeId type_id, const Val &val);
 
@@ -208,7 +206,8 @@ class GenericValue {
   friend std::ostream &operator<<(std::ostream &out, const GenericValue &val);
 
  private:
-  explicit GenericValue(TypeId type_id) : type_id_(type_id), is_null_(true) {}
+  // Private constructor to force usage of factory methods.
+  explicit GenericValue(TypeId type_id) : type_id_(type_id), is_null_(true), value_() {}
 
  private:
   // The primitive type

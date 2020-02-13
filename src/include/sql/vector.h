@@ -27,13 +27,14 @@ namespace tpl::sql {
  * capacity. Finally, a vector has an <b>active count</b> (see Vector::GetCount()) that represents
  * the number of externally visible elements. Elements may become inactive if they have been
  * filtered out through predicates. The visibility of elements in the vector is controlled through
- * a <b>selection vector</b>.
+ * a <b>tuple ID (TID) list</b>.
  *
- * Vectors can be logically filtered through a <i>tuple ID (TID) list</i>. A TID list is an array
- * containing the indexes of the <i>active</i> vector elements. If a filtered TID list is available,
- * it must be used to access the vector's data since the vector may hold otherwise invalid data in
- * unselected positions (e.g., null pointers). This functionality is provided for you through
- * VectorOps::Exec(), but can be done manually as the below example illustrates:
+ * Vectors can be logically filtered through a TID list. A TID list is an array containing the
+ * indexes of the <i>active</i> vector elements. If a non-NULL filtered TID list is available from
+ * Vector::GetFilteredTupleIdList(), it must be used to access the vector's data since the vector
+ * may hold otherwise invalid data in unselected positions (e.g., null pointers). This functionality
+ * is provided for you through VectorOps::Exec(), but can be done manually as the below example
+ * illustrates:
  *
  * @code
  * Vector vec = ...
@@ -84,10 +85,9 @@ namespace tpl::sql {
  *
  * <h3>Caution:</h3>
  *
- * While there are methods to get/set individual vector elements, this should be used
- * sparingly. If you find yourself invoking this is in a hot-loop, or very often, reconsider your
- * interaction pattern with Vector, and think about writing a new vector primitive to achieve your
- * objective.
+ * While there are methods to get/set individual vector elements, this should be used sparingly. If
+ * you find yourself invoking this is in a hot-loop, or very often, reconsider your interaction
+ * pattern with Vector, and think about writing a new vector primitive to achieve your objective.
  */
 class Vector {
   friend class VectorOps;

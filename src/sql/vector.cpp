@@ -109,8 +109,7 @@ GenericValue Vector::GetValue(const uint64_t index) const {
 }
 
 void Vector::Resize(uint32_t size) {
-  TPL_ASSERT(size <= kDefaultVectorSize, "Size too large");
-
+  TPL_ASSERT(size <= GetCapacity(), "New size exceeds vector capacity.");
   tid_list_ = nullptr;
   count_ = size;
   num_elements_ = size;
