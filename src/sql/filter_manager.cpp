@@ -48,12 +48,8 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
   //
   //   rank = (1 - selectivity) / cost
   //
-  // We use the elapsed time as a proxy for a term's cost. The below algorithm
-  // uses the difference of selectivities to estimate the selectivity of a term.
-  // This, of course, requires the assumption that terms are independent, which
-  // is false. But, the point is that we can use this infrastructure to
-  // implement any policy.
-  // TODO(pmenon): Implement Babu et. al's adaptive policy
+  // We use the elapsed time as a proxy for a term's cost. For now, we don't
+  // calculate a per-tuple cost.
 
   if (!ShouldReRank()) {
     for (const auto &term_idx : optimal_term_order_) {
@@ -67,16 +63,16 @@ void FilterManager::Clause::RunFilter(VectorProjection *vector_projection, Tuple
   temp_.Resize(tid_list->GetCapacity());
   input_copy_.AssignFrom(*tid_list);
 
-  const double selectivity = tid_list->ComputeSelectivity();
+  const double input_selectivity = tid_list->ComputeSelectivity();
 
   for (const auto term_idx : optimal_term_order_) {
     temp_.AssignFrom(input_copy_);
-    Clause::Term &term = terms_[term_idx];
-    const double exec_ns = util::Time<std::nano>([&] { term.fn(vector_projection, &temp_); });
-    const double term_selectivity = temp_.ComputeSelectivity();
-    term.rank = (1.0F - (selectivity - term_selectivity)) / exec_ns;
+    auto term = &terms_[term_idx];
+    const auto exec_ns = util::Time<std::nano>([&] { term->fn(vector_projection, &temp_); });
+    const auto term_selectivity = temp_.ComputeSelectivity();
+    term->rank = (1.0F - (input_selectivity - term_selectivity)) / exec_ns;
     LOG_TRACE("Term {}: selectivity={:05.2f}, exec ns.: {}, rank: {:.8f}", term_idx,
-              term_selectivity * 100.0F, exec_ns, term.rank);
+              term_selectivity * 100.0F, exec_ns, term->rank);
     tid_list->IntersectWith(temp_);
   }
 
