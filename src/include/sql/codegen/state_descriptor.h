@@ -1,9 +1,9 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <functional>
 
 #include "ast/identifier.h"
 #include "common/common.h"
