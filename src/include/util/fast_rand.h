@@ -21,6 +21,9 @@ namespace tpl::util {
  */
 class FastRand {
  public:
+  /**
+   * Create a new fast random number generator.
+   */
   FastRand() {
     // Seed this fast random number generator with a number generated using a
     // slower PRNG.
@@ -30,10 +33,19 @@ class FastRand {
     state_ = dist(mt);
   }
 
+  /**
+   * @return The next 64-bit psuedo-random number from this generator.
+   */
   uint64_t Next() {
     state_ *= 0xda942042e4dd58b5ull;
     return state_ >> 64u;
   }
+
+  /**
+   * @return The next 64-bit psuedo-random number from this generator. Used by the STL random number
+   *         engines.
+   */
+  uint64_t operator()() { return Next(); }
 
  private:
   uint128_t state_;
