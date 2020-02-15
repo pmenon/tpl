@@ -204,58 +204,66 @@ class SorterIterator {
   using IteratorType = decltype(Sorter::tuples_)::const_iterator;
 
  public:
-  explicit SorterIterator(const Sorter &sorter) noexcept
-      : iter_(sorter.tuples_.begin()), end_(sorter.tuples_.end()) {}
-
   /**
-   * Dereference operator.
-   * @return A pointer to the current iteration row.
+   * Create an iterator over the provided sorter.
+   * @param sorter The sorter instance.
    */
-  const byte *operator*() const noexcept { return GetRow(); }
+  explicit SorterIterator(const Sorter &sorter);
 
   /**
-   * Pre-increment the iterator.
-   * @return A reference to this iterator after it's been advanced one row.
-   */
-  SorterIterator &operator++() noexcept {
-    Next();
-    return *this;
-  }
-
-  /**
-   * Does this iterator have more data.
    * @return True if the iterator has more data; false otherwise.
    */
-  bool HasNext() const noexcept { return iter_ != end_; }
+  bool HasNext() const { return iter_ != end_; }
 
   /**
    * Advance the iterator by one tuple.
    */
-  void Next() noexcept { ++iter_; }
+  void Next() { ++iter_; }
 
   /**
-   * Determine the number of rows remaining in the iteration.
+   * Advance the iterator by @em n rows. If there are fewer than @em n rows remaining in this
+   * iterator, it will self-exhaust itself and subsequent calls to HasNext() will return false.
+   * @param n The number of rows to advance by.
+   */
+  void AdvanceBy(uint64_t n);
+
+  /**
    * @return The number of tuples remaining in the iterator.
    */
-  uint64_t NumRemaining() const noexcept { return std::distance(iter_, end_); }
+  uint64_t NumRemaining() const { return std::distance(iter_, end_); }
 
   /**
-   * Return a pointer to the current row. It assumed the called has checked the
-   * iterator is valid.
+   * @return A pointer to the current row. It assumed the called has checked the iterator is valid.
    */
-  const byte *GetRow() const noexcept {
+  const byte *GetRow() const {
     TPL_ASSERT(iter_ != end_, "Invalid iterator");
     return *iter_;
   }
 
   /**
-   * Return a pointer to the current row, interpreted as the template type @em T. It assumed the
-   * called has checked the iterator is valid.
-   * @return A pointer to the row the iterator is positioned at.
+   * @return A pointer to the current row interpreted as the template type @em T. It assumed the
+   *         called has checked the iterator is valid.
    */
   template <typename T>
-  const T *GetRowAs() const noexcept {
+  const T *GetRowAs() const {
     return reinterpret_cast<const T *>(GetRow());
+  }
+
+  // -------------------------------------------------------
+  // Operator overloads
+  // -------------------------------------------------------
+
+  /**
+   * @return A pointer to the current iteration row.
+   */
+  const byte *operator*() const { return GetRow(); }
+
+  /**
+   * @return A reference to this iterator after it's been advanced one row.
+   */
+  SorterIterator &operator++() {
+    Next();
+    return *this;
   }
 
  private:

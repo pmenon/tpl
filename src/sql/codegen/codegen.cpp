@@ -882,6 +882,12 @@ ast::Expr *CodeGen::SorterIterNext(ast::Expr *iter) {
   return call;
 }
 
+ast::Expr *CodeGen::SorterIterSkipRows(ast::Expr *iter, uint32_t n) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterSkipRows, {iter, Const64(n)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
 ast::Expr *CodeGen::SorterIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) {
   ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterGetRow, {iter});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint8)->PointerTo());

@@ -84,6 +84,7 @@ TEST_F(SeqScanTranslatorTest, SimpleSort) {
   auto plan =
       planner::OrderByPlanNode::Builder()
           .AddSortKey(expr_maker.DVE(TypeId::Integer, 0, 0), planner::OrderByOrderingType::ASC)
+          .SetOffset(44)
           .SetLimit(100)
           .AddChild(
               // The sequential scan input

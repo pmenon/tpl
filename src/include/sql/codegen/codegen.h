@@ -1089,6 +1089,14 @@ class CodeGen {
   [[nodiscard]] ast::Expr *SorterIterNext(ast::Expr *iter);
 
   /**
+   * Call @sorterIterSkipRows(). Skips N rows in the provided sorter iterator.
+   * @param iter The iterator.
+   * @param n The number of rows to skip.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *SorterIterSkipRows(ast::Expr *iter, uint32_t n);
+
+  /**
    * Call @sorterIterGetRow(). Retrieves a pointer to the current iterator row casted to the
    * provided row type.
    * @param iter The iterator.

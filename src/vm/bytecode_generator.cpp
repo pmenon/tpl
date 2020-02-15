@@ -1329,6 +1329,11 @@ void BytecodeGenerator::VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Bui
       GetEmitter()->Emit(Bytecode::SorterIteratorNext, sorter_iter);
       break;
     }
+    case ast::Builtin::SorterIterSkipRows: {
+      LocalVar n = VisitExpressionForRValue(call->Arguments()[1]);
+      GetEmitter()->Emit(Bytecode::SorterIteratorSkipRows, sorter_iter, n);
+      break;
+    }
     case ast::Builtin::SorterIterGetRow: {
       LocalVar row_ptr = GetExecutionResult()->GetOrCreateDestination(call->GetType());
       GetEmitter()->Emit(Bytecode::SorterIteratorGetRow, row_ptr, sorter_iter);
@@ -1640,6 +1645,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::SorterIterInit:
     case ast::Builtin::SorterIterHasNext:
     case ast::Builtin::SorterIterNext:
+    case ast::Builtin::SorterIterSkipRows:
     case ast::Builtin::SorterIterGetRow:
     case ast::Builtin::SorterIterClose: {
       VisitBuiltinSorterIterCall(call, builtin);

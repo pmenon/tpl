@@ -1426,6 +1426,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(SorterIteratorSkipRows) : {
+    auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
+    auto n = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    OpSorterIteratorSkipRows(iter, n);
+    DISPATCH_NEXT();
+  }
+
   OP(SorterIteratorGetRow) : {
     const auto **row = frame->LocalAt<const byte **>(READ_LOCAL_ID());
     auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
