@@ -166,11 +166,6 @@ class CodeGen {
   [[nodiscard]] ast::Expr *Int64Type() const;
 
   /**
-   * @return The type representation for an 64-bit unsigned integer (i.e., uint64)
-   */
-  [[nodiscard]] ast::Expr *Uint64Type() const;
-
-  /**
    * @return The type representation for an 32-bit floating point number (i.e., float32)
    */
   [[nodiscard]] ast::Expr *Float32Type() const;
@@ -1099,7 +1094,7 @@ class CodeGen {
    * @param n The number of rows to skip.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterSkipRows(ast::Expr *iter, ast::Expr *n);
+  [[nodiscard]] ast::Expr *SorterIterSkipRows(ast::Expr *iter, uint32_t n);
 
   /**
    * Call @sorterIterGetRow(). Retrieves a pointer to the current iterator row casted to the

@@ -1428,7 +1428,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 
   OP(SorterIteratorSkipRows) : {
     auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
-    auto n = frame->LocalAt<uint64_t>(READ_LOCAL_ID());
+    auto n = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
     OpSorterIteratorSkipRows(iter, n);
     DISPATCH_NEXT();
   }

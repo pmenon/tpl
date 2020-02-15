@@ -178,21 +178,17 @@ void SortTranslator::ScanSorter(WorkContext *ctx, FunctionBuilder *function) con
   function->Append(codegen->DeclareVarWithInit(
       iter_name, codegen->AddressOf(codegen->MakeExpr(base_iter_name))));
 
-  ast::Expr *init;
+  // Call @sorterIterInit().
+  function->Append(codegen->SorterIterInit(iter, global_sorter_.GetPtr(codegen)));
+
+  ast::Expr *init = nullptr;
   if (const auto offset = GetPlanAs<planner::OrderByPlanNode>().GetOffset(); offset != 0) {
-    // Declare a variable for the offset and call @sorterIterSkipRows() in loop body.
-    auto name = codegen->MakeFreshIdentifier("offset");
-    function->Append(codegen->DeclareVar(name, codegen->Uint64Type(), codegen->Const64(offset)));
-    // Sorter initialization is outside loop body. Issue now: @sorterIterInit()
-    function->Append(codegen->SorterIterInit(iter, global_sorter_.GetPtr(codegen)));
-    init = codegen->SorterIterSkipRows(iter, codegen->MakeExpr(name));
-  } else {
-    // Call @sorterIterInit()
-    init = codegen->SorterIterInit(iter, global_sorter_.GetPtr(codegen));
+    init = codegen->SorterIterSkipRows(iter, offset);
   }
-  Loop loop(function, codegen->MakeStmt(init),                  // @sorterIterSkipRows();
-            codegen->SorterIterHasNext(iter),                   // @sorterIterHasNext();
-            codegen->MakeStmt(codegen->SorterIterNext(iter)));  // @sorterIterNext()
+  Loop loop(function,
+            init == nullptr ? nullptr : codegen->MakeStmt(init),  // @sorterIterSkipRows();
+            codegen->SorterIterHasNext(iter),                     // @sorterIterHasNext();
+            codegen->MakeStmt(codegen->SorterIterNext(iter)));    // @sorterIterNext()
   {
     // var sortRow = @ptrCast(SortRow*, @sorterIterGetRow(sorter))
     auto row = codegen->SorterIterGetRow(iter, sort_row_type_);

@@ -1490,8 +1490,8 @@ void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin)
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      const auto uint_kind = ast::BuiltinType::Kind::Uint64;
-      if (!args[1]->GetType()->IsSpecificBuiltin(uint_kind)) {
+      const auto uint_kind = ast::BuiltinType::Kind::Uint32;
+      if (!args[1]->GetType()->IsIntegerType()) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(uint_kind));
         return;
       }
