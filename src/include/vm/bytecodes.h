@@ -178,7 +178,6 @@ namespace tpl::vm {
   F(FilterManagerInit, OperandType::Local)                                                                             \
   F(FilterManagerStartNewClause, OperandType::Local)                                                                   \
   F(FilterManagerInsertFilter, OperandType::Local, OperandType::FunctionId)                                            \
-  F(FilterManagerFinalize, OperandType::Local)                                                                         \
   F(FilterManagerRunFilters, OperandType::Local, OperandType::Local)                                                   \
   F(FilterManagerFree, OperandType::Local)                                                                             \
                                                                                                                        \

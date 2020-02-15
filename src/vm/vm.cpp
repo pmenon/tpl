@@ -755,12 +755,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(FilterManagerFinalize) : {
-    auto *filter_manager = frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
-    OpFilterManagerFinalize(filter_manager);
-    DISPATCH_NEXT();
-  }
-
   OP(FilterManagerRunFilters) : {
     auto *filter_manager = frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());

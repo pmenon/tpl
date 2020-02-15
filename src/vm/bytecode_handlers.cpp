@@ -51,10 +51,6 @@ void OpFilterManagerInsertFilter(tpl::sql::FilterManager *filter_manager,
   filter_manager->InsertClauseTerm(clause);
 }
 
-void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager) {
-  filter_manager->Finalize();
-}
-
 void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter_manager,
                                tpl::sql::VectorProjectionIterator *vpi) {
   filter_manager->RunFilters(vpi);

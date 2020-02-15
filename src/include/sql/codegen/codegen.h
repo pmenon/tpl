@@ -632,12 +632,6 @@ class CodeGen {
                                                const std::vector<ast::Identifier> &clause_fn_names);
 
   /**
-   * Call @filterManagerFinalize(). Seal the filter manager making it immutable and executable.
-   * @param fm The filter manager pointer.
-   */
-  [[nodiscard]] ast::Expr *FilterManagerFinalize(ast::Expr *filter_manager);
-
-  /**
    * Call @filterManagerRun(). Runs all filters on the input vector projection iterator.
    * @param fm The filter manager pointer.
    * @param vpi The input vector projection iterator.

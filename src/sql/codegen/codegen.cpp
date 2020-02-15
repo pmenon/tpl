@@ -534,12 +534,6 @@ ast::Expr *CodeGen::FilterManagerInsert(ast::Expr *filter_manager,
   return call;
 }
 
-ast::Expr *CodeGen::FilterManagerFinalize(ast::Expr *filter_manager) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerFinalize, {filter_manager});
-  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
-  return call;
-}
-
 ast::Expr *CodeGen::FilterManagerRunFilters(ast::Expr *filter_manager, ast::Expr *vpi) {
   ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerRunFilters, {filter_manager, vpi});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));

@@ -795,10 +795,6 @@ void BytecodeGenerator::VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::
       }
       break;
     }
-    case ast::Builtin::FilterManagerFinalize: {
-      GetEmitter()->Emit(Bytecode::FilterManagerFinalize, filter_manager);
-      break;
-    }
     case ast::Builtin::FilterManagerRunFilters: {
       LocalVar vpi = VisitExpressionForRValue(call->Arguments()[1]);
       GetEmitter()->Emit(Bytecode::FilterManagerRunFilters, filter_manager, vpi);
@@ -1567,7 +1563,6 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     };
     case ast::Builtin::FilterManagerInit:
     case ast::Builtin::FilterManagerInsertFilter:
-    case ast::Builtin::FilterManagerFinalize:
     case ast::Builtin::FilterManagerRunFilters:
     case ast::Builtin::FilterManagerFree: {
       VisitBuiltinFilterManagerCall(call, builtin);
