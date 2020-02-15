@@ -1486,6 +1486,18 @@ void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin)
       call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
+    case ast::Builtin::SorterIterSkipRows: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      const auto uint_kind = ast::BuiltinType::Kind::Uint64;
+      if (!args[1]->GetType()->IsSpecificBuiltin(uint_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(uint_kind));
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
     case ast::Builtin::SorterIterGetRow: {
       call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
@@ -1707,6 +1719,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::SorterIterInit:
     case ast::Builtin::SorterIterHasNext:
     case ast::Builtin::SorterIterNext:
+    case ast::Builtin::SorterIterSkipRows:
     case ast::Builtin::SorterIterGetRow:
     case ast::Builtin::SorterIterClose: {
       CheckBuiltinSorterIterCall(call, builtin);

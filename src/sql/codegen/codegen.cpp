@@ -145,6 +145,8 @@ ast::Expr *CodeGen::Int32Type() const { return BuiltinType(ast::BuiltinType::Int
 
 ast::Expr *CodeGen::Int64Type() const { return BuiltinType(ast::BuiltinType::Int64); }
 
+ast::Expr *CodeGen::Uint64Type() const { return BuiltinType(ast::BuiltinType::Uint64); }
+
 ast::Expr *CodeGen::Float32Type() const { return BuiltinType(ast::BuiltinType::Float32); }
 
 ast::Expr *CodeGen::Float64Type() const { return BuiltinType(ast::BuiltinType::Float64); }
@@ -878,6 +880,12 @@ ast::Expr *CodeGen::SorterIterHasNext(ast::Expr *iter) {
 
 ast::Expr *CodeGen::SorterIterNext(ast::Expr *iter) {
   ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterNext, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::SorterIterSkipRows(ast::Expr *iter, ast::Expr *n) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterSkipRows, {iter, n});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }

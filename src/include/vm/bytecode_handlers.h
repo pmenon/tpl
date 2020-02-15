@@ -1102,6 +1102,10 @@ VM_OP_HOT void OpSorterIteratorGetRow(const byte **row, tpl::sql::SorterIterator
   *row = iter->GetRow();
 }
 
+VM_OP_WARM void OpSorterIteratorSkipRows(tpl::sql::SorterIterator *iter, const uint64_t n) {
+  iter->AdvanceBy(n);
+}
+
 VM_OP void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);
 
 // ---------------------------------------------------------

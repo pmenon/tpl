@@ -392,6 +392,7 @@ namespace tpl::vm {
   F(SorterIteratorGetRow, OperandType::Local, OperandType::Local)                                                      \
   F(SorterIteratorHasNext, OperandType::Local, OperandType::Local)                                                     \
   F(SorterIteratorNext, OperandType::Local)                                                                            \
+  F(SorterIteratorSkipRows, OperandType::Local, OperandType::Local)                                                    \
   F(SorterIteratorFree, OperandType::Local)                                                                            \
                                                                                                                        \
   /* Output */                                                                                                         \

@@ -134,6 +134,7 @@ namespace tpl::ast {
   F(SorterIterInit, sorterIterInit)                             \
   F(SorterIterHasNext, sorterIterHasNext)                       \
   F(SorterIterNext, sorterIterNext)                             \
+  F(SorterIterSkipRows, sorterIterSkipRows)                     \
   F(SorterIterGetRow, sorterIterGetRow)                         \
   F(SorterIterClose, sorterIterClose)                           \
                                                                 \
