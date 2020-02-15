@@ -178,15 +178,17 @@ void SortTranslator::ScanSorter(WorkContext *ctx, FunctionBuilder *function) con
   function->Append(codegen->DeclareVarWithInit(
       iter_name, codegen->AddressOf(codegen->MakeExpr(base_iter_name))));
 
-  // @sorterIterInit()
-  function->Append(codegen->SorterIterInit(iter, global_sorter_.GetPtr(codegen)));
-
-  // If there's an offset, declare a variable for it and issue @sorterIterSkipRows().
-  ast::Expr *init = nullptr;
+  ast::Expr *init;
   if (const auto offset = GetPlanAs<planner::OrderByPlanNode>().GetOffset(); offset != 0) {
+    // Declare a variable for the offset and call @sorterIterSkipRows() in loop body.
     auto name = codegen->MakeFreshIdentifier("offset");
     function->Append(codegen->DeclareVar(name, codegen->Uint64Type(), codegen->Const64(offset)));
+    // Sorter initialization is outside loop body. Issue now: @sorterIterInit()
+    function->Append(codegen->SorterIterInit(iter, global_sorter_.GetPtr(codegen)));
     init = codegen->SorterIterSkipRows(iter, codegen->MakeExpr(name));
+  } else {
+    // Call @sorterIterInit()
+    init = codegen->SorterIterInit(iter, global_sorter_.GetPtr(codegen));
   }
   Loop loop(function, codegen->MakeStmt(init),                  // @sorterIterSkipRows();
             codegen->SorterIterHasNext(iter),                   // @sorterIterHasNext();
