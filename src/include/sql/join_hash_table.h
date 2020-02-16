@@ -78,8 +78,8 @@ class JoinHashTable {
   byte *AllocInputTuple(hash_t hash);
 
   /**
-   * Fully construct the join hash table. Nothing is done if the join hash table has already been
-   * built. After building, the table becomes read-only.
+   * Build and finalize the join hash table. After finalization, no new insertions are allowed and
+   * the table becomes read-only. Nothing is done if the join hash table has already been finalized.
    */
   void Build();
 
@@ -220,7 +220,7 @@ class JoinHashTable {
   MemPoolVector<decltype(entries_)> owned_;
 
   // The chaining hash table.
-  UntaggedChainingHashTable chaining_hash_table_;
+  TaggedChainingHashTable chaining_hash_table_;
 
   // The concise hash table.
   ConciseHashTable concise_hash_table_;
