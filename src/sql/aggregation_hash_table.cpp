@@ -652,6 +652,9 @@ AggregationHashTable *AggregationHashTable::GetOrBuildTableOverPartition(
   TPL_ASSERT(partition_idx < kDefaultNumPartitions, "Out-of-bounds partition access");
   TPL_ASSERT(partition_heads_[partition_idx] != nullptr,
              "Should not build aggregation table over empty partition!");
+  TPL_ASSERT(
+      merge_partition_fn_ != nullptr,
+      "Merging function was not provided! Did you forget to call TransferMemoryAndPartitions()?");
 
   // If the table has already been built, return it
   if (partition_tables_[partition_idx] != nullptr) {
@@ -800,15 +803,15 @@ void AggregationHashTable::MergePartitions(AggregationHashTable *target, void *q
 
   // Merge overflow data into the appropriate partitioned table in the target.
   tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
-    // Get partitioned hash table
+    // Get the partitioned hash table from the target.
     auto agg_table_partition = target->GetOrBuildTableOverPartition(query_state, part_idx);
 
-    // Merge our overflow partition into target table
+    // Merge our overflow partition into target table.
     AHTOverflowPartitionIterator iter(partition_heads_ + part_idx, partition_heads_ + part_idx + 1);
     merge_func(query_state, agg_table_partition, &iter);
   });
 
-  // Move memory
+  // Move our memory to the target.
   target->owned_entries_.emplace_back(std::move(entries_));
 }
 
