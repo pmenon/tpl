@@ -95,7 +95,8 @@ constexpr inline TypeId GetTypeId() {
   } else if constexpr (std::is_same<std::remove_const_t<T>, char *>() ||
                        std::is_same<std::remove_const_t<T>, const char *>() ||
                        std::is_same<std::remove_const_t<T>, std::string>() ||
-                       std::is_same<std::remove_const_t<T>, std::string_view>()) {
+                       std::is_same<std::remove_const_t<T>, std::string_view>() ||
+                       std::is_same<std::remove_const_t<T>, VarlenEntry>()) {
     return TypeId::Varchar;
   } else if constexpr (std::is_same<std::remove_const_t<T>, Blob>()) {
     return TypeId::Varbinary;

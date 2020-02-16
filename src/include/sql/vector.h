@@ -97,6 +97,30 @@ class Vector {
   using NullMask = util::BitVector<uint64_t>;
 
   /**
+   * Scope object that temporary sets the filter for a vector over the lifetime of the scope. When
+   * the object goes out of scope, the input vector's previous filter status is restored.
+   */
+  class TempFilterScope {
+   public:
+    TempFilterScope(Vector *vector, const TupleIdList *tid_list, const uint64_t count)
+        : vector_(vector),
+          prev_tid_list_(vector->GetFilteredTupleIdList()),
+          prev_count_(vector->GetCount()) {
+      vector_->SetFilteredTupleIdList(tid_list, count);
+    }
+
+    ~TempFilterScope() { vector_->SetFilteredTupleIdList(prev_tid_list_, prev_count_); }
+
+   private:
+    // The vector to filter.
+    Vector *vector_;
+    // The previous filter in the vector. Can be NULL.
+    const TupleIdList *prev_tid_list_;
+    // The previous count of the vector.
+    uint64_t prev_count_;
+  };
+
+  /**
    * Create an empty vector.
    * @param type The type of the elements in the vector.
    */
