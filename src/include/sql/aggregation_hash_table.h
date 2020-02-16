@@ -221,6 +221,17 @@ class AggregationHashTable {
   void Repartition();
 
   /**
+   * Merge data stored in this aggregation hash table's overflow partitions into the provided
+   * target aggregation hash table. Both source and target aggregation hash tables must already be
+   * partitioned and must use the same partitioning key!
+   * @param target The target hash table we merge our overflow partitions into.
+   * @param query_state An opaque state object pointer.
+   * @param merge_func The function we use to merge entries from our hash table into the target.
+   */
+  void MergePartitions(AggregationHashTable *target, void *query_state,
+                       MergePartitionFn merge_func);
+
+  /**
    * @return The total number of tuples in this table.
    */
   uint64_t GetTupleCount() const { return hash_table_.GetElementCount(); }
@@ -290,7 +301,7 @@ class AggregationHashTable {
 
   // Called during partitioned (parallel) scan to build an aggregation hash
   // table over a single partition.
-  AggregationHashTable *BuildTableOverPartition(void *query_state, uint32_t partition_idx);
+  AggregationHashTable *GetOrBuildTableOverPartition(void *query_state, uint32_t partition_idx);
 
  private:
   // A helper class containing various data structures used during batch processing.

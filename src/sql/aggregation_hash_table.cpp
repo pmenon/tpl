@@ -647,8 +647,8 @@ void AggregationHashTable::TransferMemoryAndPartitions(
   }
 }
 
-AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const query_state,
-                                                                    const uint32_t partition_idx) {
+AggregationHashTable *AggregationHashTable::GetOrBuildTableOverPartition(
+    void *query_state, const uint32_t partition_idx) {
   TPL_ASSERT(partition_idx < kDefaultNumPartitions, "Out-of-bounds partition access");
   TPL_ASSERT(partition_heads_[partition_idx] != nullptr,
              "Should not build aggregation table over empty partition!");
@@ -714,13 +714,13 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
 
   tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
     // Build a hash table over the given partition
-    auto *agg_table_part = BuildTableOverPartition(query_state, part_idx);
+    auto agg_table_partition = GetOrBuildTableOverPartition(query_state, part_idx);
 
     // Get a handle to the thread-local state of the executing thread
-    auto *thread_state = thread_states->AccessCurrentThreadState();
+    auto thread_state = thread_states->AccessCurrentThreadState();
 
     // Scan the partition
-    scan_fn(query_state, thread_state, agg_table_part);
+    scan_fn(query_state, thread_state, agg_table_partition);
   });
 
   timer.Stop();
@@ -750,7 +750,7 @@ void AggregationHashTable::BuildAllPartitions(void *query_state) {
 
   // For each valid partition, build a hash table over its contents.
   tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
-    BuildTableOverPartition(query_state, part_idx);
+    GetOrBuildTableOverPartition(query_state, part_idx);
   });
 }
 
@@ -781,6 +781,35 @@ void AggregationHashTable::Repartition() {
     // Move partitioned hash table memory into this main hash table.
     owned_entries_.emplace_back(std::move(table->entries_));
   }
+}
+
+void AggregationHashTable::MergePartitions(AggregationHashTable *target, void *query_state,
+                                           AggregationHashTable::MergePartitionFn merge_func) {
+  if (target->partition_tables_ == nullptr) {
+    target->partition_tables_ =
+        memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
+  }
+
+  // Find non-empty partitions.
+  llvm::SmallVector<uint32_t, kDefaultNumPartitions> nonempty_parts;
+  for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    if (partition_heads_[part_idx] != nullptr) {
+      nonempty_parts.push_back(part_idx);
+    }
+  }
+
+  // Merge overflow data into the appropriate partitioned table in the target.
+  tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
+    // Get partitioned hash table
+    auto agg_table_partition = target->GetOrBuildTableOverPartition(query_state, part_idx);
+
+    // Merge our overflow partition into target table
+    AHTOverflowPartitionIterator iter(partition_heads_ + part_idx, partition_heads_ + part_idx + 1);
+    merge_func(query_state, agg_table_partition, &iter);
+  });
+
+  // Move memory
+  target->owned_entries_.emplace_back(std::move(entries_));
 }
 
 }  // namespace tpl::sql
