@@ -9,7 +9,6 @@
 #include "count/hll.h"
 
 #include "tbb/parallel_for_each.h"
-#include "tbb/task_scheduler_init.h"
 
 #include "common/cpu_info.h"
 #include "common/exception.h"
@@ -676,10 +675,8 @@ AggregationHashTable *AggregationHashTable::GetOrBuildTableOverPartition(
   merge_partition_fn_(query_state, agg_table, &iter);
 
   timer.Stop();
-  LOG_DEBUG(
-      "Overflow Partition {}: estimated size = {}, actual size = {}, "
-      "build time = {:2f} ms",
-      partition_idx, estimated_size, agg_table->GetTupleCount(), timer.GetElapsed());
+  LOG_DEBUG("Overflow Partition {}: estimated size = {}, actual size = {}, build time = {:2f} ms",
+            partition_idx, estimated_size, agg_table->GetTupleCount(), timer.GetElapsed());
 
   // Set it
   partition_tables_[partition_idx] = agg_table;
@@ -744,7 +741,8 @@ void AggregationHashTable::BuildAllPartitions(void *query_state) {
   partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
 
   // Find non-empty partitions.
-  llvm::SmallVector<uint32_t, kDefaultNumPartitions> nonempty_parts;
+  std::vector<uint32_t> nonempty_parts;
+  nonempty_parts.reserve(kDefaultNumPartitions);
   for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
     if (partition_heads_[part_idx] != nullptr) {
       nonempty_parts.push_back(part_idx);
@@ -759,7 +757,8 @@ void AggregationHashTable::BuildAllPartitions(void *query_state) {
 
 void AggregationHashTable::Repartition() {
   // Find all non-empty partitions.
-  llvm::SmallVector<AggregationHashTable *, kDefaultNumPartitions> nonempty_tables;
+  std::vector<AggregationHashTable *> nonempty_tables;
+  nonempty_tables.reserve(kDefaultNumPartitions);
   for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
     if (partition_tables_[part_idx] != nullptr) {
       nonempty_tables.push_back(partition_tables_[part_idx]);
@@ -794,7 +793,8 @@ void AggregationHashTable::MergePartitions(AggregationHashTable *target, void *q
   }
 
   // Find non-empty partitions.
-  llvm::SmallVector<uint32_t, kDefaultNumPartitions> nonempty_parts;
+  std::vector<uint32_t> nonempty_parts;
+  nonempty_parts.reserve(kDefaultNumPartitions);
   for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
     if (partition_heads_[part_idx] != nullptr) {
       nonempty_parts.push_back(part_idx);
