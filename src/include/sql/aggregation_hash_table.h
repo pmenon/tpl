@@ -210,6 +210,17 @@ class AggregationHashTable {
                                       ScanPartitionFn scan_fn);
 
   /**
+   * Construct an AggregationHashTable over all non-empty overflow partitions.
+   * @param query_state An opaque state object pointer
+   */
+  void BuildAllPartitions(void *query_state);
+
+  /**
+   * Repartition all data stored in this partitioned hash table.
+   */
+  void Repartition();
+
+  /**
    * @return The total number of tuples in this table.
    */
   uint64_t GetTupleCount() const { return hash_table_.GetElementCount(); }

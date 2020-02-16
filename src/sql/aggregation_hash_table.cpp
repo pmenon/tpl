@@ -736,4 +736,51 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
            nonempty_parts.size(), tuple_count, timer.GetElapsed(), tps);
 }
 
+void AggregationHashTable::BuildAllPartitions(void *query_state) {
+  TPL_ASSERT(partition_tables_ == nullptr, "Should not have built aggregation hash tables already");
+  partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
+
+  // Find non-empty partitions.
+  llvm::SmallVector<uint32_t, kDefaultNumPartitions> nonempty_parts;
+  for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    if (partition_heads_[part_idx] != nullptr) {
+      nonempty_parts.push_back(part_idx);
+    }
+  }
+
+  // For each valid partition, build a hash table over its contents.
+  tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
+    BuildTableOverPartition(query_state, part_idx);
+  });
+}
+
+void AggregationHashTable::Repartition() {
+  // Find all non-empty partitions.
+  llvm::SmallVector<AggregationHashTable *, kDefaultNumPartitions> nonempty_tables;
+  for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    if (partition_tables_[part_idx] != nullptr) {
+      nonempty_tables.push_back(partition_tables_[part_idx]);
+    }
+  }
+
+  // First, flush all hash table partitions to their own overflow buckets.
+  tbb::parallel_for_each(nonempty_tables, [&](auto table) { table->FlushToOverflowPartitions(); });
+
+  // Now, transfer each hash table partition's overflow buckets to us.
+  for (auto *table : nonempty_tables) {
+    for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+      if (table->partition_heads_[part_idx] != nullptr) {
+        table->partition_tails_[part_idx]->next = partition_heads_[part_idx];
+        partition_heads_[part_idx] = table->partition_heads_[part_idx];
+        if (partition_tails_[part_idx] == nullptr) {
+          partition_tails_[part_idx] = table->partition_tails_[part_idx];
+        }
+      }
+    }
+
+    // Move partitioned hash table memory into this main hash table.
+    owned_entries_.emplace_back(std::move(table->entries_));
+  }
+}
+
 }  // namespace tpl::sql
