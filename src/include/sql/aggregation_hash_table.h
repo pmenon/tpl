@@ -26,6 +26,12 @@ class AHTIterator;
 class AHTVectorIterator;
 class AHTOverflowPartitionIterator;
 
+//===----------------------------------------------------------------------===//
+//
+// Aggregation Hash Table
+//
+//===----------------------------------------------------------------------===//
+
 /**
  * The hash table used when performing aggregations.
  */
@@ -416,9 +422,11 @@ inline byte *AggregationHashTable::Lookup(hash_t hash, AggregationHashTable::Key
   return (entry == nullptr ? nullptr : entry->payload);
 }
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * A tuple-at-a-time iterator over the contents of an aggregation hash table.
@@ -455,9 +463,11 @@ class AHTIterator {
   ChainingHashTableIterator<false> iter_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Vector Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * A vectorized iterator over the contents of an aggregation hash table. This exists so that users
@@ -524,9 +534,11 @@ class AHTVectorIterator {
   std::unique_ptr<VectorProjectionIterator> vector_projection_iterator_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Overflow Partitions Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * An iterator over a range of overflow partition entries in an aggregation hash table. The range is
