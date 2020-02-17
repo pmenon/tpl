@@ -270,6 +270,10 @@ namespace tpl::vm {
       OperandType::FunctionId, OperandType::FunctionId, OperandType::Local)                                            \
   F(AggregationHashTableTransferPartitions, OperandType::Local, OperandType::Local, OperandType::Local,                \
       OperandType::FunctionId)                                                                                         \
+  F(AggregationHashTableBuildAllHashTablePartitions, OperandType::Local, OperandType::Local)                           \
+  F(AggregationHashTableRepartition, OperandType::Local)                                                               \
+  F(AggregationHashTableMergePartitions, OperandType::Local, OperandType::Local, OperandType::Local,                   \
+      OperandType::FunctionId)                                                                                         \
   F(AggregationHashTableParallelPartitionedScan, OperandType::Local, OperandType::Local, OperandType::Local,           \
       OperandType::FunctionId)                                                                                         \
   F(AggregationHashTableFree, OperandType::Local)                                                                      \

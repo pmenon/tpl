@@ -100,6 +100,22 @@ void OpAggregationHashTableIteratorInit(tpl::sql::AHTIterator *iter,
   new (iter) tpl::sql::AHTIterator(*agg_hash_table);
 }
 
+void OpAggregationHashTableBuildAllHashTablePartitions(
+    tpl::sql::AggregationHashTable *agg_hash_table, void *query_state) {
+  agg_hash_table->BuildAllPartitions(query_state);
+}
+
+void OpAggregationHashTableRepartition(tpl::sql::AggregationHashTable *agg_hash_table) {
+  agg_hash_table->Repartition();
+}
+
+void OpAggregationHashTableMergePartitions(
+    tpl::sql::AggregationHashTable *agg_hash_table,
+    tpl::sql::AggregationHashTable *target_agg_hash_table, void *query_state,
+    tpl::sql::AggregationHashTable::MergePartitionFn merge_partition_fn) {
+  agg_hash_table->MergePartitions(target_agg_hash_table, query_state, merge_partition_fn);
+}
+
 void OpAggregationHashTableIteratorFree(tpl::sql::AHTIterator *iter) { iter->~AHTIterator(); }
 
 // ---------------------------------------------------------
