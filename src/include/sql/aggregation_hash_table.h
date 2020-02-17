@@ -247,12 +247,12 @@ class AggregationHashTable {
    */
   const Stats *GetStatistics() const { return &stats_; }
 
+  // Specialized hash table mapping hash values to group IDs
+  class HashToGroupIdMap;
+
  private:
   friend class AHTIterator;
   friend class AHTVectorIterator;
-
-  // Specialized hash table mapping hash values to group IDs
-  class HashToGroupIdMap;
 
   // Does the hash table need to grow?
   bool NeedsToGrow() const noexcept { return hash_table_.GetElementCount() >= max_fill_; }
