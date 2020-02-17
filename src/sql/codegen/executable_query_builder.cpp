@@ -1,5 +1,6 @@
 #include "sql/codegen/executable_query_builder.h"
 
+#include <ast/ast_dump.h>
 #include <ast/ast_pretty_print.h>
 #include <iostream>
 

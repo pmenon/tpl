@@ -34,8 +34,12 @@ CodeGen *Pipeline::GetCodeGen() { return compilation_context_->GetCodeGen(); }
 
 void Pipeline::RegisterStep(OperatorTranslator *op, Parallelism parallelism) {
   steps_.push_back(op);
-  parallelism_ = std::min(parallelism, parallelism_);
+  if (check_parallelism_) {
+    parallelism_ = std::min(parallelism, parallelism_);
+  }
 }
+
+void Pipeline::SetParallelCheck(bool check) { check_parallelism_ = check; }
 
 void Pipeline::RegisterExpression(ExpressionTranslator *expression) {
   TPL_ASSERT(std::find(expressions_.begin(), expressions_.end(), expression) == expressions_.end(),

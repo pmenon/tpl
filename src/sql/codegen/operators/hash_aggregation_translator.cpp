@@ -479,12 +479,11 @@ void HashAggregationTranslator::FinishPipelineWork(const Pipeline &pipeline,
   }
 }
 
-ast::Expr *HashAggregationTranslator::GetChildOutput(WorkContext *work_context,
-                                                     UNUSED uint32_t child_idx,
+ast::Expr *HashAggregationTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                                                      uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");
   if (IsProducePipeline(work_context->GetPipeline())) {
-    if (attr_idx < GetAggPlan().GetGroupByTerms().size()) {
+    if (child_idx == 0) {
       return GetGroupByTerm(agg_row_var_, attr_idx);
     }
     return GetCodeGen()->AggregatorResult(GetAggregateTermPtr(agg_row_var_, attr_idx));

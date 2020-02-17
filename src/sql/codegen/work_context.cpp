@@ -14,15 +14,17 @@ WorkContext::WorkContext(CompilationContext *compilation_context, const Pipeline
 
 ast::Expr *WorkContext::DeriveValue(const planner::AbstractExpression &expr,
                                     const ColumnValueProvider *provider) {
-  if (auto iter = cache_.find(&expr); iter != cache_.end()) {
-    return iter->second;
+  if (cache_enabled_) {
+    if (auto iter = cache_.find(&expr); iter != cache_.end()) {
+      return iter->second;
+    }
   }
   auto *translator = compilation_context_->LookupTranslator(expr);
   if (translator == nullptr) {
     return nullptr;
   }
   auto result = translator->DeriveValue(this, provider);
-  cache_[&expr] = result;
+  if (cache_enabled_) cache_[&expr] = result;
   return result;
 }
 

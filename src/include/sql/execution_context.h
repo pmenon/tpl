@@ -10,6 +10,10 @@
 
 namespace tpl::sql {
 
+namespace planner {
+class OutputSchema;
+}
+
 class MemoryPool;
 class Schema;
 
@@ -26,7 +30,7 @@ class ExecutionContext {
    * @param schema The optional schema of the output.
    * @param consumer The optional consumer of the output.
    */
-  explicit ExecutionContext(MemoryPool *mem_pool, const Schema *schema = nullptr,
+  explicit ExecutionContext(MemoryPool *mem_pool, const planner::OutputSchema *schema = nullptr,
                             ResultConsumer *consumer = nullptr)
       : mem_pool_(mem_pool),
         buffer_(schema == nullptr ? nullptr : new ResultBuffer(mem_pool, *schema, consumer)),

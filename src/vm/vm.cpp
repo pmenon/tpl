@@ -1665,6 +1665,17 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  // ------------------------
+  // Date functions
+  // ---------------------------
+
+  OP(ExtractYear) : {
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());
+    OpExtractYear(result, input);
+    DISPATCH_NEXT();
+  }
+
   // Impossible
   UNREACHABLE("Impossible to reach end of interpreter loop. Bad code!");
 }

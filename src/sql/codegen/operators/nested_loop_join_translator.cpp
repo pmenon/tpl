@@ -12,11 +12,20 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
                                                    CompilationContext *compilation_context,
                                                    Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline) {
-  // NLJ joins aren't parallel ... yet.
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Serial);
+  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
+
+  // In a nested loop, only the outer most loop determines the parallelism level.
+  // So disable the parallelism check until the last child.
+  pipeline->SetParallelCheck(false);
 
   // Prepare all children in this pipeline.
-  for (const auto child_plan : plan.GetChildren()) {
+  auto num_children = static_cast<uint32_t>(plan.GetChildren().size());
+  for (uint32_t i = 0; i < num_children; i++) {
+    auto child_plan = plan.GetChild(i);
+    if (i == num_children - 1) {
+      // Reenable the parallelism check for the outer most loop.
+      pipeline->SetParallelCheck(true);
+    }
     compilation_context->Prepare(*child_plan, pipeline);
   }
 

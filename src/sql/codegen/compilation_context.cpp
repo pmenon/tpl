@@ -12,16 +12,19 @@
 #include "sql/codegen/executable_query_builder.h"
 #include "sql/codegen/expression//derived_value_translator.h"
 #include "sql/codegen/expression/arithmetic_translator.h"
+#include "sql/codegen/expression/builtin_function_translator.h"
 #include "sql/codegen/expression/column_value_translator.h"
 #include "sql/codegen/expression/comparison_translator.h"
 #include "sql/codegen/expression/conjunction_translator.h"
 #include "sql/codegen/expression/constant_translator.h"
 #include "sql/codegen/expression/null_check_translator.h"
+#include "sql/codegen/expression/unary_translator.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/hash_aggregation_translator.h"
 #include "sql/codegen/operators/hash_join_translator.h"
 #include "sql/codegen/operators/nested_loop_join_translator.h"
 #include "sql/codegen/operators/operator_translator.h"
+#include "sql/codegen/operators/output_translator.h"
 #include "sql/codegen/operators/projection_translator.h"
 #include "sql/codegen/operators/seq_scan_translator.h"
 #include "sql/codegen/operators/sort_translator.h"
@@ -67,6 +70,7 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(&codegen_);
     for (auto &[_, op] : ops_) {
+      (void)_;
       op->InitializeQueryState(&builder);
     }
   }
@@ -80,6 +84,7 @@ ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(&codegen_);
     for (auto &[_, op] : ops_) {
+      (void)_;
       op->TearDownQueryState(&builder);
     }
   }
@@ -92,13 +97,18 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
 
   // Recursively prepare all translators for the query.
   Pipeline main_pipeline(this);
-  Prepare(plan, &main_pipeline);
+  if (plan.GetOutputSchema()->NumColumns() != 0) {
+    PrepareOut(plan, &main_pipeline);
+  } else {
+    Prepare(plan, &main_pipeline);
+  }
   query_state_.ConstructFinalType(&codegen_);
 
   // Collect top-level structures and declarations.
   util::RegionVector<ast::StructDecl *> top_level_structs(query_->GetContext()->GetRegion());
   util::RegionVector<ast::FunctionDecl *> top_level_funcs(query_->GetContext()->GetRegion());
   for (auto &[_, op] : ops_) {
+    (void)_;
     op->DefineHelperStructs(&top_level_structs);
     op->DefineHelperFunctions(&top_level_funcs);
   }
@@ -149,6 +159,11 @@ uint32_t CompilationContext::RegisterPipeline(Pipeline *pipeline) {
              "Duplicate pipeline in context");
   pipelines_.push_back(pipeline);
   return pipelines_.size();
+}
+
+void CompilationContext::PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline) {
+  auto translator = std::make_unique<OutputTranslator>(plan, this, pipeline);
+  ops_[nullptr] = std::move(translator);
 }
 
 void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline *pipeline) {
@@ -237,6 +252,12 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
       translator = std::make_unique<ArithmeticTranslator>(operator_expr, this);
       break;
     }
+    case planner::ExpressionType::OPERATOR_NOT:
+    case planner::ExpressionType::OPERATOR_UNARY_MINUS: {
+      const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
+      translator = std::make_unique<UnaryTranslator>(operator_expr, this);
+      break;
+    }
     case planner::ExpressionType::OPERATOR_IS_NULL:
     case planner::ExpressionType::OPERATOR_IS_NOT_NULL: {
       const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
@@ -251,6 +272,12 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
     case planner::ExpressionType::VALUE_TUPLE: {
       const auto &derived_value = static_cast<const planner::DerivedValueExpression &>(expression);
       translator = std::make_unique<DerivedValueTranslator>(derived_value, this);
+      break;
+    }
+    case planner::ExpressionType::BUILTIN_FUNCTION: {
+      const auto &builtin_func =
+          static_cast<const planner::BuiltinFunctionExpression &>(expression);
+      translator = std::make_unique<BuiltinFunctionTranslator>(builtin_func, this);
       break;
     }
     default: {

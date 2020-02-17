@@ -70,6 +70,7 @@ list(APPEND TPL_LINK_LIBS ${JEMALLOC_LIBRARIES})
 ############################################################
 
 # Look for LLVM 7+
+set(LLVM_DIR /usr/lib/llvm-9/cmake)
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 if (${LLVM_PACKAGE_VERSION} VERSION_LESS "7")

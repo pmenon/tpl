@@ -326,7 +326,7 @@ ast::Expr *CodeGen::IntToSql(int64_t num) const {
   return call;
 }
 
-ast::Expr *CodeGen::FloatToSql(int64_t num) const {
+ast::Expr *CodeGen::FloatToSql(double num) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::FloatToSql, {ConstDouble(num)});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Real));
   return call;

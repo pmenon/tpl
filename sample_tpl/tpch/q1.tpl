@@ -74,7 +74,7 @@ fun compareFn(lhs: *SorterRow, rhs: *SorterRow) -> int32 {
 }
 
 fun p1_filter_clause0term0(vector_proj : *VectorProjection, tids: *TupleIdList) -> nil {
-    var date_filter = @dateToSql(1998, 12, 1)
+    var date_filter = @dateToSql(1998, 9, 2)
     @filterLt(vector_proj, 10, date_filter, tids)
 }
 
@@ -113,7 +113,7 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
         // Filter on 'l_shipdate'
         @filterManagerRunFilters(&state.filter, vec)
 
-        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
+        for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
             // l_extendedprice * (1 - l_discount)
             var disc_price = @vpiGetReal(vec, 5) * (@floatToSql(1.0) - @vpiGetReal(vec, 6))
 

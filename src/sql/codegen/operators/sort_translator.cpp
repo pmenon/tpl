@@ -31,6 +31,7 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
   compilation_context->Prepare(*plan.GetChild(0), GetBuildPipeline());
 
   for (const auto &[expr, _] : plan.GetSortKeys()) {
+    (void)_;
     compilation_context->Prepare(*expr);
   }
 
@@ -58,7 +59,7 @@ void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *
 void SortTranslator::GenerateComparisonFunction(FunctionBuilder *function) {
   CodeGen *codegen = GetCodeGen();
   WorkContext context(GetCompilationContext(), *GetBuildPipeline());
-
+  context.SetCacheEnable(false);
   int32_t ret_value;
   for (const auto &[expr, sort_order] : GetPlanAs<planner::OrderByPlanNode>().GetSortKeys()) {
     if (sort_order == planner::OrderByOrderingType::ASC) {
