@@ -304,8 +304,7 @@ byte *AggregationHashTable::AllocInputTuplePartitioned(hash_t hash) {
 
 void AggregationHashTable::ComputeHash(VectorProjectionIterator *input_batch,
                                        const std::vector<uint32_t> &key_indexes) {
-  auto *vector_projection = input_batch->GetVectorProjection();
-  vector_projection->Hash(key_indexes, batch_state_->Hashes());
+  input_batch->GetVectorProjection()->Hash(key_indexes, batch_state_->Hashes());
 }
 
 void AggregationHashTable::LookupInitial() {
