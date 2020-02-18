@@ -1,6 +1,5 @@
 #include "sql/codegen/work_context.h"
 
-#include "logging/logger.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/pipeline.h"
 
@@ -10,7 +9,8 @@ WorkContext::WorkContext(CompilationContext *compilation_context, const Pipeline
     : compilation_context_(compilation_context),
       pipeline_(pipeline),
       pipeline_iter_(pipeline_.Begin()),
-      pipeline_end_(pipeline_.End()) {}
+      pipeline_end_(pipeline_.End()),
+      cache_enabled_(true) {}
 
 ast::Expr *WorkContext::DeriveValue(const planner::AbstractExpression &expr,
                                     const ColumnValueProvider *provider) {

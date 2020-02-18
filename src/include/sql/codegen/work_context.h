@@ -63,10 +63,10 @@ class WorkContext {
   const Pipeline &GetPipeline() const { return pipeline_; }
 
   /**
-   * Sets the cache enabled flag
-   * @param val New value
+   * Controls whether expression caching is enabled in this context.
+   * @param val True if caching is enabled; false otherwise.
    */
-  void SetCacheEnable(bool val) { cache_enabled_ = val; }
+  void SetExpressionCacheEnable(bool val) { cache_enabled_ = val; }
 
  private:
   // The compilation context.
@@ -78,7 +78,7 @@ class WorkContext {
   // The current pipeline step and last pipeline step.
   Pipeline::StepIterator pipeline_iter_, pipeline_end_;
   // Whether to cache translated expressions
-  bool cache_enabled_{true};
+  bool cache_enabled_;
 };
 
 }  // namespace tpl::sql::codegen
