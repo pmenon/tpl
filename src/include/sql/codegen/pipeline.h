@@ -193,7 +193,7 @@ class Pipeline {
   // Configured parallelism.
   Parallelism parallelism_;
   // Whether to check for parallelism in new pipeline elements.
-  bool check_parallelism_{true};
+  bool check_parallelism_;
   // All pipelines this one depends on completion of.
   std::vector<Pipeline *> dependencies_;
 

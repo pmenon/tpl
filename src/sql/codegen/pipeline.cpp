@@ -21,6 +21,7 @@ Pipeline::Pipeline(CompilationContext *ctx)
     : id_(ctx->RegisterPipeline(this)),
       compilation_context_(ctx),
       parallelism_(Parallelism::Parallel),
+      check_parallelism_(true),
       state_var_(GetCodeGen()->MakeIdentifier("pipelineState")),
       state_type_(GetCodeGen()->MakeIdentifier(fmt::format("P{}_State", id_))),
       state_(state_type_, [this](CodeGen *codegen) { return codegen->MakeExpr(state_var_); }) {}
