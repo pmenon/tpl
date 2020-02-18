@@ -409,8 +409,6 @@ VM_OP void OpFilterManagerStartNewClause(tpl::sql::FilterManager *filter_manager
 VM_OP void OpFilterManagerInsertFilter(tpl::sql::FilterManager *filter_manager,
                                        tpl::sql::FilterManager::MatchFn clause);
 
-VM_OP void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager);
-
 VM_OP void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter,
                                      tpl::sql::VectorProjectionIterator *vpi);
 
@@ -635,6 +633,16 @@ VM_OP_HOT void OpAggregationHashTableTransferPartitions(
   agg_hash_table->TransferMemoryAndPartitions(thread_state_container, agg_ht_offset,
                                               merge_partition_fn);
 }
+
+VM_OP void OpAggregationHashTableBuildAllHashTablePartitions(
+    tpl::sql::AggregationHashTable *agg_hash_table, void *query_state);
+
+VM_OP void OpAggregationHashTableRepartition(tpl::sql::AggregationHashTable *agg_hash_table);
+
+VM_OP void OpAggregationHashTableMergePartitions(
+    tpl::sql::AggregationHashTable *agg_hash_table,
+    tpl::sql::AggregationHashTable *target_agg_hash_table, void *query_state,
+    tpl::sql::AggregationHashTable::MergePartitionFn merge_partition_fn);
 
 VM_OP_HOT void OpAggregationHashTableParallelPartitionedScan(
     tpl::sql::AggregationHashTable *const agg_hash_table, void *const query_state,
@@ -1100,6 +1108,10 @@ VM_OP_HOT void OpSorterIteratorNext(tpl::sql::SorterIterator *iter) { iter->Next
 
 VM_OP_HOT void OpSorterIteratorGetRow(const byte **row, tpl::sql::SorterIterator *iter) {
   *row = iter->GetRow();
+}
+
+VM_OP_WARM void OpSorterIteratorSkipRows(tpl::sql::SorterIterator *iter, const uint64_t n) {
+  iter->AdvanceBy(n);
 }
 
 VM_OP void OpSorterIteratorFree(tpl::sql::SorterIterator *iter);

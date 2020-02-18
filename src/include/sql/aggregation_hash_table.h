@@ -26,6 +26,12 @@ class AHTIterator;
 class AHTVectorIterator;
 class AHTOverflowPartitionIterator;
 
+//===----------------------------------------------------------------------===//
+//
+// Aggregation Hash Table
+//
+//===----------------------------------------------------------------------===//
+
 /**
  * The hash table used when performing aggregations.
  */
@@ -210,6 +216,28 @@ class AggregationHashTable {
                                       ScanPartitionFn scan_fn);
 
   /**
+   * Construct an AggregationHashTable over all non-empty overflow partitions.
+   * @param query_state An opaque state object pointer
+   */
+  void BuildAllPartitions(void *query_state);
+
+  /**
+   * Repartition all data stored in this partitioned hash table.
+   */
+  void Repartition();
+
+  /**
+   * Merge data stored in this aggregation hash table's overflow partitions into the provided
+   * target aggregation hash table. Both source and target aggregation hash tables must already be
+   * partitioned and must use the same partitioning key!
+   * @param target The target hash table we merge our overflow partitions into.
+   * @param query_state An opaque state object pointer.
+   * @param merge_func The function we use to merge entries from our hash table into the target.
+   */
+  void MergePartitions(AggregationHashTable *target, void *query_state,
+                       MergePartitionFn merge_func);
+
+  /**
    * @return The total number of tuples in this table.
    */
   uint64_t GetTupleCount() const { return hash_table_.GetElementCount(); }
@@ -279,7 +307,7 @@ class AggregationHashTable {
 
   // Called during partitioned (parallel) scan to build an aggregation hash
   // table over a single partition.
-  AggregationHashTable *BuildTableOverPartition(void *query_state, uint32_t partition_idx);
+  AggregationHashTable *GetOrBuildTableOverPartition(void *query_state, uint32_t partition_idx);
 
  private:
   // A helper class containing various data structures used during batch processing.
@@ -394,9 +422,11 @@ inline byte *AggregationHashTable::Lookup(hash_t hash, AggregationHashTable::Key
   return (entry == nullptr ? nullptr : entry->payload);
 }
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * A tuple-at-a-time iterator over the contents of an aggregation hash table.
@@ -433,9 +463,11 @@ class AHTIterator {
   ChainingHashTableIterator<false> iter_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Vector Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * A vectorized iterator over the contents of an aggregation hash table. This exists so that users
@@ -502,9 +534,11 @@ class AHTVectorIterator {
   std::unique_ptr<VectorProjectionIterator> vector_projection_iterator_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Overflow Partitions Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * An iterator over a range of overflow partition entries in an aggregation hash table. The range is

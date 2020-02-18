@@ -755,12 +755,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(FilterManagerFinalize) : {
-    auto *filter_manager = frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
-    OpFilterManagerFinalize(filter_manager);
-    DISPATCH_NEXT();
-  }
-
   OP(FilterManagerRunFilters) : {
     auto *filter_manager = frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
@@ -1045,6 +1039,31 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
         module_->GetRawFunctionImpl(merge_partition_fn_id));
     OpAggregationHashTableTransferPartitions(agg_hash_table, thread_state_container, agg_ht_offset,
                                              merge_partition_fn);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableBuildAllHashTablePartitions) : {
+    auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *query_state = frame->LocalAt<void *>(READ_LOCAL_ID());
+    OpAggregationHashTableBuildAllHashTablePartitions(agg_hash_table, query_state);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableRepartition) : {
+    auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    OpAggregationHashTableRepartition(agg_hash_table);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableMergePartitions) : {
+    auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *target_agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *query_state = frame->LocalAt<void *>(READ_LOCAL_ID());
+    auto merge_partition_fn_id = READ_FUNC_ID();
+    auto merge_partition_fn = reinterpret_cast<sql::AggregationHashTable::MergePartitionFn>(
+        module_->GetRawFunctionImpl(merge_partition_fn_id));
+    OpAggregationHashTableMergePartitions(agg_hash_table, target_agg_hash_table, query_state,
+                                          merge_partition_fn);
     DISPATCH_NEXT();
   }
 
@@ -1423,6 +1442,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(SorterIteratorNext) : {
     auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
     OpSorterIteratorNext(iter);
+    DISPATCH_NEXT();
+  }
+
+  OP(SorterIteratorSkipRows) : {
+    auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
+    auto n = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    OpSorterIteratorSkipRows(iter, n);
     DISPATCH_NEXT();
   }
 

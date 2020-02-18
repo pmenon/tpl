@@ -13,14 +13,13 @@ fun setUpState(execCtx: *ExecutionContext, state: *State) -> nil {
 
 fun tearDownState(execCtx: *ExecutionContext, state: *State) -> nil { }
 
-fun pipeline1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+fun pipeline1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList, ctx: *uint8) -> nil {
     @filterLt(vector_proj, 0, @intToSql(500), tids)
 }
 
 fun pipeline1_worker_initThreadState(execCtx: *ExecutionContext, state: *ThreadState_1) -> nil {
     @filterManagerInit(&state.filter)
     @filterManagerInsertFilter(&state.filter, pipeline1_filter_clause0term0)
-    @filterManagerFinalize(&state.filter)
 
     state.count = 0
 }

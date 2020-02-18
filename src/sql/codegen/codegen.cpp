@@ -534,12 +534,6 @@ ast::Expr *CodeGen::FilterManagerInsert(ast::Expr *filter_manager,
   return call;
 }
 
-ast::Expr *CodeGen::FilterManagerFinalize(ast::Expr *filter_manager) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerFinalize, {filter_manager});
-  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
-  return call;
-}
-
 ast::Expr *CodeGen::FilterManagerRunFilters(ast::Expr *filter_manager, ast::Expr *vpi) {
   ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerRunFilters, {filter_manager, vpi});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
@@ -878,6 +872,12 @@ ast::Expr *CodeGen::SorterIterHasNext(ast::Expr *iter) {
 
 ast::Expr *CodeGen::SorterIterNext(ast::Expr *iter) {
   ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterNext, {iter});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::SorterIterSkipRows(ast::Expr *iter, uint32_t n) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterSkipRows, {iter, Const64(n)});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }

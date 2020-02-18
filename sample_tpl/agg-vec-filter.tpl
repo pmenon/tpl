@@ -40,7 +40,7 @@ fun updateAgg(agg: *Agg, vec: *VectorProjectionIterator) -> nil {
     @aggAdvance(&agg.sum, &input)
 }
 
-fun pipeline1_filter_clause0term0(vp: *VectorProjection, tids: *TupleIdList) -> nil {
+fun pipeline1_filter_clause0term0(vp: *VectorProjection, tids: *TupleIdList, ctx: *uint8) -> nil {
     @filterLt(vp, 0, @intToSql(5000), tids)
 }
 
@@ -48,7 +48,6 @@ fun pipeline_1(state: *State) -> nil {
     var filter_manager: FilterManager
     @filterManagerInit(&filter_manager)
     @filterManagerInsertFilter(&filter_manager, pipeline1_filter_clause0term0)
-    @filterManagerFinalize(&filter_manager)
 
     // The aggregation hash table
     var ht: *AggregationHashTable = &state.table

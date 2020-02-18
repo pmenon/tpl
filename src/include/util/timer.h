@@ -54,16 +54,27 @@ class Timer {
  *
  * @tparam ResolutionRatio Timing resolution, std::milli, std::micro, std::nano etc.
  * @tparam F A no-arg void return functor-type
- * @param fn The functor to time
+ * @param f The functor to time
  * @return The elapsed time in whatever resolution ratio the caller wants
  */
 template <typename ResolutionRatio, typename F>
-inline double Time(F &&fn) {
+inline double Time(F &&f) {
   Timer<ResolutionRatio> timer;
   timer.Start();
-  fn();
+  f();
   timer.Stop();
   return timer.GetElapsed();
+}
+
+/**
+ * Measure the time taken to run the provided function @em f in nanoseconds.
+ * @tparam F A no-arg void return functor-type.
+ * @param fn The functor to time.
+ * @return The elapsed time in nanoseconds.
+ */
+template <typename F>
+inline double TimeNanos(F &&f) {
+  return Time<std::nano>(f);
 }
 
 /**

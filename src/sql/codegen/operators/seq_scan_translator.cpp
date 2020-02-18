@@ -55,10 +55,10 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
 
   auto vpi = codegen->MakeExpr(vpi_var_);
   auto gen_body = [&](const bool is_filtered) {
-    Loop vpi_loop(function,
-                  codegen->MakeStmt(codegen->VPIInit(vpi, vector_proj, tid_list)),  // @vpiInit()
-                  codegen->VPIHasNext(vpi, is_filtered),                            // @vpiHasNext()
-                  codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));        // @vpiAdvance()
+    Loop vpi_loop(
+        function, codegen->MakeStmt(codegen->VPIInit(vpi, vector_proj, tid_list)),  // @vpiInit()
+        codegen->VPIHasNext(vpi, is_filtered),                      // @vpiHasNext[Filtered]()
+        codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));  // @vpiAdvance[Filtered]()
     {
       WorkContext context(GetCompilationContext(), *GetPipeline());
       auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
@@ -96,7 +96,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(
   }
 
   // At this point, we create a term.
-  // Signature: (vp: *VectorProjection, tids: *TupleIdList) -> nil
+  // Signature: (vp: *VectorProjection, tids: *TupleIdList, context: *uint8) -> nil
   auto codegen = GetCodeGen();
   auto fn_name = codegen->MakeFreshIdentifier("filterClause");
   util::RegionVector<ast::FieldDecl *> params = codegen->MakeFieldList({
@@ -104,6 +104,8 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(
                          codegen->PointerType(ast::BuiltinType::VectorProjection)),
       codegen->MakeField(codegen->MakeIdentifier("tids"),
                          codegen->PointerType(ast::BuiltinType::TupleIdList)),
+      codegen->MakeField(codegen->MakeIdentifier("context"),
+                         codegen->PointerType(ast::BuiltinType::Uint8)),
   });
   FunctionBuilder builder(codegen, fn_name, std::move(params), codegen->Nil());
   {
@@ -188,7 +190,6 @@ void SeqScanTranslator::InitializePipelineState(const Pipeline &pipeline,
     for (const auto &clause : filters_) {
       function->Append(codegen->FilterManagerInsert(local_filter_manager_.GetPtr(codegen), clause));
     }
-    function->Append(codegen->FilterManagerFinalize(local_filter_manager_.GetPtr(codegen)));
   }
 }
 

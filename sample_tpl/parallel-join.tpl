@@ -28,7 +28,7 @@ fun tearDownState(state: *State) -> nil {
     @joinHTFree(&state.jht)
 }
 
-fun pipeline1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList) -> nil {
+fun pipeline1_filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList, ctx: *uint8) -> nil {
     @filterLt(vector_proj, 0, @intToSql(500), tids)
 }
 
@@ -36,7 +36,6 @@ fun pipeline1_worker_initThreadState(execCtx: *ExecutionContext, state: *ThreadS
     // Filter
     @filterManagerInit(&state.filter_manager)
     @filterManagerInsertFilter(&state.filter_manager, pipeline1_filter_clause0term0)
-    @filterManagerFinalize(&state.filter_manager)
 
     // Join hash table
     @joinHTInit(&state.jht, @execCtxGetMem(execCtx), @sizeOf(BuildRow))

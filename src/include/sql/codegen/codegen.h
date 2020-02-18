@@ -632,12 +632,6 @@ class CodeGen {
                                                const std::vector<ast::Identifier> &clause_fn_names);
 
   /**
-   * Call @filterManagerFinalize(). Seal the filter manager making it immutable and executable.
-   * @param fm The filter manager pointer.
-   */
-  [[nodiscard]] ast::Expr *FilterManagerFinalize(ast::Expr *filter_manager);
-
-  /**
    * Call @filterManagerRun(). Runs all filters on the input vector projection iterator.
    * @param fm The filter manager pointer.
    * @param vpi The input vector projection iterator.
@@ -1087,6 +1081,14 @@ class CodeGen {
    * @return The call expression.
    */
   [[nodiscard]] ast::Expr *SorterIterNext(ast::Expr *iter);
+
+  /**
+   * Call @sorterIterSkipRows(). Skips N rows in the provided sorter iterator.
+   * @param iter The iterator.
+   * @param n The number of rows to skip.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *SorterIterSkipRows(ast::Expr *iter, uint32_t n);
 
   /**
    * Call @sorterIterGetRow(). Retrieves a pointer to the current iterator row casted to the

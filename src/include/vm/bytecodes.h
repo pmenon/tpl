@@ -178,7 +178,6 @@ namespace tpl::vm {
   F(FilterManagerInit, OperandType::Local)                                                                             \
   F(FilterManagerStartNewClause, OperandType::Local)                                                                   \
   F(FilterManagerInsertFilter, OperandType::Local, OperandType::FunctionId)                                            \
-  F(FilterManagerFinalize, OperandType::Local)                                                                         \
   F(FilterManagerRunFilters, OperandType::Local, OperandType::Local)                                                   \
   F(FilterManagerFree, OperandType::Local)                                                                             \
                                                                                                                        \
@@ -270,6 +269,10 @@ namespace tpl::vm {
   F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local,  \
       OperandType::FunctionId, OperandType::FunctionId, OperandType::Local)                                            \
   F(AggregationHashTableTransferPartitions, OperandType::Local, OperandType::Local, OperandType::Local,                \
+      OperandType::FunctionId)                                                                                         \
+  F(AggregationHashTableBuildAllHashTablePartitions, OperandType::Local, OperandType::Local)                           \
+  F(AggregationHashTableRepartition, OperandType::Local)                                                               \
+  F(AggregationHashTableMergePartitions, OperandType::Local, OperandType::Local, OperandType::Local,                   \
       OperandType::FunctionId)                                                                                         \
   F(AggregationHashTableParallelPartitionedScan, OperandType::Local, OperandType::Local, OperandType::Local,           \
       OperandType::FunctionId)                                                                                         \
@@ -392,6 +395,7 @@ namespace tpl::vm {
   F(SorterIteratorGetRow, OperandType::Local, OperandType::Local)                                                      \
   F(SorterIteratorHasNext, OperandType::Local, OperandType::Local)                                                     \
   F(SorterIteratorNext, OperandType::Local)                                                                            \
+  F(SorterIteratorSkipRows, OperandType::Local, OperandType::Local)                                                    \
   F(SorterIteratorFree, OperandType::Local)                                                                            \
                                                                                                                        \
   /* Output */                                                                                                         \

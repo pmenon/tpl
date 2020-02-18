@@ -2313,12 +2313,12 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 }
 
 BENCHMARK_REGISTER_F(TpchBenchmark, Q1);
-// BENCHMARK_REGISTER_F(TpchBenchmark, Q4);
-// BENCHMARK_REGISTER_F(TpchBenchmark, Q5);
-// BENCHMARK_REGISTER_F(TpchBenchmark, Q6);
-// BENCHMARK_REGISTER_F(TpchBenchmark, Q7);
-// BENCHMARK_REGISTER_F(TpchBenchmark, Q11);
-// BENCHMARK_REGISTER_F(TpchBenchmark, Q16);
-// BENCHMARK_REGISTER_F(TpchBenchmark, Q18);
-// BENCHMARK_REGISTER_F(TpchBenchmark, Q19);
+ BENCHMARK_REGISTER_F(TpchBenchmark, Q4);
+ BENCHMARK_REGISTER_F(TpchBenchmark, Q5);
+ BENCHMARK_REGISTER_F(TpchBenchmark, Q6);
+ BENCHMARK_REGISTER_F(TpchBenchmark, Q7);
+ BENCHMARK_REGISTER_F(TpchBenchmark, Q11);
+ BENCHMARK_REGISTER_F(TpchBenchmark, Q16);
+ BENCHMARK_REGISTER_F(TpchBenchmark, Q18);
+ BENCHMARK_REGISTER_F(TpchBenchmark, Q19);
 }  // namespace tpl::sql::codegen

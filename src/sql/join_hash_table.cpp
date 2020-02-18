@@ -10,7 +10,6 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "tbb/parallel_for_each.h"
-#include "tbb/task_scheduler_init.h"
 
 #include "common/cpu_info.h"
 #include "common/memory.h"
@@ -45,10 +44,6 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   return entry->payload;
 }
 
-// ---------------------------------------------------------
-// Generic hash tables
-// ---------------------------------------------------------
-
 void JoinHashTable::BuildChainingHashTable() {
   // Perfectly size the generic hash table in preparation for bulk-load.
   chaining_hash_table_.SetSize(GetTupleCount());
@@ -61,10 +56,6 @@ void JoinHashTable::BuildChainingHashTable() {
   LOG_DEBUG("ChainingHashTable chain stats: min={}, max={}, avg={}", min, max, avg);
 #endif
 }
-
-// ---------------------------------------------------------
-// Concise hash tables
-// ---------------------------------------------------------
 
 namespace {
 
@@ -521,9 +512,10 @@ void JoinHashTable::Build() {
   built_ = true;
 }
 
+// TODO(pmenon): Vectorized bloom filter pre-filtering.
+// TODO(pmenon): Implement prefetching.
+
 void JoinHashTable::LookupBatchInChainingHashTable(const Vector &hashes, Vector *results) const {
-  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
-  // TODO(pmenon): Implement prefetching.
   auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(results->GetData());
   VectorOps::ExecTyped<hash_t>(hashes, [&](hash_t hash_val, uint64_t i, uint64_t k) {
     raw_entries[i] = chaining_hash_table_.FindChainHead(hash_val);
@@ -531,8 +523,6 @@ void JoinHashTable::LookupBatchInChainingHashTable(const Vector &hashes, Vector 
 }
 
 void JoinHashTable::LookupBatchInConciseHashTable(const Vector &hashes, Vector *results) const {
-  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
-  // TODO(pmenon): Implement prefetching.
   auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(results->GetData());
   VectorOps::ExecTyped<hash_t>(hashes, [&](hash_t hash_val, uint64_t i, uint64_t k) {
     const auto [found, entry_idx] = concise_hash_table_.Lookup(hash_val);
@@ -592,20 +582,18 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   const bool use_serial_build = num_elem_estimate < kDefaultMinSizeForParallelMerge;
   if (use_serial_build) {
     // TODO(pmenon): Switch to parallel-mode if estimate is wrong.
-    LOG_INFO(
-        "JHT: Estimated total {} elements < {} element parallel threshold. Using serial merge.",
-        num_elem_estimate, kDefaultMinSizeForParallelMerge);
+    LOG_INFO("JHT: Estimated {} elements < {} element parallel threshold. Using serial merge.",
+             num_elem_estimate, kDefaultMinSizeForParallelMerge);
     llvm::for_each(tl_join_tables, [this](auto *source) { MergeIncomplete<false>(source); });
   } else {
-    LOG_INFO(
-        "JHT: Estimated total {} elements >= {} element parallel threshold. Using parallel merge.",
-        num_elem_estimate, kDefaultMinSizeForParallelMerge);
-    tbb::parallel_for_each(tl_join_tables, [this](auto *source) { MergeIncomplete<true>(source); });
+    LOG_INFO("JHT: Estimated {} elements >= {} element parallel threshold. Using parallel merge.",
+             num_elem_estimate, kDefaultMinSizeForParallelMerge);
+    tbb::parallel_for_each(tl_join_tables, [this](auto source) { MergeIncomplete<true>(source); });
   }
 
   timer.Stop();
 
-  double tps = (chaining_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
+  const double tps = (chaining_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
   LOG_INFO("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
            use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
            chaining_hash_table_.GetElementCount(), timer.GetElapsed(), tps);

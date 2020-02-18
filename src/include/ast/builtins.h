@@ -75,7 +75,6 @@ namespace tpl::ast {
   /* Filter Manager */                                          \
   F(FilterManagerInit, filterManagerInit)                       \
   F(FilterManagerInsertFilter, filterManagerInsertFilter)       \
-  F(FilterManagerFinalize, filterManagerFinalize)               \
   F(FilterManagerRunFilters, filterManagerRunFilters)           \
   F(FilterManagerFree, filterManagerFree)                       \
   /* Filter Execution */                                        \
@@ -135,6 +134,7 @@ namespace tpl::ast {
   F(SorterIterInit, sorterIterInit)                             \
   F(SorterIterHasNext, sorterIterHasNext)                       \
   F(SorterIterNext, sorterIterNext)                             \
+  F(SorterIterSkipRows, sorterIterSkipRows)                     \
   F(SorterIterGetRow, sorterIterGetRow)                         \
   F(SorterIterClose, sorterIterClose)                           \
                                                                 \

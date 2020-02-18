@@ -1092,7 +1092,6 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
 
   switch (builtin) {
     case ast::Builtin::FilterManagerInit:
-    case ast::Builtin::FilterManagerFinalize:
     case ast::Builtin::FilterManagerFree: {
       call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
@@ -1102,12 +1101,11 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
         const auto vector_proj_kind = ast::BuiltinType::VectorProjection;
         const auto tid_list_kind = ast::BuiltinType::TupleIdList;
         auto *arg_type = call->Arguments()[arg_idx]->GetType()->SafeAs<ast::FunctionType>();
-        if (arg_type == nullptr || arg_type->GetNumParams() != 2 ||
+        if (arg_type == nullptr || arg_type->GetNumParams() != 3 ||
             !IsPointerToSpecificBuiltin(arg_type->GetParams()[0].type, vector_proj_kind) ||
-            !IsPointerToSpecificBuiltin(arg_type->GetParams()[1].type, tid_list_kind)) {
-          error_reporter()->Report(call->Position(), ErrorMessages::kIncorrectCallArgType,
-                                   call->GetFuncName(), GetBuiltinType(fm_kind)->PointerTo(),
-                                   arg_idx, call->Arguments()[arg_idx]->GetType());
+            !IsPointerToSpecificBuiltin(arg_type->GetParams()[1].type, tid_list_kind) ||
+            !arg_type->GetParams()[2].type->IsPointerType()) {
+          ReportIncorrectCallArg(call, arg_idx, "(*VectorProjection, *TupleIdList, *uint8)->nil");
           return;
         }
       }
@@ -1513,6 +1511,18 @@ void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin)
       call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
+    case ast::Builtin::SorterIterSkipRows: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      const auto uint_kind = ast::BuiltinType::Kind::Uint32;
+      if (!args[1]->GetType()->IsIntegerType()) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(uint_kind));
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
     case ast::Builtin::SorterIterGetRow: {
       call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
@@ -1639,7 +1649,6 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::FilterManagerInit:
     case ast::Builtin::FilterManagerInsertFilter:
-    case ast::Builtin::FilterManagerFinalize:
     case ast::Builtin::FilterManagerRunFilters:
     case ast::Builtin::FilterManagerFree: {
       CheckBuiltinFilterManagerCall(call, builtin);
@@ -1738,6 +1747,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::SorterIterInit:
     case ast::Builtin::SorterIterHasNext:
     case ast::Builtin::SorterIterNext:
+    case ast::Builtin::SorterIterSkipRows:
     case ast::Builtin::SorterIterGetRow:
     case ast::Builtin::SorterIterClose: {
       CheckBuiltinSorterIterCall(call, builtin);
