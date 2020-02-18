@@ -22,7 +22,6 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
       tvi_var_(GetCodeGen()->MakeFreshIdentifier("tvi")),
       vpi_var_(GetCodeGen()->MakeFreshIdentifier("vpi")) {
   pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
-
   // If there's a predicate, prepare the expression and register a filter manager.
   if (HasPredicate()) {
     compilation_context->Prepare(*plan.GetScanPredicate());
@@ -201,7 +200,7 @@ void SeqScanTranslator::TearDownPipelineState(const Pipeline &pipeline,
 
 void SeqScanTranslator::PerformPipelineWork(WorkContext *work_context,
                                             FunctionBuilder *function) const {
-  if (!GetPipeline()->IsParallel()) {
+  if (!GetPipeline()->IsParallel() || this != GetPipeline()->Root()) {
     // var tviBase: TableVectorIterator
     // var tvi = &tviBase
     CodeGen *codegen = GetCodeGen();
