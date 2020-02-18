@@ -10,11 +10,10 @@ int main(int argc, char **argv) {
   tpl::logging::InitLogger();
 
   benchmark::Initialize(&argc, argv);
+  
+  // TODO(pmenon): Pull all initialization/shutdown logic into single function.
   tpl::CpuInfo::Instance();
   tpl::sql::Catalog::Instance();
-  tpl::sql::tablegen::TableGenerator::GenerateTPCHTables(tpl::sql::Catalog::Instance(),
-                                                         "../../tpl_tables/tables/");
-
   tpl::vm::LLVMEngine::Initialize();
 
   benchmark::RunSpecifiedBenchmarks();
