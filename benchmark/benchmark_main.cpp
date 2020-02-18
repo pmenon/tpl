@@ -3,7 +3,6 @@
 #include "common/cpu_info.h"
 #include "logging/logger.h"
 #include "sql/catalog.h"
-#include "sql/tablegen/table_generator.h"
 #include "vm/llvm_engine.h"
 
 int main(int argc, char **argv) {
