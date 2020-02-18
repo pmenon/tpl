@@ -1691,9 +1691,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  // ------------------------
+  // -------------------------------------------------------
   // Date functions
-  // ---------------------------
+  // -------------------------------------------------------
 
   OP(ExtractYear) : {
     auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
