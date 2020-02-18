@@ -62,6 +62,12 @@ class WorkContext {
    */
   const Pipeline &GetPipeline() const { return pipeline_; }
 
+  /**
+   * Sets the cache enabled flag
+   * @param val New value
+   */
+  void SetCacheEnable(bool val) { cache_enabled_ = val; }
+
  private:
   // The compilation context.
   CompilationContext *compilation_context_;
@@ -71,6 +77,8 @@ class WorkContext {
   std::unordered_map<const planner::AbstractExpression *, ast::Expr *> cache_;
   // The current pipeline step and last pipeline step.
   Pipeline::StepIterator pipeline_iter_, pipeline_end_;
+  // Whether to cache translated expressions
+  bool cache_enabled_{true};
 };
 
 }  // namespace tpl::sql::codegen

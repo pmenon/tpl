@@ -69,6 +69,13 @@ class CompilationContext {
   void Prepare(const planner::AbstractExpression &expression);
 
   /**
+   * Prepare compilation for the output.
+   * @param plan The plan node
+   * @param pipeline The main pipeline
+   */
+  void PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline);
+
+  /**
    * @return The code generator instance.
    */
   CodeGen *GetCodeGen() { return &codegen_; }

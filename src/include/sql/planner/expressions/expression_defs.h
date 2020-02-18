@@ -58,6 +58,7 @@ enum class ExpressionType : uint8_t {
   AGGREGATE_AVG,
 
   FUNCTION,
+  BUILTIN_FUNCTION,
 
   HASH_RANGE,
 

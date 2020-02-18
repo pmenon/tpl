@@ -66,6 +66,12 @@ class Pipeline {
   void RegisterStep(OperatorTranslator *op, Parallelism parallelism);
 
   /**
+   * Enable or disable the pipeline's parallelism check during register RegisterStep.
+   * @param check Wether the to check for parallelism or not.
+   */
+  void SetParallelCheck(bool check);
+
+  /**
    * Register an expression in this pipeline. This expression may or may not create/destroy state.
    * @param expression The expression to register.
    */
@@ -186,6 +192,8 @@ class Pipeline {
   std::vector<ExpressionTranslator *> expressions_;
   // Configured parallelism.
   Parallelism parallelism_;
+  // Whether to check for parallelism in new pipeline elements.
+  bool check_parallelism_{true};
   // All pipelines this one depends on completion of.
   std::vector<Pipeline *> dependencies_;
 

@@ -86,6 +86,20 @@ class AbstractJoinPlanNode : public AbstractPlanNode {
       case LogicalJoinType::SEMI:
       case LogicalJoinType::ANTI:
       case LogicalJoinType::OUTER:
+      case LogicalJoinType::LEFT_SEMI:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * @return True if the join requires a right-mark.
+   */
+  bool RequiresRightMark() const {
+    switch (join_type_) {
+      case LogicalJoinType::RIGHT_SEMI:
+      case LogicalJoinType::RIGHT_ANTI:
         return true;
       default:
         return false;

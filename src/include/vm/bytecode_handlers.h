@@ -1348,6 +1348,19 @@ VM_OP_WARM void OpUpper(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *re
   tpl::sql::StringFunctions::Upper(ctx, result, *str);
 }
 
+// ---------------------------------
+// Date function
+// ---------------------------------
+
+VM_OP_WARM void OpExtractYear(tpl::sql::Integer *result, tpl::sql::DateVal *input) {
+  if (input->is_null) {
+    result->is_null = true;
+  } else {
+    result->is_null = false;
+    result->val = input->val.ExtractYear();
+  }
+}
+
 // Macro hygiene
 #undef VM_OP_COLD
 #undef VM_OP_WARM

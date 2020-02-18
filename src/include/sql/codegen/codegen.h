@@ -460,7 +460,7 @@ class CodeGen {
    * @param num The number to convert.
    * @return The SQL real.
    */
-  [[nodiscard]] ast::Expr *FloatToSql(int64_t num) const;
+  [[nodiscard]] ast::Expr *FloatToSql(double num) const;
 
   /**
    * Call @dateToSql(). Convert a date into a SQL date.

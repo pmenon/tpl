@@ -547,6 +547,20 @@ void BytecodeGenerator::VisitSqlStringLikeCall(ast::CallExpr *call) {
   GetExecutionResult()->SetDestination(dest);
 }
 
+void BytecodeGenerator::VisitBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin) {
+  auto dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  auto input = VisitExpressionForLValue(call->Arguments()[0]);
+
+  switch (builtin) {
+    case ast::Builtin::ExtractYear:
+      GetEmitter()->Emit(Bytecode::ExtractYear, dest, input);
+      break;
+    default:
+      UNREACHABLE("Impossible date call!");
+  }
+  GetExecutionResult()->SetDestination(dest);
+}
+
 void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) {
   // The first argument to all calls is a pointer to the TVI
   LocalVar iter = VisitExpressionForRValue(call->Arguments()[0]);
@@ -1540,6 +1554,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     }
     case ast::Builtin::Like: {
       VisitSqlStringLikeCall(call);
+      break;
+    }
+    case ast::Builtin::ExtractYear: {
+      VisitBuiltinDateFunctionCall(call, builtin);
       break;
     }
     case ast::Builtin::ExecutionContextGetMemoryPool:

@@ -4,8 +4,10 @@
 #include <utility>
 #include <vector>
 
+#include "ast/builtins.h"
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/aggregate_expression.h"
+#include "sql/planner/expressions/builtin_function_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
 #include "sql/planner/expressions/conjunction_expression.h"
@@ -49,6 +51,14 @@ class ExpressionMaker {
   Expression Constant(int16_t year, uint8_t month, uint8_t day) {
     return Alloc(std::make_unique<planner::ConstantValueExpression>(
         sql::GenericValue::CreateDate(static_cast<uint32_t>(year), month, day)));
+  }
+
+  /**
+   * Create a string constant expression
+   */
+  Expression Constant(const std::string &str) {
+    return Alloc(
+        std::make_unique<planner::ConstantValueExpression>(sql::GenericValue::CreateVarchar(str)));
   }
 
   /**
@@ -165,6 +175,13 @@ class ExpressionMaker {
   }
 
   /**
+   * Create expression for NOT(child)
+   */
+  Expression OpNot(Expression child) {
+    return Operator(planner::ExpressionType::OPERATOR_NOT, sql::TypeId::Boolean, child);
+  }
+
+  /**
    * Create expression for child1 AND/OR child2
    */
   Expression Conjunction(planner::ExpressionType op_type, Expression child1, Expression child2) {
@@ -187,46 +204,55 @@ class ExpressionMaker {
   }
 
   /**
+   * Create an expression for a builtin call.
+   */
+  Expression BuiltinFunction(ast::Builtin builtin, std::vector<Expression> args,
+                             const sql::TypeId return_value_type) {
+    return Alloc(std::make_unique<planner::BuiltinFunctionExpression>(builtin, std::move(args),
+                                                                      return_value_type));
+  }
+
+  /**
    * Create an aggregate expression
    */
-  AggExpression AggregateTerm(planner::ExpressionType agg_type, Expression child) {
+  AggExpression AggregateTerm(planner::ExpressionType agg_type, Expression child, bool distinct) {
     return Alloc(std::make_unique<planner::AggregateExpression>(
-        agg_type, std::vector<Expression>{child}, false));
+        agg_type, std::vector<Expression>{child}, distinct));
   }
 
   /**
    * Create a sum aggregate expression
    */
-  AggExpression AggSum(Expression child) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_SUM, child);
+  AggExpression AggSum(Expression child, bool distinct = false) {
+    return AggregateTerm(planner::ExpressionType::AGGREGATE_SUM, child, distinct);
   }
 
   /**
    * Create a sum aggregate expression
    */
-  AggExpression AggMin(Expression child) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_MIN, child);
+  AggExpression AggMin(Expression child, bool distinct = false) {
+    return AggregateTerm(planner::ExpressionType::AGGREGATE_MIN, child, distinct);
   }
 
   /**
    * Create a sum aggregate expression
    */
-  AggExpression AggMax(Expression child) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_MAX, child);
+  AggExpression AggMax(Expression child, bool distinct = false) {
+    return AggregateTerm(planner::ExpressionType::AGGREGATE_MAX, child, distinct);
   }
 
   /**
    * Create a avg aggregate expression
    */
-  AggExpression AggAvg(Expression child) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_AVG, child);
+  AggExpression AggAvg(Expression child, bool distinct = false) {
+    return AggregateTerm(planner::ExpressionType::AGGREGATE_AVG, child, distinct);
   }
 
   /**
    * Create a count aggregate expression
    */
-  AggExpression AggCount(Expression child) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_COUNT, child);
+  AggExpression AggCount(Expression child, bool distinct = false) {
+    return AggregateTerm(planner::ExpressionType::AGGREGATE_COUNT, child, distinct);
   }
 
  private:

@@ -149,11 +149,19 @@ class HashJoinTranslator : public OperatorTranslator {
   // Probe the join hash table with the input tuple(s).
   void ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const;
 
+  // Check the right mark.
+  void CheckRightMark(WorkContext *ctx, FunctionBuilder *function, ast::Expr *right_mark) const;
+
+  // Check the join predicate.
+  void CheckJoinPredicate(WorkContext *ctx, FunctionBuilder *function) const;
+
  private:
   // The name of the materialized row when inserting or probing into join hash
   // table.
   ast::Identifier build_row_var_;
   ast::Identifier build_row_type_;
+  // For exotic joins
+  ast::Identifier build_mark_;
 
   // The left build-side pipeline.
   Pipeline left_pipeline_;

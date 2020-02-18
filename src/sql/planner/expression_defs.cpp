@@ -86,6 +86,8 @@ std::string ExpressionTypeToString(ExpressionType type, bool short_str) {
       return short_str ? "AVG" : "AGGREGATE_AVG";
     case ExpressionType::FUNCTION:
       return "FUNCTION";
+    case ExpressionType::BUILTIN_FUNCTION:
+      return "BUILTIN_FUNCTION";
     case ExpressionType::HASH_RANGE:
       return "HASH_RANGE";
     case ExpressionType::OPERATOR_CASE_EXPR:

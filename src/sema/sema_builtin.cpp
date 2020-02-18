@@ -141,6 +141,27 @@ void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::Boolean));
 }
 
+void Sema::CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+  // First arg must be a date.
+  auto date_kind = ast::BuiltinType::Date;
+  if (!call->Arguments()[0]->GetType()->IsSpecificBuiltin(date_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(date_kind));
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::ExtractYear:
+      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+      return;
+    default:
+      // TODO(Amadou): Support other date function.
+      UNREACHABLE("Impossible date function");
+  }
+}
+
 void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
@@ -983,7 +1004,13 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       call->SetType(GetBuiltinType(ast::BuiltinType::Real));
       break;
     }
-    case ast::Builtin::VPIGetDate:
+    case ast::Builtin::VPIGetDate: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Date));
+      break;
+    }
     case ast::Builtin::VPIGetString: {
       if (!CheckArgCount(call, 2)) {
         return;
@@ -1552,6 +1579,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::Like: {
       CheckBuiltinStringLikeCall(call);
+      break;
+    }
+    case ast::Builtin::ExtractYear: {
+      CheckBuiltinDateFunctionCall(call, builtin);
       break;
     }
     case ast::Builtin::ExecutionContextGetMemoryPool:

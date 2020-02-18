@@ -19,11 +19,15 @@ ast::Expr *ConstantTranslator::DeriveValue(WorkContext *ctx,
     case TypeId::Boolean:
       return codegen->BoolToSql(val.value_.boolean);
     case TypeId::TinyInt:
+      return codegen->IntToSql(val.value_.tinyint);
     case TypeId::SmallInt:
+      return codegen->IntToSql(val.value_.smallint);
     case TypeId::Integer:
+      return codegen->IntToSql(val.value_.integer);
     case TypeId::BigInt:
       return codegen->IntToSql(val.value_.bigint);
     case TypeId::Float:
+      return codegen->FloatToSql(val.value_.float_);
     case TypeId::Double:
       return codegen->FloatToSql(val.value_.double_);
     case TypeId::Date:

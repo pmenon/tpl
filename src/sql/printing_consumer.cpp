@@ -2,24 +2,25 @@
 
 #include <iomanip>
 
-#include "sql/schema.h"
+#include "sql/planner/plannodes/output_schema.h"
 #include "sql/sql.h"
 #include "sql/value.h"
 
 namespace tpl::sql {
 
-PrintingConsumer::PrintingConsumer(std::ostream &os, const sql::Schema &output_schema)
+PrintingConsumer::PrintingConsumer(std::ostream &os,
+                                   const sql::planner::OutputSchema *output_schema)
     : os_(os), output_schema_(output_schema) {}
 
 void PrintingConsumer::PrintTuple(const byte *tuple) const {
   bool first = true;
-  for (const auto &col_info : output_schema_.GetColumns()) {
+  for (const auto &col : output_schema_->GetColumns()) {
     // Comma
     if (!first) os_ << ",";
     first = false;
 
     // Column value
-    switch (col_info.sql_type.GetId()) {
+    switch (GetSqlTypeFromInternalType(col.GetType())) {
       case SqlTypeId::Boolean: {
         const auto val = reinterpret_cast<const BoolVal *>(tuple);
         os_ << (val->is_null ? "NULL" : val->val ? "True" : "False");

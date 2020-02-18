@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include "sql/printing_consumer.h"
 
 #include "tbb/task_scheduler_init.h"
 
@@ -66,10 +67,10 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
 
-  sql::NoOpResultConsumer consumer;
   sql::tablegen::TPCHOutputSchemas schemas;
-  const sql::Schema *schema = schemas.GetSchema(
+  const sql::planner::OutputSchema *schema = schemas.GetSchema(
       llvm::sys::path::filename(name).take_until([](char x) { return x == '.'; }));
+  sql::PrintingConsumer consumer(std::cout, schema);
 
   double parse_ms = 0.0,       // Time to parse the source
       typecheck_ms = 0.0,      // Time to perform semantic analysis

@@ -124,7 +124,7 @@ class SeqScanTranslator : public OperatorTranslator {
   void ScanTable(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Generate a scan over the VPI.
-  void ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi, bool filtered) const;
+  void ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const;
 
  private:
   // The name of the declared TVI and VPI.

@@ -95,6 +95,12 @@ std::string JoinTypeToString(LogicalJoinType type) {
       return "Semi";
     case LogicalJoinType::ANTI:
       return "Anti";
+    case LogicalJoinType::LEFT_SEMI:
+      return "Anti";
+    case LogicalJoinType::RIGHT_SEMI:
+      return "Anti";
+    case LogicalJoinType::RIGHT_ANTI:
+      return "Anti";
   }
   UNREACHABLE("Impossible to reach. All join types handled.");
 }
