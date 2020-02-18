@@ -174,44 +174,37 @@ TEST_F(FilterManagerTest, AdaptiveCheckTest) {
   }
 }
 
-#if 0
 void RunExperiment(bool adapt, const std::vector<FilterManager::MatchFn> &terms,
                    std::vector<double> *results) {
-  constexpr uint32_t num_runs = 3;
-  for (uint32_t run = 0; run < num_runs; run++) {
-    FilterManager filter(adapt);
-    filter.StartNewClause();
-    filter.InsertClauseTerms(terms);
+  FilterManager filter(adapt);
+  filter.StartNewClause();
+  filter.InsertClauseTerms(terms);
 
-    TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
-    for (tvi.Init(); tvi.Advance();) {
-      auto vpi = tvi.GetVectorProjectionIterator();
-      const auto exec_micros = util::Time<std::micro>([&] { filter.RunFilters(vpi); });
-      results->push_back(exec_micros);
-    }
+  TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
+  for (tvi.Init(); tvi.Advance();) {
+    auto vpi = tvi.GetVectorProjectionIterator();
+    const auto exec_micros = util::Time<std::micro>([&] { filter.RunFilters(vpi); });
+    results->push_back(exec_micros);
   }
 }
 
 template <int32_t Min, int32_t Max>
-void RunExperiment(std::string output) {
+void RunExperiment(const std::string &output) {
   // ALL terms here.
   std::vector<FilterManager::MatchFn> terms = {
       // c <= 6048
       [](auto input, auto tids, auto ctx) {
-        static constexpr int32_t kCVal = 6048;
-        const auto v = GenericValue::CreateInteger(kCVal);
+        const auto v = GenericValue::CreateInteger(6048);
         VectorFilterExecutor::SelectLessThanEqualVal(input, 2, v, tids);
       },
-      // b < 5
+      // a >= MIN
       [](auto input, auto tids, auto ctx) {
-        static constexpr int32_t kBVal = 5;
-        const auto v = GenericValue::CreateInteger(kBVal);
-        VectorFilterExecutor::SelectGreaterThanEqualVal(input, 1, v, tids);
+        const auto val = GenericValue::CreateInteger(Min);
+        VectorFilterExecutor::SelectGreaterThanEqualVal(input, 0, val, tids);
       },
       // b >= 2
       [](auto input, auto tids, auto ctx) {
-        static constexpr int32_t kBVal = 2;
-        const auto v = GenericValue::CreateInteger(kBVal);
+        const auto v = GenericValue::CreateInteger(2);
         VectorFilterExecutor::SelectGreaterThanEqualVal(input, 1, v, tids);
       },
       // a < MAX
@@ -219,27 +212,50 @@ void RunExperiment(std::string output) {
         const auto val = GenericValue::CreateInteger(Max);
         VectorFilterExecutor::SelectLessThanVal(input, 0, val, tids);
       },
-      // a >= MIN
+      // b < 5
       [](auto input, auto tids, auto ctx) {
-        const auto val = GenericValue::CreateInteger(Min);
-        VectorFilterExecutor::SelectGreaterThanEqualVal(input, 0, val, tids);
+        const auto v = GenericValue::CreateInteger(5);
+        VectorFilterExecutor::SelectLessThanVal(input, 1, v, tids);
       },
   };
   std::sort(terms.begin(), terms.end());
 
-  std::vector<std::vector<double>> results;
-  std::vector<double> adapt_results;
+  std::vector<std::vector<double>> results;  // Subset of interesting results.
+  std::vector<double> adapt_results;         // Results from adaptive filter.
 
-  // Fixed orderings.
-  do {
-    std::vector<double> perm;
-    perm.reserve(1000);
-    RunExperiment(false, terms, &perm);
-    results.emplace_back(std::move(perm));
-  } while (std::next_permutation(terms.begin(), terms.end()));
+  {
+    // 'all_results' holds, for each possible ordering, the timings for each
+    // partition. We time and capture all orderings because we don't know
+    // which will be best ahead of time. So, we'll run them all, sort them
+    // and choose the ones we want.
+    std::vector<std::pair<uint32_t, std::vector<double>>> all_results;
 
-  // Adaptive.
-  RunExperiment(true, terms, &adapt_results);
+    // Perform experiment on all possible orderings.
+    uint32_t order_num = 0;
+    do {
+      std::vector<double> perm;
+      RunExperiment(false, terms, &perm);
+      all_results.emplace_back(order_num++, std::move(perm));
+    } while (std::next_permutation(terms.begin(), terms.end()));
+
+    // Run adaptive mode.
+    RunExperiment(true, terms, &adapt_results);
+
+    // Sort the results by time. 'all_results[0]' will be best.
+    std::sort(all_results.begin(), all_results.end(), [](const auto &a, const auto &b) {
+      auto a_total = std::accumulate(a.second.begin(), a.second.end(), 0.0);
+      auto b_total = std::accumulate(b.second.begin(), b.second.end(), 0.0);
+      return a_total <= b_total;
+    });
+
+    const auto num_orders = all_results.size();
+
+    // Collect a subset of all the order timings.
+    results.push_back(all_results[0].second);                   // Best
+    results.push_back(all_results[num_orders / 2].second);      // 50%
+    results.push_back(all_results[3 * num_orders / 4].second);  // 75%
+    results.push_back(all_results.back().second);               // Worst
+  }
 
   // Print results.
   const auto num_orders = results.size();
@@ -265,38 +281,16 @@ void RunExperiment(std::string output) {
       out_file << adapt_results[i] << std::endl;
     }
   }
-
-  // Print CSV of total time per ordering.
-  {
-    std::vector<std::pair<uint32_t, double>> totals;
-    for (uint32_t order = 0; order < num_orders; order++) {
-      const auto &order_results = results[order];
-      totals.emplace_back(order, std::accumulate(order_results.begin(), order_results.end(), 0.0));
-    }
-    totals.emplace_back(std::numeric_limits<uint32_t>::max(),
-                        std::accumulate(adapt_results.begin(), adapt_results.end(), 0.0));
-    std::sort(totals.begin(), totals.end(),
-              [](const auto &a, const auto &b) { return a.second < b.second; });
-
-    std::ofstream out_file;
-    out_file.open(output + "-total.csv");
-    out_file << "Order, Total Time" << std::endl;
-    for (const auto &total : totals) {
-      out_file << total.first << ", " ;
-      out_file << std::fixed << std::setprecision(5) << total.second << std::endl;
-    }
-    out_file << std::endl;
-  }
 }
 
 TEST_F(FilterManagerTest, Experiment) {
-  static constexpr uint32_t num_elems = 20000000;
+  static constexpr uint32_t num_elems = 2000000;
   static constexpr uint32_t half = num_elems / 2;
   static constexpr uint32_t ten_pct = num_elems / 10;
   static constexpr uint32_t half_ten_pct = ten_pct / 2;
 
   RunExperiment<half, half>("filter-0.csv");
-  RunExperiment<half - half_ten_pct, half - half_ten_pct>("filter-10.csv");
+  RunExperiment<half - half_ten_pct, half + half_ten_pct>("filter-10.csv");
   RunExperiment<half - 2 * half_ten_pct, half + 2 * half_ten_pct>("filter-20.csv");
   RunExperiment<half - 3 * half_ten_pct, half + 3 * half_ten_pct>("filter-30.csv");
   RunExperiment<half - 4 * half_ten_pct, half + 4 * half_ten_pct>("filter-40.csv");
@@ -306,6 +300,5 @@ TEST_F(FilterManagerTest, Experiment) {
   RunExperiment<half - 8 * half_ten_pct, half + 8 * half_ten_pct>("filter-80.csv");
   RunExperiment<half - 9 * half_ten_pct, half + 9 * half_ten_pct>("filter-90.csv");
 }
-#endif
 
 }  // namespace tpl::sql
