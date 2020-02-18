@@ -139,16 +139,20 @@ void SeqScanTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDe
   }
 }
 
-void SeqScanTranslator::ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi,
-                                bool filtered) const {
+void SeqScanTranslator::ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const {
   CodeGen *codegen = GetCodeGen();
-  Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi, filtered),
-                codegen->MakeStmt(codegen->VPIAdvance(vpi, filtered)));
-  {
-    // Push to parent.
-    ctx->Push(function);
-  }
-  vpi_loop.EndLoop();
+
+  auto gen_vpi_loop = [&](bool is_filtered) {
+    Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi, is_filtered),
+                  codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));
+    {
+      // Push to parent.
+      ctx->Push(function);
+    }
+    vpi_loop.EndLoop();
+  };
+  // TODO(Amadou): What if the predicate doesn't filter out anything?
+  gen_vpi_loop(HasPredicate());
 }
 
 void SeqScanTranslator::ScanTable(WorkContext *ctx, FunctionBuilder *function) const {
@@ -160,15 +164,13 @@ void SeqScanTranslator::ScanTable(WorkContext *ctx, FunctionBuilder *function) c
     function->Append(codegen->DeclareVarWithInit(
         vpi_var_, codegen->TableIterGetVPI(codegen->MakeExpr(tvi_var_))));
 
-    bool filtered = false;
     if (HasPredicate()) {
-      filtered = true;
       auto filter_manager = local_filter_manager_.GetPtr(codegen);
       function->Append(codegen->FilterManagerRunFilters(filter_manager, vpi));
     }
 
     if (!ctx->GetPipeline().IsVectorized()) {
-      ScanVPI(ctx, function, vpi, filtered);
+      ScanVPI(ctx, function, vpi);
     }
   }
   tvi_loop.EndLoop();

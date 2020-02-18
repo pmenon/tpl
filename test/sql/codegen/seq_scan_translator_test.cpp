@@ -553,166 +553,184 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  query->Run(&exec_ctx);
 //}
 
-//TEST_F(SeqScanTranslatorTest, TPCHQ1Test) {
-//  // TODO: This should be in the benchmarks
-//  // Find a cleaner way to make these plans.
-//  auto accessor = sql::Catalog::Instance();
-//  planner::ExpressionMaker expr_maker;
-//  sql::Table *l_table = accessor->LookupTableByName("lineitem");
-//  const auto &l_schema = l_table->GetSchema();
-//  // Scan the table
-//  std::unique_ptr<planner::AbstractPlanNode> l_seq_scan;
-//  planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 0};
-//  {
-//    // Read all needed columns
-//    auto l_returnflag =
-//        expr_maker.CVE(l_schema.GetColumnInfo("l_returnflag").oid, sql::TypeId::Varchar);
-//    auto l_linestatus =
-//        expr_maker.CVE(l_schema.GetColumnInfo("l_linestatus").oid, sql::TypeId::Varchar);
-//    auto l_extendedprice =
-//        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-//    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-//    auto l_tax = expr_maker.CVE(l_schema.GetColumnInfo("l_tax").oid, sql::TypeId::Float);
-//    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-//    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
-//    // Make the output schema
-//    l_seq_scan_out.AddOutput("l_returnflag", l_returnflag);
-//    l_seq_scan_out.AddOutput("l_linestatus", l_linestatus);
-//    l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
-//    l_seq_scan_out.AddOutput("l_discount", l_discount);
-//    l_seq_scan_out.AddOutput("l_tax", l_tax);
-//    l_seq_scan_out.AddOutput("l_quantity", l_quantity);
-//    auto schema = l_seq_scan_out.MakeSchema();
-//    // Make the predicate
-//    l_seq_scan_out.AddOutput("l_shipdate", l_shipdate);
-//    auto date_const = expr_maker.Constant(1998, 9, 2);
-//    auto predicate = expr_maker.CompareLt(l_shipdate, date_const);
-//    // Build
-//    planner::SeqScanPlanNode::Builder builder;
-//    l_seq_scan = builder.SetOutputSchema(std::move(schema))
-//                     .SetScanPredicate(predicate)
-//                     .SetTableOid(l_table->GetId())
-//                     .Build();
-//  }
-//  // Make the aggregate
-//  std::unique_ptr<planner::AbstractPlanNode> agg;
-//  planner::OutputSchemaHelper agg_out{&expr_maker, 0};
-//  {
-//    // Read previous layer's output
-//    auto l_returnflag = l_seq_scan_out.GetOutput("l_returnflag");
-//    auto l_linestatus = l_seq_scan_out.GetOutput("l_linestatus");
-//    auto l_quantity = l_seq_scan_out.GetOutput("l_quantity");
-//    auto l_extendedprice = l_seq_scan_out.GetOutput("l_extendedprice");
-//    auto l_discount = l_seq_scan_out.GetOutput("l_discount");
-//    auto l_tax = l_seq_scan_out.GetOutput("l_tax");
-//    // Make the aggregate expressions
-//    auto sum_qty = expr_maker.AggSum(l_quantity);
-//    auto sum_base_price = expr_maker.AggSum(l_extendedprice);
-//    auto one_const = expr_maker.Constant(1.0f);
-//    auto disc_price = expr_maker.OpMul(l_extendedprice, expr_maker.OpMin(one_const, l_discount));
-//    auto sum_disc_price = expr_maker.AggSum(disc_price);
-//    auto charge = expr_maker.OpMul(disc_price, expr_maker.OpSum(one_const, l_tax));
-//    auto sum_charge = expr_maker.AggSum(charge);
-//    auto avg_qty = expr_maker.AggAvg(l_quantity);
-//    auto avg_price = expr_maker.AggAvg(l_extendedprice);
-//    auto avg_disc = expr_maker.AggAvg(l_discount);
-//    auto count_order = expr_maker.AggCount(expr_maker.Constant(1));  // Works as Count(*)
-//    // Add them to the helper.
-//    agg_out.AddGroupByTerm("l_returnflag", l_returnflag);
-//    agg_out.AddGroupByTerm("l_linestatus", l_linestatus);
-//    agg_out.AddAggTerm("sum_qty", sum_qty);
-//    agg_out.AddAggTerm("sum_base_price", sum_base_price);
-//    agg_out.AddAggTerm("sum_disc_price", sum_disc_price);
-//    agg_out.AddAggTerm("sum_charge", sum_charge);
-//    agg_out.AddAggTerm("avg_qty", avg_qty);
-//    agg_out.AddAggTerm("avg_price", avg_price);
-//    agg_out.AddAggTerm("avg_disc", avg_disc);
-//    agg_out.AddAggTerm("count_order", count_order);
-//    // Make the output schema
-//    agg_out.AddOutput("l_returnflag", agg_out.GetGroupByTermForOutput("l_returnflag"));
-//    agg_out.AddOutput("l_linestatus", agg_out.GetGroupByTermForOutput("l_linestatus"));
-//    agg_out.AddOutput("sum_qty", agg_out.GetAggTermForOutput("sum_qty"));
-//    agg_out.AddOutput("sum_base_price", agg_out.GetAggTermForOutput("sum_base_price"));
-//    agg_out.AddOutput("sum_disc_price", agg_out.GetAggTermForOutput("sum_disc_price"));
-//    agg_out.AddOutput("sum_charge", agg_out.GetAggTermForOutput("sum_charge"));
-//    agg_out.AddOutput("avg_qty", agg_out.GetAggTermForOutput("avg_qty"));
-//    agg_out.AddOutput("avg_price", agg_out.GetAggTermForOutput("avg_price"));
-//    agg_out.AddOutput("avg_disc", agg_out.GetAggTermForOutput("avg_disc"));
-//    agg_out.AddOutput("count_order", agg_out.GetAggTermForOutput("count_order"));
-//    auto schema = agg_out.MakeSchema();
-//    // Build
-//    planner::AggregatePlanNode::Builder builder;
-//    agg = builder.SetOutputSchema(std::move(schema))
-//              .AddGroupByTerm(l_returnflag)
-//              .AddGroupByTerm(l_linestatus)
-//              .AddAggregateTerm(sum_qty)
-//              .AddAggregateTerm(sum_base_price)
-//              .AddAggregateTerm(sum_disc_price)
-//              .AddAggregateTerm(sum_charge)
-//              .AddAggregateTerm(avg_qty)
-//              .AddAggregateTerm(avg_price)
-//              .AddAggregateTerm(avg_disc)
-//              .AddAggregateTerm(count_order)
-//              .AddChild(std::move(l_seq_scan))
-//              .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
-//              .SetHavingClausePredicate(nullptr)
-//              .Build();
-//  }
-//  // Order By
-//  std::unique_ptr<planner::AbstractPlanNode> order_by;
-//  planner::OutputSchemaHelper order_by_out{&expr_maker, 0};
-//  {
-//    // Output Colums col1, col2, col1 + col2
-//    auto l_returnflag = agg_out.GetOutput("l_returnflag");
-//    auto l_linestatus = agg_out.GetOutput("l_linestatus");
-//    auto sum_qty = agg_out.GetOutput("sum_qty");
-//    auto sum_base_price = agg_out.GetOutput("sum_base_price");
-//    auto sum_disc_price = agg_out.GetOutput("sum_disc_price");
-//    auto sum_charge = agg_out.GetOutput("sum_charge");
-//    auto avg_qty = agg_out.GetOutput("avg_qty");
-//    auto avg_price = agg_out.GetOutput("avg_price");
-//    auto avg_disc = agg_out.GetOutput("avg_disc");
-//    auto count_order = agg_out.GetOutput("count_order");
-//    order_by_out.AddOutput("l_returnflag", l_returnflag);
-//    order_by_out.AddOutput("l_linestatus", l_linestatus);
-//    order_by_out.AddOutput("sum_qty", sum_qty);
-//    order_by_out.AddOutput("sum_base_price", sum_base_price);
-//    order_by_out.AddOutput("sum_disc_price", sum_disc_price);
-//    order_by_out.AddOutput("sum_charge", sum_charge);
-//    order_by_out.AddOutput("avg_qty", avg_qty);
-//    order_by_out.AddOutput("avg_price", avg_price);
-//    order_by_out.AddOutput("avg_disc", avg_disc);
-//    order_by_out.AddOutput("count_order", count_order);
-//    auto schema = order_by_out.MakeSchema();
-//    // Order By Clause
-//    planner::SortKey clause1{l_returnflag, planner::OrderByOrderingType::ASC};
-//    planner::SortKey clause2{l_linestatus, planner::OrderByOrderingType::ASC};
-//    // Build
-//    planner::OrderByPlanNode::Builder builder;
-//    order_by = builder.SetOutputSchema(std::move(schema))
-//                   .AddChild(std::move(agg))
-//                   .AddSortKey(clause1.first, clause1.second)
-//                   .AddSortKey(clause2.first, clause2.second)
-//                   .Build();
-//  }
-//  {
-//    auto last = order_by.get();
-//    CorrectnessFn correcteness_fn;
-//    RowChecker row_checker;
-//    GenericChecker checker(row_checker, correcteness_fn);
-//    OutputStore store{&checker, last->GetOutputSchema()};
-//    OutputPrinter printer(last->GetOutputSchema());
-//    MultiOutputCallback callback{std::vector<sql::ResultConsumer *>{&store, &printer}};
-//    sql::MemoryPool memory(nullptr);
-//    sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
-//    // Run & Check
-//    auto query = CompilationContext::Compile(*last);
-//    query->Run(&exec_ctx);
-//  }
-//}
+TEST_F(SeqScanTranslatorTest, TPCHQ1Test) {
+  // TODO: This should be in the benchmarks
+  // Find a cleaner way to make these plans.
+  auto accessor = sql::Catalog::Instance();
+  planner::ExpressionMaker expr_maker;
+  sql::Table *l_table = accessor->LookupTableByName("lineitem");
+  const auto &l_schema = l_table->GetSchema();
+  // Scan the table
+  std::unique_ptr<planner::AbstractPlanNode> l_seq_scan;
+  planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 0};
+  {
+    // Read all needed columns
+    auto l_returnflag =
+        expr_maker.CVE(l_schema.GetColumnInfo("l_returnflag").oid, sql::TypeId::Varchar);
+    auto l_linestatus =
+        expr_maker.CVE(l_schema.GetColumnInfo("l_linestatus").oid, sql::TypeId::Varchar);
+    auto l_extendedprice =
+        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
+    auto l_tax = expr_maker.CVE(l_schema.GetColumnInfo("l_tax").oid, sql::TypeId::Float);
+    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
+    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
+    // Make the output schema
+    l_seq_scan_out.AddOutput("l_returnflag", l_returnflag);
+    l_seq_scan_out.AddOutput("l_linestatus", l_linestatus);
+    l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
+    l_seq_scan_out.AddOutput("l_discount", l_discount);
+    l_seq_scan_out.AddOutput("l_tax", l_tax);
+    l_seq_scan_out.AddOutput("l_quantity", l_quantity);
+    auto schema = l_seq_scan_out.MakeSchema();
+    // Make the predicate
+    l_seq_scan_out.AddOutput("l_shipdate", l_shipdate);
+    auto date_const = expr_maker.Constant(1998, 9, 2);
+    auto predicate = expr_maker.CompareLt(l_shipdate, date_const);
+    // Build
+    planner::SeqScanPlanNode::Builder builder;
+    l_seq_scan = builder.SetOutputSchema(std::move(schema))
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(l_table->GetId())
+                     .Build();
+  }
+
+  // Make the aggregate
+  std::unique_ptr<planner::AbstractPlanNode> agg;
+  planner::OutputSchemaHelper agg_out{&expr_maker, 0};
+  {
+    // Read previous layer's output
+    auto l_returnflag = l_seq_scan_out.GetOutput("l_returnflag");
+    auto l_linestatus = l_seq_scan_out.GetOutput("l_linestatus");
+    auto l_quantity = l_seq_scan_out.GetOutput("l_quantity");
+    auto l_extendedprice = l_seq_scan_out.GetOutput("l_extendedprice");
+    auto l_discount = l_seq_scan_out.GetOutput("l_discount");
+    auto l_tax = l_seq_scan_out.GetOutput("l_tax");
+    // Make the aggregate expressions
+    auto sum_qty = expr_maker.AggSum(l_quantity);
+    auto sum_base_price = expr_maker.AggSum(l_extendedprice);
+    auto one_const = expr_maker.Constant(1.0f);
+    auto disc_price = expr_maker.OpMul(l_extendedprice, expr_maker.OpMin(one_const, l_discount));
+    auto sum_disc_price = expr_maker.AggSum(disc_price);
+    auto charge = expr_maker.OpMul(disc_price, expr_maker.OpSum(one_const, l_tax));
+    auto sum_charge = expr_maker.AggSum(charge);
+    auto avg_qty = expr_maker.AggAvg(l_quantity);
+    auto avg_price = expr_maker.AggAvg(l_extendedprice);
+    auto avg_disc = expr_maker.AggAvg(l_discount);
+    auto count_order = expr_maker.AggCount(expr_maker.Constant(1));  // Works as Count(*)
+    // Add them to the helper.
+    agg_out.AddGroupByTerm("l_returnflag", l_returnflag);
+    agg_out.AddGroupByTerm("l_linestatus", l_linestatus);
+    agg_out.AddAggTerm("sum_qty", sum_qty);
+    agg_out.AddAggTerm("sum_base_price", sum_base_price);
+    agg_out.AddAggTerm("sum_disc_price", sum_disc_price);
+    agg_out.AddAggTerm("sum_charge", sum_charge);
+    agg_out.AddAggTerm("avg_qty", avg_qty);
+    agg_out.AddAggTerm("avg_price", avg_price);
+    agg_out.AddAggTerm("avg_disc", avg_disc);
+    agg_out.AddAggTerm("count_order", count_order);
+    // Make the output schema
+    agg_out.AddOutput("l_returnflag", agg_out.GetGroupByTermForOutput("l_returnflag"));
+    agg_out.AddOutput("l_linestatus", agg_out.GetGroupByTermForOutput("l_linestatus"));
+    agg_out.AddOutput("sum_qty", agg_out.GetAggTermForOutput("sum_qty"));
+    agg_out.AddOutput("sum_base_price", agg_out.GetAggTermForOutput("sum_base_price"));
+    agg_out.AddOutput("sum_disc_price", agg_out.GetAggTermForOutput("sum_disc_price"));
+    agg_out.AddOutput("sum_charge", agg_out.GetAggTermForOutput("sum_charge"));
+    agg_out.AddOutput("avg_qty", agg_out.GetAggTermForOutput("avg_qty"));
+    agg_out.AddOutput("avg_price", agg_out.GetAggTermForOutput("avg_price"));
+    agg_out.AddOutput("avg_disc", agg_out.GetAggTermForOutput("avg_disc"));
+    agg_out.AddOutput("count_order", agg_out.GetAggTermForOutput("count_order"));
+    auto schema = agg_out.MakeSchema();
+    // Build
+    planner::AggregatePlanNode::Builder builder;
+    agg = builder.SetOutputSchema(std::move(schema))
+              .AddGroupByTerm(l_returnflag)
+              .AddGroupByTerm(l_linestatus)
+              .AddAggregateTerm(sum_qty)
+              .AddAggregateTerm(sum_base_price)
+              .AddAggregateTerm(sum_disc_price)
+              .AddAggregateTerm(sum_charge)
+              .AddAggregateTerm(avg_qty)
+              .AddAggregateTerm(avg_price)
+              .AddAggregateTerm(avg_disc)
+              .AddAggregateTerm(count_order)
+              .AddChild(std::move(l_seq_scan))
+              .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
+              .SetHavingClausePredicate(nullptr)
+              .Build();
+  }
+  {
+    auto last = agg.get();
+    // CorrectnessFn correcteness_fn;
+    // RowChecker row_checker;
+    // GenericChecker checker(row_checker, correcteness_fn);
+    // OutputStore store{&checker, last->GetOutputSchema()};
+    // OutputPrinter printer(last->GetOutputSchema());
+    // MultiOutputCallback callback{std::vector<sql::ResultConsumer *>{&store, &printer}};
+    sql::MemoryPool memory(nullptr);
+    OutputPrinter callback(last->GetOutputSchema());
+    // NoOpResultConsumer callback;
+    sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
+    // Run & Check
+    auto query = CompilationContext::Compile(*last);
+    query->Run(&exec_ctx);
+    ASSERT_TRUE(false);
+  }
+  // Order By
+  std::unique_ptr<planner::AbstractPlanNode> order_by;
+  planner::OutputSchemaHelper order_by_out{&expr_maker, 0};
+  {
+    // Output Colums col1, col2, col1 + col2
+    auto l_returnflag = agg_out.GetOutput("l_returnflag");
+    auto l_linestatus = agg_out.GetOutput("l_linestatus");
+    auto sum_qty = agg_out.GetOutput("sum_qty");
+    auto sum_base_price = agg_out.GetOutput("sum_base_price");
+    auto sum_disc_price = agg_out.GetOutput("sum_disc_price");
+    auto sum_charge = agg_out.GetOutput("sum_charge");
+    auto avg_qty = agg_out.GetOutput("avg_qty");
+    auto avg_price = agg_out.GetOutput("avg_price");
+    auto avg_disc = agg_out.GetOutput("avg_disc");
+    auto count_order = agg_out.GetOutput("count_order");
+    order_by_out.AddOutput("l_returnflag", l_returnflag);
+    order_by_out.AddOutput("l_linestatus", l_linestatus);
+    order_by_out.AddOutput("sum_qty", sum_qty);
+    order_by_out.AddOutput("sum_base_price", sum_base_price);
+    order_by_out.AddOutput("sum_disc_price", sum_disc_price);
+    order_by_out.AddOutput("sum_charge", sum_charge);
+    order_by_out.AddOutput("avg_qty", avg_qty);
+    order_by_out.AddOutput("avg_price", avg_price);
+    order_by_out.AddOutput("avg_disc", avg_disc);
+    order_by_out.AddOutput("count_order", count_order);
+    auto schema = order_by_out.MakeSchema();
+    // Order By Clause
+    planner::SortKey clause1{l_returnflag, planner::OrderByOrderingType::ASC};
+    planner::SortKey clause2{l_linestatus, planner::OrderByOrderingType::ASC};
+    // Build
+    planner::OrderByPlanNode::Builder builder;
+    order_by = builder.SetOutputSchema(std::move(schema))
+                   .AddChild(std::move(agg))
+                   .AddSortKey(clause1.first, clause1.second)
+                   .AddSortKey(clause2.first, clause2.second)
+                   .Build();
+  }
+  {
+    auto last = order_by.get();
+    CorrectnessFn correcteness_fn;
+    RowChecker row_checker;
+    GenericChecker checker(row_checker, correcteness_fn);
+    OutputStore store{&checker, last->GetOutputSchema()};
+    OutputPrinter printer(last->GetOutputSchema());
+    MultiOutputCallback callback{std::vector<sql::ResultConsumer *>{&store, &printer}};
+    sql::MemoryPool memory(nullptr);
+    sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
+    // Run & Check
+    auto query = CompilationContext::Compile(*last);
+    query->Run(&exec_ctx);
+  }
+}
 //
-//// NOLINTNEXTLINE
-//TEST_F(SeqScanTranslatorTest, TPCHQ4Test) {
+// //// NOLINTNEXTLINE
+// TEST_F(SeqScanTranslatorTest, TPCHQ4Test) {
 //  // Find a cleaner way to make these plans.
 //  auto accessor = sql::Catalog::Instance();
 //  planner::ExpressionMaker expr_maker;
@@ -731,7 +749,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
 //    auto o_orderpriority =
 //        expr_maker.CVE(o_schema.GetColumnInfo("o_orderpriority").oid, sql::TypeId::Varchar);
-//    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date);
+//    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid,
+//    sql::TypeId::Date);
 //    // Make the output schema
 //    o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
 //    o_seq_scan_out.AddOutput("o_orderpriority", o_orderpriority);
@@ -854,9 +873,9 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    auto query = CompilationContext::Compile(*last);
 //    query->Run(&exec_ctx);
 //  }
-//}
-
-//TEST_F(SeqScanTranslatorTest, TPCHQ5Test) {
+// }
+//
+// TEST_F(SeqScanTranslatorTest, TPCHQ5Test) {
 //  // TODO: This should be in the benchmarks
 //  // Find a cleaner way to make these plans.
 //  auto accessor = sql::Catalog::Instance();
@@ -927,8 +946,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 1};
 //  {
 //    // Read all needed columns
-//    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-//    auto c_nationkey =
+//    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid,
+//    sql::TypeId::Integer); auto c_nationkey =
 //        expr_maker.CVE(c_schema.GetColumnInfo("c_nationkey").oid, sql::TypeId::Integer);
 //    // Make the output schema
 //    c_seq_scan_out.AddOutput("c_custkey", c_custkey);
@@ -948,8 +967,9 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    // Read all needed columns
 //    auto o_orderkey =
 //        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
-//    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid, sql::TypeId::Integer);
-//    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date);
+//    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid,
+//    sql::TypeId::Integer); auto o_orderdate =
+//    expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date);
 //    // Make the output schema
 //    o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
 //    o_seq_scan_out.AddOutput("o_custkey", o_custkey);
@@ -974,10 +994,11 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    // Read all needed columns
 //    auto l_extendedprice =
 //        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-//    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-//    auto l_orderkey =
+//    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid,
+//    sql::TypeId::Float); auto l_orderkey =
 //        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
-//    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey").oid, sql::TypeId::Integer);
+//    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey").oid,
+//    sql::TypeId::Integer);
 //    // Make the output schema
 //    l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
 //    l_seq_scan_out.AddOutput("l_discount", l_discount);
@@ -996,8 +1017,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
 //  {
 //    // Read all needed columns
-//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-//    auto s_nationkey =
+//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid,
+//    sql::TypeId::Integer); auto s_nationkey =
 //        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
 //    // Make the output schema
 //    s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
@@ -1226,9 +1247,9 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    query->Run(&exec_ctx);
 //    checker.CheckCorrectness();
 //  }
-//}
-
-//TEST_F(SeqScanTranslatorTest, TPCHQ6Test) {
+// }
+//
+// TEST_F(SeqScanTranslatorTest, TPCHQ6Test) {
 //  // Find a cleaner way to make these plans.
 //  auto accessor = sql::Catalog::Instance();
 //  planner::ExpressionMaker expr_maker;
@@ -1242,9 +1263,10 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    // Read all needed columns
 //    auto l_extendedprice =
 //        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-//    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-//    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
-//    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
+//    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid,
+//    sql::TypeId::Float); auto l_shipdate =
+//    expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date); auto l_quantity =
+//    expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
 //    // Make the output schema
 //    l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
 //    l_seq_scan_out.AddOutput("l_discount", l_discount);
@@ -1263,7 +1285,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    auto date_comp = expr_maker.ConjunctionAnd(lo_date_comp, hi_date_comp);
 //    auto discount_comp = expr_maker.ConjunctionAnd(lo_discount_comp, hi_discount_comp);
 //    auto predicate =
-//        expr_maker.ConjunctionAnd(date_comp, expr_maker.ConjunctionAnd(discount_comp, lo_qty_comp));
+//        expr_maker.ConjunctionAnd(date_comp, expr_maker.ConjunctionAnd(discount_comp,
+//        lo_qty_comp));
 //    // Build
 //    planner::SeqScanPlanNode::Builder builder;
 //    l_seq_scan = builder.SetOutputSchema(std::move(schema))
@@ -1309,9 +1332,9 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    query->Run(&exec_ctx);
 //    checker.CheckCorrectness();
 //  }
-//}
+// }
 
-//TEST_F(SeqScanTranslatorTest, TPCHQ7Test) {
+// TEST_F(SeqScanTranslatorTest, TPCHQ7Test) {
 //  // TODO: This should be in the benchmarks
 //  // Find a cleaner way to make these plans.
 //  auto accessor = sql::Catalog::Instance();
@@ -1418,8 +1441,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 1};
 //  {
 //    // Read all needed columns
-//    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-//    auto c_nationkey =
+//    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid,
+//    sql::TypeId::Integer); auto c_nationkey =
 //        expr_maker.CVE(c_schema.GetColumnInfo("c_nationkey").oid, sql::TypeId::Integer);
 //    // Make the output schema
 //    c_seq_scan_out.AddOutput("c_custkey", c_custkey);
@@ -1473,7 +1496,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    // Read all needed columns
 //    auto o_orderkey =
 //        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
-//    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid, sql::TypeId::Integer);
+//    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid,
+//    sql::TypeId::Integer);
 //    // Make the output schema
 //    o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
 //    o_seq_scan_out.AddOutput("o_custkey", o_custkey);
@@ -1526,11 +1550,12 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    // Read all needed columns
 //    auto l_extendedprice =
 //        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-//    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-//    auto l_orderkey =
+//    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid,
+//    sql::TypeId::Float); auto l_orderkey =
 //        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
-//    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey").oid, sql::TypeId::Integer);
-//    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
+//    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey").oid,
+//    sql::TypeId::Integer); auto l_shipdate =
+//    expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
 //    // Make the output schema
 //    auto const_one = expr_maker.Constant(1.0f);
 //    auto volume = expr_maker.OpMul(l_extendedprice, expr_maker.OpMin(const_one, l_discount));
@@ -1598,8 +1623,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
 //  {
 //    // Read all needed columns
-//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-//    auto s_nationkey =
+//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid,
+//    sql::TypeId::Integer); auto s_nationkey =
 //        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
 //    // Make the output schema
 //    s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
@@ -1734,7 +1759,7 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  }
 //}
 
-//TEST_F(SeqScanTranslatorTest, TPCHQ11Test) {
+// TEST_F(SeqScanTranslatorTest, TPCHQ11Test) {
 //  // Find a cleaner way to make these plans.
 //  auto accessor = sql::Catalog::Instance();
 //  planner::ExpressionMaker expr_maker;
@@ -1794,8 +1819,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper s_seq_scan_out1{&expr_maker, 1};
 //  {
 //    // Read all needed columns
-//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-//    auto s_nationkey =
+//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid,
+//    sql::TypeId::Integer); auto s_nationkey =
 //        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
 //    // Make the output schema
 //    s_seq_scan_out1.AddOutput("s_suppkey", s_suppkey);
@@ -1813,8 +1838,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper s_seq_scan_out2{&expr_maker, 1};
 //  {
 //    // Read all needed columns
-//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-//    auto s_nationkey =
+//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid,
+//    sql::TypeId::Integer); auto s_nationkey =
 //        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
 //    // Make the output schema
 //    s_seq_scan_out2.AddOutput("s_suppkey", s_suppkey);
@@ -2110,7 +2135,7 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  }
 //}
 
-//TEST_F(SeqScanTranslatorTest, TPCHQ16Test) {
+// TEST_F(SeqScanTranslatorTest, TPCHQ16Test) {
 //  // Find a cleaner way to make these plans.
 //  auto accessor = sql::Catalog::Instance();
 //  planner::ExpressionMaker expr_maker;
@@ -2130,8 +2155,9 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    // Read all needed columns
 //    auto p_brand = expr_maker.CVE(p_schema.GetColumnInfo("p_brand").oid, sql::TypeId::Varchar);
 //    auto p_type = expr_maker.CVE(p_schema.GetColumnInfo("p_type").oid, sql::TypeId::Varchar);
-//    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-//    auto p_size = expr_maker.CVE(p_schema.GetColumnInfo("p_size").oid, sql::TypeId::Integer);
+//    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid,
+//    sql::TypeId::Integer); auto p_size = expr_maker.CVE(p_schema.GetColumnInfo("p_size").oid,
+//    sql::TypeId::Integer);
 //    // Make the output schema
 //    p_seq_scan_out.AddOutput("p_brand", p_brand);
 //    p_seq_scan_out.AddOutput("p_type", p_type);
@@ -2177,8 +2203,9 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
 //  {
 //    // Read all needed columns
-//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-//    auto s_comment = expr_maker.CVE(s_schema.GetColumnInfo("s_comment").oid, sql::TypeId::Varchar);
+//    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid,
+//    sql::TypeId::Integer); auto s_comment =
+//    expr_maker.CVE(s_schema.GetColumnInfo("s_comment").oid, sql::TypeId::Varchar);
 //    // Make the output schema
 //    s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
 //    auto schema = s_seq_scan_out.MakeSchema();
@@ -2366,7 +2393,7 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //}
 
 // NOLINTNEXTLINE
-//TEST_F(SeqScanTranslatorTest, TPCHQ18Test) {
+// TEST_F(SeqScanTranslatorTest, TPCHQ18Test) {
 //  // TODO: This should be in the benchmarks
 //  // Find a cleaner way to make these plans.
 //  auto accessor = sql::Catalog::Instance();
@@ -2385,8 +2412,9 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
 //  {
 //    // Read all needed columns
-//    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-//    auto c_name = expr_maker.CVE(c_schema.GetColumnInfo("c_name").oid, sql::TypeId::Varchar);
+//    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid,
+//    sql::TypeId::Integer); auto c_name = expr_maker.CVE(c_schema.GetColumnInfo("c_name").oid,
+//    sql::TypeId::Varchar);
 //    // Make the output schema
 //    c_seq_scan_out.AddOutput("c_custkey", c_custkey);
 //    c_seq_scan_out.AddOutput("c_name", c_name);
@@ -2405,9 +2433,10 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    // Read all needed columns
 //    auto o_orderkey =
 //        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
-//    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid, sql::TypeId::Integer);
-//    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date);
-//    auto o_totalprice =
+//    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid,
+//    sql::TypeId::Integer); auto o_orderdate =
+//    expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date); auto
+//    o_totalprice =
 //        expr_maker.CVE(o_schema.GetColumnInfo("o_totalprice").oid, sql::TypeId::Float);
 //    // Make the output schema
 //    o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
@@ -2427,8 +2456,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper l_seq_scan_out1{&expr_maker, 0};
 //  {
 //    // Read all needed columns
-//    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-//    auto l_orderkey =
+//    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid,
+//    sql::TypeId::Float); auto l_orderkey =
 //        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
 //    // Make the output schema
 //    l_seq_scan_out1.AddOutput("l_quantity", l_quantity);
@@ -2446,8 +2475,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //  planner::OutputSchemaHelper l_seq_scan_out2{&expr_maker, 1};
 //  {
 //    // Read all needed columns
-//    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-//    auto l_orderkey =
+//    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid,
+//    sql::TypeId::Float); auto l_orderkey =
 //        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
 //    // Make the output schema
 //    l_seq_scan_out2.AddOutput("l_quantity", l_quantity);
@@ -2477,7 +2506,8 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //    auto schema = agg_out1.MakeSchema();
 //    // Make having
 //    auto having =
-//        expr_maker.CompareGt(agg_out1.GetAggTermForOutput("sum_qty"), expr_maker.Constant(300.0f));
+//        expr_maker.CompareGt(agg_out1.GetAggTermForOutput("sum_qty"),
+//        expr_maker.Constant(300.0f));
 //    // Build
 //    planner::AggregatePlanNode::Builder builder;
 //    agg1 = builder.SetOutputSchema(std::move(schema))
@@ -2676,183 +2706,189 @@ class SeqScanTranslatorTest : public SqlBasedTest {
 //}
 
 // NOLINTNEXTLINE
-TEST_F(SeqScanTranslatorTest, TPCHQ19Test) {
-  // Find a cleaner way to make these plans.
-  auto accessor = sql::Catalog::Instance();
-  planner::ExpressionMaker expr_maker;
-  // Lineitem.
-  sql::Table *l_table = accessor->LookupTableByName("lineitem");
-  const auto &l_schema = l_table->GetSchema();
-  // Part.
-  sql::Table *p_table = accessor->LookupTableByName("part");
-  const auto &p_schema = p_table->GetSchema();
-  // Lineitem scan
-  std::unique_ptr<planner::AbstractPlanNode> l_seq_scan;
-  planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 1};
-  {
-    // Read all needed columns
-    auto l_extendedprice =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-    auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey").oid, sql::TypeId::Integer);
-    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-    auto l_shipmode =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_shipmode").oid, sql::TypeId::Varchar);
-    auto l_shipinstruct =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_shipinstruct").oid, sql::TypeId::Varchar);
-    // Make the output schema
-    l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
-    l_seq_scan_out.AddOutput("l_discount", l_discount);
-    l_seq_scan_out.AddOutput("l_partkey", l_partkey);
-    l_seq_scan_out.AddOutput("l_quantity", l_quantity);
-    l_seq_scan_out.AddOutput("l_shipmode", l_shipmode);
-    l_seq_scan_out.AddOutput("l_shipinstruct", l_shipinstruct);
-    auto schema = l_seq_scan_out.MakeSchema();
-    // Build
-    planner::SeqScanPlanNode::Builder builder;
-    l_seq_scan = builder.SetOutputSchema(std::move(schema))
-                     .SetScanPredicate(nullptr)
-                     .SetTableOid(l_table->GetId())
-                     .Build();
-  }
-  // Part Scan
-  std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
-  planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
-  {
-    // Read all needed columns
-    auto p_brand = expr_maker.CVE(p_schema.GetColumnInfo("p_brand").oid, sql::TypeId::Varchar);
-    auto p_container =
-        expr_maker.CVE(p_schema.GetColumnInfo("p_container").oid, sql::TypeId::Varchar);
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_size = expr_maker.CVE(p_schema.GetColumnInfo("p_size").oid, sql::TypeId::Integer);
-    // Make the output schema
-    p_seq_scan_out.AddOutput("p_brand", p_brand);
-    p_seq_scan_out.AddOutput("p_container", p_container);
-    p_seq_scan_out.AddOutput("p_partkey", p_partkey);
-    p_seq_scan_out.AddOutput("p_size", p_size);
-    auto schema = p_seq_scan_out.MakeSchema();
-    // Build
-    planner::SeqScanPlanNode::Builder builder;
-    p_seq_scan = builder.SetOutputSchema(std::move(schema))
-                     .SetScanPredicate(nullptr)
-                     .SetTableOid(p_table->GetId())
-                     .Build();
-  }
-  // Hash Join 1
-  std::unique_ptr<planner::AbstractPlanNode> hash_join1;
-  planner::OutputSchemaHelper hash_join_out1{&expr_maker, 0};
-  {
-    // Left columns
-    auto p_brand = p_seq_scan_out.GetOutput("p_brand");
-    auto p_container = p_seq_scan_out.GetOutput("p_container");
-    auto p_partkey = p_seq_scan_out.GetOutput("p_partkey");
-    auto p_size = p_seq_scan_out.GetOutput("p_size");
-    // Right columns
-    auto l_partkey = l_seq_scan_out.GetOutput("l_partkey");
-    auto l_quantity = l_seq_scan_out.GetOutput("l_quantity");
-    auto l_shipmode = l_seq_scan_out.GetOutput("l_shipmode");
-    auto l_shipinstruct = l_seq_scan_out.GetOutput("l_shipinstruct");
-    auto l_discount = l_seq_scan_out.GetOutput("l_discount");
-    auto l_extendedprice = l_seq_scan_out.GetOutput("l_extendedprice");
-    // Output Schema
-    hash_join_out1.AddOutput("l_extendedprice", l_extendedprice);
-    hash_join_out1.AddOutput("l_discount", l_discount);
-    hash_join_out1.AddOutput("p_brand", p_brand);
-    hash_join_out1.AddOutput("p_size", p_size);
-    auto schema = hash_join_out1.MakeSchema();
-    // Predicate1
-    planner::ExpressionMaker::Expression predicate1, predicate2, predicate3;
-    auto gen_predicate_clause = [&](const std::string &brand, const std::vector<std::string> &sm,
-                                    float lo_qty, float hi_qty, int32_t lo_size, int32_t hi_size) {
-      auto brand_comp = expr_maker.CompareEq(p_brand, expr_maker.Constant(brand));
-      auto container_comp = expr_maker.ConjunctionOr(
-          expr_maker.CompareEq(p_container, expr_maker.Constant(sm[0])),
-          expr_maker.ConjunctionOr(
-              expr_maker.CompareEq(p_container, expr_maker.Constant(sm[1])),
-              expr_maker.ConjunctionOr(
-                  expr_maker.CompareEq(p_container, expr_maker.Constant(sm[2])),
-                  expr_maker.CompareEq(p_container, expr_maker.Constant(sm[3])))));
-      auto qty_lo_comp = expr_maker.CompareGe(l_quantity, expr_maker.Constant(lo_qty));
-      auto qty_hi_comp = expr_maker.CompareLe(l_quantity, expr_maker.Constant(hi_qty));
-      auto qty_comp = expr_maker.ConjunctionAnd(qty_lo_comp, qty_hi_comp);
-      auto size_lo_comp = expr_maker.CompareGe(p_size, expr_maker.Constant(lo_size));
-      auto size_hi_comp = expr_maker.CompareLe(p_size, expr_maker.Constant(hi_size));
-      auto size_comp = expr_maker.ConjunctionAnd(size_lo_comp, size_hi_comp);
-      auto shipmode_comp = expr_maker.ConjunctionOr(
-          expr_maker.CompareEq(l_shipmode, expr_maker.Constant("AIR")),
-          expr_maker.CompareEq(l_shipmode, expr_maker.Constant("AIR REG")));
-      auto shipinstruct_comp =
-          expr_maker.CompareEq(l_shipinstruct, expr_maker.Constant("DELIVER IN PERSON"));
-
-      return expr_maker.ConjunctionAnd(
-          brand_comp, expr_maker.ConjunctionAnd(
-                          container_comp,
-                          expr_maker.ConjunctionAnd(
-                              qty_comp, expr_maker.ConjunctionAnd(
-                                            size_comp, expr_maker.ConjunctionAnd(
-                                                           shipmode_comp, shipinstruct_comp)))));
-    };
-    predicate1 =
-        gen_predicate_clause("Brand#12", {"SM CASE", "SM BOX", "SM PACK", "SM PKG"}, 1, 11, 1, 5);
-    predicate2 = gen_predicate_clause("Brand#23", {"MED BAG", "MED BOX", "MED PKG", "MED PACK"}, 10,
-                                      20, 1, 10);
-    predicate3 =
-        gen_predicate_clause("Brand#34", {"LG CASE", "LG BOX", "LG PACK", "LG PKG"}, 20, 30, 1, 15);
-    auto predicate =
-        expr_maker.ConjunctionOr(predicate1, expr_maker.ConjunctionOr(predicate2, predicate3));
-    // Build
-    planner::HashJoinPlanNode::Builder builder;
-    hash_join1 = builder.AddChild(std::move(p_seq_scan))
-                     .AddChild(std::move(l_seq_scan))
-                     .SetOutputSchema(std::move(schema))
-                     .AddLeftHashKey(p_partkey)
-                     .AddRightHashKey(l_partkey)
-                     .SetJoinType(planner::LogicalJoinType::INNER)
-                     .SetJoinPredicate(predicate)
-                     .Build();
-  }
-  // Make the aggregate
-  std::unique_ptr<planner::AbstractPlanNode> agg;
-  planner::OutputSchemaHelper agg_out{&expr_maker, 0};
-  {
-    // Read previous layer's output
-    auto l_extendedprice = hash_join_out1.GetOutput("l_extendedprice");
-    auto l_discount = hash_join_out1.GetOutput("l_discount");
-    // Make the aggregate expressions
-    auto one_const = expr_maker.Constant(1.0f);
-    auto revenue = expr_maker.AggSum(
-        expr_maker.OpMul(l_extendedprice, expr_maker.OpMin(one_const, l_discount)));
-    // Add them to the helper.
-    agg_out.AddAggTerm("revenue", revenue);
-    // Make the output schema
-    agg_out.AddOutput("revenue", agg_out.GetAggTermForOutput("revenue"));
-    auto schema = agg_out.MakeSchema();
-    // Make having
-    // Build
-    planner::AggregatePlanNode::Builder builder;
-    agg = builder.SetOutputSchema(std::move(schema))
-              .AddAggregateTerm(revenue)
-              .AddChild(std::move(hash_join1))
-              .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
-              .SetHavingClausePredicate(nullptr)
-              .Build();
-  }
-  // Run and print
-  {
-    auto last = agg.get();
-    CorrectnessFn correcteness_fn;
-    RowChecker row_checker;
-    GenericChecker checker(row_checker, correcteness_fn);
-    OutputStore store{&checker, last->GetOutputSchema()};
-    OutputPrinter printer(last->GetOutputSchema());
-    MultiOutputCallback callback{std::vector<sql::ResultConsumer *>{&store, &printer}};
-    sql::MemoryPool memory(nullptr);
-    sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
-    // Run & Check
-    auto query = CompilationContext::Compile(*last);
-    query->Run(&exec_ctx);
-    checker.CheckCorrectness();
-  }
-}
+// TEST_F(SeqScanTranslatorTest, TPCHQ19Test) {
+//   // Find a cleaner way to make these plans.
+//   auto accessor = sql::Catalog::Instance();
+//   planner::ExpressionMaker expr_maker;
+//   // Lineitem.
+//   sql::Table *l_table = accessor->LookupTableByName("lineitem");
+//   const auto &l_schema = l_table->GetSchema();
+//   // Part.
+//   sql::Table *p_table = accessor->LookupTableByName("part");
+//   const auto &p_schema = p_table->GetSchema();
+//   // Lineitem scan
+//   std::unique_ptr<planner::AbstractPlanNode> l_seq_scan;
+//   planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 1};
+//   {
+//     // Read all needed columns
+//     auto l_extendedprice =
+//         expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
+//     auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid,
+//     sql::TypeId::Float); auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey").oid,
+//     sql::TypeId::Integer); auto l_quantity =
+//     expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float); auto l_shipmode
+//     =
+//         expr_maker.CVE(l_schema.GetColumnInfo("l_shipmode").oid, sql::TypeId::Varchar);
+//     auto l_shipinstruct =
+//         expr_maker.CVE(l_schema.GetColumnInfo("l_shipinstruct").oid, sql::TypeId::Varchar);
+//     // Make the output schema
+//     l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
+//     l_seq_scan_out.AddOutput("l_discount", l_discount);
+//     l_seq_scan_out.AddOutput("l_partkey", l_partkey);
+//     l_seq_scan_out.AddOutput("l_quantity", l_quantity);
+//     l_seq_scan_out.AddOutput("l_shipmode", l_shipmode);
+//     l_seq_scan_out.AddOutput("l_shipinstruct", l_shipinstruct);
+//     auto schema = l_seq_scan_out.MakeSchema();
+//     // Build
+//     planner::SeqScanPlanNode::Builder builder;
+//     l_seq_scan = builder.SetOutputSchema(std::move(schema))
+//                      .SetScanPredicate(nullptr)
+//                      .SetTableOid(l_table->GetId())
+//                      .Build();
+//   }
+//   // Part Scan
+//   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
+//   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
+//   {
+//     // Read all needed columns
+//     auto p_brand = expr_maker.CVE(p_schema.GetColumnInfo("p_brand").oid, sql::TypeId::Varchar);
+//     auto p_container =
+//         expr_maker.CVE(p_schema.GetColumnInfo("p_container").oid, sql::TypeId::Varchar);
+//     auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid,
+//     sql::TypeId::Integer); auto p_size = expr_maker.CVE(p_schema.GetColumnInfo("p_size").oid,
+//     sql::TypeId::Integer);
+//     // Make the output schema
+//     p_seq_scan_out.AddOutput("p_brand", p_brand);
+//     p_seq_scan_out.AddOutput("p_container", p_container);
+//     p_seq_scan_out.AddOutput("p_partkey", p_partkey);
+//     p_seq_scan_out.AddOutput("p_size", p_size);
+//     auto schema = p_seq_scan_out.MakeSchema();
+//     // Build
+//     planner::SeqScanPlanNode::Builder builder;
+//     p_seq_scan = builder.SetOutputSchema(std::move(schema))
+//                      .SetScanPredicate(nullptr)
+//                      .SetTableOid(p_table->GetId())
+//                      .Build();
+//   }
+//   // Hash Join 1
+//   std::unique_ptr<planner::AbstractPlanNode> hash_join1;
+//   planner::OutputSchemaHelper hash_join_out1{&expr_maker, 0};
+//   {
+//     // Left columns
+//     auto p_brand = p_seq_scan_out.GetOutput("p_brand");
+//     auto p_container = p_seq_scan_out.GetOutput("p_container");
+//     auto p_partkey = p_seq_scan_out.GetOutput("p_partkey");
+//     auto p_size = p_seq_scan_out.GetOutput("p_size");
+//     // Right columns
+//     auto l_partkey = l_seq_scan_out.GetOutput("l_partkey");
+//     auto l_quantity = l_seq_scan_out.GetOutput("l_quantity");
+//     auto l_shipmode = l_seq_scan_out.GetOutput("l_shipmode");
+//     auto l_shipinstruct = l_seq_scan_out.GetOutput("l_shipinstruct");
+//     auto l_discount = l_seq_scan_out.GetOutput("l_discount");
+//     auto l_extendedprice = l_seq_scan_out.GetOutput("l_extendedprice");
+//     // Output Schema
+//     hash_join_out1.AddOutput("l_extendedprice", l_extendedprice);
+//     hash_join_out1.AddOutput("l_discount", l_discount);
+//     hash_join_out1.AddOutput("p_brand", p_brand);
+//     hash_join_out1.AddOutput("p_size", p_size);
+//     auto schema = hash_join_out1.MakeSchema();
+//     // Predicate1
+//     planner::ExpressionMaker::Expression predicate1, predicate2, predicate3;
+//     auto gen_predicate_clause = [&](const std::string &brand, const std::vector<std::string> &sm,
+//                                     float lo_qty, float hi_qty, int32_t lo_size, int32_t hi_size)
+//                                     {
+//       auto brand_comp = expr_maker.CompareEq(p_brand, expr_maker.Constant(brand));
+//       auto container_comp = expr_maker.ConjunctionOr(
+//           expr_maker.CompareEq(p_container, expr_maker.Constant(sm[0])),
+//           expr_maker.ConjunctionOr(
+//               expr_maker.CompareEq(p_container, expr_maker.Constant(sm[1])),
+//               expr_maker.ConjunctionOr(
+//                   expr_maker.CompareEq(p_container, expr_maker.Constant(sm[2])),
+//                   expr_maker.CompareEq(p_container, expr_maker.Constant(sm[3])))));
+//       auto qty_lo_comp = expr_maker.CompareGe(l_quantity, expr_maker.Constant(lo_qty));
+//       auto qty_hi_comp = expr_maker.CompareLe(l_quantity, expr_maker.Constant(hi_qty));
+//       auto qty_comp = expr_maker.ConjunctionAnd(qty_lo_comp, qty_hi_comp);
+//       auto size_lo_comp = expr_maker.CompareGe(p_size, expr_maker.Constant(lo_size));
+//       auto size_hi_comp = expr_maker.CompareLe(p_size, expr_maker.Constant(hi_size));
+//       auto size_comp = expr_maker.ConjunctionAnd(size_lo_comp, size_hi_comp);
+//       auto shipmode_comp = expr_maker.ConjunctionOr(
+//           expr_maker.CompareEq(l_shipmode, expr_maker.Constant("AIR")),
+//           expr_maker.CompareEq(l_shipmode, expr_maker.Constant("AIR REG")));
+//       auto shipinstruct_comp =
+//           expr_maker.CompareEq(l_shipinstruct, expr_maker.Constant("DELIVER IN PERSON"));
+//
+//       return expr_maker.ConjunctionAnd(
+//           brand_comp, expr_maker.ConjunctionAnd(
+//                           container_comp,
+//                           expr_maker.ConjunctionAnd(
+//                               qty_comp, expr_maker.ConjunctionAnd(
+//                                             size_comp, expr_maker.ConjunctionAnd(
+//                                                            shipmode_comp, shipinstruct_comp)))));
+//     };
+//     predicate1 =
+//         gen_predicate_clause("Brand#12", {"SM CASE", "SM BOX", "SM PACK", "SM PKG"}, 1, 11, 1,
+//         5);
+//     predicate2 = gen_predicate_clause("Brand#23", {"MED BAG", "MED BOX", "MED PKG", "MED PACK"},
+//     10,
+//                                       20, 1, 10);
+//     predicate3 =
+//         gen_predicate_clause("Brand#34", {"LG CASE", "LG BOX", "LG PACK", "LG PKG"}, 20, 30, 1,
+//         15);
+//     auto predicate =
+//         expr_maker.ConjunctionOr(predicate1, expr_maker.ConjunctionOr(predicate2, predicate3));
+//     // Build
+//     planner::HashJoinPlanNode::Builder builder;
+//     hash_join1 = builder.AddChild(std::move(p_seq_scan))
+//                      .AddChild(std::move(l_seq_scan))
+//                      .SetOutputSchema(std::move(schema))
+//                      .AddLeftHashKey(p_partkey)
+//                      .AddRightHashKey(l_partkey)
+//                      .SetJoinType(planner::LogicalJoinType::INNER)
+//                      .SetJoinPredicate(predicate)
+//                      .Build();
+//   }
+//   // Make the aggregate
+//   std::unique_ptr<planner::AbstractPlanNode> agg;
+//   planner::OutputSchemaHelper agg_out{&expr_maker, 0};
+//   {
+//     // Read previous layer's output
+//     auto l_extendedprice = hash_join_out1.GetOutput("l_extendedprice");
+//     auto l_discount = hash_join_out1.GetOutput("l_discount");
+//     // Make the aggregate expressions
+//     auto one_const = expr_maker.Constant(1.0f);
+//     auto revenue = expr_maker.AggSum(
+//         expr_maker.OpMul(l_extendedprice, expr_maker.OpMin(one_const, l_discount)));
+//     // Add them to the helper.
+//     agg_out.AddAggTerm("revenue", revenue);
+//     // Make the output schema
+//     agg_out.AddOutput("revenue", agg_out.GetAggTermForOutput("revenue"));
+//     auto schema = agg_out.MakeSchema();
+//     // Make having
+//     // Build
+//     planner::AggregatePlanNode::Builder builder;
+//     agg = builder.SetOutputSchema(std::move(schema))
+//               .AddAggregateTerm(revenue)
+//               .AddChild(std::move(hash_join1))
+//               .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
+//               .SetHavingClausePredicate(nullptr)
+//               .Build();
+//   }
+//   // Run and print
+//   {
+//     auto last = agg.get();
+//     CorrectnessFn correcteness_fn;
+//     RowChecker row_checker;
+//     GenericChecker checker(row_checker, correcteness_fn);
+//     OutputStore store{&checker, last->GetOutputSchema()};
+//     OutputPrinter printer(last->GetOutputSchema());
+//     MultiOutputCallback callback{std::vector<sql::ResultConsumer *>{&store, &printer}};
+//     sql::MemoryPool memory(nullptr);
+//     sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
+//     // Run & Check
+//     auto query = CompilationContext::Compile(*last);
+//     query->Run(&exec_ctx);
+//     checker.CheckCorrectness();
+//   }
+// }
 
 }  // namespace tpl::sql::codegen

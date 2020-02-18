@@ -189,6 +189,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q1)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -330,6 +332,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q4)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -696,6 +700,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -775,6 +781,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q6)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -1192,6 +1200,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -1561,6 +1571,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -1810,6 +1822,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -2113,6 +2127,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q18)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -2154,9 +2170,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
     // Build
     planner::SeqScanPlanNode::Builder builder;
     l_seq_scan = builder.SetOutputSchema(std::move(schema))
-        .SetScanPredicate(nullptr)
-        .SetTableOid(l_table->GetId())
-        .Build();
+                     .SetScanPredicate(nullptr)
+                     .SetTableOid(l_table->GetId())
+                     .Build();
   }
   // Part Scan
   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
@@ -2177,9 +2193,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
     // Build
     planner::SeqScanPlanNode::Builder builder;
     p_seq_scan = builder.SetOutputSchema(std::move(schema))
-        .SetScanPredicate(nullptr)
-        .SetTableOid(p_table->GetId())
-        .Build();
+                     .SetScanPredicate(nullptr)
+                     .SetTableOid(p_table->GetId())
+                     .Build();
   }
   // Hash Join 1
   std::unique_ptr<planner::AbstractPlanNode> hash_join1;
@@ -2229,11 +2245,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 
       return expr_maker.ConjunctionAnd(
           brand_comp, expr_maker.ConjunctionAnd(
-              container_comp,
-              expr_maker.ConjunctionAnd(
-                  qty_comp, expr_maker.ConjunctionAnd(
-                      size_comp, expr_maker.ConjunctionAnd(
-                          shipmode_comp, shipinstruct_comp)))));
+                          container_comp,
+                          expr_maker.ConjunctionAnd(
+                              qty_comp, expr_maker.ConjunctionAnd(
+                                            size_comp, expr_maker.ConjunctionAnd(
+                                                           shipmode_comp, shipinstruct_comp)))));
     };
     predicate1 =
         gen_predicate_clause("Brand#12", {"SM CASE", "SM BOX", "SM PACK", "SM PKG"}, 1, 11, 1, 5);
@@ -2246,13 +2262,13 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
     // Build
     planner::HashJoinPlanNode::Builder builder;
     hash_join1 = builder.AddChild(std::move(p_seq_scan))
-        .AddChild(std::move(l_seq_scan))
-        .SetOutputSchema(std::move(schema))
-        .AddLeftHashKey(p_partkey)
-        .AddRightHashKey(l_partkey)
-        .SetJoinType(planner::LogicalJoinType::INNER)
-        .SetJoinPredicate(predicate)
-        .Build();
+                     .AddChild(std::move(l_seq_scan))
+                     .SetOutputSchema(std::move(schema))
+                     .AddLeftHashKey(p_partkey)
+                     .AddRightHashKey(l_partkey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(predicate)
+                     .Build();
   }
   // Make the aggregate
   std::unique_ptr<planner::AbstractPlanNode> agg;
@@ -2274,11 +2290,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
     // Build
     planner::AggregatePlanNode::Builder builder;
     agg = builder.SetOutputSchema(std::move(schema))
-        .AddAggregateTerm(revenue)
-        .AddChild(std::move(hash_join1))
-        .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
-        .SetHavingClausePredicate(nullptr)
-        .Build();
+              .AddAggregateTerm(revenue)
+              .AddChild(std::move(hash_join1))
+              .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
+              .SetHavingClausePredicate(nullptr)
+              .Build();
   }
 
   // Compile plan
@@ -2287,6 +2303,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx);
 
   // Only time execution
   for (auto _ : state) {
@@ -2295,12 +2313,12 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 }
 
 BENCHMARK_REGISTER_F(TpchBenchmark, Q1);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q4);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q5);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q6);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q7);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q11);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q16);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q18);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q19);
+// BENCHMARK_REGISTER_F(TpchBenchmark, Q4);
+// BENCHMARK_REGISTER_F(TpchBenchmark, Q5);
+// BENCHMARK_REGISTER_F(TpchBenchmark, Q6);
+// BENCHMARK_REGISTER_F(TpchBenchmark, Q7);
+// BENCHMARK_REGISTER_F(TpchBenchmark, Q11);
+// BENCHMARK_REGISTER_F(TpchBenchmark, Q16);
+// BENCHMARK_REGISTER_F(TpchBenchmark, Q18);
+// BENCHMARK_REGISTER_F(TpchBenchmark, Q19);
 }  // namespace tpl::sql::codegen
