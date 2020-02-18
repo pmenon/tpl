@@ -1,5 +1,4 @@
 #include "sql/codegen/expression/constant_translator.h"
-#include <sql/generic_value.h>
 
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
