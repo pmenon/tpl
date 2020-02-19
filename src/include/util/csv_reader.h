@@ -1,5 +1,6 @@
 #pragma once
 
+#include <charconv>
 #include <memory>
 #include <string>
 #include <vector>
@@ -228,7 +229,9 @@ class CSVReader {
      */
     int64_t AsInteger() const {
       TPL_ASSERT(!escaped, "Integer data cannot contain be escaped");
-      return std::strtol(ptr, nullptr, 10);
+      int64_t n = 0;
+      std::from_chars(ptr, ptr + len, n);
+      return n;
     }
 
     /**
@@ -236,6 +239,8 @@ class CSVReader {
      */
     double AsDouble() const {
       TPL_ASSERT(!escaped, "Integer data cannot contain be escaped");
+      // TODO(pmenon): std::strtod() is very slow. We can probably speed this up
+      //               by implementing a custom floating-point parser.
       return std::strtod(ptr, nullptr);
     }
 
