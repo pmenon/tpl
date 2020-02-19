@@ -143,11 +143,13 @@ TEST_F(SeqScanTranslatorTest, NonVecFilterTest) {
     num_output_rows++;
   };
   GenericChecker checker(row_checker, {});
+
   // Create the execution context
-  OutputCollectorAndChecker store{&checker, last->GetOutputSchema()};
-  MultiOutputCallback callback{std::vector<sql::ResultConsumer *>{&store}};
+  OutputCollectorAndChecker store(&checker, last->GetOutputSchema());
+  MultiOutputCallback callback({&store});
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
+
   // Run & Check
   auto query = CompilationContext::Compile(*last);
   query->Run(&exec_ctx);
