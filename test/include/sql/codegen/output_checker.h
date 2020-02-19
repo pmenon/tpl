@@ -79,22 +79,23 @@ class GenericChecker : public OutputChecker {
 /**
  * Checks if the number of output tuples is correct
  */
-class NumChecker : public OutputChecker {
+class TupleCounterChecker : public OutputChecker {
  public:
   /**
-   * Constructor
+   * Constructor.
    * @param expected_count the expected number of output tuples
    */
-  NumChecker(int64_t expected_count) : expected_count_{expected_count} {}
+  explicit TupleCounterChecker(int64_t expected_count)
+      : curr_count_(0), expected_count_(expected_count) {}
 
   /**
-   * Checks if the expected number and the received number are the same
+   * Checks if the expected number and the received number are the same.
    */
   void CheckCorrectness() override { EXPECT_EQ(curr_count_, expected_count_); }
 
   /**
-   * Increment the current count
-   * @param output current output batch
+   * Increment the current count.
+   * @param output current output batch.
    */
   void ProcessBatch(const std::vector<std::vector<const sql::Val *>> &output) override {
     curr_count_ += output.size();
@@ -102,7 +103,7 @@ class NumChecker : public OutputChecker {
 
  private:
   // Current number of tuples
-  int64_t curr_count_{0};
+  int64_t curr_count_;
   // Expected number of tuples
   int64_t expected_count_;
 };

@@ -19,8 +19,12 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline),
       build_row_var_(GetCodeGen()->MakeFreshIdentifier("buildRow")),
       build_row_type_(GetCodeGen()->MakeFreshIdentifier("BuildRow")),
-      build_mark_(GetCodeGen()->MakeFreshIdentifier("build_mark")),
+      build_mark_(GetCodeGen()->MakeFreshIdentifier("buildMark")),
       left_pipeline_(this, Pipeline::Parallelism::Parallel) {
+  TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
+  TPL_ASSERT(!plan.GetRightHashKeys().empty(), "Hash-join must have join keys from right input");
+  TPL_ASSERT(plan.GetJoinPredicate() != nullptr, "Hash-join must have a join predicate!");
+
   pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
   pipeline->LinkSourcePipeline(LeftPipeline());
 
@@ -172,34 +176,35 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *f
   // The probe depends on the join type
   if (join_plan.RequiresRightMark()) {
     // First declare the right mark.
-    ast::Identifier right_mark_ident = codegen->MakeFreshIdentifier("right_mark");
-    ast::Expr *right_mark = codegen->MakeExpr(right_mark_ident);
-    function->Append(codegen->DeclareVarWithInit(right_mark_ident, codegen->ConstBool(true)));
+    ast::Identifier right_mark_var = codegen->MakeFreshIdentifier("rightMark");
+    ast::Expr *right_mark = codegen->MakeExpr(right_mark_var);
+    function->Append(codegen->DeclareVarWithInit(right_mark_var, codegen->ConstBool(true)));
 
-    // Probe hash table and check for a match
-    // This condition becomes false as soon as a match is found.
+    // Probe hash table and check for a match. Loop condition becomes false as
+    // soon as a match is found.
     auto loop_cond = codegen->BinaryOp(parsing::Token::Type::AND, right_mark, has_next_call);
     Loop entry_loop(function, lookup_call, loop_cond, nullptr);
     {
       // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
       function->Append(codegen->DeclareVarWithInit(
           build_row_var_, codegen->HTEntryIterGetRow(entry_iter, build_row_type_)));
-      CheckRightMark(ctx, function, right_mark);
+      CheckRightMark(ctx, function, right_mark_var);
     }
     entry_loop.EndLoop();
 
     // The next step depends on the join type.
     if (join_plan.GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_ANTI) {
-      // If the right mark is still true, then can do the anti join
+      // If the right mark is true, then we can perform the anti join.
       // if (right_mark)
-      If right_anti_check(function, right_mark);
-      { ctx->Push(function); }
+      If right_anti_check(function, codegen->MakeExpr(right_mark_var));
+      ctx->Push(function);
       right_anti_check.EndIf();
     } else if (join_plan.GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_SEMI) {
-      // If the right mark is unset, then there is at least one match
+      // If the right mark is unset, then there is at least one match.
       // if (!right_mark)
-      If right_semi_check(function, codegen->UnaryOp(parsing::Token::Type::BANG, right_mark));
-      { ctx->Push(function); }
+      auto cond = codegen->UnaryOp(parsing::Token::Type::BANG, codegen->MakeExpr(right_mark_var));
+      If right_semi_check(function, cond);
+      ctx->Push(function);
       right_semi_check.EndIf();
     }
   } else {
@@ -218,39 +223,43 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *f
 void HashJoinTranslator::CheckJoinPredicate(WorkContext *ctx, FunctionBuilder *function) const {
   const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
   auto codegen = GetCodeGen();
-  if (const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate()) {
-    auto cond = ctx->DeriveValue(*join_predicate, this);
+
+  auto cond = ctx->DeriveValue(*join_plan.GetJoinPredicate(), this);
+  if (join_plan.RequiresLeftMark()) {
+    // For left-semi joins, we also need to make sure the build-side tuple
+    // has not already found an earlier join partner. We enforce the check
+    // by modifying the join predicate.
+    auto left_mark = codegen->AccessStructMember(codegen->MakeExpr(build_row_var_), build_mark_);
+    cond = codegen->BinaryOp(parsing::Token::Type::AND, left_mark, cond);
+  }
+
+  If check_condition(function, cond);
+  {
     if (join_plan.RequiresLeftMark()) {
-      // For left-semi joins, we need to make sure this tuple hasn't been matched yet.
-      auto left_mark = codegen->AccessStructMember(codegen->MakeExpr(build_row_var_), build_mark_);
-      cond = codegen->BinaryOp(parsing::Token::Type::AND, left_mark, cond);
-    }
-    // Start if statement.
-    If check_condition(function, cond);
-    if (join_plan.RequiresLeftMark()) {
-      // For left-semi join, mark this tuple as accessed.
+      // Mark this tuple as accessed.
       auto left_mark = codegen->AccessStructMember(codegen->MakeExpr(build_row_var_), build_mark_);
       function->Append(codegen->Assign(left_mark, codegen->ConstBool(false)));
     }
-    ctx->Push(function);
-  } else {
+    // Move along.
     ctx->Push(function);
   }
+  check_condition.EndIf();
 }
 
 void HashJoinTranslator::CheckRightMark(WorkContext *ctx, FunctionBuilder *function,
-                                        ast::Expr *right_mark) const {
+                                        ast::Identifier right_mark) const {
   auto codegen = GetCodeGen();
-  if (const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate()) {
-    auto cond = ctx->DeriveValue(*join_predicate, this);
-    If check_condition(function, cond);
-    // In case there is a match, unset the right_mark
-    function->Append(codegen->Assign(right_mark, codegen->ConstBool(false)));
-    check_condition.EndIf();
-  } else {
-    // In case there is a match, unset the right_mark
-    function->Append(codegen->Assign(right_mark, codegen->ConstBool(false)));
+
+  // Generate the join condition.
+  const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate();
+  auto cond = ctx->DeriveValue(*join_predicate, this);
+
+  If check_condition(function, cond);
+  {
+    // If there is a match, unset the right mark now.
+    function->Append(codegen->Assign(codegen->MakeExpr(right_mark), codegen->ConstBool(false)));
   }
+  check_condition.EndIf();
 }
 
 void HashJoinTranslator::PerformPipelineWork(WorkContext *ctx, FunctionBuilder *function) const {

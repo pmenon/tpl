@@ -1,8 +1,10 @@
 #pragma once
-#include <iostream>
+
 #include "sql/planner/expression_maker.h"
 #include "sql/planner/plannodes/output_schema.h"
+
 namespace tpl::sql::planner {
+
 using OutputColumn = OutputSchema::Column;
 
 class OutputSchemaHelper {
@@ -15,7 +17,6 @@ class OutputSchemaHelper {
   }
 
   ExpressionMaker::Expression GetOutput(const std::string &col_name) {
-    std::cout << "Getting col " << col_name << std::endl;
     return GetOutput(name_to_idx_.at(col_name));
   }
 

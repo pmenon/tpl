@@ -95,11 +95,12 @@ class HashJoinTranslator : public OperatorTranslator {
   void LaunchWork(FunctionBuilder *, ast::Identifier) const override { UNREACHABLE("Impossible"); }
 
   /**
-   *
-   * @param work_context
-   * @param child_idx
-   * @param attr_idx
-   * @return
+   * Access the attribute at index @em attr_idx in the output of the child operator at the given
+   * index @em child_idx of the hash join plan.
+   * @param work_context The working context.
+   * @param child_idx The index of the child whose output to access.
+   * @param attr_idx The index of the attribute within the child's output.
+   * @return The attribute value.
    */
   ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
@@ -150,7 +151,8 @@ class HashJoinTranslator : public OperatorTranslator {
   void ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const;
 
   // Check the right mark.
-  void CheckRightMark(WorkContext *ctx, FunctionBuilder *function, ast::Expr *right_mark) const;
+  void CheckRightMark(WorkContext *ctx, FunctionBuilder *function,
+                      ast::Identifier right_mark) const;
 
   // Check the join predicate.
   void CheckJoinPredicate(WorkContext *ctx, FunctionBuilder *function) const;
