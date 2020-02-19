@@ -55,9 +55,9 @@ fun pipeline1_worker(queryState: *State, state: *ThreadState_1, tvi: *TableVecto
         // Filter on colA
         @filterManagerRunFilters(filter, vec)
 
-        // Insert into JHT using colB as key
+        // Insert into JHT using colA as key
         for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
-            var key = @vpiGetInt(vec, 1)
+            var key = @vpiGetInt(vec, 0)
             var elem = @ptrCast(*BuildRow, @joinHTInsert(jht, @hash(key)))
             elem.key = key
         }
@@ -77,14 +77,14 @@ fun pipeline2_worker(queryState: *State, state: *ThreadState_2, tvi: *TableVecto
     for (@tableIterAdvance(tvi)) {
         var vec = @tableIterGetVPI(tvi)
 
-        var key = @vpiGetInt(vec, 1)
-        var hash_val = @hash(key)
-
-        var iter: HashTableEntryIterator
-        for (@joinHTLookup(&queryState.jht, &iter, hash_val); @htEntryIterHasNext(&iter); ) {
-            var build_row = @ptrCast(*BuildRow, @htEntryIterGetRow(&iter))
-            if (@vpiGetInt(vec, 1) == build_row.key) {
-              state.num_matches = state.num_matches + 1
+        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
+            var key = @vpiGetInt(vec, 0)
+            var iter: HashTableEntryIterator
+            for (@joinHTLookup(&queryState.jht, &iter, @hash(key)); @htEntryIterHasNext(&iter); ) {
+                var build_row = @ptrCast(*BuildRow, @htEntryIterGetRow(&iter))
+                if (build_row.key == key) {
+                state.num_matches = state.num_matches + 1
+                }
             }
         }
 
