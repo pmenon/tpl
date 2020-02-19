@@ -11,25 +11,12 @@
 #include "ast/type.h"
 #include "vm/bytecode_module.h"
 #include "vm/llvm_engine.h"
+#include "vm/vm_defs.h"
 
 namespace tpl::vm {
 
 // Test
 class BytecodeTrampolineTest;
-
-/**
- * An enumeration capturing different execution methods and optimization levels.
- */
-enum class ExecutionMode : uint8_t {
-  // Always execute in interpreted mode
-  Interpret,
-  // Execute in interpreted mode, but trigger a compilation asynchronously. As
-  // compiled code becomes available, seamlessly swap it in and execute mixed
-  // interpreter and compiled code.
-  Adaptive,
-  // Compile and generate all machine code before executing the function
-  Compiled
-};
 
 /**
  * A Module instance is used to store all information associated with a single TPL program. Module's
