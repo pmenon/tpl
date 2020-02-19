@@ -241,6 +241,10 @@ ast::Expr *CodeGen::AddressOf(ast::Expr *obj) const {
   return UnaryOp(parsing::Token::Type::AMPERSAND, obj);
 }
 
+ast::Expr *CodeGen::AddressOf(ast::Identifier obj_name) const {
+  return UnaryOp(parsing::Token::Type::AMPERSAND, MakeExpr(obj_name));
+}
+
 ast::Expr *CodeGen::SizeOf(ast::Identifier type_name) const {
   return CallBuiltin(ast::Builtin::SizeOf, {MakeExpr(type_name)});
 }

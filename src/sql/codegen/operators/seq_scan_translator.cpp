@@ -179,10 +179,6 @@ void SeqScanTranslator::ScanTable(WorkContext *ctx, FunctionBuilder *function) c
     }
   }
   tvi_loop.EndLoop();
-
-  if (!GetPipeline()->IsParallel()) {
-    function->Append(codegen->TableIterClose(codegen->MakeExpr(tvi_var_)));
-  }
 }
 
 void SeqScanTranslator::InitializePipelineState(const Pipeline &pipeline,
@@ -206,18 +202,25 @@ void SeqScanTranslator::TearDownPipelineState(const Pipeline &pipeline,
 
 void SeqScanTranslator::PerformPipelineWork(WorkContext *work_context,
                                             FunctionBuilder *function) const {
-  if (!GetPipeline()->IsParallel() || this != GetPipeline()->Root()) {
+  CodeGen *codegen = GetCodeGen();
+
+  const bool declare_local_tvi = !GetPipeline()->IsParallel() || this != GetPipeline()->Root();
+  if (declare_local_tvi) {
     // var tviBase: TableVectorIterator
     // var tvi = &tviBase
-    CodeGen *codegen = GetCodeGen();
     auto tvi_base = codegen->MakeFreshIdentifier("tviBase");
     function->Append(codegen->DeclareVarNoInit(tvi_base, ast::BuiltinType::TableVectorIterator));
-    function->Append(
-        codegen->DeclareVarWithInit(tvi_var_, codegen->AddressOf(codegen->MakeExpr(tvi_base))));
+    function->Append(codegen->DeclareVarWithInit(tvi_var_, codegen->AddressOf(tvi_base)));
     function->Append(codegen->TableIterInit(codegen->MakeExpr(tvi_var_), GetTableName()));
   }
 
+  // Scan it.
   ScanTable(work_context, function);
+
+  // Close TVI, if need be.
+  if (declare_local_tvi) {
+    function->Append(codegen->TableIterClose(codegen->MakeExpr(tvi_var_)));
+  }
 }
 
 util::RegionVector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const {

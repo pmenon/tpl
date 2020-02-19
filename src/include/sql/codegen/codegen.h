@@ -221,6 +221,11 @@ class CodeGen {
   [[nodiscard]] ast::Expr *AddressOf(ast::Expr *obj) const;
 
   /**
+   * @return An expression that represents the address of the provided object.
+   */
+  [[nodiscard]] ast::Expr *AddressOf(ast::Identifier obj_name) const;
+
+  /**
    * @return An expression that represents the size of a type with the provided name, in bytes.
    */
   [[nodiscard]] ast::Expr *SizeOf(ast::Identifier type_name) const;
