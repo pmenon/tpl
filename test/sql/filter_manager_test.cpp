@@ -283,7 +283,7 @@ void RunExperiment(const std::string &output) {
   }
 }
 
-TEST_F(FilterManagerTest, Experiment) {
+TEST_F(FilterManagerTest, DISABLED_Experiment) {
   static constexpr uint32_t num_elems = 2000000;
   static constexpr uint32_t half = num_elems / 2;
   static constexpr uint32_t ten_pct = num_elems / 10;
