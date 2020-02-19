@@ -53,11 +53,14 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
   function->Append(
       codegen->DeclareVarWithInit(vpi_var_, codegen->AddressOf(codegen->MakeExpr(vpi_base))));
 
+  // @vpiInit()
   auto vpi = codegen->MakeExpr(vpi_var_);
+  function->Append(codegen->VPIInit(vpi, vector_proj, tid_list));
+
   auto gen_body = [&](const bool is_filtered) {
     Loop vpi_loop(
-        function, codegen->MakeStmt(codegen->VPIInit(vpi, vector_proj, tid_list)),  // @vpiInit()
-        codegen->VPIHasNext(vpi, is_filtered),                      // @vpiHasNext[Filtered]()
+        function, nullptr,                                          // No init;
+        codegen->VPIHasNext(vpi, is_filtered),                      // @vpiHasNext[Filtered]();
         codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));  // @vpiAdvance[Filtered]()
     {
       WorkContext context(GetCompilationContext(), *GetPipeline());
@@ -98,7 +101,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(
   // At this point, we create a term.
   // Signature: (vp: *VectorProjection, tids: *TupleIdList, context: *uint8) -> nil
   auto codegen = GetCodeGen();
-  auto fn_name = codegen->MakeFreshIdentifier("filterClause");
+  auto fn_name = codegen->MakeFreshIdentifier("FilterClause");
   util::RegionVector<ast::FieldDecl *> params = codegen->MakeFieldList({
       codegen->MakeField(codegen->MakeIdentifier("vp"),
                          codegen->PointerType(ast::BuiltinType::VectorProjection)),
