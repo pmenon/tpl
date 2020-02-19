@@ -248,9 +248,9 @@ TEST_F(SeqScanTranslatorTest, SimpleSortTest) {
     // Build
     planner::SeqScanPlanNode::Builder builder;
     seq_scan = builder.SetOutputSchema(std::move(schema))
-        .SetScanPredicate(predicate)
-        .SetTableOid(table->GetId())
-        .Build();
+                   .SetScanPredicate(predicate)
+                   .SetTableOid(table->GetId())
+                   .Build();
   }
   // Order By
   std::unique_ptr<planner::AbstractPlanNode> order_by;
@@ -265,16 +265,16 @@ TEST_F(SeqScanTranslatorTest, SimpleSortTest) {
     // Build
     planner::OrderByPlanNode::Builder builder;
     order_by = builder.SetOutputSchema(std::move(schema))
-        .AddChild(std::move(seq_scan))
-        .AddSortKey(col2, planner::OrderByOrderingType::ASC)
-        .Build();
+                   .AddChild(std::move(seq_scan))
+                   .AddSortKey(col2, planner::OrderByOrderingType::ASC)
+                   .Build();
   }
   auto last = order_by.get();
 
   // Checkers:
   // There should be 500 output rows, where col1 < 500.
   // The output should be sorted by col2 ASC
-  SingleIntComparisonChecker col1_checker([](auto a, auto b){return a < b;}, 0, 500);
+  SingleIntComparisonChecker col1_checker([](auto a, auto b) { return a < b; }, 0, 500);
   SingleIntSortChecker col2_sort_checker(1);
   MultiChecker multi_checker({&col2_sort_checker, &col1_checker});
 
