@@ -22,7 +22,6 @@
 #include "sql/codegen/output_checker.h"
 #include "sql/planner/expression_maker.h"
 #include "sql/planner/output_schema_util.h"
-#include "sql/tablegen/table_generator.h"
 
 namespace tpl::sql::codegen {
 
@@ -75,17 +74,18 @@ TEST_F(SeqScanTranslatorTest, SimpleSeqScanTest) {
   // Make the output checkers
   SingleIntComparisonChecker col1_checker(std::less<int64_t>(), 0, 500);
   SingleIntComparisonChecker col2_checker(std::greater_equal<int64_t>(), 1, 5);
-  TupleCounterChecker tuple_count_checker(500 / 2);
-  MultiChecker multi_checker({&col1_checker, &col2_checker, &tuple_count_checker});
+  MultiChecker multi_checker({&col1_checker, &col2_checker});
 
   // Create the execution context
-  OutputStore store(&multi_checker, last->GetOutputSchema());
+  OutputCollectorAndChecker store(&multi_checker, last->GetOutputSchema());
   MultiOutputCallback callback({&store});
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
   // Run & Check
   auto query = CompilationContext::Compile(*last);
   query->Run(&exec_ctx);
+
+  multi_checker.CheckCorrectness();
 }
 
 TEST_F(SeqScanTranslatorTest, NonVecFilterTest) {
@@ -142,20 +142,17 @@ TEST_F(SeqScanTranslatorTest, NonVecFilterTest) {
                 (col1->val >= 500 && col1->val < 1000 && (col2->val == 7 || col2->val == 3)));
     num_output_rows++;
   };
-  CorrectnessFn correcteness_fn = [&num_output_rows]() {
-    // The first predicate selects 5 out of every 10 of the 500 tuples.
-    // The second predicate selects 2 out of every 10.
-    ASSERT_EQ(num_output_rows, 500 / 2 + 500 / 5);
-  };
-  GenericChecker checker(row_checker, correcteness_fn);
+  GenericChecker checker(row_checker, {});
   // Create the execution context
-  OutputStore store{&checker, last->GetOutputSchema()};
+  OutputCollectorAndChecker store{&checker, last->GetOutputSchema()};
   MultiOutputCallback callback{std::vector<sql::ResultConsumer *>{&store}};
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
   // Run & Check
   auto query = CompilationContext::Compile(*last);
   query->Run(&exec_ctx);
+
+  checker.CheckCorrectness();
 }
 
 TEST_F(SeqScanTranslatorTest, SimpleAggregateTest) {
@@ -215,16 +212,83 @@ TEST_F(SeqScanTranslatorTest, SimpleAggregateTest) {
   MultiChecker multi_checker({&num_checker, &sum_checker});
 
   // Compile and Run
-  OutputStore store(&multi_checker, agg->GetOutputSchema());
+  OutputCollectorAndChecker store(&multi_checker, agg->GetOutputSchema());
   MultiOutputCallback callback({&store});
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, agg->GetOutputSchema(), &callback);
+
   // Run & Check
   auto query = CompilationContext::Compile(*last);
   query->Run(&exec_ctx);
+
+  multi_checker.CheckCorrectness();
 }
 
 TEST_F(SeqScanTranslatorTest, SimpleSortTest) {
+  // SELECT col1, col2 FROM test_1 WHERE col1 < 500 ORDER BY col2 ASC
+
+  // Get accessor
+  auto accessor = sql::Catalog::Instance();
+  planner::ExpressionMaker expr_maker;
+  sql::Table *table = accessor->LookupTableByName("test_1");
+  const auto &table_schema = table->GetSchema();
+  std::unique_ptr<planner::AbstractPlanNode> seq_scan;
+  planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
+  {
+    // Get Table columns
+    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA").oid, sql::TypeId::Integer);
+    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    seq_scan_out.AddOutput("col1", col1);
+    seq_scan_out.AddOutput("col2", col2);
+    auto schema = seq_scan_out.MakeSchema();
+    // Make predicate
+    auto predicate = expr_maker.CompareLt(col1, expr_maker.Constant(500));
+    // Build
+    planner::SeqScanPlanNode::Builder builder;
+    seq_scan = builder.SetOutputSchema(std::move(schema))
+        .SetScanPredicate(predicate)
+        .SetTableOid(table->GetId())
+        .Build();
+  }
+  // Order By
+  std::unique_ptr<planner::AbstractPlanNode> order_by;
+  planner::OutputSchemaHelper order_by_out{&expr_maker, 0};
+  {
+    // Output Colums col1, col2
+    auto col1 = seq_scan_out.GetOutput("col1");
+    auto col2 = seq_scan_out.GetOutput("col2");
+    order_by_out.AddOutput("col1", col1);
+    order_by_out.AddOutput("col2", col2);
+    auto schema = order_by_out.MakeSchema();
+    // Build
+    planner::OrderByPlanNode::Builder builder;
+    order_by = builder.SetOutputSchema(std::move(schema))
+        .AddChild(std::move(seq_scan))
+        .AddSortKey(col2, planner::OrderByOrderingType::ASC)
+        .Build();
+  }
+  auto last = order_by.get();
+
+  // Checkers:
+  // There should be 500 output rows, where col1 < 500.
+  // The output should be sorted by col2 ASC
+  SingleIntComparisonChecker col1_checker([](auto a, auto b){return a < b;}, 0, 500);
+  SingleIntSortChecker col2_sort_checker(1);
+  MultiChecker multi_checker({&col2_sort_checker, &col1_checker});
+
+  OutputCollectorAndChecker store(&multi_checker, order_by->GetOutputSchema());
+  MultiOutputCallback callback({&store});
+  sql::MemoryPool memory(nullptr);
+  sql::ExecutionContext exec_ctx(&memory, order_by->GetOutputSchema(), &callback);
+
+  // Run & Check
+  auto query = CompilationContext::Compile(*last);
+  query->Run(&exec_ctx);
+
+  multi_checker.CheckCorrectness();
+}
+
+TEST_F(SeqScanTranslatorTest, TwoColumnSortTest) {
   // SELECT col1, col2, col1 + col2 FROM test_1 WHERE col1 < 500 ORDER BY col2 ASC, col1 - col2 DESC
 
   // Get accessor
@@ -304,13 +368,16 @@ TEST_F(SeqScanTranslatorTest, SimpleSortTest) {
     ASSERT_EQ(num_output_rows, num_expected_rows);
   };
   GenericChecker checker(row_checker, correcteness_fn);
-  OutputStore store(&checker, order_by->GetOutputSchema());
+  OutputCollectorAndChecker store(&checker, order_by->GetOutputSchema());
   MultiOutputCallback callback({&store});
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, order_by->GetOutputSchema(), &callback);
+
   // Run & Check
   auto query = CompilationContext::Compile(*last);
   query->Run(&exec_ctx);
+
+  checker.CheckCorrectness();
 }
 
 }  // namespace tpl::sql::codegen

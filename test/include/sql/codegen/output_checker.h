@@ -1,12 +1,11 @@
-#include <ostream>
+#pragma once
+
+#include <utility>
+
 #include "sql/planner/plannodes/output_schema.h"
 #include "sql/schema.h"
 #include "sql/value.h"
 #include "util/test_harness.h"
-
-// TODO(Amadou): Currently all checker only work on single integer columns. Ideally, we want them to
-// work on arbitrary expressions, but this is no simple task. We would basically need an expression
-// evaluator on output rows.
 
 namespace tpl::sql::codegen {
 /**
@@ -27,7 +26,7 @@ class MultiChecker : public OutputChecker {
    * Constructor
    * @param checkers list of output checkers
    */
-  MultiChecker(std::vector<OutputChecker *> &&checkers) : checkers_{std::move(checkers)} {}
+  explicit MultiChecker(std::vector<OutputChecker *> &&checkers) : checkers_(std::move(checkers)) {}
 
   /**
    * Call checkCorrectness on all output checkers
@@ -58,14 +57,14 @@ using CorrectnessFn = std::function<void()>;
 class GenericChecker : public OutputChecker {
  public:
   GenericChecker(RowChecker row_checker, CorrectnessFn correctness_fn)
-      : row_checker_{row_checker}, correctness_fn_(correctness_fn) {}
+      : row_checker_(std::move(row_checker)), correctness_fn_(std::move(correctness_fn)) {}
 
   void CheckCorrectness() override {
-    if (bool(correctness_fn_)) correctness_fn_();
+    if (correctness_fn_) correctness_fn_();
   }
 
   void ProcessBatch(const std::vector<std::vector<const sql::Val *>> &output) override {
-    if (!bool(row_checker_)) return;
+    if (!row_checker_) return;
     for (const auto &vals : output) {
       row_checker_(vals);
     }
@@ -116,14 +115,14 @@ class SingleIntComparisonChecker : public OutputChecker {
  public:
   SingleIntComparisonChecker(std::function<bool(int64_t, int64_t)> fn, uint32_t col_idx,
                              int64_t rhs)
-      : comp_fn_(fn), col_idx_{col_idx}, rhs_{rhs} {}
+      : comp_fn_(std::move(fn)), col_idx_(col_idx), rhs_(rhs) {}
 
   void CheckCorrectness() override {}
 
   void ProcessBatch(const std::vector<std::vector<const sql::Val *>> &output) override {
     for (const auto &vals : output) {
       auto int_val = static_cast<const sql::Integer *>(vals[col_idx_]);
-      EXPECT_TRUE(comp_fn_(int_val->val, rhs_));
+      EXPECT_TRUE(comp_fn_(int_val->val, rhs_)) << "lhs=" << int_val->val << ",rhs=" << rhs_;
     }
   }
 
@@ -178,7 +177,7 @@ class SingleIntSumChecker : public OutputChecker {
    * @param expected expected sum
    */
   SingleIntSumChecker(uint32_t col_idx, int64_t expected)
-      : col_idx_{col_idx}, expected_{expected} {}
+      : col_idx_(col_idx), curr_sum_(0), expected_(expected) {}
 
   /**
    * Checks of the expected sum and the received sum are the same
@@ -198,7 +197,7 @@ class SingleIntSumChecker : public OutputChecker {
 
  private:
   uint32_t col_idx_;
-  int64_t curr_sum_{0};
+  int64_t curr_sum_;
   int64_t expected_;
 };
 
@@ -211,7 +210,7 @@ class SingleIntSortChecker : public OutputChecker {
    * Constructor
    * @param col_idx column to check
    */
-  SingleIntSortChecker(uint32_t col_idx) : col_idx_{0} {}
+  SingleIntSortChecker(uint32_t col_idx) : col_idx_(col_idx), prev_val_(sql::Integer::Null()) {}
 
   /**
    * Does nothing. All the checking is done in ProcessBatch.
@@ -226,18 +225,18 @@ class SingleIntSortChecker : public OutputChecker {
     for (const auto &vals : output) {
       auto int_val = static_cast<const sql::Integer *>(vals[col_idx_]);
       if (int_val->is_null) {
-        EXPECT_TRUE(prev_val.is_null);
+        EXPECT_TRUE(prev_val_.is_null);
       } else {
-        EXPECT_TRUE(prev_val.is_null || int_val->val >= prev_val.val);
+        EXPECT_TRUE(prev_val_.is_null || int_val->val >= prev_val_.val)
+            << prev_val_.val << " NOT < " << int_val->val;
       }
-      // Copy the value since the pointer does not belong to this class.
-      prev_val = *int_val;
+      prev_val_ = *int_val;
     }
   }
 
  private:
-  sql::Integer prev_val{sql::Integer::Null()};
   uint32_t col_idx_;
+  sql::Integer prev_val_;
 };
 
 /**
@@ -249,13 +248,13 @@ class MultiOutputCallback : public sql::ResultConsumer {
    * Constructor
    * @param callbacks list of output callbacks
    */
-  MultiOutputCallback(std::vector<sql::ResultConsumer *> callbacks)
-      : callbacks_{std::move(callbacks)} {}
+  explicit MultiOutputCallback(std::vector<sql::ResultConsumer *> callbacks)
+      : callbacks_(std::move(callbacks)) {}
 
   /**
    * OutputCallback function
    */
-  void Consume(const sql::OutputBuffer &tuples) {
+  void Consume(const sql::OutputBuffer &tuples) override {
     for (auto &callback : callbacks_) {
       callback->Consume(tuples);
     }
@@ -266,105 +265,16 @@ class MultiOutputCallback : public sql::ResultConsumer {
 };
 
 /**
- * Consumer that prints out results to the given output stream.
- */
-class OutputPrinter : public sql::ResultConsumer {
- public:
-  /**
-   * Create a new consumer.
-   * @param os The stream to write the results into.
-   * @param output_schema The schema of the output of the query.
-   */
-  OutputPrinter(const sql::planner::OutputSchema *output_schema) : output_schema_(output_schema) {}
-
-  /**
-   * Print out the tuples in the input batch.
-   * @param batch The batch of result tuples to print.
-   */
-  void Consume(const OutputBuffer &batch) override {
-    for (const byte *raw_tuple : batch) {
-      PrintTuple(raw_tuple);
-    }
-  }
-
- private:
-  // Print one tuple
-  void PrintTuple(const byte *tuple) const {
-    bool first = true;
-    for (const auto &col_info : output_schema_->GetColumns()) {
-      // Comma
-      if (!first) std::cout << ",";
-      first = false;
-
-      // Column value
-      switch (GetSqlTypeFromInternalType(col_info.GetType())) {
-        case SqlTypeId::Boolean: {
-          const auto val = reinterpret_cast<const BoolVal *>(tuple);
-          std::cout << (val->is_null ? "NULL" : val->val ? "True" : "False");
-          tuple += sizeof(BoolVal);
-          break;
-        }
-        case SqlTypeId::TinyInt:
-        case SqlTypeId::SmallInt:
-        case SqlTypeId::Integer:
-        case SqlTypeId::BigInt: {
-          const auto val = reinterpret_cast<const Integer *>(tuple);
-          std::cout << (val->is_null ? "NULL" : std::to_string(val->val));
-          tuple += sizeof(Integer);
-          break;
-        }
-        case SqlTypeId::Real:
-        case SqlTypeId::Double:
-        case SqlTypeId::Decimal: {
-          const auto val = reinterpret_cast<const Real *>(tuple);
-          if (val->is_null) {
-            std::cout << "NULL";
-          } else {
-            std::cout << std::fixed << std::setprecision(2) << val->val << std::dec;
-          }
-          tuple += sizeof(Real);
-          break;
-        }
-        case SqlTypeId::Date: {
-          const auto val = reinterpret_cast<const DateVal *>(tuple);
-          std::cout << (val->is_null ? "NULL" : val->val.ToString());
-          tuple += sizeof(DateVal);
-          break;
-        }
-        case SqlTypeId::Char:
-        case SqlTypeId::Varchar: {
-          const auto val = reinterpret_cast<const StringVal *>(tuple);
-          if (val->is_null) {
-            std::cout << "NULL";
-          } else {
-            std::cout << "'" << val->val.GetStringView() << "'";
-          }
-          tuple += sizeof(StringVal);
-          break;
-        }
-      }
-    }
-
-    // New line
-    std::cout << std::endl;
-  }
-
- private:
-  // The output schema
-  const sql::planner::OutputSchema *output_schema_;
-};
-
-/**
  * An output callback that stores the rows in a vector and runs a checker on them.
  */
-class OutputStore : public sql::ResultConsumer {
+class OutputCollectorAndChecker : public sql::ResultConsumer {
  public:
   /**
    * Constructor
    * @param checker checker to run
    * @param schema output schema of the query.
    */
-  OutputStore(OutputChecker *checker, const planner::OutputSchema *schema)
+  OutputCollectorAndChecker(OutputChecker *checker, const planner::OutputSchema *schema)
       : schema_(schema), checker_(checker) {}
 
   /**
@@ -374,8 +284,8 @@ class OutputStore : public sql::ResultConsumer {
     for (uint32_t row = 0; row < tuples.size(); row++) {
       uint32_t curr_offset = 0;
       std::vector<const sql::Val *> vals;
+      vals.reserve(schema_->NumColumns());
       for (uint16_t col = 0; col < schema_->GetColumns().size(); col++) {
-        // TODO(Amadou): Figure out to print other types.
         switch (schema_->GetColumn(col).GetType()) {
           case sql::TypeId::TinyInt:
           case sql::TypeId::SmallInt:
@@ -429,4 +339,5 @@ class OutputStore : public sql::ResultConsumer {
   // checker to run
   OutputChecker *checker_;
 };
+
 }  // namespace tpl::sql::codegen

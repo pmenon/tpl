@@ -5,11 +5,10 @@
 #include "sql/result_consumer.h"
 
 namespace tpl::sql {
+
 namespace planner {
 class OutputSchema;
-};
-
-class Schema;
+}  // namespace planner
 
 /**
  * Consumer that prints out results to the given output stream.
