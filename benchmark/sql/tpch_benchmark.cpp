@@ -1,46 +1,55 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
-#include "ast/ast_dump.h"
 
+#include "benchmark/benchmark.h"
+
+#include "ast/ast_dump.h"
 #include "compiler/compiler.h"
 #include "sema/sema.h"
+#include "sql/codegen/compilation_context.h"
+#include "sql/codegen/output_checker.h"
 #include "sql/execution_context.h"
-#include "sql/table.h"
-#include "sql/value.h"
-#include "vm/bytecode_generator.h"
-#include "vm/bytecode_module.h"
-#include "vm/llvm_engine.h"
-#include "vm/module.h"
-
+#include "sql/planner/expression_maker.h"
+#include "sql/planner/output_schema_util.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 #include "sql/planner/plannodes/hash_join_plan_node.h"
 #include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/output_schema.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
-
-#include "benchmark/benchmark.h"
-#include "sql/codegen/compilation_context.h"
-#include "sql/codegen/output_checker.h"
-#include "sql/planner/expression_maker.h"
-#include "sql/planner/output_schema_util.h"
+#include "sql/table.h"
 #include "sql/tablegen/table_generator.h"
+#include "sql/value.h"
+#include "vm/bytecode_generator.h"
+#include "vm/bytecode_module.h"
+#include "vm/llvm_engine.h"
+#include "vm/module.h"
 
 namespace tpl::sql::codegen {
 
+namespace {
+
+// Change this path to where your TPC-H data is.
+constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-1";
+
+// Flag used to ensure the TPCH database is only loaded once.
+std::once_flag kLoadTpchDatabaseOnce{};
+
+}  // namespace
+
 class TpchBenchmark : public benchmark::Fixture {
  public:
-  TpchBenchmark() : benchmark::Fixture() {}
-
-  ~TpchBenchmark() override {}
-
-  void SetUp(const benchmark::State &state) override { benchmark::Fixture::SetUp(state); }
-
-  void TearDown(const benchmark::State &state) override { benchmark::Fixture::TearDown(state); }
+  void SetUp(benchmark::State &st) override {
+    Fixture::SetUp(st);
+    std::call_once(kLoadTpchDatabaseOnce, []() {
+      tablegen::TableGenerator::GenerateTPCHTables(Catalog::Instance(), kTpchDataDir);
+    });
+  }
 };
 
 BENCHMARK_DEFINE_F(TpchBenchmark, Q1)(benchmark::State &state) {
@@ -2313,12 +2322,12 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 }
 
 BENCHMARK_REGISTER_F(TpchBenchmark, Q1);
- BENCHMARK_REGISTER_F(TpchBenchmark, Q4);
- BENCHMARK_REGISTER_F(TpchBenchmark, Q5);
- BENCHMARK_REGISTER_F(TpchBenchmark, Q6);
- BENCHMARK_REGISTER_F(TpchBenchmark, Q7);
- BENCHMARK_REGISTER_F(TpchBenchmark, Q11);
- BENCHMARK_REGISTER_F(TpchBenchmark, Q16);
- BENCHMARK_REGISTER_F(TpchBenchmark, Q18);
- BENCHMARK_REGISTER_F(TpchBenchmark, Q19);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q4);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q5);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q6);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q7);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q11);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q16);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q18);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q19);
 }  // namespace tpl::sql::codegen
