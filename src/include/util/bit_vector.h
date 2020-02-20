@@ -418,7 +418,7 @@ class BitVector {
    * @pre The sizes of the bit vectors must be the same.
    *
    * @param other The bit vector to intersect with. Lengths must match exactly.
-   * @return This bit vector.
+   * @return This modified bit vector.
    */
   BitVector &Intersect(const BitVector &other) {
     TPL_ASSERT(GetNumBits() == other.GetNumBits(), "Mismatched bit vector size");
@@ -434,7 +434,7 @@ class BitVector {
    * @pre The sizes of the bit vectors must be the same.
    *
    * @param other The bit vector to union with. Lengths must match exactly.
-   * @return This bit vector.
+   * @return This modified bit vector.
    */
   BitVector &Union(const BitVector &other) {
     TPL_ASSERT(GetNumBits() == other.GetNumBits(), "Mismatched bit vector size");
@@ -450,12 +450,28 @@ class BitVector {
    * @pre The sizes of the bit vectors must be the same.
    *
    * @param other The bit vector to diff with. Lengths must match exactly.
-   * @return This bit vector.
+   * @return This modified bit vector.
    */
   BitVector &Difference(const BitVector &other) {
     TPL_ASSERT(GetNumBits() == other.GetNumBits(), "Mismatched bit vector size");
     for (uint32_t i = 0; i < GetNumWords(); i++) {
       words_[i] &= ~other.words_[i];
+    }
+    return *this;
+  }
+
+  /**
+   * Perform a bitwise XOR of this bit vector with the provided bit vector.
+   *
+   * @pre The sizes of the bit vectors must be the same.
+   *
+   * @param other The bit vector to XOR with. Lengths must match.
+   * @return This modified bit vector.
+   */
+  BitVector &Xor(const BitVector &other) {
+    TPL_ASSERT(GetNumBits() == other.GetNumBits(), "Mismatched bit vector size");
+    for (uint32_t i = 0; i < GetNumWords(); i++) {
+      words_[i] ^= other.words_[i];
     }
     return *this;
   }
@@ -690,10 +706,7 @@ class BitVector {
    * @param that The bit vector to difference with.
    * @return This bit vector after all <b>common</b> between this and @em that have been removed.
    */
-  BitVector &operator-=(const BitVector &that) {
-    Difference(that);
-    return *this;
-  }
+  BitVector &operator-=(const BitVector &that) { return Difference(that); }
 
   /**
    * Perform an intersection of this bit vector the provided bit vector storing the result in this
@@ -704,10 +717,7 @@ class BitVector {
    * @param that The bit vector to intersect with.
    * @return This bit vector after an intersection with @em that bit vector.
    */
-  BitVector &operator&=(const BitVector &that) {
-    Intersect(that);
-    return *this;
-  }
+  BitVector &operator&=(const BitVector &that) { return Intersect(that); }
 
   /**
    * Perform a union of this bit vector and the provided bit vector storing the result in this bit
@@ -718,10 +728,18 @@ class BitVector {
    * @param that The bit vector to union with.
    * @return This bit vector after a union with @em that bit vector.
    */
-  BitVector &operator|=(const BitVector &that) {
-    Union(that);
-    return *this;
-  }
+  BitVector &operator|=(const BitVector &that) { return Union(that); }
+
+  /**
+   * Perform a bitwise XOR of this vector and the provided bit vector, storing the result in this
+   * bit vector.
+   *
+   * @pre The two vectors must be the same size.
+   *
+   * @param that The bit vector to XOR with.
+   * @return This bit vector after XORing with @em that bit vector.
+   */
+  BitVector &operator^=(const BitVector &that) { return Xor(that); }
 
   /**
    * @return The number of bits in the bit vector.
@@ -769,13 +787,9 @@ class BitVector {
 };
 
 /**
- * Free bit vector difference operation. Returns a - b, the difference of the bit vectors @em a and
- * @em b.
- *
- * Note: @em a is copied on purpose to ensure RVO.
- *
+ * Bit vector difference. Returns a - b, the difference of the bit vectors @em a and @em b.
+ * NOTE: The left input @em a is copied on purpose to ensure RVO.
  * @pre Both inputs must have the same size.
- *
  * @tparam T The word size used by both bit vectors.
  * @param a The left bit vector to the operation.
  * @param b The right bit vector to the operation.
@@ -788,13 +802,9 @@ inline BitVector<T> operator-(BitVector<T> a, const BitVector<T> &b) {
 }
 
 /**
- * Free bit vector intersection operation. Returns a & b, the intersection of the bit vectors @em a
- * and @em b.
- *
- * Note: @em a is copied on purpose to ensure RVO.
- *
+ * Bit vector intersection. Returns a & b, the intersection of the bit vectors @em a and @em b.
+ * NOTE: The left input @em a is copied on purpose to ensure RVO.
  * @pre Both inputs must have the same size.
- *
  * @tparam T The word size used by both bit vectors.
  * @param a The left bit vector to the operation.
  * @param b The right bit vector to the operation.
@@ -807,12 +817,9 @@ inline BitVector<T> operator&(BitVector<T> a, const BitVector<T> &b) {
 }
 
 /**
- * Free bit vector union operation. Returns a & b, the union of the bit vectors @em a and @em b.
- *
- * Note: @em a is copied on purpose to ensure RVO.
- *
+ * Free bit vector union. Returns a & b, the union of the bit vectors @em a and @em b.
+ * NOTE: The left input @em a is copied on purpose to ensure RVO.
  * @pre Both inputs must have the same size.
- *
  * @tparam T The word size used by both bit vectors.
  * @param a The left bit vector to the operation.
  * @param b The right bit vector to the operation.
@@ -821,6 +828,21 @@ inline BitVector<T> operator&(BitVector<T> a, const BitVector<T> &b) {
 template <typename T>
 inline BitVector<T> operator|(BitVector<T> a, const BitVector<T> &b) {
   a |= b;
+  return a;
+}
+
+/**
+ * Bit vector XOR operation. Returns a ^ b, the XOR result of the bit vectors @em a and @em b.
+ * NOTE: The left input @em a is copied on purpose to ensure RVO.
+ * @pre Both inputs must have the same size.
+ * @tparam T The word size used by both bit vectors.
+ * @param a The left bit vector to the operation.
+ * @param b The right bit vector to the operation.
+ * @return The XOR result between a and b.
+ */
+template <typename T>
+inline BitVector<T> operator^(BitVector<T> a, const BitVector<T> &b) {
+  a ^= b;
   return a;
 }
 
