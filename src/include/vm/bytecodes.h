@@ -448,9 +448,9 @@ namespace tpl::vm {
   F(SplitPart, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)     \
   F(Substring, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)     \
   F(Trim, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
-  F(Upper, OperandType::Local, OperandType::Local, OperandType::Local) \
-  \
-  /* Date Functions*/ \
+  F(Upper, OperandType::Local, OperandType::Local, OperandType::Local)                                                 \
+                                                                                                                       \
+  /* Date Functions */                                                                                                 \
   F(ExtractYear, OperandType::Local, OperandType::Local)
 
 // clang-format on
