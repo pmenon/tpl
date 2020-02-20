@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
   tpl::logging::InitLogger();
 
   benchmark::Initialize(&argc, argv);
-  
+
   // TODO(pmenon): Pull all initialization/shutdown logic into single function.
   tpl::CpuInfo::Instance();
   tpl::sql::Catalog::Instance();

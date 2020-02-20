@@ -1,8 +1,10 @@
 #pragma once
 
 #include <utility>
+#include <vector>
 
 #include "sql/planner/plannodes/output_schema.h"
+#include "sql/result_consumer.h"
 #include "sql/schema.h"
 #include "sql/value.h"
 #include "util/test_harness.h"
@@ -210,7 +212,8 @@ class SingleIntSortChecker : public OutputChecker {
    * Constructor
    * @param col_idx column to check
    */
-  SingleIntSortChecker(uint32_t col_idx) : col_idx_(col_idx), prev_val_(sql::Integer::Null()) {}
+  explicit SingleIntSortChecker(uint32_t col_idx)
+      : col_idx_(col_idx), prev_val_(sql::Integer::Null()) {}
 
   /**
    * Does nothing. All the checking is done in ProcessBatch.
