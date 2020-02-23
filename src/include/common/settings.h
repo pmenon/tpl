@@ -140,6 +140,10 @@ class Settings {
     return std::get<std::string>(settings_[static_cast<uint32_t>(name)]);
   }
 
+  void SetDouble(Name name, const double val) {
+    settings_[static_cast<uint32_t>(name)] = val;
+  }
+
  private:
   // Private to force singleton access
   Settings();
