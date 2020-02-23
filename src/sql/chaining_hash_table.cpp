@@ -20,7 +20,8 @@ ChainingHashTable<UseTags>::~ChainingHashTable() {
 
 template <bool UseTags>
 void ChainingHashTable<UseTags>::SetSize(uint64_t new_size) {
-  TPL_ASSERT(new_size > 0, "New size cannot be zero!");
+  new_size = std::max(new_size, kMinTableSize);
+
   if (entries_ != nullptr) {
     Memory::FreeHugeArray(entries_, GetCapacity());
   }

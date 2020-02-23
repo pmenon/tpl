@@ -57,7 +57,8 @@ class ChainingHashTable {
   static constexpr uint64_t kMaskPointer = (~0ull) >> kNumTagBits;
   // The mask to use to retrieve the tag from a tagged pointer.
   static constexpr uint64_t kMaskTag = (~0ull) << kNumPointerBits;
-
+  // The minimum table size.
+  static constexpr uint64_t kMinTableSize = 8;
   // The default load factor to use.
   static constexpr float kDefaultLoadFactor = 0.7;
 
