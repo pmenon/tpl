@@ -255,12 +255,10 @@ TEST_F(VectorTest, CopyWithOffset) {
   // vec = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
   auto vec = MakeIntegerVector(10);
   for (uint64_t i = 0; i < vec->GetSize(); i++) {
-    if (i == 4 || i == 8) {
-      vec->SetNull(i, true);
-    } else {
-      vec->SetValue(i, GenericValue::CreateInteger(i));
-    }
+    vec->SetValue(i, GenericValue::CreateInteger(i));
   }
+  vec->SetNull(4, true);
+  vec->SetNull(8, true);
 
   // Filtered vec = [0, 2, NULL, 6, NULL]
   auto filter = TupleIdList(vec->GetCount());
