@@ -6,6 +6,7 @@
 
 #include "gmock/gmock.h"
 
+#include "common/settings.h"
 #include "sql/catalog.h"
 #include "sql/filter_manager.h"
 #include "sql/table_vector_iterator.h"
@@ -174,22 +175,42 @@ TEST_F(FilterManagerTest, AdaptiveCheckTest) {
   }
 }
 
-void RunExperiment(bool adapt, const std::vector<FilterManager::MatchFn> &terms,
+// Run the filter manager experiment a fixed number of times and take the average.
+// Using the provided filter terms and adaptation flag.
+void RunExperiment(uint32_t num_runs, bool adapt, const std::vector<FilterManager::MatchFn> &terms,
                    std::vector<double> *results) {
-  FilterManager filter(adapt);
-  filter.StartNewClause();
-  filter.InsertClauseTerms(terms);
+  for (uint32_t r = 0; r < num_runs; r++) {
+    std::vector<double> run_results;
+    run_results.reserve(1000);
 
-  TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
-  for (tvi.Init(); tvi.Advance();) {
-    auto vpi = tvi.GetVectorProjectionIterator();
-    const auto exec_micros = util::Time<std::micro>([&] { filter.RunFilters(vpi); });
-    results->push_back(exec_micros);
+    FilterManager filter(adapt);
+    filter.StartNewClause();
+    filter.InsertClauseTerms(terms);
+
+    TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
+    for (tvi.Init(); tvi.Advance();) {
+      auto vpi = tvi.GetVectorProjectionIterator();
+      const auto exec_micros = util::Time<std::micro>([&] { filter.RunFilters(vpi); });
+      run_results.push_back(exec_micros);
+    }
+
+    if (r == 0) {
+      *results = run_results;
+    } else {
+      for (uint32_t i = 0; i < run_results.size(); i++) {
+        (*results)[i] += run_results[i];
+      }
+    }
+  }
+
+  // Average out.
+  for (std::size_t i = 0; i < results->size(); i++) {
+    (*results)[i] /= static_cast<double>(num_runs);
   }
 }
 
 template <int32_t Min, int32_t Max>
-void RunExperiment(const std::string &output) {
+void RunExperiment(const std::string &output, bool verbose) {
   // ALL terms here.
   std::vector<FilterManager::MatchFn> terms = {
       // c <= 6048
@@ -220,6 +241,7 @@ void RunExperiment(const std::string &output) {
   };
   std::sort(terms.begin(), terms.end());
 
+  const uint32_t num_runs = 10;
   std::vector<std::vector<double>> results;  // Subset of interesting results.
   std::vector<double> adapt_results;         // Results from adaptive filter.
 
@@ -234,12 +256,12 @@ void RunExperiment(const std::string &output) {
     uint32_t order_num = 0;
     do {
       std::vector<double> perm;
-      RunExperiment(false, terms, &perm);
+      RunExperiment(num_runs, false, terms, &perm);
       all_results.emplace_back(order_num++, std::move(perm));
     } while (std::next_permutation(terms.begin(), terms.end()));
 
     // Run adaptive mode.
-    RunExperiment(true, terms, &adapt_results);
+    RunExperiment(num_runs, true, terms, &adapt_results);
 
     // Sort the results by time. 'all_results[0]' will be best.
     std::sort(all_results.begin(), all_results.end(), [](const auto &a, const auto &b) {
@@ -257,14 +279,14 @@ void RunExperiment(const std::string &output) {
     results.push_back(all_results.back().second);               // Worst
   }
 
-  // Print results.
-  const auto num_orders = results.size();
-  const auto num_parts = results[0].size();
+  if (verbose) {
+    // Print results.
+    const auto num_orders = results.size();
+    const auto num_parts = results[0].size();
 
-  // Print CSV of per-partition timings.
-  {
+    // Print CSV of per-partition timings.
     std::ofstream out_file;
-    out_file.open(output.c_str());
+    out_file.open((output + ".csv").c_str());
 
     out_file << "Partition, ";
     for (uint32_t order = 0; order < num_orders; order++) {
@@ -280,7 +302,71 @@ void RunExperiment(const std::string &output) {
       }
       out_file << adapt_results[i] << std::endl;
     }
+  } else {
+    std::ofstream out_file((output + "-dense.csv").c_str());
+    const auto total_best = std::accumulate(results[0].begin(), results[0].end(), 0.0);
+    const auto total_worst = std::accumulate(results.back().begin(), results.back().end(), 0.0);
+    const auto total_adaptive = std::accumulate(adapt_results.begin(), adapt_results.end(), 0.0);
+    out_file << total_worst << ", " << total_best << ", " << total_adaptive << std::endl;
   }
+}
+
+template <int32_t Min, int32_t Max>
+void VarySamplingRate(const std::string &output) {
+  // ALL terms here.
+  std::vector<FilterManager::MatchFn> terms = {
+      // c <= 6048
+      [](auto input, auto tids, auto ctx) {
+        const auto v = GenericValue::CreateInteger(6048);
+        VectorFilterExecutor::SelectLessThanEqualVal(input, 2, v, tids);
+      },
+      // a >= MIN
+      [](auto input, auto tids, auto ctx) {
+        const auto val = GenericValue::CreateInteger(Min);
+        VectorFilterExecutor::SelectGreaterThanEqualVal(input, 0, val, tids);
+      },
+      // b >= 2
+      [](auto input, auto tids, auto ctx) {
+        const auto v = GenericValue::CreateInteger(2);
+        VectorFilterExecutor::SelectGreaterThanEqualVal(input, 1, v, tids);
+      },
+      // a < MAX
+      [](auto input, auto tids, auto ctx) {
+        const auto val = GenericValue::CreateInteger(Max);
+        VectorFilterExecutor::SelectLessThanVal(input, 0, val, tids);
+      },
+      // b < 5
+      [](auto input, auto tids, auto ctx) {
+        const auto v = GenericValue::CreateInteger(5);
+        VectorFilterExecutor::SelectLessThanVal(input, 1, v, tids);
+      },
+  };
+
+  // Number of runs for each sampling rate.
+  const uint32_t num_runs = 10;
+
+  // One result for each sampling rate.
+  std::vector<double> sample_freqs = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50,
+                                      0.60, 0.70, 0.80, 0.90, 1.00};
+  std::vector<double> results;
+
+  // Check all possible sampling rates.
+  for (double sample_freq : sample_freqs) {
+    // Set rate.
+    Settings::Instance()->SetDouble(Settings::Name::AdaptivePredicateOrderSamplingFrequency,
+                                    sample_freq);
+    // Run experiment.
+    std::vector<double> sample_results;
+    RunExperiment(num_runs, true, terms, &sample_results);
+    const auto total = std::accumulate(sample_results.begin(), sample_results.end(), 0.0);
+    results.push_back(total);
+  }
+
+  std::ofstream out_file(output.c_str());
+  for (uint32_t i = 0; i < results.size(); i++) {
+    out_file << sample_freqs[i] << ", " << results[i] << std::endl;
+  }
+  out_file.close();
 }
 
 TEST_F(FilterManagerTest, DISABLED_Experiment) {
@@ -289,16 +375,25 @@ TEST_F(FilterManagerTest, DISABLED_Experiment) {
   static constexpr uint32_t ten_pct = num_elems / 10;
   static constexpr uint32_t half_ten_pct = ten_pct / 2;
 
-  RunExperiment<half, half>("filter-0.csv");
-  RunExperiment<half - half_ten_pct, half + half_ten_pct>("filter-10.csv");
-  RunExperiment<half - 2 * half_ten_pct, half + 2 * half_ten_pct>("filter-20.csv");
-  RunExperiment<half - 3 * half_ten_pct, half + 3 * half_ten_pct>("filter-30.csv");
-  RunExperiment<half - 4 * half_ten_pct, half + 4 * half_ten_pct>("filter-40.csv");
-  RunExperiment<half - 5 * half_ten_pct, half + 5 * half_ten_pct>("filter-50.csv");
-  RunExperiment<half - 6 * half_ten_pct, half + 6 * half_ten_pct>("filter-60.csv");
-  RunExperiment<half - 7 * half_ten_pct, half + 7 * half_ten_pct>("filter-70.csv");
-  RunExperiment<half - 8 * half_ten_pct, half + 8 * half_ten_pct>("filter-80.csv");
-  RunExperiment<half - 9 * half_ten_pct, half + 9 * half_ten_pct>("filter-90.csv");
+  bool verbose = true;
+  RunExperiment<half, half>("filter-0", verbose);
+  RunExperiment<half - half_ten_pct, half + half_ten_pct>("filter-10", verbose);
+  RunExperiment<half - 2 * half_ten_pct, half + 2 * half_ten_pct>("filter-20", verbose);
+  RunExperiment<half - 3 * half_ten_pct, half + 3 * half_ten_pct>("filter-30", verbose);
+  RunExperiment<half - 4 * half_ten_pct, half + 4 * half_ten_pct>("filter-40", verbose);
+  RunExperiment<half - 5 * half_ten_pct, half + 5 * half_ten_pct>("filter-50", verbose);
+  RunExperiment<half - 6 * half_ten_pct, half + 6 * half_ten_pct>("filter-60", verbose);
+  RunExperiment<half - 7 * half_ten_pct, half + 7 * half_ten_pct>("filter-70", verbose);
+  RunExperiment<half - 8 * half_ten_pct, half + 8 * half_ten_pct>("filter-80", verbose);
+  RunExperiment<half - 9 * half_ten_pct, half + 9 * half_ten_pct>("filter-90", verbose);
+}
+
+TEST_F(FilterManagerTest, DISABLED_VarySampleFreqExperiment) {
+  static constexpr uint32_t num_elems = 2000000;
+  static constexpr uint32_t half = num_elems / 2;
+  static constexpr uint32_t ten_pct = num_elems / 10;
+  static constexpr uint32_t half_ten_pct = ten_pct / 2;
+  VarySamplingRate<half - 4 * half_ten_pct, half + 4 * half_ten_pct>("sampling-rate.csv");
 }
 
 }  // namespace tpl::sql
