@@ -41,9 +41,9 @@ void JoinHashTableVectorProbe::Init(VectorProjection *input) {
   // Perform the initial lookup.
   table_.LookupBatch(hashes, &matches_);
 
-  // Assume for simplicity that all probe keys found join partners from
-  // the previous lookup. We'll verify and validate this assumption when we
-  // filter the matches vector for non-null entries below.
+  // Assume for simplicity that all probe keys found join partners from the
+  // previous lookup. We'll verify and validate this assumption when we filter
+  // the matches vector for non-null entries below.
   input->CopySelectionsTo(&non_null_entries_);
 
   // Filter out non-null entries, storing the result in the non-null TID list.
