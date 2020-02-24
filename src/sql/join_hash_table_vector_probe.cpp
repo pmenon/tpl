@@ -56,32 +56,15 @@ void JoinHashTableVectorProbe::Init(VectorProjection *input) {
 
 namespace {
 
-#define FUSE_GATHER_SELECT 0
-
 template <typename T>
 void TemplatedCompareKey(Vector *probe_keys, Vector *entries, const std::size_t key_offset,
                          TupleIdList *key_equal_tids) {
-#if FUSE_GATHER_SELECT == 0
-  // The build keys we'll gather.
-  StaticVector<T> build_keys;
-  build_keys.Resize(key_equal_tids->GetCapacity());
-
-  // Temporarily scope.
-  const uint64_t size = key_equal_tids->GetTupleCount();
-  Vector::TempFilterScope probe_scope(probe_keys, key_equal_tids, size);
-  Vector::TempFilterScope build_scope(&build_keys, key_equal_tids, size);
-
-  // Gather and select.
-  VectorOps::Gather(*entries, &build_keys, key_offset);
-  VectorOps::SelectEqual(*probe_keys, build_keys, key_equal_tids);
-#else
   auto *RESTRICT raw_probe_keys = reinterpret_cast<const T *>(probe_keys->GetData());
   auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries->GetData());
   key_equal_tids->Filter([&](uint64_t i) {
     auto *RESTRICT table_key = reinterpret_cast<const T *>(raw_entries[i]->payload + key_offset);
     return raw_probe_keys[i] == *table_key;
   });
-#endif
 }
 
 void CompareKey(Vector *probe_keys, Vector *entries, const std::size_t key_offset,
@@ -130,7 +113,7 @@ void JoinHashTableVectorProbe::CheckKeyEquality(VectorProjection *input) {
   matches_.SetFilteredTupleIdList(&key_matches_, key_matches_.GetTupleCount());
 
   // Check each key component.
-  std::size_t key_offset = sizeof(HashTableEntry);
+  std::size_t key_offset = 0;
   for (const auto key_index : join_key_indexes_) {
     auto probe_keys = input->GetColumn(key_index);
     CompareKey(probe_keys, &matches_, key_offset, &key_matches_);
@@ -141,11 +124,8 @@ void JoinHashTableVectorProbe::CheckKeyEquality(VectorProjection *input) {
 
 // Advance all non-null entries in the matches vector to their next element.
 void JoinHashTableVectorProbe::FollowChainNext() {
-  // We decompose this advancement into two steps to
-  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(matches_.GetData());
-  non_null_entries_.ForEach([&](const uint64_t i) { raw_entries[i] = raw_entries[i]->next; });
-  non_null_entries_.GetMutableBits()->UpdateFull(
-      [&](const uint64_t i) { return raw_entries[i] != nullptr; });
+  auto *RESTRICT entries = reinterpret_cast<const HashTableEntry **>(matches_.GetData());
+  non_null_entries_.Filter([&](auto i) { return (entries[i] = entries[i]->next) != nullptr; });
 }
 
 bool JoinHashTableVectorProbe::NextInnerJoin(VectorProjection *input) {
@@ -206,7 +186,7 @@ bool JoinHashTableVectorProbe::NextSemiOrAntiJoin(VectorProjection *input) {
   }
 
   key_matches_.AddAll();
-  if (Match) {
+  if constexpr (Match) {
     key_matches_.IntersectWith(semi_anti_key_matches_);
   } else {
     key_matches_.UnsetFrom(semi_anti_key_matches_);
