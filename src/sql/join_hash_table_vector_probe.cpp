@@ -31,6 +31,9 @@ void JoinHashTableVectorProbe::Init(VectorProjection *input) {
     non_null_entries_.Resize(size);
   }
 
+  // First probe.
+  first_ = true;
+
   // First, hash the keys.
   StaticVector<hash_t> hashes;
   input->Hash(join_key_indexes_, &hashes);
