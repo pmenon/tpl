@@ -98,6 +98,11 @@ class ExecutableQuery {
   void Run(ExecutionContext *exec_ctx);
 
   /**
+   * @return The physical plan this executable query implements.
+   */
+  const planner::AbstractPlanNode &GetPlan() const { return plan_; }
+
+  /**
    * @return The AST context.
    */
   ast::Context *GetContext() { return ast_context_.get(); }
