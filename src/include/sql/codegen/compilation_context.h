@@ -112,6 +112,11 @@ class CompilationContext {
    */
   ast::Expr *GetExecutionContextPtrFromQueryState();
 
+  /**
+   * @return The compilation mode.
+   */
+  CompilationMode GetCompilationMode() const { return mode_; }
+
  private:
   // Private to force use of static Compile() function.
   explicit CompilationContext(ExecutableQuery *query, CompilationMode mode);
