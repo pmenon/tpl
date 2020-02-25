@@ -125,10 +125,12 @@ void JoinHashTableVectorProbe::CheckKeyEquality(VectorProjection *input) {
 // Advance all non-null entries in the matches vector to their next element.
 void JoinHashTableVectorProbe::FollowChainNext() {
   auto *RESTRICT entries = reinterpret_cast<const HashTableEntry **>(matches_.GetData());
-  non_null_entries_.Filter([&](auto i) { return (entries[i] = entries[i]->next) != nullptr; });
+  non_null_entries_.Filter([&](uint64_t i) { return (entries[i] = entries[i]->next) != nullptr; });
 }
 
 bool JoinHashTableVectorProbe::NextInnerJoin(VectorProjection *input) {
+  const auto *input_filter = input->GetFilteredTupleIdList();
+
   while (!non_null_entries_.IsEmpty()) {
     if (!first_) {
       FollowChainNext();
@@ -137,8 +139,13 @@ bool JoinHashTableVectorProbe::NextInnerJoin(VectorProjection *input) {
 
     // Check the input keys against the current set of matches.
     key_matches_.AssignFrom(non_null_entries_);
-    if (const auto *input_filter = input->GetFilteredTupleIdList(); input_filter != nullptr) {
+    if (input_filter != nullptr) {
       key_matches_.IntersectWith(*input_filter);
+    }
+
+    // If there aren't any keys to check, there are no matches.
+    if (key_matches_.IsEmpty()) {
+      return false;
     }
 
     // Check the keys.
