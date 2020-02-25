@@ -140,9 +140,13 @@ class Settings {
     return std::get<std::string>(settings_[static_cast<uint32_t>(name)]);
   }
 
-  void SetDouble(Name name, const double val) {
-    settings_[static_cast<uint32_t>(name)] = val;
-  }
+  /**
+   * Set the value of the given setting to the provided value.
+   * @warning This is not thread-safe.
+   * @param name The name of the setting to set.
+   * @param val The value to set.
+   */
+  void SetDouble(Name name, const double val) { settings_[static_cast<uint32_t>(name)] = val; }
 
  private:
   // Private to force singleton access
