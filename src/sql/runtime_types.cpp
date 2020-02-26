@@ -304,6 +304,30 @@ int32_t Timestamp::ExtractSecond() const {
   return sec;
 }
 
+int32_t Timestamp::ExtractMillis() const {
+  // Extract date component.
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Extract month from date.
+  int32_t hour, min, sec;
+  double fsec;
+  SplitTime(time, &hour, &min, &sec, &fsec);
+  return sec * 1000.0 + fsec / 1000.0;
+}
+
+int32_t Timestamp::ExtractMicros() const {
+  // Extract date component.
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Extract month from date.
+  int32_t hour, min, sec;
+  double fsec;
+  SplitTime(time, &hour, &min, &sec, &fsec);
+  return sec + fsec / 1000000.0;
+}
+
 Timestamp Timestamp::FromYMDHMS(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t min,
                                 int32_t sec) {
   // Check date component.
