@@ -123,7 +123,7 @@ TEST_F(RuntimeTypesTest, TimestampComparisons) {
   Timestamp t2 = Timestamp::FromYMDHMS(2000, 1, 1, 16, 0, 0);
   Timestamp t3 = t1;
   Timestamp t4 = Timestamp::FromYMDHMS(2017, 1, 1, 18, 18, 18);
-  
+
   EXPECT_NE(t1, t2);
   EXPECT_LT(t1, t2);
   EXPECT_EQ(t1, t3);
@@ -135,6 +135,45 @@ TEST_F(RuntimeTypesTest, TimestampComparisons) {
   t2 = Timestamp::FromYMDHMS(-4000, 1, 1, 10, 10, 11);
   EXPECT_NE(t1, t2);
   EXPECT_LT(t1, t2);
+}
+
+TEST_F(RuntimeTypesTest, VarlenComparisons) {
+  // Short strings first.
+  {
+    auto v1 = VarlenEntry::Create("somethings");
+    auto v2 = VarlenEntry::Create("anotherone");
+    auto v3 = v1;
+    EXPECT_TRUE(v1.IsInlined());
+    EXPECT_TRUE(v2.IsInlined());
+    EXPECT_NE(v1, v2);
+    EXPECT_LT(v2, v1);
+    EXPECT_GT(v1, v2);
+    EXPECT_EQ(v1, v3);
+  }
+
+  // Longer strings.
+  auto s1 = "This is sort of a long string, but the end of the string should be different than XXX";
+  auto s2 = "This is sort of a long string, but the end of the string should be different than YYY";
+  {
+    auto v1 = VarlenEntry::Create(s1);
+    auto v2 = VarlenEntry::Create(s2);
+    auto v3 = VarlenEntry::Create("smallstring");
+    auto v4 = VarlenEntry::Create("This is so");  // A prefix of the longer strings.
+    EXPECT_FALSE(v1.IsInlined());
+    EXPECT_FALSE(v2.IsInlined());
+    EXPECT_NE(v1, v2);
+    EXPECT_LT(v1, v2);
+    EXPECT_GT(v2, v1);
+    EXPECT_EQ(v2, v2);
+
+    EXPECT_NE(v1, v3);
+    EXPECT_NE(v2, v3);
+    EXPECT_GT(v3, v1);
+    EXPECT_GT(v3, v2);
+
+    EXPECT_LT(v4, v1);
+    EXPECT_LT(v4, v2);
+  }
 }
 
 }  // namespace tpl::sql

@@ -432,16 +432,17 @@ class VarlenEntry {
    * will only store a pointer to it. It is the caller's responsibility to ensure the content
    * outlives this varlen entry.
    *
-   * @param content A Pointer to the varlen content itself.
-   * @param size The length of the varlen content, in bytes (no C-style nul-terminator).
+   * @param content A pointer to the content.
+   * @param size The length of the content, in bytes (no C-style nul-terminator).
    * @return A constructed VarlenEntry object.
    */
   static VarlenEntry Create(const byte *content, uint32_t size) {
     VarlenEntry result;
     result.size_ = size;
 
-    // If the size is small enough for the content to be inlined, apply that optimization. If not,
-    // store a prefix of the content inline and point to the bigger content.
+    // If the size is small enough for the content to be inlined, apply that
+    // optimization. If not, store a prefix of the content inline and point to
+    // the bigger content.
 
     if (size <= GetInlineThreshold()) {
       std::memcpy(result.prefix_, content, size);
@@ -451,6 +452,19 @@ class VarlenEntry {
     }
 
     return result;
+  }
+
+  /**
+   * Construct a new varlen entry whose contents match the provided string. The varlen DOES NOT
+   * take ownership of the content, but it will store a pointer to it if it cannot apply a small
+   * string optimization. It is the caller's responsibility to ensure the content outlives this
+   * varlen entry.
+   *
+   * @param str The input string.
+   * @return A constructed VarlenEntry object.
+   */
+  static VarlenEntry Create(std::string_view str) {
+    return Create(reinterpret_cast<const byte *>(str.data()), str.length());
   }
 
   /**
@@ -508,6 +522,32 @@ class VarlenEntry {
   }
 
   /**
+   * Compare two strings ONLY for equality or inequality only.
+   * @tparam EqualCheck
+   * @param left The first string.
+   * @param right The second string.
+   * @return 0 if equal; any non-zero value otherwise.
+   */
+  template <bool EqualityCheck>
+  static bool CompareEqualOrNot(const VarlenEntry &left, const VarlenEntry &right) {
+    // Compare the size and prefix in one fell swoop.
+    if (std::memcmp(&left, &right, sizeof(size_) + GetPrefixSize()) == 0) {
+      // Prefix and length are equal.
+      if (left.IsInlined()) {
+        if (std::memcmp(left.prefix_, right.prefix_, left.size_) == 0) {
+          return EqualityCheck ? true : false;
+        }
+      } else {
+        if (std::memcmp(left.content_, right.content_, left.size_) == 0) {
+          return EqualityCheck ? true : false;
+        }
+      }
+    }
+    // Not equal.
+    return EqualityCheck ? false : true;
+  }
+
+  /**
    * Compare two strings. Returns:
    * < 0 if left < right
    *  0  if left == right
@@ -519,33 +559,19 @@ class VarlenEntry {
    */
   static int32_t Compare(const VarlenEntry &left, const VarlenEntry &right) {
     const auto min_len = std::min(left.GetSize(), right.GetSize());
-
-    if (min_len < GetPrefixSize()) {
-      int32_t result = std::memcmp(left.GetPrefix(), right.GetPrefix(), min_len);
-      return result != 0 ? result : left.GetSize() - right.GetSize();
-    }
-
-    // Full prefix match?
-    int32_t result = std::memcmp(left.GetPrefix(), right.GetPrefix(), GetPrefixSize());
-    if (result != 0) {
-      return result;
-    }
-
-    // Content match (minus prefix)
-    result = std::memcmp(left.GetContent() + GetPrefixSize(), right.GetContent() + GetPrefixSize(),
-                         min_len - GetPrefixSize());
+    const auto result = std::memcmp(left.GetContent(), right.GetContent(), min_len);
     return result != 0 ? result : left.GetSize() - right.GetSize();
   }
 
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
    */
-  bool operator==(const VarlenEntry &that) const { return Compare(*this, that) == 0; }
+  bool operator==(const VarlenEntry &that) const { return CompareEqualOrNot<true>(*this, that); }
 
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
    */
-  bool operator!=(const VarlenEntry &that) const { return Compare(*this, that) != 0; }
+  bool operator!=(const VarlenEntry &that) const { return CompareEqualOrNot<false>(*this, that); }
 
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
@@ -574,7 +600,10 @@ class VarlenEntry {
   // is not inlined as well.
   byte prefix_[kPrefixLength];
   // Pointer to the content when not inlined
-  const byte *content_;
+  union {
+    byte inlined_[sizeof(byte *)];
+    const byte *content_;
+  };
 };
 
 /**
