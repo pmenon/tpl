@@ -33,7 +33,7 @@ class Date {
   /**
    * @return True if this is a valid date instance; false otherwise.
    */
-  bool IsValid() const noexcept;
+  bool IsValid() const;
 
   /**
    * @return A string representation of this date in the form "YYYY-MM-MM".
@@ -43,17 +43,17 @@ class Date {
   /**
    * @return The year of this date.
    */
-  uint32_t ExtractYear() const noexcept;
+  uint32_t ExtractYear() const;
 
   /**
    * @return The month of this date.
    */
-  uint32_t ExtractMonth() const noexcept;
+  uint32_t ExtractMonth() const;
 
   /**
    * @return The day of this date.
    */
-  uint32_t ExtractDay() const noexcept;
+  uint32_t ExtractDay() const;
 
   /**
    * Convert this date object into its year, month, and day parts.
@@ -67,7 +67,7 @@ class Date {
    * Convert this date instance into a timestamp instance.
    * @return The timestamp instance representing this date.
    */
-  Timestamp ConvertToTimestamp() const noexcept;
+  Timestamp ConvertToTimestamp() const;
 
   /**
    * Compute the hash value of this date instance.
@@ -84,32 +84,32 @@ class Date {
   /**
    * @return True if this date equals @em that date; false otherwise.
    */
-  bool operator==(const Date &that) const noexcept { return value_ == that.value_; }
+  bool operator==(const Date &that) const { return value_ == that.value_; }
 
   /**
    * @return True if this date is not equal to @em that date; false otherwise.
    */
-  bool operator!=(const Date &that) const noexcept { return value_ != that.value_; }
+  bool operator!=(const Date &that) const { return value_ != that.value_; }
 
   /**
    * @return True if this data occurs before @em that date; false otherwise.
    */
-  bool operator<(const Date &that) const noexcept { return value_ < that.value_; }
+  bool operator<(const Date &that) const { return value_ < that.value_; }
 
   /**
    * @return True if this data occurs before or is the same as @em that date; false otherwise.
    */
-  bool operator<=(const Date &that) const noexcept { return value_ <= that.value_; }
+  bool operator<=(const Date &that) const { return value_ <= that.value_; }
 
   /**
    * @return True if this date occurs after @em that date; false otherwise.
    */
-  bool operator>(const Date &that) const noexcept { return value_ > that.value_; }
+  bool operator>(const Date &that) const { return value_ > that.value_; }
 
   /**
    * @return True if this date occurs after or is equal to @em that date; false otherwise.
    */
-  bool operator>=(const Date &that) const noexcept { return value_ >= that.value_; }
+  bool operator>=(const Date &that) const { return value_ >= that.value_; }
 
   /**
    * Convert a C-style string of the form "YYYY-MM-DD" into a date instance. Will attempt to convert
@@ -196,32 +196,32 @@ class Timestamp {
   /**
    * @return True if this timestamp equals @em that timestamp; false otherwise.
    */
-  bool operator==(const Timestamp &that) const noexcept { return value_ == that.value_; }
+  bool operator==(const Timestamp &that) const { return value_ == that.value_; }
 
   /**
    * @return True if this timestamp is not equal to @em that timestamp; false otherwise.
    */
-  bool operator!=(const Timestamp &that) const noexcept { return value_ != that.value_; }
+  bool operator!=(const Timestamp &that) const { return value_ != that.value_; }
 
   /**
    * @return True if this data occurs before @em that timestamp; false otherwise.
    */
-  bool operator<(const Timestamp &that) const noexcept { return value_ < that.value_; }
+  bool operator<(const Timestamp &that) const { return value_ < that.value_; }
 
   /**
    * @return True if this data occurs before or is the same as @em that timestamp; false otherwise.
    */
-  bool operator<=(const Timestamp &that) const noexcept { return value_ <= that.value_; }
+  bool operator<=(const Timestamp &that) const { return value_ <= that.value_; }
 
   /**
    * @return True if this timestamp occurs after @em that timestamp; false otherwise.
    */
-  bool operator>(const Timestamp &that) const noexcept { return value_ > that.value_; }
+  bool operator>(const Timestamp &that) const { return value_ > that.value_; }
 
   /**
    * @return True if this timestamp occurs after or is equal to @em that timestamp; false otherwise.
    */
-  bool operator>=(const Timestamp &that) const noexcept { return value_ >= that.value_; }
+  bool operator>=(const Timestamp &that) const { return value_ >= that.value_; }
 
   /**
    * Convert a C-style string of the form "YYYY-MM-DD HH::MM::SS" into a timestamp. Will attempt to
@@ -429,7 +429,7 @@ class VarlenEntry {
    * @param seed The value to seed the hash with.
    * @return The hash value for this string instance.
    */
-  hash_t Hash(hash_t seed) const noexcept;
+  hash_t Hash(hash_t seed) const;
 
   /**
    * @return The hash value of this variable-length string.
@@ -479,32 +479,32 @@ class VarlenEntry {
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
    */
-  bool operator==(const VarlenEntry &that) const noexcept { return Compare(*this, that) == 0; }
+  bool operator==(const VarlenEntry &that) const { return Compare(*this, that) == 0; }
 
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
    */
-  bool operator!=(const VarlenEntry &that) const noexcept { return Compare(*this, that) != 0; }
+  bool operator!=(const VarlenEntry &that) const { return Compare(*this, that) != 0; }
 
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
    */
-  bool operator<(const VarlenEntry &that) const noexcept { return Compare(*this, that) < 0; }
+  bool operator<(const VarlenEntry &that) const { return Compare(*this, that) < 0; }
 
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
    */
-  bool operator<=(const VarlenEntry &that) const noexcept { return Compare(*this, that) <= 0; }
+  bool operator<=(const VarlenEntry &that) const { return Compare(*this, that) <= 0; }
 
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
    */
-  bool operator>(const VarlenEntry &that) const noexcept { return Compare(*this, that) > 0; }
+  bool operator>(const VarlenEntry &that) const { return Compare(*this, that) > 0; }
 
   /**
    * @return True if this varlen equals @em that varlen; false otherwise.
    */
-  bool operator>=(const VarlenEntry &that) const noexcept { return Compare(*this, that) >= 0; }
+  bool operator>=(const VarlenEntry &that) const { return Compare(*this, that) >= 0; }
 
  private:
   // The size of the contents
@@ -583,22 +583,22 @@ class Blob {
    * @param data The blob data.
    * @param size The size of the blob.
    */
-  Blob(byte *data, std::size_t size) noexcept : data_(data), size_(size) {}
+  Blob(byte *data, std::size_t size) : data_(data), size_(size) {}
 
   /**
    * @return A const-view of the raw blob data.
    */
-  const byte *GetData() const noexcept { return data_; }
+  const byte *GetData() const { return data_; }
 
   /**
    * @return The size of the blob in bytes.
    */
-  std::size_t GetSize() const noexcept { return size_; }
+  std::size_t GetSize() const { return size_; }
 
   /**
    * @return The hash value for this BLOB using the given seed.
    */
-  hash_t Hash(hash_t seed) const noexcept;
+  hash_t Hash(hash_t seed) const;
 
   /**
    * @return The hash value of this BLOB.
@@ -628,36 +628,36 @@ class Blob {
   /**
    * @return True if this blob is byte-for-byte equivalent to @em that blob; false otherwise.
    */
-  bool operator==(const Blob &that) const noexcept {
+  bool operator==(const Blob &that) const {
     return size_ == that.size_ && std::memcmp(data_, that.data_, size_) == 0;
   }
 
   /**
    * @return True if this blob is byte-for-byte not-equal-to @em that blob; false otherwise.
    */
-  bool operator!=(const Blob &that) const noexcept { return !(*this == that); }
+  bool operator!=(const Blob &that) const { return !(*this == that); }
 
   /**
    * @return True if this blob is byte-for-byte less-than @em that blob; false otherwise.
    */
-  bool operator<(const Blob &that) const noexcept { return Compare(*this, that) < 0; }
+  bool operator<(const Blob &that) const { return Compare(*this, that) < 0; }
 
   /**
    * @return True if this blob is byte-for-byte less-than-or-equal-to @em that blob; false
    *         otherwise.
    */
-  bool operator<=(const Blob &that) const noexcept { return Compare(*this, that) <= 0; }
+  bool operator<=(const Blob &that) const { return Compare(*this, that) <= 0; }
 
   /**
    * @return True if this blob is byte-for-byte greater than @em that blob; false otherwise.
    */
-  bool operator>(const Blob &that) const noexcept { return Compare(*this, that) > 0; }
+  bool operator>(const Blob &that) const { return Compare(*this, that) > 0; }
 
   /**
    * @return True if this blob is byte-for-byte greater-than-or-equal-to @em that blob; false
    *         otherwise.
    */
-  bool operator>=(const Blob &that) const noexcept { return Compare(*this, that) >= 0; }
+  bool operator>=(const Blob &that) const { return Compare(*this, that) >= 0; }
 
  private:
   // Root
@@ -667,6 +667,6 @@ class Blob {
   std::size_t size_;
 };
 
-inline Timestamp Date::ConvertToTimestamp() const noexcept { return Timestamp(value_ * kMsPerDay); }
+inline Timestamp Date::ConvertToTimestamp() const { return Timestamp(value_ * kMsPerDay); }
 
 }  // namespace tpl::sql

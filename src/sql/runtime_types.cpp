@@ -45,7 +45,7 @@ void SplitJulianDate(uint32_t julian_date, uint32_t *year, uint32_t *month, uint
 //
 //===----------------------------------------------------------------------===//
 
-bool Date::IsValid() const noexcept {
+bool Date::IsValid() const {
   uint32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return IsValidJulianDate(year, month, day);
@@ -57,19 +57,19 @@ std::string Date::ToString() const {
   return fmt::format("{}-{:02}-{:02}", year, month, day);
 }
 
-uint32_t Date::ExtractYear() const noexcept {
+uint32_t Date::ExtractYear() const {
   uint32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return year;
 }
 
-uint32_t Date::ExtractMonth() const noexcept {
+uint32_t Date::ExtractMonth() const {
   uint32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return month;
 }
 
-uint32_t Date::ExtractDay() const noexcept {
+uint32_t Date::ExtractDay() const {
   uint32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return day;
@@ -152,7 +152,7 @@ bool Date::IsValidDate(uint32_t year, uint32_t month, uint32_t day) {
 //
 //===----------------------------------------------------------------------===//
 
-hash_t VarlenEntry::Hash(const hash_t seed) const noexcept {
+hash_t VarlenEntry::Hash(const hash_t seed) const {
   return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(GetContent()), GetSize(), seed);
 }
 
@@ -162,7 +162,7 @@ hash_t VarlenEntry::Hash(const hash_t seed) const noexcept {
 //
 //===----------------------------------------------------------------------===//
 
-hash_t Blob::Hash(hash_t seed) const noexcept {
+hash_t Blob::Hash(hash_t seed) const {
   return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(data_), size_, seed);
 }
 
