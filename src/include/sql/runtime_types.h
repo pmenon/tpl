@@ -166,6 +166,36 @@ class Timestamp {
   Timestamp() = default;
 
   /**
+   * @return The year of this date.
+   */
+  int32_t ExtractYear() const;
+
+  /**
+   * @return The month of this date.
+   */
+  int32_t ExtractMonth() const;
+
+  /**
+   * @return The day of this date.
+   */
+  int32_t ExtractDay() const;
+
+  /**
+   * @return The year of this date.
+   */
+  int32_t ExtractHour() const;
+
+  /**
+   * @return The month of this date.
+   */
+  int32_t ExtractMinute() const;
+
+  /**
+   * @return The day of this date.
+   */
+  int32_t ExtractSecond() const;
+
+  /**
    * Compute the hash value of this timestamp instance.
    * @param seed The value to seed the hash with.
    * @return The hash value for this timestamp instance.
@@ -230,6 +260,20 @@ class Timestamp {
   static Timestamp FromString(const std::string &str) {
     return FromString(str.c_str(), str.size());
   }
+
+  /**
+   * Given year, month, day, hour, minute, second components construct a TPL timestamp. If any
+   * component is invalid, this will throw an exception.
+   * @param year The year.
+   * @param month The month.
+   * @param day The day.
+   * @param hour The hour.
+   * @param min The minute.
+   * @param sec The second.
+   * @return The constructed timestamp if valid.
+   */
+  static Timestamp FromYMDHMS(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t min,
+                              int32_t sec);
 
  private:
   friend class Date;

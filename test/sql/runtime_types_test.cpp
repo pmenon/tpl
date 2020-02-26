@@ -86,4 +86,55 @@ TEST_F(RuntimeTypesTest, DateToString) {
   EXPECT_EQ("2000-01-01", d1.ToString());
 }
 
+TEST_F(RuntimeTypesTest, ExtractTimestampParts) {
+  // Valid timestamp.
+  Timestamp t;
+  EXPECT_NO_THROW({ t = Timestamp::FromYMDHMS(2016, 12, 19, 10, 20, 30); });
+  EXPECT_EQ(2016, t.ExtractYear());
+  EXPECT_EQ(12, t.ExtractMonth());
+  EXPECT_EQ(19, t.ExtractDay());
+  EXPECT_EQ(10, t.ExtractHour());
+  EXPECT_EQ(20, t.ExtractMinute());
+  EXPECT_EQ(30, t.ExtractSecond());
+
+  // BC timestamp.
+  EXPECT_NO_THROW({ t = Timestamp::FromYMDHMS(-4000, 1, 2, 12, 24, 48); });
+  EXPECT_EQ(-4000, t.ExtractYear());
+  EXPECT_EQ(1, t.ExtractMonth());
+  EXPECT_EQ(2, t.ExtractDay());
+  EXPECT_EQ(12, t.ExtractHour());
+  EXPECT_EQ(24, t.ExtractMinute());
+  EXPECT_EQ(48, t.ExtractSecond());
+
+  // Invalid
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 1, 1, 100); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 1, 100, 1); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 1, 100, 100); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 25, 1, 1); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 25, 1, 100); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 25, 100, 1); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 25, 100, 100); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(50000000, 12, 9, 100, 1, 1); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(50000000, 92187, 1, 13, 59, 60); }, ConversionException);
+}
+
+TEST_F(RuntimeTypesTest, TimestampComparisons) {
+  Timestamp t1 = Timestamp::FromYMDHMS(2000, 1, 1, 12, 0, 0);
+  Timestamp t2 = Timestamp::FromYMDHMS(2000, 1, 1, 16, 0, 0);
+  Timestamp t3 = t1;
+  Timestamp t4 = Timestamp::FromYMDHMS(2017, 1, 1, 18, 18, 18);
+  
+  EXPECT_NE(t1, t2);
+  EXPECT_LT(t1, t2);
+  EXPECT_EQ(t1, t3);
+  EXPECT_GT(t4, t3);
+  EXPECT_GT(t4, t2);
+  EXPECT_GT(t4, t1);
+
+  t1 = Timestamp::FromYMDHMS(-4000, 1, 1, 10, 10, 10);
+  t2 = Timestamp::FromYMDHMS(-4000, 1, 1, 10, 10, 11);
+  EXPECT_NE(t1, t2);
+  EXPECT_LT(t1, t2);
+}
+
 }  // namespace tpl::sql

@@ -18,6 +18,10 @@ constexpr const char *const kMonthNames[] = {"Jan", "Feb", "Mar", "Apr", "May", 
 constexpr const char *const kDayNames[] = {"Sunday",   "Monday", "Tuesday",  "Wednesday",
                                            "Thursday", "Friday", "Saturday", NULL};
 
+constexpr int64_t kHoursPerDay = 24;
+constexpr int64_t kMinutesPerHour = 60;
+constexpr int64_t kSecondsPerMinute = 60;
+
 // Like Postgres, TPL stores dates as Julian Date Numbers. Julian dates are
 // commonly used in astronomical applications and in software since it's
 // numerically accurate and computationally simple. BuildJulianDate() and
@@ -96,6 +100,32 @@ void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_t *day) {
   quad = julian * 2141 / 65536;
   *day = julian - 7834 * quad / 256;
   *month = (quad + 10) % kMonthsPerYear + 1;
+}
+
+// Split a Julian time (i.e., Julian date in microseconds) into a time and date
+// component.
+void StripTime(int64_t jd, int64_t *date, int64_t *time) {
+  *date = jd / kMicroSecondsPerDay;
+  *time = jd - (*date * kMicroSecondsPerDay);
+}
+
+// Given hour, minute, and second components, build a time in microseconds.
+int64_t BuildTime(int32_t hour, int32_t min, int32_t sec) {
+  return (((hour * kMinutesPerHour + min) * kSecondsPerMinute) * kMicroSecondsPerSecond) +
+         sec * kMicroSecondsPerSecond;
+}
+
+// Given a time in microseconds, split it into hour, minute, second, and
+// fractional second components.
+void SplitTime(int64_t jd, int32_t *hour, int32_t *min, int32_t *sec, double *fsec) {
+  int64_t time = jd;
+
+  *hour = time / kMicroSecondsPerHour;
+  time -= (*hour) * kMicroSecondsPerHour;
+  *min = time / kMicroSecondsPerMinute;
+  time -= (*min) * kMicroSecondsPerMinute;
+  *sec = time / kMicroSecondsPerSecond;
+  *fsec = time - (*sec * kMicroSecondsPerSecond);
 }
 
 }  // namespace
@@ -197,6 +227,110 @@ Date Date::FromYMD(int32_t year, int32_t month, int32_t day) {
   }
 
   return Date(BuildJulianDate(year, month, day));
+}
+
+//===----------------------------------------------------------------------===//
+//
+// Timestamp
+//
+//===----------------------------------------------------------------------===//
+
+int32_t Timestamp::ExtractYear() const {
+  // Extract date component.
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Extract year from date.
+  int32_t year, month, day;
+  SplitJulianDate(date, &year, &month, &day);
+  return year;
+}
+
+int32_t Timestamp::ExtractMonth() const {
+  // Extract date component.
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Extract month from date.
+  int32_t year, month, day;
+  SplitJulianDate(date, &year, &month, &day);
+  return month;
+}
+
+int32_t Timestamp::ExtractDay() const {
+  // Extract date component.
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Extract day from date.
+  int32_t year, month, day;
+  SplitJulianDate(date, &year, &month, &day);
+  return day;
+}
+
+int32_t Timestamp::ExtractHour() const {
+  // Extract date component.
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Extract month from date.
+  int32_t hour, min, sec;
+  double fsec;
+  SplitTime(time, &hour, &min, &sec, &fsec);
+  return hour;
+}
+
+int32_t Timestamp::ExtractMinute() const {
+  // Extract date component.
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Extract month from date.
+  int32_t hour, min, sec;
+  double fsec;
+  SplitTime(time, &hour, &min, &sec, &fsec);
+  return min;
+}
+
+int32_t Timestamp::ExtractSecond() const {
+  // Extract date component.
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Extract month from date.
+  int32_t hour, min, sec;
+  double fsec;
+  SplitTime(time, &hour, &min, &sec, &fsec);
+  return sec;
+}
+
+Timestamp Timestamp::FromYMDHMS(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t min,
+                                int32_t sec) {
+  // Check date component.
+  if (!IsValidCalendarDate(year, month, day) || !IsValidJulianDate(year, month, day)) {
+    throw ConversionException("date field {}-{}-{} out of range", year, month, day);
+  }
+
+  // Check time component.
+  if (hour < 0 || min < 0 || min > kMinutesPerHour - 1 || sec < 0 || sec > kSecondsPerMinute ||
+      hour > kHoursPerDay ||
+      // Check for > 24:00:00.
+      (hour == kHoursPerDay && (min > 0 || sec > 0))) {
+    throw ConversionException("time field {}:{}:{} out of range", hour, min, sec);
+  }
+
+  const int64_t date = BuildJulianDate(year, month, day);
+  const int64_t time = BuildTime(hour, min, sec);
+  const int64_t result = date * kMicroSecondsPerDay + time;
+
+  // Check for major overflow.
+  if ((result - time) / kMicroSecondsPerDay != date) {
+    throw ConversionException("timestamp out of range {}-{}-{} {}:{}:{} out of range", year, month,
+                              day, hour, min, sec);
+  }
+
+  // Loos good.
+  return Timestamp(result);
 }
 
 //===----------------------------------------------------------------------===//
