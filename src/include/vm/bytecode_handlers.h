@@ -464,7 +464,7 @@ VM_OP_HOT void OpInitReal(tpl::sql::Real *result, float input) {
   result->val = input;
 }
 
-VM_OP_HOT void OpInitDate(tpl::sql::DateVal *result, uint32_t year, uint32_t month, uint32_t day) {
+VM_OP_HOT void OpInitDate(tpl::sql::DateVal *result, int32_t year, int32_t month, int32_t day) {
   result->is_null = false;
   result->val = tpl::sql::Date::FromYMD(year, month, day);
 }

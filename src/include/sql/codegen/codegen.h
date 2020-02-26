@@ -481,7 +481,7 @@ class CodeGen {
    * @param day The number to convert.
    * @return The SQL date.
    */
-  [[nodiscard]] ast::Expr *DateToSql(uint32_t year, uint32_t month, uint32_t day) const;
+  [[nodiscard]] ast::Expr *DateToSql(int32_t year, int32_t month, int32_t day) const;
 
   /**
    * Call @stringToSql(). Convert a string literal into a SQL string.

@@ -10,31 +10,92 @@ namespace tpl::sql {
 
 namespace {
 
-// The below Julian date conversions are taken from Postgres.
+constexpr int64_t kMonthsPerYear = 12;
+constexpr int32_t kDaysPerMonth[2][13] = {{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 0},
+                                          {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 0}};
+constexpr const char *const kMonthNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
+                                             "Aug", "Sep", "Oct", "Nov", "Dec", NULL};
+constexpr const char *const kDayNames[] = {"Sunday",   "Monday", "Tuesday",  "Wednesday",
+                                           "Thursday", "Friday", "Saturday", NULL};
 
-bool IsValidJulianDate(uint32_t year, uint32_t month, uint32_t day) {
-  return year <= 9999 && month >= 1 && month <= 12 && day >= 1 && day <= 31;
+// Like Postgres, TPL stores dates as Julian Date Numbers. Julian dates are
+// commonly used in astronomical applications and in software since it's
+// numerically accurate and computationally simple. BuildJulianDate() and
+// SplitJulianDate() correctly convert between Julian day and Gregorian
+// calendar for all non-negative Julian days (i.e., from 4714-11-24 BC to
+// 5874898-06-03 AD). Though the JDN number is unsigned, it's physically
+// stored as a signed 32-bit integer, and comparison functions also use
+// signed integer logic.
+//
+// Many of the conversion functions are adapted from implementations in
+// Postgres. Specifically, we use the algorithms date2j() and j2date()
+// in src/backend/utils/adt/datetime.c.
+
+constexpr int64_t kJulianMinYear = -4713;
+constexpr int64_t kJulianMinMonth = 11;
+constexpr int64_t kJulianMinDay = 24;
+constexpr int64_t kJulianMaxYear = 5874898;
+constexpr int64_t kJulianMaxMonth = 6;
+constexpr int64_t kJulianMaxDay = 3;
+
+// Is the provided year a leap year?
+bool IsLeapYear(int32_t year) { return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0); }
+
+// Does the provided date fall into the Julian date range?
+bool IsValidJulianDate(int32_t y, int32_t m, int32_t d) {
+  return (y > kJulianMinYear || (y == kJulianMinYear && m >= kJulianMinMonth)) &&
+         (y < kJulianMaxYear || (y == kJulianMaxYear && m < kJulianMaxMonth));
 }
 
+// Is the provided date a valid calendar date?
+bool IsValidCalendarDate(int32_t year, int32_t month, int32_t day) {
+  // There isn't a year 0. We represent 1 BC as year zero, 2 BC as -1, etc.
+  if (year == 0) return false;
+
+  // Month.
+  if (month < 1 || month > kMonthsPerYear) return false;
+
+  // Day.
+  if (day < 1 || day > kDaysPerMonth[IsLeapYear(year)][month - 1]) return false;
+
+  // Looks good.
+  return true;
+}
+
+// Based on date2j().
 uint32_t BuildJulianDate(uint32_t year, uint32_t month, uint32_t day) {
-  uint32_t a = (14 - month) / 12;
-  uint32_t y = year + 4800 - a;
-  uint32_t m = month + (12 * a) - 3;
+  if (month > 2) {
+    month += 1;
+    year += 4800;
+  } else {
+    month += 13;
+    year += 4799;
+  }
 
-  return day + ((153 * m + 2) / 5) + (365 * y) + (y / 4) - (y / 100) + (y / 400) - 32045;
+  int32_t century = year / 100;
+  int32_t julian = year * 365 - 32167;
+  julian += year / 4 - century + century / 4;
+  julian += 7834 * month / 256 + day;
+
+  return julian;
 }
 
-void SplitJulianDate(uint32_t julian_date, uint32_t *year, uint32_t *month, uint32_t *day) {
-  uint32_t a = julian_date + 32044;
-  uint32_t b = (4 * a + 3) / 146097;
-  uint32_t c = a - ((146097 * b) / 4);
-  uint32_t d = (4 * c + 3) / 1461;
-  uint32_t e = c - ((1461 * d) / 4);
-  uint32_t m = (5 * e + 2) / 153;
-
-  *day = e - ((153 * m + 2) / 5) + 1;
-  *month = m + 3 - (12 * (m / 10));
-  *year = (100 * b) + d - 4800 + (m / 10);
+// Based on j2date().
+void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_t *day) {
+  uint32_t julian = jd;
+  julian += 32044;
+  uint32_t quad = julian / 146097;
+  uint32_t extra = (julian - quad * 146097) * 4 + 3;
+  julian += 60 + quad * 3 + extra / 146097;
+  quad = julian / 1461;
+  julian -= quad * 1461;
+  int32_t y = julian * 4 / 1461;
+  julian = ((y != 0) ? ((julian + 305) % 365) : ((julian + 306) % 366)) + 123;
+  y += quad * 4;
+  *year = y - 4800;
+  quad = julian * 2141 / 65536;
+  *day = julian - 7834 * quad / 256;
+  *month = (quad + 10) % kMonthsPerYear + 1;
 }
 
 }  // namespace
@@ -45,37 +106,31 @@ void SplitJulianDate(uint32_t julian_date, uint32_t *year, uint32_t *month, uint
 //
 //===----------------------------------------------------------------------===//
 
-bool Date::IsValid() const {
-  uint32_t year, month, day;
-  SplitJulianDate(value_, &year, &month, &day);
-  return IsValidJulianDate(year, month, day);
-}
-
 std::string Date::ToString() const {
-  uint32_t year, month, day;
+  int32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return fmt::format("{}-{:02}-{:02}", year, month, day);
 }
 
-uint32_t Date::ExtractYear() const {
-  uint32_t year, month, day;
+int32_t Date::ExtractYear() const {
+  int32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return year;
 }
 
-uint32_t Date::ExtractMonth() const {
-  uint32_t year, month, day;
+int32_t Date::ExtractMonth() const {
+  int32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return month;
 }
 
-uint32_t Date::ExtractDay() const {
-  uint32_t year, month, day;
+int32_t Date::ExtractDay() const {
+  int32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return day;
 }
 
-void Date::ExtractComponents(uint32_t *year, uint32_t *month, uint32_t *day) {
+void Date::ExtractComponents(int32_t *year, int32_t *month, int32_t *day) {
   SplitJulianDate(value_, year, month, day);
 }
 
@@ -127,23 +182,21 @@ Date Date::FromString(const char *str, std::size_t len) {
     }
   }
 
-  if (!IsValidJulianDate(year, month, day)) ERROR;
-
-#undef ERROR
-
-  return Date(BuildJulianDate(year, month, day));
+  return Date::FromYMD(year, month, day);
 }
 
-Date Date::FromYMD(uint32_t year, uint32_t month, uint32_t day) {
+Date Date::FromYMD(int32_t year, int32_t month, int32_t day) {
+  // Check calendar date.
+  if (!IsValidCalendarDate(year, month, day)) {
+    throw ConversionException("{}-{}-{} is not a valid date", year, month, day);
+  }
+
+  // Check if date would overflow Julian calendar.
   if (!IsValidJulianDate(year, month, day)) {
     throw ConversionException("{}-{}-{} is not a valid date", year, month, day);
   }
 
   return Date(BuildJulianDate(year, month, day));
-}
-
-bool Date::IsValidDate(uint32_t year, uint32_t month, uint32_t day) {
-  return IsValidJulianDate(year, month, day);
 }
 
 //===----------------------------------------------------------------------===//

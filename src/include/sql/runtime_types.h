@@ -16,24 +16,22 @@ class Timestamp;
 //
 //===----------------------------------------------------------------------===//
 
-static constexpr uint64_t kMsPerDay = 24 * 60 * 60 * 1000;
+static constexpr int64_t kMicroSecondsPerSecond = 1000 * 1000;
+static constexpr int64_t kMicroSecondsPerMinute = 60UL * kMicroSecondsPerSecond;
+static constexpr int64_t kMicroSecondsPerHour = 60UL * kMicroSecondsPerMinute;
+static constexpr int64_t kMicroSecondsPerDay = 24UL * kMicroSecondsPerHour;
 
 /**
  * A SQL date.
  */
 class Date {
  public:
-  using NativeType = uint32_t;
+  using NativeType = int32_t;
 
   /**
    * Empty constructor.
    */
   Date() = default;
-
-  /**
-   * @return True if this is a valid date instance; false otherwise.
-   */
-  bool IsValid() const;
 
   /**
    * @return A string representation of this date in the form "YYYY-MM-MM".
@@ -43,17 +41,17 @@ class Date {
   /**
    * @return The year of this date.
    */
-  uint32_t ExtractYear() const;
+  int32_t ExtractYear() const;
 
   /**
    * @return The month of this date.
    */
-  uint32_t ExtractMonth() const;
+  int32_t ExtractMonth() const;
 
   /**
    * @return The day of this date.
    */
-  uint32_t ExtractDay() const;
+  int32_t ExtractDay() const;
 
   /**
    * Convert this date object into its year, month, and day parts.
@@ -61,7 +59,7 @@ class Date {
    * @param[out] month The month corresponding to this date.
    * @param[out] day The day corresponding to this date.
    */
-  void ExtractComponents(uint32_t *year, uint32_t *month, uint32_t *day);
+  void ExtractComponents(int32_t *year, int32_t *month, int32_t *day);
 
   /**
    * Convert this date instance into a timestamp instance.
@@ -135,16 +133,7 @@ class Date {
    * @param day The day of the date.
    * @return The constructed date. May be invalid.
    */
-  static Date FromYMD(uint32_t year, uint32_t month, uint32_t day);
-
-  /**
-   * Is the date corresponding to the given year, month, and day a valid date?
-   * @param year The year of the date.
-   * @param month The month of the date.
-   * @param day The day of the date.
-   * @return True if valid date.
-   */
-  static bool IsValidDate(uint32_t year, uint32_t month, uint32_t day);
+  static Date FromYMD(int32_t year, int32_t month, int32_t day);
 
  private:
   friend class Timestamp;
@@ -667,6 +656,12 @@ class Blob {
   std::size_t size_;
 };
 
-inline Timestamp Date::ConvertToTimestamp() const { return Timestamp(value_ * kMsPerDay); }
+// ---------------------------------------------------------
+// Implementation below
+// ---------------------------------------------------------
+
+inline Timestamp Date::ConvertToTimestamp() const {
+  return Timestamp(value_ * kMicroSecondsPerDay);
+}
 
 }  // namespace tpl::sql

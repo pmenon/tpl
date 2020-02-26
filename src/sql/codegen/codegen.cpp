@@ -337,12 +337,12 @@ ast::Expr *CodeGen::FloatToSql(double num) const {
 }
 
 ast::Expr *CodeGen::DateToSql(Date date) const {
-  uint32_t year, month, day;
+  int32_t year, month, day;
   date.ExtractComponents(&year, &month, &day);
   return DateToSql(year, month, day);
 }
 
-ast::Expr *CodeGen::DateToSql(uint32_t year, uint32_t month, uint32_t day) const {
+ast::Expr *CodeGen::DateToSql(int32_t year, int32_t month, int32_t day) const {
   ast::Expr *call =
       CallBuiltin(ast::Builtin::DateToSql, {Const32(year), Const32(month), Const32(day)});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Date));

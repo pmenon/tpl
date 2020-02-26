@@ -10,18 +10,24 @@ TEST_F(RuntimeTypesTest, ExtractDateParts) {
   // Valid date
   Date d;
   EXPECT_NO_THROW({ d = Date::FromYMD(2016, 12, 19); });
-  EXPECT_EQ(2016u, d.ExtractYear());
-  EXPECT_EQ(12u, d.ExtractMonth());
-  EXPECT_EQ(19u, d.ExtractDay());
+  EXPECT_EQ(2016, d.ExtractYear());
+  EXPECT_EQ(12, d.ExtractMonth());
+  EXPECT_EQ(19, d.ExtractDay());
+
+  // BC date.
+  EXPECT_NO_THROW({ d = Date::FromYMD(-4000, 1, 2); });
+  EXPECT_EQ(-4000, d.ExtractYear());
+  EXPECT_EQ(1, d.ExtractMonth());
+  EXPECT_EQ(2, d.ExtractDay());
 
   // Invalid
   EXPECT_THROW({ d = Date::FromYMD(1234, 3, 1111); }, ConversionException);
   EXPECT_THROW({ d = Date::FromYMD(1234, 93874, 11); }, ConversionException);
   EXPECT_THROW({ d = Date::FromYMD(1234, 7283, 192873); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromYMD(88888, 12, 12); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromYMD(88888, 12, 987); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromYMD(88888, 921873, 1); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromYMD(88888, 921873, 21938); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromYMD(-40000, 12, 12); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromYMD(50000000, 12, 987); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromYMD(50000000, 921873, 1); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromYMD(-50000000, 921873, 21938); }, ConversionException);
 }
 
 TEST_F(RuntimeTypesTest, DateFromString) {
@@ -46,9 +52,9 @@ TEST_F(RuntimeTypesTest, DateFromString) {
   EXPECT_THROW({ d = Date::FromString("1000-11-23123"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("1000-12323-19"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("1000-12323-199"); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromString("129398-12-20"); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromString("129398-12-120"); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromString("129398-1289217-12"); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromString("50000000-12-20"); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromString("50000000-12-120"); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromString("50000000-1289217-12"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("da fuk?"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("-1-1-23"); }, ConversionException);
 }
@@ -64,6 +70,11 @@ TEST_F(RuntimeTypesTest, DateComparisons) {
   EXPECT_GT(d4, d3);
   EXPECT_GT(d4, d2);
   EXPECT_GT(d4, d1);
+
+  d1 = Date::FromYMD(-4000, 1, 1);
+  d2 = Date::FromYMD(-4000, 1, 2);
+  EXPECT_NE(d1, d2);
+  EXPECT_LT(d1, d2);
 }
 
 TEST_F(RuntimeTypesTest, DateToString) {

@@ -847,9 +847,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 
   OP(InitDate) : {
     auto *sql_date = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());
-    auto year = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
-    auto month = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
-    auto day = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    auto year = frame->LocalAt<int32_t>(READ_LOCAL_ID());
+    auto month = frame->LocalAt<int32_t>(READ_LOCAL_ID());
+    auto day = frame->LocalAt<int32_t>(READ_LOCAL_ID());
     OpInitDate(sql_date, year, month, day);
     DISPATCH_NEXT();
   }
