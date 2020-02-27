@@ -40,7 +40,13 @@ class JoinHashTableVectorProbe {
   /**
    * @return The current set of matches.
    */
-  const Vector *GetMatches();
+  const Vector *GetMatches() { return &curr_matches_; }
+
+  /**
+   * @return The list of TIDs that currently have matches in this probe. This same list filters the
+   *         matches vector returned from JoinHashTableVectorProbe::GetMatches().
+   */
+  const TupleIdList *GetMatchList() { return &key_matches_; }
 
   /**
    * Reset this probe to the state immediately after initialization. This enables re-iterating the
@@ -59,7 +65,7 @@ class JoinHashTableVectorProbe {
   bool NextRightJoin(VectorProjection *input);
 
   // Follow the chain for all non-null entries in 'matches'
-  void FollowChainNext();
+  void FollowNext();
 
   // Given the input keys, check their equality to the current set of matches.
   void CheckKeyEquality(VectorProjection *input);
@@ -75,13 +81,24 @@ class JoinHashTableVectorProbe {
   const planner::LogicalJoinType join_type_;
   // The indexes of the join keys in the input.
   const std::vector<uint32_t> join_key_indexes_;
-  // The list of TIDs that have valid key matches in the matches vector.
-  TupleIdList key_matches_;
-  TupleIdList semi_anti_key_matches_;
-  // The list of TIDs that have non-null entries in the matches vector.
+
+  // The list of non-null initial matches. This list and vector are needed so
+  // that the probe can be reset without having to re-probe the hash table.
+  TupleIdList initial_match_list_;
+  Vector initial_matches_;
+
+  // The list of non-null entries in the current matches vector.
   TupleIdList non_null_entries_;
-  // The vector of current matches.
-  Vector matches_;
+  // The list of TIDs that have matching keys in the current matches vector.
+  TupleIdList key_matches_;
+  // The list used when processing semi or anti joins. Since these are processed
+  // at once in a loop, they're collecting a running list of matches.
+  TupleIdList semi_anti_key_matches_;
+  // The list of current matches. This is always filtered by the key-matches TID
+  // list to select only matches keys. But, it is modified in each iteration of
+  // Next() to follow bucket chains.
+  Vector curr_matches_;
+
   // First 'next' call?
   bool first_;
 };
