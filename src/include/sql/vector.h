@@ -303,10 +303,17 @@ class Vector {
   void Append(const Vector &other);
 
   /**
-   * Copies the contents of this vector into another vector. Callers can optionally specify at what
-   * offset to begin copying at, but data is always copied into the start of the destination vector.
-   * The default is 0.
-   *
+   * Create a clone of this vector into the target vector. The clone will have a copy of all data
+   * and will retain the same shape of this vector.
+   * @param[out] target Where the clone is stored.
+   */
+  void Clone(Vector *target);
+
+  /**
+   * Copies the ACTIVE vector elements in this vector into another vector. Vectors storing complex
+   * objects will invoke copy constructors of these objects when creating new instances in the
+   * target vector.Callers can optionally specify at what offset to begin copying at. The default
+   * offset is 0.
    * @param other The vector to copy into.
    * @param offset The offset in this vector to begin copying.
    */

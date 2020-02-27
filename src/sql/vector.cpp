@@ -328,6 +328,29 @@ void Vector::MoveTo(Vector *other) {
   Destroy();
 }
 
+void Vector::Clone(Vector *target) {
+  TPL_ASSERT(target->owned_data_ != nullptr, "Cannot clone into a reference vector");
+  target->Resize(GetSize());
+  target->type_ = type_;
+  target->count_ = count_;
+  target->num_elements_ = num_elements_;
+  target->tid_list_ = tid_list_;
+  target->null_mask_.Copy(null_mask_);
+
+  // Clone data.
+  if (IsTypeFixedSize(type_)) {
+    std::memcpy(target->GetData(), GetData(), GetTypeIdSize(type_) * num_elements_);
+  } else {
+    auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
+    auto target_data = reinterpret_cast<VarlenEntry *>(target->data_);
+    VectorOps::Exec(*this, [&](uint64_t i, uint64_t k) {
+      if (!null_mask_[i]) {
+        target_data[i] = target->varlen_heap_.AddVarlen(src_data[i]);
+      }
+    });
+  }
+}
+
 void Vector::CopyTo(Vector *other, uint64_t offset) {
   TPL_ASSERT(type_ == other->type_,
              "Copying to vector of different type. Did you mean to cast instead?");
