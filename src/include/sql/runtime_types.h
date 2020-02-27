@@ -440,13 +440,15 @@ class VarlenEntry {
     VarlenEntry result;
     result.size_ = size;
 
-    // If the size is small enough for the content to be inlined, apply that
-    // optimization. If not, store a prefix of the content inline and point to
-    // the bigger content.
-
     if (size <= GetInlineThreshold()) {
-      std::memcpy(result.prefix_, content, size);
+      // Small string: just store the prefix. But, first zero initialize prefix
+      // to ensure strings smaller than 4 still have an equal prefix.
+      std::memset(result.prefix_, 0, GetPrefixSize());
+      if (size != 0) {
+        std::memcpy(result.prefix_, content, size);
+      }
     } else {
+      // Large string: copy prefix and store pointer.
       std::memcpy(result.prefix_, content, kPrefixLength);
       result.content_ = content;
     }
