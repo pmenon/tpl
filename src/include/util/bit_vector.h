@@ -3,7 +3,6 @@
 #include <immintrin.h>
 #include <algorithm>
 #include <limits>
-#include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -128,49 +127,16 @@ class BitVector {
    * Create an empty bit vector. Users must call Resize() before interacting with it.
    * @ref BitVector::Resize()
    */
-  BitVector() : num_bits_(0) {}
+  explicit BitVector(Allocator allocator = Allocator()) : num_bits_(0), words_(allocator) {}
 
   /**
    * Create a new bit vector with the specified number of bits, all initially unset.
    * @param num_bits The number of bits in the vector.
    */
-  explicit BitVector(const uint32_t num_bits)
-      : num_bits_(num_bits), words_(NumNeededWords(num_bits), WordType(0)) {
+  explicit BitVector(const uint32_t num_bits, Allocator allocator = Allocator())
+      : num_bits_(num_bits), words_(NumNeededWords(num_bits), WordType(0), allocator) {
     TPL_ASSERT(num_bits_ > 0, "Cannot create bit vector with zero bits");
   }
-
-  /**
-   * Create a copy of the provided bit vector.
-   * @param other The bit vector to copy.
-   */
-  BitVector(const BitVector &other) : num_bits_(other.num_bits_), words_(other.words_) {}
-
-  /**
-   * Move constructor.
-   * @param other Move the given bit vector into this.
-   */
-  BitVector(BitVector &&other) noexcept = default;
-
-  /**
-   * Copy the provided bit vector into this bit vector.
-   * @param other The bit vector to copy.
-   * @return This bit vector as a copy of the input vector.
-   */
-  BitVector &operator=(const BitVector &other) {
-    if (this == &other) {
-      return *this;
-    }
-    num_bits_ = other.num_bits_;
-    words_ = other.words_;
-    return *this;
-  }
-
-  /**
-   * Move assignment.
-   * @param other The bit vector we're moving.
-   * @return This vector.
-   */
-  BitVector &operator=(BitVector &&other) noexcept = default;
 
   /**
    * @return True if the bit at the provided position is set; false otherwise.
@@ -768,7 +734,7 @@ class BitVector {
     }
   }
 
-  // Find the first set bit in the bit vector starting at the given word position
+  // Find the first set bit in the vector starting at the given word position.
   uint32_t FindFrom(uint32_t word_index) const noexcept {
     for (uint32_t i = word_index; i < GetNumWords(); i++) {
       if (words_[i] != WordType(0)) {
@@ -779,11 +745,10 @@ class BitVector {
   }
 
  private:
-  // The number of bits in the bit vector
+  // The number of bits in the bit vector.
   uint32_t num_bits_;
-
-  // The array of words making up the bit vector
-  std::vector<WordType> words_;
+  // The array of words making up the bit vector.
+  std::vector<WordType, Allocator> words_;
 };
 
 /**
