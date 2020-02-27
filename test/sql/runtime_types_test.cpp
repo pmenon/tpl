@@ -151,6 +151,26 @@ TEST_F(RuntimeTypesTest, VarlenComparisons) {
     EXPECT_EQ(v1, v3);
   }
 
+  // Very short strings.
+  {
+    auto v1 = VarlenEntry::Create("a");
+    auto v2 = VarlenEntry::Create("b");
+    auto v3 = v1;
+    auto v4 = VarlenEntry::Create("");
+    EXPECT_TRUE(v1.IsInlined());
+    EXPECT_TRUE(v2.IsInlined());
+    EXPECT_TRUE(v3.IsInlined());
+    EXPECT_TRUE(v4.IsInlined());
+    EXPECT_NE(v1, v2);
+    EXPECT_LT(v1, v2);
+    EXPECT_GT(v2, v1);
+    EXPECT_EQ(v1, v3);
+    EXPECT_NE(v1, v4);
+    EXPECT_NE(v2, v4);
+    EXPECT_NE(v3, v4);
+    EXPECT_LT(v4, v1);
+  }
+
   // Longer strings.
   auto s1 = "This is sort of a long string, but the end of the string should be different than XXX";
   auto s2 = "This is sort of a long string, but the end of the string should be different than YYY";
