@@ -6,7 +6,7 @@
 namespace tpl::sql::codegen {
 
 /**
- * Builtin Function Translator
+ * Translator for TPL builtins functions.
  */
 class BuiltinFunctionTranslator : public ExpressionTranslator {
  public:
@@ -18,9 +18,13 @@ class BuiltinFunctionTranslator : public ExpressionTranslator {
   BuiltinFunctionTranslator(const planner::BuiltinFunctionExpression &expr,
                             CompilationContext *compilation_context);
 
+  /**
+   * Derive the value of the expression.
+   * @param ctx The context containing collected subexpressions.
+   * @param provider A provider for specific column values.
+   * @return The value of the expression.
+   */
   ast::Expr *DeriveValue(WorkContext *ctx, const ColumnValueProvider *provider) const override;
-
- private:
-  std::vector<std::unique_ptr<ExpressionTranslator>> arg_translators_;
 };
+
 }  // namespace tpl::sql::codegen
