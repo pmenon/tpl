@@ -16,8 +16,28 @@ class JoinHashTableVectorProbe;
 class VectorProjectionIterator;
 
 /**
- * An adaptive join processor that dynamically adapts the ordering of a series of joins in order to
- * find an optimal ordering.
+ * A flexible join processor that dynamically adapts the ordering of a series of joins in order to
+ * improve runtime performance. The manager is initially configured with a sequence of joins through
+ * consecutive calls to InsertJoinStep(). Each invocation provides (1) the join hash table to probe
+ * (2) the indexes of the join keys within the input batch (as they arrive) and (3) the matching
+ * function used to evaluation the join.
+ *
+ * Once configured, the manage is "effectively" immutable and can be used to issue multi-step
+ * joins. The process begins with an invocation to SetInputBatch() to prepare the join for a new
+ * input batch of tuples. Then, all result tuples can be retrieved by looping while Next() returns
+ * true:
+ *
+ * @code
+ * JoinManager *jm = ...
+ * VectorProjectionIterator *iter = ...
+ * // Prepare the join, then loop results.
+ * jm->SetInputBatch(iter);
+ * while (jm->Next()) {
+ *   HashTableEntry **matches[];
+ *   jm->GetOutputBatch(matches);
+ *   // Process matches
+ * }
+ * @endcode
  */
 class JoinManager {
  public:
@@ -54,9 +74,8 @@ class JoinManager {
   void SetInputBatch(VectorProjectionIterator *input_vpi);
 
   /**
-   * Attempt to advance
-   * @return True if there is more output from this fancy-ass multi-step join for the current input
-   *         batch. False otherwise.
+   * Attempt to advance this fancy-ass multi-step join for the current input batch.
+   * @return True if there is more output for the current input batch; false otherwise.
    */
   bool Next();
 
