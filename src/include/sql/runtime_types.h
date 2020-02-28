@@ -473,7 +473,7 @@ class VarlenEntry {
    * @return The maximum size of the varlen field, in bytes, that can be inlined within the object.
    * Any objects that are larger need to be stored as a pointer to a separate buffer.
    */
-  static constexpr uint32_t GetInlineThreshold() { return sizeof(VarlenEntry) - kPrefixLength; }
+  static constexpr uint32_t GetInlineThreshold() { return sizeof(VarlenEntry) - sizeof(uint32_t); }
 
   /**
    * @return length of the prefix of the varlen stored in the object for execution engine, if the
@@ -607,6 +607,8 @@ class VarlenEntry {
     const byte *content_;
   };
 };
+
+static_assert(sizeof(VarlenEntry) == 16U, "VarlenEntry expected to be 16 bytes");
 
 /**
  * A container for varlens.
