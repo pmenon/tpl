@@ -83,7 +83,7 @@ TableInsertMeta insert_meta[] = {
       {"col2", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
 
     // All types
-    {TableId::AllTypes, "all_types", 2000000,
+    {TableId::AllTypes, "all_types", 2000,
      {{"a", sql::BooleanType::Instance(false), Dist::Serial, 0L, 1L},
       {"b", sql::TinyIntType::Instance(false), Dist::Uniform, -100L, 100L},
       {"c", sql::SmallIntType::Instance(false), Dist::Uniform, -1000L, 1000L},

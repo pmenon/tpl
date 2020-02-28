@@ -53,7 +53,7 @@ parallel-scan.tpl,true,500
 scan-table.tpl,true,500
 scan-table-2.tpl,true,1999950
 scan-table-3.tpl,true,2000000
-scan-alltypes.tpl,true,1000000
+scan-alltypes.tpl,true,1000
 scan-vpi-iter.tpl,true,500
 sort.tpl,true,2000
 sort-topk.tpl,true,11
