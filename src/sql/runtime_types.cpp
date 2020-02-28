@@ -11,12 +11,16 @@ namespace tpl::sql {
 namespace {
 
 constexpr int64_t kMonthsPerYear = 12;
-constexpr int32_t kDaysPerMonth[2][13] = {{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 0},
-                                          {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 0}};
-constexpr const char *const kMonthNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
-                                             "Aug", "Sep", "Oct", "Nov", "Dec", NULL};
-constexpr const char *const kDayNames[] = {"Sunday",   "Monday", "Tuesday",  "Wednesday",
-                                           "Thursday", "Friday", "Saturday", NULL};
+constexpr int32_t kDaysPerMonth[2][12] = {{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+                                          {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
+constexpr const char *const kMonthNames[] = {"January",   "February", "March",    "April",
+                                             "May",       "June",     "July",     "August",
+                                             "September", "October",  "November", "December"};
+constexpr const char *const kShortMonthNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+constexpr const char *const kDayNames[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+constexpr const char *const kShortDayNames[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
+                                                "Thursday", "Friday", "Saturday"};
 
 constexpr int64_t kHoursPerDay = 24;
 constexpr int64_t kMinutesPerHour = 60;
