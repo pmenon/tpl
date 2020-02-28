@@ -49,18 +49,18 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
              "with an explicit return expression, or use the factory to manually append a return "
              "statement and call FunctionBuilder::Finish() with a null return.");
 
-  // Add the return
+  // Add the return.
   if (!statements_->IsEmpty() && !statements_->GetLast()->IsReturnStmt()) {
     Append(codegen_->GetFactory()->NewReturnStmt(codegen_->GetPosition(), ret));
   }
 
-  // Finalize everything
+  // Finalize everything.
   statements_->SetRightBracePosition(codegen_->GetPosition());
 
-  // Build the function's type
+  // Build the function's type.
   auto func_type = codegen_->GetFactory()->NewFunctionType(start_, std::move(params_), ret_type_);
 
-  // Create the declaration
+  // Create the declaration.
   auto func_lit = codegen_->GetFactory()->NewFunctionLitExpr(func_type, statements_);
   decl_ = codegen_->GetFactory()->NewFunctionDecl(start_, name_, func_lit);
 

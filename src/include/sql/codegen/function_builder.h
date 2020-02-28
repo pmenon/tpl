@@ -79,8 +79,6 @@ class FunctionBuilder {
  private:
   // The code generation instance.
   CodeGen *codegen_;
-  // The previous function that was being built, if any.
-  FunctionBuilder *prev_function_;
   // The function's name.
   ast::Identifier name_;
   // The function's arguments.
