@@ -84,14 +84,14 @@ void ThreadStateContainer::Reset(const std::size_t state_size,
 
 byte *ThreadStateContainer::AccessCurrentThreadState() {
   auto &tls_handle = impl_->states.local();
-  return tls_handle.state();
+  return tls_handle.State();
 }
 
 void ThreadStateContainer::CollectThreadLocalStates(std::vector<byte *> *container) const {
   container->clear();
   container->reserve(impl_->states.size());
   for (auto &tls_handle : impl_->states) {
-    container->push_back(tls_handle.state());
+    container->push_back(tls_handle.State());
   }
 }
 
@@ -100,22 +100,21 @@ void ThreadStateContainer::CollectThreadLocalStateElements(std::vector<byte *> *
   container->clear();
   container->reserve(impl_->states.size());
   for (auto &tls_handle : impl_->states) {
-    container->push_back(tls_handle.state() + element_offset);
+    container->push_back(tls_handle.State() + element_offset);
   }
 }
 
 void ThreadStateContainer::IterateStates(void *const ctx,
                                          ThreadStateContainer::IterateFn iterate_fn) const {
   for (auto &tls_handle : impl_->states) {
-    iterate_fn(ctx, tls_handle.state());
+    iterate_fn(ctx, tls_handle.State());
   }
 }
 
 void ThreadStateContainer::IterateStatesParallel(void *const ctx,
                                                  ThreadStateContainer::IterateFn iterate_fn) const {
-  std::vector<byte *> states;
-  CollectThreadLocalStates(&states);
-  tbb::parallel_for_each(states, [&](auto tls) { iterate_fn(ctx, tls); });
+  tbb::parallel_for_each(impl_->states,
+                         [&](auto &tls_handle) { iterate_fn(ctx, tls_handle.State()); });
 }
 
 uint32_t ThreadStateContainer::GetThreadStateCount() const { return impl_->states.size(); }

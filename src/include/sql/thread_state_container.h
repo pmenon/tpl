@@ -244,7 +244,7 @@ class ThreadStateContainer {
     ~TLSHandle();
 
     // Thread-local state
-    byte *state() { return state_; }
+    byte *State() { return state_; }
 
    private:
     // Handle to container
