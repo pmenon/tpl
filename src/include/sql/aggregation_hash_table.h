@@ -216,7 +216,7 @@ class AggregationHashTable {
                                       ScanPartitionFn scan_fn);
 
   /**
-   * Construct an AggregationHashTable over all non-empty overflow partitions.
+   * Construct a new aggregation hash table instance for each non-empty overflow partition.
    * @param query_state An opaque state object pointer
    */
   void BuildAllPartitions(void *query_state);
