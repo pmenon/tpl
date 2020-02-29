@@ -303,6 +303,77 @@ class VectorOps : public AllStatic {
    */
   static void Gather(const Vector &pointers, Vector *result, std::size_t offset);
 
+  /**
+   * Perform a fused gather+select operation. Filter elements in @em tid_list where elements in
+   * @em input equal elements pointed to by @em pointers after applying the provided byte offset.
+   * @param input The input elements to compare with.
+   * @param pointers The vector of pointers.
+   * @param offset The byte offset to apply to each valid pointer element.
+   * @param[in,out] tid_list The list of TIDs to read and update.
+   */
+  static void GatherAndSelectEqual(const Vector &input, const Vector &pointers, std::size_t offset,
+                                   TupleIdList *tid_list);
+
+  /**
+   * Perform a fused gather+select operation. Filter elements in @em tid_list where elements in
+   * @em input are greater than elements pointed to by @em pointers after applying the provided byte
+   * offset.
+   * @param input The input elements to compare with.
+   * @param pointers The vector of pointers.
+   * @param offset The byte offset to apply to each valid pointer element.
+   * @param[in,out] tid_list The list of TIDs to read and update.
+   */
+  static void GatherAndSelectGreaterThan(const Vector &input, const Vector &pointers,
+                                         std::size_t offset, TupleIdList *tid_list);
+
+  /**
+   * Perform a fused gather+select operation. Filter elements in @em tid_list where elements in
+   * @em input are greater than or equal to elements pointed to by @em pointers after applying the
+   * provided byte offset.
+   * @param input The input elements to compare with.
+   * @param pointers The vector of pointers.
+   * @param offset The byte offset to apply to each valid pointer element.
+   * @param[in,out] tid_list The list of TIDs to read and update.
+   */
+  static void GatherAndSelectGreaterThanEqual(const Vector &input, const Vector &pointers,
+                                              std::size_t offset, TupleIdList *tid_list);
+
+  /**
+   * Perform a fused gather+select operation. Filter elements in @em tid_list where elements in
+   * @em input are less than elements pointed to by @em pointers after applying the provided byte
+   * offset.
+   * @param input The input elements to compare with.
+   * @param pointers The vector of pointers.
+   * @param offset The byte offset to apply to each valid pointer element.
+   * @param[in,out] tid_list The list of TIDs to read and update.
+   */
+  static void GatherAndSelectLessThan(const Vector &input, const Vector &pointers,
+                                      std::size_t offset, TupleIdList *tid_list);
+
+  /**
+   * Perform a fused gather+select operation. Filter elements in @em tid_list where elements in
+   * @em input are less than or equal to elements pointed to by @em pointers after applying the
+   * provided byte offset.
+   * @param input The input elements to compare with.
+   * @param pointers The vector of pointers.
+   * @param offset The byte offset to apply to each valid pointer element.
+   * @param[in,out] tid_list The list of TIDs to read and update.
+   */
+  static void GatherAndSelectLessThanEqual(const Vector &input, const Vector &pointers,
+                                           std::size_t offset, TupleIdList *tid_list);
+
+  /**
+   * Perform a fused gather+select operation. Filter elements in @em tid_list where elements in
+   * @em input are not equal to elements pointed to by @em pointers after applying the provided byte
+   * offset.
+   * @param input The input elements to compare with.
+   * @param pointers The vector of pointers.
+   * @param offset The byte offset to apply to each valid pointer element.
+   * @param[in,out] tid_list The list of TIDs to read and update.
+   */
+  static void GatherAndSelectNotEqual(const Vector &input, const Vector &pointers,
+                                      std::size_t offset, TupleIdList *tid_list);
+
   // -------------------------------------------------------
   //
   // Sort-ish
