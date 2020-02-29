@@ -164,7 +164,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   // -------------------------------------------------------
 
   std::vector<Sorter *> tl_sorters;
-  thread_state_container->CollectThreadLocalStateElementsAs(tl_sorters, sorter_offset);
+  thread_state_container->CollectThreadLocalStateElementsAs(&tl_sorters, sorter_offset);
   llvm::erase_if(tl_sorters, [](const Sorter *sorter) { return sorter->IsEmpty(); });
 
   // If there's nothing to sort, exit.

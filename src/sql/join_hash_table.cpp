@@ -560,7 +560,7 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
                                   const std::size_t jht_offset) {
   // Collect thread-local hash tables
   std::vector<JoinHashTable *> tl_join_tables;
-  thread_state_container->CollectThreadLocalStateElementsAs(tl_join_tables, jht_offset);
+  thread_state_container->CollectThreadLocalStateElementsAs(&tl_join_tables, jht_offset);
 
   // Combine HLL counts to get a global estimate
   for (auto *jht : tl_join_tables) {

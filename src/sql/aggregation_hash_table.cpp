@@ -615,7 +615,7 @@ void AggregationHashTable::TransferMemoryAndPartitions(
   // Okay, now we actually pull out the thread-local aggregation hash tables and
   // move both their main entry data and the overflow partitions to us.
   std::vector<AggregationHashTable *> tl_agg_ht;
-  thread_states->CollectThreadLocalStateElementsAs(tl_agg_ht, agg_ht_offset);
+  thread_states->CollectThreadLocalStateElementsAs(&tl_agg_ht, agg_ht_offset);
 
   for (auto *table : tl_agg_ht) {
     // Flush each table to ensure their hash tables are empty and their overflow
