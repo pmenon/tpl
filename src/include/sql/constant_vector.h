@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "sql/vector.h"
 
 namespace tpl::sql {

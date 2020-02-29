@@ -41,7 +41,6 @@ void BuildHT(JoinHashTable *jht, bool is_a_key, uint32_t a_max, uint32_t b_max) 
 }
 
 TEST_F(JoinManagerTest, TwoWayJoin) {
-
   MemoryPool mem_pool(nullptr);
   QueryState query_state;
   query_state.jht1 = std::make_unique<JoinHashTable>(&mem_pool, sizeof(JoinRow), false);

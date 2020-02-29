@@ -44,9 +44,10 @@ void OutputTranslator::PerformPipelineWork(tpl::sql::codegen::WorkContext *work_
   }
 }
 
-void OutputTranslator::FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *func) const {
+void OutputTranslator::FinishPipelineWork(const Pipeline &pipeline,
+                                          FunctionBuilder *function) const {
   auto exec_ctx = GetExecutionContext();
-  func->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx}));
+  function->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx}));
 }
 
 void OutputTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {

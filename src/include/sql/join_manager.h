@@ -10,7 +10,7 @@
 
 namespace tpl::sql {
 
-class HashTableEntry;
+struct HashTableEntry;
 class JoinHashTable;
 class JoinHashTableVectorProbe;
 class VectorProjectionIterator;

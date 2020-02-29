@@ -38,12 +38,12 @@ class OutputTranslator : public OperatorTranslator {
   /**
    * Output translator does not hold state.
    */
-  void InitializeQueryState(FunctionBuilder *func) const override {}
+  void InitializeQueryState(FunctionBuilder *function) const override {}
 
   /**
    * Output tranlator does not hold state.
    */
-  void TearDownQueryState(FunctionBuilder *func) const override {}
+  void TearDownQueryState(FunctionBuilder *function) const override {}
 
   /**
    * Output translator does not need helper functions.
@@ -64,7 +64,7 @@ class OutputTranslator : public OperatorTranslator {
   /**
    * Output translator does not require any pre-pipeline logic.
    */
-  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *func) const override {}
+  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * Perform the main work of the translator.
@@ -74,12 +74,12 @@ class OutputTranslator : public OperatorTranslator {
   /**
    * Output translator needs to finalize the output.
    */
-  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *func) const override;
+  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Nothing to tear down.
    */
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *func) const override {}
+  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * Cannot be start of pipeline
@@ -113,6 +113,6 @@ class OutputTranslator : public OperatorTranslator {
  private:
   ast::Identifier output_var_;
   ast::Identifier output_struct_;
+};
 
-};  // namespace tpl::sql::codegen
 }  // namespace tpl::sql::codegen
