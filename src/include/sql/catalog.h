@@ -17,7 +17,8 @@ class Table;
   V(Test1, "test_1")           \
   V(Test2, "test_2")           \
   V(AllTypes, "all_types")     \
-  V(Small1, "small_1")
+  V(Small1, "small_1")         \
+  V(FuckYou1, "fuck_you_1")
 
 enum class TableId : uint16_t {
 #define ENTRY(Id, ...) Id,

@@ -178,7 +178,7 @@ TEST_F(FilterManagerTest, AdaptiveCheckTest) {
 // Run the filter manager experiment a fixed number of times and take the average.
 // Using the provided filter terms and adaptation flag.
 void RunExperiment(uint32_t num_runs, bool adapt, const std::vector<FilterManager::MatchFn> &terms,
-                   std::vector<double> *results) {
+                   std::vector<double> *results, const TableId table_id) {
   for (uint32_t r = 0; r < num_runs; r++) {
     std::vector<double> run_results;
     run_results.reserve(1000);
@@ -187,7 +187,7 @@ void RunExperiment(uint32_t num_runs, bool adapt, const std::vector<FilterManage
     filter.StartNewClause();
     filter.InsertClauseTerms(terms);
 
-    TableVectorIterator tvi(static_cast<uint16_t>(TableId::Test1));
+    TableVectorIterator tvi(static_cast<uint16_t>(table_id));
     for (tvi.Init(); tvi.Advance();) {
       auto vpi = tvi.GetVectorProjectionIterator();
       const auto exec_micros = util::Time<std::micro>([&] { filter.RunFilters(vpi); });
@@ -256,12 +256,100 @@ void RunExperiment(const std::string &output, bool verbose) {
     uint32_t order_num = 0;
     do {
       std::vector<double> perm;
-      RunExperiment(num_runs, false, terms, &perm);
+      RunExperiment(num_runs, false, terms, &perm, TableId::Test1);
       all_results.emplace_back(order_num++, std::move(perm));
     } while (std::next_permutation(terms.begin(), terms.end()));
 
     // Run adaptive mode.
-    RunExperiment(num_runs, true, terms, &adapt_results);
+    RunExperiment(num_runs, true, terms, &adapt_results, TableId::Test1);
+
+    // Sort the results by time. 'all_results[0]' will be best.
+    std::sort(all_results.begin(), all_results.end(), [](const auto &a, const auto &b) {
+      auto a_total = std::accumulate(a.second.begin(), a.second.end(), 0.0);
+      auto b_total = std::accumulate(b.second.begin(), b.second.end(), 0.0);
+      return a_total <= b_total;
+    });
+
+    const auto num_orders = all_results.size();
+
+    // Collect a subset of all the order timings.
+    results.push_back(all_results[0].second);                   // Best
+    results.push_back(all_results[num_orders / 2].second);      // 50%
+    results.push_back(all_results[3 * num_orders / 4].second);  // 75%
+    results.push_back(all_results.back().second);               // Worst
+  }
+
+  if (verbose) {
+    // Print results.
+    const auto num_orders = results.size();
+    const auto num_parts = results[0].size();
+
+    // Print CSV of per-partition timings.
+    std::ofstream out_file;
+    out_file.open((output + ".csv").c_str());
+
+    out_file << "Partition, ";
+    for (uint32_t order = 0; order < num_orders; order++) {
+      out_file << "Order_" << order << ", ";
+    }
+    out_file << "Adaptive" << std::endl;
+
+    for (uint32_t i = 0; i < num_parts; i++) {
+      out_file << i << ", ";
+      std::cout << std::fixed << std::setprecision(5);
+      for (uint32_t j = 0; j < num_orders; j++) {
+        out_file << results[j][i] << ", ";
+      }
+      out_file << adapt_results[i] << std::endl;
+    }
+  } else {
+    std::ofstream out_file((output + "-dense.csv").c_str());
+    const auto total_best = std::accumulate(results[0].begin(), results[0].end(), 0.0);
+    const auto total_worst = std::accumulate(results.back().begin(), results.back().end(), 0.0);
+    const auto total_adaptive = std::accumulate(adapt_results.begin(), adapt_results.end(), 0.0);
+    out_file << total_worst << ", " << total_best << ", " << total_adaptive << std::endl;
+  }
+}
+
+void RunFuckYouExperiment(const std::string &output, bool verbose) {
+  // ALL terms here.
+  std::vector<FilterManager::MatchFn> terms = {
+      // c < 5
+      [](auto input, auto tids, auto ctx) {
+        VectorFilterExecutor::SelectLessThanVal(input, 2, GenericValue::CreateInteger(5), tids);
+      },
+      // b < 5
+      [](auto input, auto tids, auto ctx) {
+        VectorFilterExecutor::SelectLessThanVal(input, 1, GenericValue::CreateInteger(5), tids);
+      },
+      // a < 5
+      [](auto input, auto tids, auto ctx) {
+        VectorFilterExecutor::SelectLessThanVal(input, 0, GenericValue::CreateInteger(5), tids);
+      },
+  };
+  std::sort(terms.begin(), terms.end());
+
+  const uint32_t num_runs = 10;
+  std::vector<std::vector<double>> results;  // Subset of interesting results.
+  std::vector<double> adapt_results;         // Results from adaptive filter.
+
+  {
+    // 'all_results' holds, for each possible ordering, the timings for each
+    // partition. We time and capture all orderings because we don't know
+    // which will be best ahead of time. So, we'll run them all, sort them
+    // and choose the ones we want.
+    std::vector<std::pair<uint32_t, std::vector<double>>> all_results;
+
+    // Perform experiment on all possible orderings.
+    uint32_t order_num = 0;
+    do {
+      std::vector<double> perm;
+      RunExperiment(num_runs, false, terms, &perm, TableId::FuckYou1);
+      all_results.emplace_back(order_num++, std::move(perm));
+    } while (std::next_permutation(terms.begin(), terms.end()));
+
+    // Run adaptive mode.
+    RunExperiment(num_runs, true, terms, &adapt_results, TableId::FuckYou1);
 
     // Sort the results by time. 'all_results[0]' will be best.
     std::sort(all_results.begin(), all_results.end(), [](const auto &a, const auto &b) {
@@ -357,7 +445,7 @@ void VarySamplingRate(const std::string &output) {
                                     sample_freq);
     // Run experiment.
     std::vector<double> sample_results;
-    RunExperiment(num_runs, true, terms, &sample_results);
+    RunExperiment(num_runs, true, terms, &sample_results, TableId::Test1);
     const auto total = std::accumulate(sample_results.begin(), sample_results.end(), 0.0);
     results.push_back(total);
   }
@@ -386,6 +474,11 @@ TEST_F(FilterManagerTest, DISABLED_Experiment) {
   RunExperiment<half - 7 * half_ten_pct, half + 7 * half_ten_pct>("filter-70", verbose);
   RunExperiment<half - 8 * half_ten_pct, half + 8 * half_ten_pct>("filter-80", verbose);
   RunExperiment<half - 9 * half_ten_pct, half + 9 * half_ten_pct>("filter-90", verbose);
+}
+
+TEST_F(FilterManagerTest, DISABLED_FuckYouExperiment) {
+  bool verbose = true;
+  RunFuckYouExperiment("filter", verbose);
 }
 
 TEST_F(FilterManagerTest, DISABLED_VarySampleFreqExperiment) {
