@@ -150,9 +150,8 @@ class AggregationHashTable {
   byte *AllocInputTuplePartitioned(hash_t hash);
 
   /**
-   * Insert and link in the given fully-constructed tuple contained within @em entry payload into
-   * this aggregation table. This is used during partitioned-build when pre-allocated tuples need to
-   * be linked into the hash table without allocating new tuple data.
+   * Insert and link in an entry containing a fully-constructed tuple into this aggregation table.
+   * The entry is inserted assuming non-concurrent insertions!
    * @param entry The entry to insert into the hash table.
    */
   void Insert(HashTableEntry *entry) { hash_table_.Insert<false>(entry); }
