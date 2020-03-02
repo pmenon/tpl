@@ -60,7 +60,7 @@ void TemplatedGatherAndSelectOperation_Constant(const Vector &input, const Vecto
   const auto *RESTRICT raw_pointers = reinterpret_cast<const byte **>(pointers.GetData());
   tid_list->Filter([&](const uint64_t i) {
     const auto *RESTRICT element = reinterpret_cast<const T *>(raw_pointers[i] + offset);
-    return *element == *constant;
+    return Op::Apply(*element, *constant);
   });
 }
 
@@ -75,7 +75,7 @@ void TemplatedGatherAndSelectOperation_Vector(const Vector &input, const Vector 
   const auto *RESTRICT raw_pointers = reinterpret_cast<const byte **>(pointers.GetData());
   tid_list->Filter([&](const uint64_t i) {
     const auto *RESTRICT element = reinterpret_cast<const T *>(raw_pointers[i] + offset);
-    return *element == raw_inputs[i];
+    return Op::Apply(*element, raw_inputs[i]);
   });
 }
 
