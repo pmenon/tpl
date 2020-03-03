@@ -64,72 +64,17 @@ void JoinHashTableVectorProbe::Init(VectorProjection *input) {
   initial_matches_.Clone(&curr_matches_);
 }
 
-namespace {
-
-// TODO(pmenon): Prefetch?
-template <typename T>
-void TemplatedCompareKey(Vector *probe_keys, Vector *entries, const std::size_t key_offset,
-                         TupleIdList *key_equal_tids) {
-  auto *RESTRICT raw_probe_keys = reinterpret_cast<const T *>(probe_keys->GetData());
-  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries->GetData());
-  key_equal_tids->Filter([&](uint64_t i) {
-    auto *RESTRICT table_key = reinterpret_cast<const T *>(raw_entries[i]->payload + key_offset);
-    return raw_probe_keys[i] == *table_key;
-  });
-}
-
-void CompareKey(Vector *probe_keys, Vector *entries, const std::size_t key_offset,
-                TupleIdList *key_equal_tids) {
-  switch (probe_keys->GetTypeId()) {
-    case TypeId::Boolean:
-      TemplatedCompareKey<bool>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::TinyInt:
-      TemplatedCompareKey<int8_t>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::SmallInt:
-      TemplatedCompareKey<int16_t>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Integer:
-      TemplatedCompareKey<int32_t>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::BigInt:
-      TemplatedCompareKey<int64_t>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Float:
-      TemplatedCompareKey<float>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Double:
-      TemplatedCompareKey<double>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Date:
-      TemplatedCompareKey<Date>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Varchar:
-      TemplatedCompareKey<VarlenEntry>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Varbinary:
-      TemplatedCompareKey<Blob>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    default:
-      throw NotImplementedException("key comparison on type {} not supported",
-                                    TypeIdToString(probe_keys->GetTypeId()));
-  }
-}
-
-}  // namespace
-
 void JoinHashTableVectorProbe::CheckKeyEquality(VectorProjection *input) {
   // Filter matches in preparation for the key check.
   curr_matches_.SetFilteredTupleIdList(&key_matches_, key_matches_.GetTupleCount());
 
   // Check each key component.
-  std::size_t key_offset = 0;
+  std::size_t key_offset = HashTableEntry::ComputePayloadOffset();
   for (const auto key_index : join_key_indexes_) {
-    auto probe_keys = input->GetColumn(key_index);
-    CompareKey(probe_keys, &curr_matches_, key_offset, &key_matches_);
+    const Vector *key_vector = input->GetColumn(key_index);
+    VectorOps::GatherAndSelectEqual(*key_vector, curr_matches_, key_offset, &key_matches_);
     if (key_matches_.IsEmpty()) break;
-    key_offset += GetTypeIdSize(probe_keys->GetTypeId());
+    key_offset += GetTypeIdSize(key_vector->GetTypeId());
   }
 }
 
