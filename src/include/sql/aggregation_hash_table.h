@@ -439,7 +439,6 @@ class AHTIterator {
   explicit AHTIterator(const AggregationHashTable &agg_table) : iter_(agg_table.hash_table_) {}
 
   /**
-   * Does this iterator have more data?
    * @return True if the iterator has more data; false otherwise
    */
   bool HasNext() const { return iter_.HasNext(); }
@@ -450,7 +449,8 @@ class AHTIterator {
   void Next() { iter_.Next(); }
 
   /**
-   * Return a pointer to the current row. It's assumed the called has checked the iterator is valid.
+   * @return A pointer to the current row. This assumes a previous call to HasNext() indicated there
+   *         is more data.
    */
   const byte *GetCurrentAggregateRow() const {
     auto *ht_entry = iter_.GetCurrentEntry();

@@ -328,60 +328,6 @@ void AggregationHashTable::LookupInitial() {
   batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->GroupsNotFound());
 }
 
-namespace {
-
-template <typename T>
-void TemplatedCompareKey(const Vector &probe_keys, const Vector &entries,
-                         const std::size_t key_offset, TupleIdList *key_equal_tids) {
-  auto *RESTRICT raw_probe_keys = reinterpret_cast<const T *>(probe_keys.GetData());
-  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries.GetData());
-  key_equal_tids->Filter([&](uint64_t i) {
-    auto *RESTRICT table_key = reinterpret_cast<const T *>(raw_entries[i]->payload + key_offset);
-    return raw_probe_keys[i] == *table_key;
-  });
-}
-
-void CompareKey(const Vector &probe_keys, const Vector &entries, const std::size_t key_offset,
-                TupleIdList *key_equal_tids) {
-  switch (probe_keys.GetTypeId()) {
-    case TypeId::Boolean:
-      TemplatedCompareKey<bool>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::TinyInt:
-      TemplatedCompareKey<int8_t>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::SmallInt:
-      TemplatedCompareKey<int16_t>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Integer:
-      TemplatedCompareKey<int32_t>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::BigInt:
-      TemplatedCompareKey<int64_t>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Float:
-      TemplatedCompareKey<float>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Double:
-      TemplatedCompareKey<double>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Date:
-      TemplatedCompareKey<Date>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Varchar:
-      TemplatedCompareKey<VarlenEntry>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    case TypeId::Varbinary:
-      TemplatedCompareKey<Blob>(probe_keys, entries, key_offset, key_equal_tids);
-      break;
-    default:
-      throw NotImplementedException("key comparison on type {} not supported",
-                                    TypeIdToString(probe_keys.GetTypeId()));
-  }
-}
-
-}  // namespace
-
 void AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *input_batch,
                                             const std::vector<uint32_t> &key_indexes) {
   // The list of tuples whose keys need to be checked is stored in
@@ -395,10 +341,11 @@ void AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *input_batc
   }
 
   // Check all key components one at a time.
-  std::size_t key_offset = 0;
+  std::size_t key_offset = HashTableEntry::ComputePayloadOffset();
   for (const auto key_index : key_indexes) {
     const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
-    CompareKey(*key_vector, *batch_state_->Entries(), key_offset, batch_state_->KeyEqual());
+    VectorOps::GatherAndSelectEqual(*key_vector, *batch_state_->Entries(), key_offset,
+                                    batch_state_->KeyEqual());
     key_offset += GetTypeIdSize(key_vector->GetTypeId());
   }
 
