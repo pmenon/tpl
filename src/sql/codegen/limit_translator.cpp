@@ -12,9 +12,7 @@ namespace tpl::sql::codegen {
 LimitTranslator::LimitTranslator(const planner::LimitPlanNode &plan,
                                  CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline) {
-  TPL_ASSERT(plan.GetLimit() != 0,
-             "Zero limit returns nothing. This shouldn't been optimized earlier in the execution "
-             "pipeline");
+  TPL_ASSERT(plan.GetOffset() != 0 || plan.GetLimit() != 0, "Both offset and limit cannot be 0");
 
   // Limits are serial ... for now.
   pipeline->RegisterStep(this, Pipeline::Parallelism::Serial);
@@ -39,16 +37,19 @@ void LimitTranslator::PerformPipelineWork(WorkContext *work_context,
   const auto &plan = GetPlanAs<planner::LimitPlanNode>();
   CodeGen *codegen = GetCodeGen();
 
-  ast::Expr *condition = codegen->BinaryOp(
-      parsing::Token::Type::AND,
-      // numTuples >= plan.offset
-      codegen->Compare(parsing::Token::Type::GREATER_EQUAL, tuple_count_.Get(codegen),
-                       codegen->Const32(plan.GetOffset())),
-      // numTuples < plan.limit
-      codegen->Compare(parsing::Token::Type::LESS, tuple_count_.Get(codegen),
-                       codegen->Const32(plan.GetOffset() + plan.GetLimit())));
+  ast::Expr *cond = nullptr;
+  if (plan.GetOffset() != 0) {
+    cond = codegen->Compare(parsing::Token::Type::GREATER_EQUAL, tuple_count_.Get(codegen),
+                            codegen->Const32(plan.GetOffset()));
+  }
+  if (plan.GetLimit() != 0) {
+    auto limit_check = codegen->Compare(parsing::Token::Type::LESS, tuple_count_.Get(codegen),
+                                        codegen->Const32(plan.GetOffset() + plan.GetLimit()));
+    cond = cond == nullptr ? limit_check
+                           : codegen->BinaryOp(parsing::Token::Type::AND, cond, limit_check);
+  }
 
-  If check_limit(function, condition);
+  If check_limit(function, cond);
   {
     // In range, push to next operator.
     work_context->Push(function);

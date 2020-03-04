@@ -69,13 +69,6 @@ class CompilationContext {
   void Prepare(const planner::AbstractExpression &expression);
 
   /**
-   * Prepare compilation for the output.
-   * @param plan The plan node
-   * @param pipeline The main pipeline
-   */
-  void PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline);
-
-  /**
    * @return The code generator instance.
    */
   CodeGen *GetCodeGen() { return &codegen_; }
@@ -129,6 +122,9 @@ class CompilationContext {
 
   // Generate the query tear-down function.
   ast::FunctionDecl *GenerateTearDownFunction();
+
+  // Prepare compilation for the output.
+  void PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline);
 
  private:
   // Unique ID used as a prefix for all generated functions to ensure uniqueness.

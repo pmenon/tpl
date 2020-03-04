@@ -422,7 +422,6 @@ void TestLimitAndOrOffset(uint64_t off, uint64_t lim) {
     limit_out.AddOutput("col2", col2);
     auto schema = limit_out.MakeSchema();
     // Build
-    planner::LimitPlanNode::Builder builder;
     limit = planner::LimitPlanNode::Builder()
                 .SetLimit(lim)
                 .SetOffset(off)
@@ -441,7 +440,14 @@ void TestLimitAndOrOffset(uint64_t off, uint64_t lim) {
         EXPECT_LT(col2->val, off + lim);
       },
       nullptr);
-  TupleCounterChecker num_checker(std::min(static_cast<uint64_t>(table->GetTupleCount()), lim));
+  uint32_t expected_tuple_count = 0;
+  if (lim == 0) {
+    expected_tuple_count = table->GetTupleCount() > off ? table->GetTupleCount() - off : 0;
+  } else {
+    expected_tuple_count =
+        table->GetTupleCount() > off ? std::min(lim, table->GetTupleCount() - off) : 0;
+  }
+  TupleCounterChecker num_checker(expected_tuple_count);
   MultiChecker multi_checker({&num_checker, &row_check});
 
   // Compile and Run
@@ -467,6 +473,8 @@ TEST_F(SeqScanTranslatorTest, LimitAndOffsetTest) {
   TestLimitAndOrOffset(10, 20);
   TestLimitAndOrOffset(10, 1);
   TestLimitAndOrOffset(50, 20);
+  TestLimitAndOrOffset(10000, 0);
+  TestLimitAndOrOffset(10000, 10000);
 }
 
 }  // namespace tpl::sql::codegen
