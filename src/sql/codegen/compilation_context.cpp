@@ -22,6 +22,7 @@
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/hash_aggregation_translator.h"
 #include "sql/codegen/operators/hash_join_translator.h"
+#include "sql/codegen/operators/limit_translator.h"
 #include "sql/codegen/operators/nested_loop_join_translator.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/operators/output_translator.h"
@@ -40,6 +41,7 @@
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 #include "sql/planner/plannodes/csv_scan_plan_node.h"
 #include "sql/planner/plannodes/hash_join_plan_node.h"
+#include "sql/planner/plannodes/limit_plan_node.h"
 #include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
@@ -185,6 +187,11 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
     case planner::PlanNodeType::HASHJOIN: {
       const auto &hash_join = static_cast<const planner::HashJoinPlanNode &>(plan);
       translator = std::make_unique<HashJoinTranslator>(hash_join, this, pipeline);
+      break;
+    }
+    case planner::PlanNodeType::LIMIT: {
+      const auto &limit = static_cast<const planner::LimitPlanNode &>(plan);
+      translator = std::make_unique<LimitTranslator>(limit, this, pipeline);
       break;
     }
     case planner::PlanNodeType::NESTLOOP: {
