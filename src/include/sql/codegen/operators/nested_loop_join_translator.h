@@ -63,14 +63,14 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
    * NLJ plans are not the root of a pipeline. Thus, this method should never be called.
    */
   util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("Impossible");
+    UNREACHABLE("NLJ are never the root of a plan and, thus, cannot be launched in parallel.");
   }
 
   /**
    * NLJ plans are not the root of a pipeline. Thus, this method should never be called.
    */
   void LaunchWork(UNUSED FunctionBuilder *, UNUSED ast::Identifier) const override {
-    UNREACHABLE("Impossible");
+    UNREACHABLE("NLJ are never the root of a plan and, thus, cannot be launched in parallel.");
   }
 
   /**
