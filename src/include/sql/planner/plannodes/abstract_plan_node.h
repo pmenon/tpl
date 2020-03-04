@@ -21,7 +21,8 @@ class AbstractPlanNode {
   template <class ConcreteType>
   class Builder {
    public:
-    Builder() = default;
+    Builder(): output_schema_(nullptr) {}
+
     virtual ~Builder() = default;
 
     /**
@@ -43,14 +44,10 @@ class AbstractPlanNode {
     }
 
    protected:
-    /**
-     * child plans
-     */
+    // Child plans
     std::vector<std::unique_ptr<AbstractPlanNode>> children_;
-    /**
-     * schema describing output of the node
-     */
-    std::unique_ptr<OutputSchema> output_schema_{nullptr};
+    // Schema describing output of the node.
+    std::unique_ptr<OutputSchema> output_schema_;
   };
 
   /**

@@ -99,7 +99,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(
   }
 
   // At this point, we create a term.
-  // Signature: (vp: *VectorProjection, tids: *TupleIdList, context: *uint8) -> nil
+  // Signature: (vp: *VectorProjection, tids: *TupleIdList, ctx: *uint8) -> nil
   auto codegen = GetCodeGen();
   auto fn_name = codegen->MakeFreshIdentifier("FilterClause");
   util::RegionVector<ast::FieldDecl *> params = codegen->MakeFieldList({
@@ -126,8 +126,9 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(
     } else if (planner::ExpressionUtil::IsConstCompareWithColumn(*predicate)) {
       throw NotImplementedException("const <op> col vector filter comparison not implemented");
     } else {
-      // If we ever reach this point, the current node in the expression tree violates strict DNF.
-      // Its subtree is treated as a generic, non-vectorized filter.
+      // If we ever reach this point, the current node in the expression tree
+      // violates strict DNF. Its subtree is treated as a generic,
+      // non-vectorized filter.
       GenerateGenericTerm(&builder, predicate, vector_proj, tid_list);
     }
   }

@@ -385,6 +385,99 @@ TEST_F(SeqScanTranslatorTest, TwoColumnSortTest) {
 
 namespace {
 
+void TestSortWithLimitAndOrOffset(uint64_t off, uint64_t lim) {
+  // SELECT col1, col2 FROM test_1 ORDER BY col2 ASC OFFSET off LIMIT lim;
+
+  // Get accessor
+  auto accessor = sql::Catalog::Instance();
+  planner::ExpressionMaker expr_maker;
+  sql::Table *table = accessor->LookupTableByName("small_1");
+  const auto &table_schema = table->GetSchema();
+
+  // Scan
+  std::unique_ptr<planner::AbstractPlanNode> seq_scan;
+  planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
+  {
+    // Get Table columns
+    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("col1").oid, sql::TypeId::Integer);
+    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("col2").oid, sql::TypeId::Integer);
+    seq_scan_out.AddOutput("col1", col1);
+    seq_scan_out.AddOutput("col2", col2);
+    auto schema = seq_scan_out.MakeSchema();
+    // Build
+    planner::SeqScanPlanNode::Builder builder;
+    seq_scan = builder.SetOutputSchema(std::move(schema)).SetTableOid(table->GetId()).Build();
+  }
+
+  // Order By
+  std::unique_ptr<planner::AbstractPlanNode> order_by;
+  planner::OutputSchemaHelper order_by_out(&expr_maker, 0);
+  {
+    // Output columns col1, col2
+    auto col1 = seq_scan_out.GetOutput("col1");
+    auto col2 = seq_scan_out.GetOutput("col2");
+    order_by_out.AddOutput("col1", col1);
+    order_by_out.AddOutput("col2", col2);
+    auto schema = order_by_out.MakeSchema();
+    // Build
+    planner::OrderByPlanNode::Builder builder;
+    builder.SetOutputSchema(std::move(schema))
+        .AddChild(std::move(seq_scan))
+        .AddSortKey(col2, planner::OrderByOrderingType::ASC);
+    if (off != 0) builder.SetOffset(off);
+    if (lim != 0) builder.SetLimit(lim);
+    order_by = builder.Build();
+  }
+
+  // Checkers:
+  // 1. col2 should contain rows in range [offset, offset+lim].
+  // 2. col2 should be sorted by col2 ASC.
+  // 3. The total number of rows should depend on offset and limit.
+  GenericChecker col2_row_check(
+      [&](const std::vector<const sql::Val *> &row) {
+        const auto col2 = static_cast<const sql::Integer *>(row[1]);
+        EXPECT_GE(col2->val, off);
+        if (lim != 0) {
+          ASSERT_LT(col2->val, off + lim);
+        }
+      },
+      nullptr);
+  uint32_t expected_tuple_count = 0;
+  if (lim == 0) {
+    expected_tuple_count = table->GetTupleCount() > off ? table->GetTupleCount() - off : 0;
+  } else {
+    expected_tuple_count =
+        table->GetTupleCount() > off ? std::min(lim, table->GetTupleCount() - off) : 0;
+  }
+  TupleCounterChecker tuple_count_checker(expected_tuple_count);
+  SingleIntSortChecker col2_sort_checker(1);
+  MultiChecker multi_checker({&col2_row_check, &col2_sort_checker, &tuple_count_checker});
+
+  OutputCollectorAndChecker store(&multi_checker, order_by->GetOutputSchema());
+  MultiOutputCallback callback({&store});
+  sql::MemoryPool memory(nullptr);
+  sql::ExecutionContext exec_ctx(&memory, order_by->GetOutputSchema(), &callback);
+
+  // Run & Check
+  auto query = CompilationContext::Compile(*order_by);
+  query->Run(&exec_ctx);
+
+  multi_checker.CheckCorrectness();
+}
+
+}  // namespace
+
+TEST_F(SeqScanTranslatorTest, SortWithLimitAndOffsetTest) {
+  TestSortWithLimitAndOrOffset(0, 1);
+  TestSortWithLimitAndOrOffset(0, 10);
+  TestSortWithLimitAndOrOffset(10, 0);
+  TestSortWithLimitAndOrOffset(100, 0);
+  TestSortWithLimitAndOrOffset(50000000, 0);
+  TestSortWithLimitAndOrOffset(50000000, 50000000);
+}
+
+namespace {
+
 void TestLimitAndOrOffset(uint64_t off, uint64_t lim) {
   // SELECT col1, col2 FROM small_1 OFFSET off LIMIT lim;
   // small_1.col2 is serial, we use that to check offset/limit.

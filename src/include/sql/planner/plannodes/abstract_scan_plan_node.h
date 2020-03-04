@@ -22,6 +22,11 @@ class AbstractScanPlanNode : public AbstractPlanNode {
   class Builder : public AbstractPlanNode::Builder<ConcreteType> {
    public:
     /**
+     * Default constructor.
+     */
+    Builder() : scan_predicate_(nullptr) {}
+
+    /**
      * @param predicate predicate to use for scan
      * @return builder object
      */
@@ -31,9 +36,7 @@ class AbstractScanPlanNode : public AbstractPlanNode {
     }
 
    protected:
-    /**
-     * Scan predicate
-     */
+    // Scan predicate.
     const AbstractExpression *scan_predicate_;
   };
 
