@@ -8,13 +8,7 @@ namespace tpl::sql {
  * Date/timestamp functions.
  */
 class DateTimeFunctions : public AllStatic {
-  /**
-   * Convert a SQL date into a SQL timestamp.
-   * @param date The potentially NULL input date.
-   * @return The converted timestamp.
-   */
-  static TimestampVal ConvertDateToTimestamp(DateVal *date) noexcept;
-
+ public:
   /**
    * @return The century the SQL date falls into.
    */

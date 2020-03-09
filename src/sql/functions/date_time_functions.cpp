@@ -2,10 +2,6 @@
 
 namespace tpl::sql {
 
-TimestampVal DateTimeFunctions::ConvertDateToTimestamp(DateVal *date) noexcept {
-  return date->is_null ? TimestampVal::Null() : TimestampVal(date->val.ConvertToTimestamp());
-}
-
 Integer DateTimeFunctions::Century(const TimestampVal &time) noexcept {
   if (time.is_null) {
     return Integer::Null();
