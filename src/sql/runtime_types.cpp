@@ -332,6 +332,28 @@ int32_t Timestamp::ExtractMicros() const {
   return sec + fsec / 1000000.0;
 }
 
+int32_t Timestamp::ExtractDayOfWeek() const {
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  date += 1;
+  date %= 7;
+  if (date < 0) date += 7;
+  return date;
+}
+
+int32_t Timestamp::ExtractDayOfYear() const {
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  // Split date components.
+  int32_t year, month, day;
+  SplitJulianDate(date, &year, &month, &day);
+
+  // Compute date of year.
+  return BuildJulianDate(year, month, day) - BuildJulianDate(year, 1, 1) + 1;
+}
+
 Timestamp Timestamp::FromYMDHMS(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t min,
                                 int32_t sec) {
   // Check date component.

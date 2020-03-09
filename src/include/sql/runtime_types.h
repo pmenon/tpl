@@ -206,6 +206,16 @@ class Timestamp {
   int32_t ExtractMicros() const;
 
   /**
+   * @return The day-of-the-week (0-6 Sun-Sat) this timestamp falls on.
+   */
+  int32_t ExtractDayOfWeek() const;
+
+  /**
+   * @return THe day-of-the-year this timestamp falls on.
+   */
+  int32_t ExtractDayOfYear() const;
+
+  /**
    * Extract all components of this timestamp
    * @param[out] year The year corresponding to this date.
    * @param[out] month The month corresponding to this date.
