@@ -311,7 +311,13 @@ class TupleIdList {
    */
   template <typename F>
   void ForEach(F f) const {
-    bit_vector_.IterateSetBits(f);
+    if (IsFull()) {
+      for (uint32_t i = 0, n = GetCapacity(); i < n; i++) {
+        f(i);
+      }
+    } else {
+      bit_vector_.IterateSetBits(f);
+    }
   }
 
   /**
