@@ -1,10 +1,9 @@
-#include <sql/constant_vector.h>
-
 #include <unordered_set>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 #include "sql/catalog.h"
+#include "sql/constant_vector.h"
 #include "sql/join_hash_table.h"
 #include "sql/join_manager.h"
 #include "sql/memory_pool.h"
@@ -12,7 +11,6 @@
 #include "sql/tuple_id_list.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "sql/vector_projection.h"
-#include "sql/vector_projection_iterator.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 ///
