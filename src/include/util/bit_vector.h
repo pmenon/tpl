@@ -613,9 +613,15 @@ class BitVector {
   }
 
   /**
-   * @return The density of set (i.e., 1) bits in this bit vector.
+   * @return The density of set/one bits in this bit vector.
    */
-  float ComputeDensity() const noexcept { return static_cast<float>(CountOnes()) / GetNumBits(); }
+  float ComputeDensity() const noexcept {
+    return GetNumBits() == 0 ? 0.0 : static_cast<float>(CountOnes()) / GetNumBits();
+  }
+
+  // -------------------------------------------------------
+  // C++ operator overloads.
+  // -------------------------------------------------------
 
   /**
    * Return the value of the bit at the provided position in the bit vector. Used for testing the
@@ -706,6 +712,10 @@ class BitVector {
    * @return This bit vector after XORing with @em that bit vector.
    */
   BitVector &operator^=(const BitVector &that) { return Xor(that); }
+
+  // -------------------------------------------------------
+  // Accessors.
+  // -------------------------------------------------------
 
   /**
    * @return The number of bits in the bit vector.
