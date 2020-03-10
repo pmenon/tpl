@@ -71,7 +71,7 @@ void FilterManager::Clause::RunFilter(VectorProjection *input_batch, TupleIdList
   const auto input_selectivity = tid_list->ComputeSelectivity();
   for (const auto &term : terms_) {
     temp_.AssignFrom(input_copy_);
-    const auto exec_ns = util::TimeNanos([&] { term->fn(input_batch, &temp_, opaque_context_); });
+    const auto exec_ns = util::TimeNanos([&]() { term->fn(input_batch, &temp_, opaque_context_); });
     const auto term_selectivity = temp_.ComputeSelectivity();
     const auto term_cost = exec_ns / tuple_count;
     term->rank = (input_selectivity - term_selectivity) / term_cost;
