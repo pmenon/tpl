@@ -8,11 +8,12 @@
 #include "common/settings.h"
 #include "logging/logger.h"
 #include "sql/catalog.h"
+#include "sql/constant_vector.h"
 #include "sql/filter_manager.h"
 #include "sql/schema.h"
 #include "sql/table.h"
 #include "sql/table_vector_iterator.h"
-#include "sql/vector_filter_executor.h"
+#include "sql/vector_operations/vector_operators.h"
 #include "util/timer.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -38,27 +39,32 @@ constexpr const int64_t kPredB = 20;
 constexpr const int64_t kPredC = 30;
 
 // The filtering terms: A < 10 AND B < 20 AND C < 30
-sql::FilterManager::MatchFn kAllTerms[] = {
+constexpr const sql::FilterManager::MatchFn kAllTerms[] = {
     [](auto input, auto tids, auto ctx) {
+      auto c_vec = input->GetColumn(2);
       auto c_val = sql::GenericValue::CreateInteger(kPredC);
-      sql::VectorFilterExecutor::SelectLessThanVal(input, 2, c_val, tids);
+      sql::VectorOps::SelectLessThan(*c_vec, sql::ConstantVector(c_val), tids);
     },
     [](auto input, auto tids, auto ctx) {
+      auto b_vec = input->GetColumn(1);
       auto b_val = sql::GenericValue::CreateInteger(kPredB);
-      sql::VectorFilterExecutor::SelectLessThanVal(input, 1, b_val, tids);
+      sql::VectorOps::SelectLessThan(*b_vec, sql::ConstantVector(b_val), tids);
     },
     [](auto input, auto tids, auto ctx) {
+      auto a_vec = input->GetColumn(0);
       auto a_val = sql::GenericValue::CreateInteger(kPredA);
-      sql::VectorFilterExecutor::SelectLessThanVal(input, 0, a_val, tids);
+      sql::VectorOps::SelectLessThan(*a_vec, sql::ConstantVector(a_val), tids);
     },
 };
 
+// Get a specific ordering of filtering terms.
 std::vector<sql::FilterManager::MatchFn> GetTermsByOrder(const std::vector<uint32_t> &term_order) {
   std::vector<sql::FilterManager::MatchFn> result;
   for (auto i : term_order) result.push_back(kAllTerms[i]);
   return result;
 }
 
+// Metadata about a table.
 struct TableMeta {
   const char *name;
   double selectivity;
@@ -96,6 +102,7 @@ constexpr const TableMeta kTables[] = {
 
 constexpr const std::size_t kNumTables = sizeof(kTables) / sizeof(kTables[0]);
 
+// Generate a column's data using a uniform random distribution between min/max.
 int32_t *GenColumnData(uint32_t num_vals, int32_t min, int32_t max) {
   auto *data =
       static_cast<int32_t *>(Memory::MallocAligned(sizeof(int32_t) * num_vals, CACHELINE_SIZE));
@@ -114,6 +121,8 @@ int32_t *GenColumnData(uint32_t num_vals, int32_t min, int32_t max) {
   return data;
 }
 
+// Load the given test table using the provided selectivities for A, B, and C.
+// The selectivities are rotated across the columns in three phases.
 void LoadTestTable(sql::Table *table, uint32_t num_rows, double s1, double s2, double s3) {
   const uint32_t num_phases = 3;
   const uint32_t batch_size = 10000;
@@ -180,6 +189,7 @@ void LoadTestTable(sql::Table *table, uint32_t num_rows, double s1, double s2, d
   }
 }
 
+// Create all test tables. One per overall selectivity.
 void InitTestTables() {
   sql::Catalog *catalog = sql::Catalog::Instance();
   for (const auto &table_meta : kTables) {
@@ -206,6 +216,8 @@ void InitTestTables() {
   }
 }
 
+// Retrieve a test table that has the provided overall selectivity for the
+// predicate. NULL if no such table exists.
 const sql::Table *GetTestTable(double selectivity) {
   uint32_t lower = 0, upper = kNumTables - 1;
   while (lower != upper) {
