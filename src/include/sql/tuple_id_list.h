@@ -153,9 +153,21 @@ class TupleIdList {
   explicit TupleIdList(uint32_t num_tuples) : bit_vector_(num_tuples) {}
 
   /**
-   * This class cannot be copied, but can be moved.
+   * This class cannot be copied (but can be moved).
    */
   DISALLOW_COPY(TupleIdList);
+
+  /**
+   * Move constructor.
+   */
+  TupleIdList(TupleIdList &&other) = default;
+
+  /**
+   * Move assignment.
+   * @param other The TID list whose contents to move into this instance.
+   * @return This TID list instance.
+   */
+  TupleIdList &operator=(TupleIdList &&other) = default;
 
   /**
    * Resize the list to be able to store at least @em num_tuples tuple IDs. If growing the list, the
