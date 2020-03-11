@@ -98,12 +98,6 @@ TableInsertMeta insert_meta[] = {
      {{"col1", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 100L},
       {"col2", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
 
-    // FuckYou1
-    {TableId::FuckYou1, "fuck_you_1", 3000000,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Fixed, 0L, 0L},
-      {"colB", sql::IntegerType::Instance(false), Dist::Fixed, 0L, 0L},
-      {"colC", sql::IntegerType::Instance(false), Dist::Fixed, 0L, 0L}}},
-
 };
 // clang-format on
 
@@ -239,53 +233,8 @@ std::pair<byte *, uint32_t *> GenerateColumnData(ColumnInsertMeta *col_meta, uin
   return {col_data, null_bitmap};
 }
 
-void InitSpecialFuckYou1(TableInsertMeta *table_meta, Table *table) {
-  const uint32_t num_phases = 3;
-  const uint32_t batch_size = 10000;
-  const uint32_t num_batches = table_meta->num_rows / batch_size;
-  const uint32_t num_batches_per_phase = num_batches / num_phases;
-  if (table_meta->num_rows % batch_size != 0 || table_meta->num_rows % num_phases != 0) {
-    throw NotImplementedException(
-        "Number of fuck-you-1 rows ({}) must be a multiple of batch size ({})",
-        table_meta->num_rows, batch_size);
-  }
-
-  for (uint32_t i = 0; i < num_phases; i++) {
-    if (i == 0) {
-      table_meta->col_meta[0].min = 20L;
-      table_meta->col_meta[1].min = 3L;
-      table_meta->col_meta[2].min = 0L;
-    } else if (i == 1) {
-      table_meta->col_meta[0].min = 0L;
-      table_meta->col_meta[1].min = 20L;
-      table_meta->col_meta[2].min = 3L;
-    } else {
-      table_meta->col_meta[0].min = 3L;
-      table_meta->col_meta[1].min = 0L;
-      table_meta->col_meta[2].min = 20L;
-    }
-
-    // Insert batches for this phase.
-    for (uint32_t j = 0; j < num_batches_per_phase; j++) {
-      std::vector<ColumnSegment> columns;
-      for (auto &col_meta : table_meta->col_meta) {
-        auto [data, null_bitmap] = GenerateColumnData(&col_meta, batch_size);
-        columns.emplace_back(col_meta.sql_type, data, null_bitmap, batch_size);
-      }
-
-      // Insert into table
-      table->Insert(Table::Block(std::move(columns), batch_size));
-    }
-  }
-}
-
 void InitTable(TableInsertMeta *table_meta, Table *table) {
   LOG_INFO("Populating table instance '{}' with {} rows", table_meta->name, table_meta->num_rows);
-
-  if (table_meta->id == TableId::FuckYou1) {
-    InitSpecialFuckYou1(table_meta, table);
-    return;
-  }
 
   uint32_t batch_size = 10000;
   uint32_t num_batches = table_meta->num_rows / batch_size +
