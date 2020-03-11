@@ -71,6 +71,7 @@ constexpr const uint32_t kNumTableRows = 3000000;
 // produced a desired overall selectivity.
 constexpr const TableMeta kTables[] = {
     {"FM_00", 0.00, {0.0, 0.98, 0.98}},       // 0%
+    {"FM_02", 0.02, {0.020824, 0.98, 0.98}},  // 2%
     {"FM_05", 0.05, {0.052061, 0.98, 0.98}},  // 5%
     {"FM_10", 0.10, {0.104123, 0.98, 0.98}},  // 10%
     {"FM_15", 0.15, {0.156184, 0.98, 0.98}},  // 15%
@@ -288,7 +289,7 @@ class FilterManagerBenchmark : public benchmark::Fixture {
 };
 
 BENCHMARK_DEFINE_F(FilterManagerBenchmark, TimeSeries)(benchmark::State &state) {
-  auto table_id = GetTestTable(0.0225)->GetId();
+  auto table_id = GetTestTable(0.02)->GetId();
 
   std::vector<std::vector<double>> results;  // Subset of interesting results.
   std::vector<double> adapt_results;         // Results from adaptive filter.
@@ -366,7 +367,7 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VaryPredicateSelectivity)(benchmark::
 }
 
 BENCHMARK_DEFINE_F(FilterManagerBenchmark, VarySamplingRate)(benchmark::State &state) {
-  const auto table_id = GetTestTable(0.0225)->GetId();
+  const auto table_id = GetTestTable(0.02)->GetId();
 
   // Total time per sampling-rate.
   std::vector<double> results;
