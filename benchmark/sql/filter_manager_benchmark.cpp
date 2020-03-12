@@ -34,9 +34,9 @@ namespace {
 constexpr const uint32_t kNumRuns = 10;
 
 // The constants used in the predicate.
-constexpr const int64_t kPredA = 10;
-constexpr const int64_t kPredB = 20;
-constexpr const int64_t kPredC = 30;
+constexpr const int64_t kPredA = 1000;
+constexpr const int64_t kPredB = 2000;
+constexpr const int64_t kPredC = 3000;
 
 // The filtering terms: A < 10 AND B < 20 AND C < 30
 constexpr const sql::FilterManager::MatchFn kAllTerms[] = {
@@ -54,6 +54,39 @@ constexpr const sql::FilterManager::MatchFn kAllTerms[] = {
       auto a_vec = input->GetColumn(0);
       auto a_val = sql::GenericValue::CreateInteger(kPredA);
       sql::VectorOps::SelectLessThan(*a_vec, sql::ConstantVector(a_val), tids);
+    },
+};
+
+constexpr const sql::FilterManager::MatchFn kOracleTerms[] = {
+    [](auto input, auto tids, auto ctx) {
+      uint32_t run = *reinterpret_cast<uint32_t *>(ctx);
+      if (run <= 500) {
+        kAllTerms[2](input, tids, ctx);
+      } else if (run <= 1000) {
+        kAllTerms[0](input, tids, ctx);
+      } else {
+        kAllTerms[1](input, tids, ctx);
+      }
+    },
+    [](auto input, auto tids, auto ctx) {
+      uint32_t run = *reinterpret_cast<uint32_t *>(ctx);
+      if (run <= 500) {
+        kAllTerms[1](input, tids, ctx);
+      } else if (run <= 1000) {
+        kAllTerms[2](input, tids, ctx);
+      } else {
+        kAllTerms[0](input, tids, ctx);
+      }
+    },
+    [](auto input, auto tids, auto ctx) {
+      uint32_t run = *reinterpret_cast<uint32_t *>(ctx);
+      if (run <= 500) {
+        kAllTerms[0](input, tids, ctx);
+      } else if (run <= 1000) {
+        kAllTerms[1](input, tids, ctx);
+      } else {
+        kAllTerms[2](input, tids, ctx);
+      }
     },
 };
 
@@ -77,26 +110,26 @@ constexpr const uint32_t kNumTableRows = 3000000;
 // produced a desired overall selectivity.
 constexpr const TableMeta kTables[] = {
     {"FM_00", 0.00, {0.0, 0.98, 0.98}},       // 0%
-    {"FM_02", 0.02, {0.020824, 0.98, 0.98}},  // 2%
-    {"FM_05", 0.05, {0.052061, 0.98, 0.98}},  // 5%
+//    {"FM_02", 0.02, {0.020824, 0.98, 0.98}},  // 2%
+//    {"FM_05", 0.05, {0.052061, 0.98, 0.98}},  // 5%
     {"FM_10", 0.10, {0.104123, 0.98, 0.98}},  // 10%
-    {"FM_15", 0.15, {0.156184, 0.98, 0.98}},  // 15%
+//    {"FM_15", 0.15, {0.156184, 0.98, 0.98}},  // 15%
     {"FM_20", 0.20, {0.208246, 0.98, 0.98}},  // 20%
-    {"FM_25", 0.25, {0.260308, 0.98, 0.98}},  // 25%
+//    {"FM_25", 0.25, {0.260308, 0.98, 0.98}},  // 25%
     {"FM_30", 0.30, {0.312369, 0.98, 0.98}},  // 30%
-    {"FM_35", 0.35, {0.364431, 0.98, 0.98}},  // 35%
+//    {"FM_35", 0.35, {0.364431, 0.98, 0.98}},  // 35%
     {"FM_40", 0.40, {0.416493, 0.98, 0.98}},  // 40%
-    {"FM_45", 0.45, {0.468554, 0.98, 0.98}},  // 45%
+//    {"FM_45", 0.45, {0.468554, 0.98, 0.98}},  // 45%
     {"FM_50", 0.50, {0.520616, 0.98, 0.98}},  // 50%
-    {"FM_55", 0.55, {0.572678, 0.98, 0.98}},  // 55%
+//    {"FM_55", 0.55, {0.572678, 0.98, 0.98}},  // 55%
     {"FM_60", 0.60, {0.624739, 0.98, 0.98}},  // 60%
-    {"FM_65", 0.65, {0.676801, 0.98, 0.98}},  // 65%
+//    {"FM_65", 0.65, {0.676801, 0.98, 0.98}},  // 65%
     {"FM_70", 0.70, {0.728862, 0.98, 0.98}},  // 70%
-    {"FM_75", 0.75, {0.780924, 0.98, 0.98}},  // 75%
+//    {"FM_75", 0.75, {0.780924, 0.98, 0.98}},  // 75%
     {"FM_80", 0.80, {0.832986, 0.98, 0.98}},  // 80%
-    {"FM_85", 0.85, {0.885047, 0.98, 0.98}},  // 85%
+//    {"FM_85", 0.85, {0.885047, 0.98, 0.98}},  // 85%
     {"FM_90", 0.90, {0.937109, 0.98, 0.98}},  // 90%
-    {"FM_95", 0.95, {0.989171, 0.98, 0.98}},  // 95%
+//    {"FM_95", 0.95, {0.989171, 0.98, 0.98}},  // 95%
     {"FM_100", 1.00, {1.00, 1.00, 1.00}},     // 100%
 };
 
@@ -133,44 +166,43 @@ void LoadTestTable(sql::Table *table, uint32_t num_rows, double s1, double s2, d
                                   num_rows, batch_size);
   }
 
-  int64_t min_a, max_a;
-  int64_t min_b, max_b;
-  int64_t min_c, max_c;
+  int32_t min_a, max_a;
+  int32_t min_b, max_b;
+  int32_t min_c, max_c;
   for (uint32_t i = 0; i < num_phases; i++) {
     if (i == 0) {
       // A
       min_a = s1 == 0.0 ? kPredA + 1 : 0;
-      max_a = s1 == 0.0 ? min_a + 10 : static_cast<int64_t>(kPredA / s1);
+      max_a = s1 == 0.0 ? min_a + 10 : std::lround(kPredA / s1);
       // B
       min_b = s2 == 0.0 ? kPredB + 1 : 0;
-      max_b = s2 == 0.0 ? min_b + 10 : static_cast<int64_t>(kPredB / s2);
+      max_b = s2 == 0.0 ? min_b + 10 : std::lround(kPredB / s2);
       // C
       min_c = s3 == 0.0 ? kPredC + 1 : 0;
-      max_c = s3 == 0.0 ? min_c + 10 : static_cast<int64_t>(kPredC / s3);
+      max_c = s3 == 0.0 ? min_c + 10 : std::lround(kPredC / s3);
     } else if (i == 1) {
       // A
       min_a = s2 == 0.0 ? kPredA + 1 : 0;
-      max_a = s2 == 0.0 ? min_a + 10 : static_cast<int64_t>(kPredA / s2);
+      max_a = s2 == 0.0 ? min_a + 10 : std::lround(kPredA / s2);
       // B
       min_b = s3 == 0.0 ? kPredB + 1 : 0;
-      max_b = s3 == 0.0 ? min_b + 10 : static_cast<int64_t>(kPredB / s3);
+      max_b = s3 == 0.0 ? min_b + 10 : std::lround(kPredB / s3);
       // C
       min_c = s1 == 0.0 ? kPredC + 1 : 0;
-      max_c = s1 == 0.0 ? min_c + 10 : static_cast<int64_t>(kPredC / s1);
+      max_c = s1 == 0.0 ? min_c + 10 : std::lround(kPredC / s1);
     } else {
       // A
       min_a = s3 == 0.0 ? kPredA + 1 : 0;
-      max_a = s3 == 0.0 ? min_a + 10 : static_cast<int64_t>(kPredA / s3);
+      max_a = s3 == 0.0 ? min_a + 10 : std::lround(kPredA / s3);
       // B
       min_b = s1 == 0.0 ? kPredB + 1 : 0;
-      max_b = s1 == 0.0 ? min_b + 10 : static_cast<int64_t>(kPredB / s1);
+      max_b = s1 == 0.0 ? min_b + 10 : std::lround(kPredB / s1);
       // C
       min_c = s2 == 0.0 ? kPredC + 1 : 0;
-      max_c = s2 == 0.0 ? min_c + 10 : static_cast<int64_t>(kPredC / s2);
+      max_c = s2 == 0.0 ? min_c + 10 : std::lround(kPredC / s2);
     }
 
-    LOG_INFO("Phase {}: A=[{},{}], B=[{},{}], C=[{},{}]", i, min_a, max_a, min_b, max_b, min_c,
-             max_c);
+    LOG_DEBUG("A=[{},{}], B=[{},{}], C=[{},{}]", min_a, max_a, min_b, max_b, min_c, max_c);
 
     // Insert batches for this phase.
     for (uint32_t j = 0; j < num_batches_per_phase; j++) {
@@ -201,15 +233,16 @@ void InitTestTables() {
                                               std::make_unique<sql::Schema>(std::move(cols)));
 
     // Populate it.
-    const auto population_time = util::Time<std::milli>([&]() {
-      auto [s1, s2, s3] = table_meta.col_selectivities;
-      if (!util::MathUtil::ApproxEqual(table_meta.selectivity, s1 * s2 * s3)) {
-        throw NotImplementedException("Computed selectivity [{}] doesn't match expected [{}].",
-                                      s1 * s2 * s3, table_meta.selectivity);
-      }
-      LoadTestTable(table.get(), kNumTableRows, s1, s2, s3);
-    });
-    LOG_INFO("Populated table {} ({} ms)", table_meta.name, population_time);
+    util::Timer<std::milli> timer;
+    timer.Start();
+    auto [s1, s2, s3] = table_meta.col_selectivities;
+    if (!util::MathUtil::ApproxEqual(table_meta.selectivity, s1 * s2 * s3)) {
+      throw NotImplementedException("Computed selectivity [{}] doesn't match expected [{}].",
+                                    s1 * s2 * s3, table_meta.selectivity);
+    }
+    LoadTestTable(table.get(), kNumTableRows, s1, s2, s3);
+    timer.Stop();
+    LOG_INFO("Populated table {} ({} ms)", table_meta.name, timer.GetElapsed());
 
     // Insert into catalog.
     catalog->InsertTable(table_meta.name, std::move(table));
@@ -219,6 +252,7 @@ void InitTestTables() {
 // Retrieve a test table that has the provided overall selectivity for the
 // predicate. NULL if no such table exists.
 const sql::Table *GetTestTable(double selectivity) {
+  // Binary search since the tables are ordered by selectivities.
   uint32_t lower = 0, upper = kNumTables - 1;
   while (lower != upper) {
     uint32_t middle = lower + ((upper - lower) / 2);
@@ -242,12 +276,13 @@ void RunScanWithTermOrder(uint16_t table_id, bool adapt,
     std::vector<double> run_results;
     run_results.reserve(2000);
 
-    sql::FilterManager filter(adapt);
+    uint32_t vec_idx = 0;
+    sql::FilterManager filter(adapt, &vec_idx);
     filter.StartNewClause();
     filter.InsertClauseTerms(terms);
 
     sql::TableVectorIterator tvi(static_cast<uint16_t>(table_id));
-    for (tvi.Init(); tvi.Advance();) {
+    for (tvi.Init(); tvi.Advance(); vec_idx++) {
       auto vpi = tvi.GetVectorProjectionIterator();
       const auto exec_micros = util::Time<std::micro>([&] { filter.RunFilters(vpi); });
       run_results.push_back(exec_micros);
@@ -269,8 +304,8 @@ void RunScanWithTermOrder(uint16_t table_id, bool adapt,
 }
 
 void RunExperiment(uint16_t table_id, std::vector<std::vector<double>> *all_results,
-                   std::vector<double> *adapt_results) {
-  // Perform experiment on all possible orderings.
+                   std::vector<double> *oracle_results, std::vector<double> *adapt_results) {
+  // 1. Perform experiment on all possible static orderings.
   std::vector<uint32_t> term_order = {0, 1, 2};
   do {
     std::vector<double> timings;
@@ -278,7 +313,11 @@ void RunExperiment(uint16_t table_id, std::vector<std::vector<double>> *all_resu
     all_results->emplace_back(std::move(timings));
   } while (std::next_permutation(term_order.begin(), term_order.end()));
 
-  // Run adaptive mode.
+  // 2. Run oracle mode.
+  RunScanWithTermOrder(table_id, false, {kOracleTerms[0], kOracleTerms[1], kOracleTerms[2]},
+                       oracle_results);
+
+  // 3. Run adaptive mode.
   RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), adapt_results);
 }
 
@@ -312,7 +351,8 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, TimeSeries)(benchmark::State &state) 
     // which will be best ahead of time. So, we'll run them all, sort them
     // and choose the ones we want.
     std::vector<std::vector<double>> all_results;
-    RunExperiment(table_id, &all_results, &adapt_results);
+    std::vector<double> oracle_results;
+    RunExperiment(table_id, &all_results, &oracle_results, &adapt_results);
 
     // Sort the results by time. 'all_results[0]' will be best.
     std::sort(all_results.begin(), all_results.end(), [](const auto &a, const auto &b) {
@@ -360,8 +400,8 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VaryPredicateSelectivity)(benchmark::
     const auto table_id = sql::Catalog::Instance()->LookupTableByName(table.name)->GetId();
 
     std::vector<std::vector<double>> results;
-    std::vector<double> adapt_results;
-    RunExperiment(table_id, &results, &adapt_results);
+    std::vector<double> oracle_results, adapt_results;
+    RunExperiment(table_id, &results, &oracle_results, &adapt_results);
 
     // Sort the results by time. 'all_results[0]' will be best.
     std::sort(results.begin(), results.end(), [](const auto &a, const auto &b) {
@@ -370,11 +410,11 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VaryPredicateSelectivity)(benchmark::
       return a_total <= b_total;
     });
 
-    const auto total_best = std::accumulate(results[0].begin(), results[0].end(), 0.0);
-    const auto total_worst = std::accumulate(results.back().begin(), results.back().end(), 0.0);
+    const auto total_best_static = std::accumulate(results[0].begin(), results[0].end(), 0.0);
+    const auto total_oracle = std::accumulate(oracle_results.begin(), oracle_results.end(), 0.0);
     const auto total_adaptive = std::accumulate(adapt_results.begin(), adapt_results.end(), 0.0);
     out_file << std::fixed << std::setprecision(2) << table.selectivity << ", ";
-    out_file << total_worst << ", " << total_best << ", " << total_adaptive << std::endl;
+    out_file << total_best_static << ", " << total_oracle << ", " << total_adaptive << std::endl;
   }
 }
 
@@ -412,8 +452,8 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VarySamplingRate)(benchmark::State &s
 //
 // ---------------------------------------------------------
 
-BENCHMARK_REGISTER_F(FilterManagerBenchmark, TimeSeries);
-BENCHMARK_REGISTER_F(FilterManagerBenchmark, VaryPredicateSelectivity);
-BENCHMARK_REGISTER_F(FilterManagerBenchmark, VarySamplingRate);
+BENCHMARK_REGISTER_F(FilterManagerBenchmark, TimeSeries)->Iterations(1);
+BENCHMARK_REGISTER_F(FilterManagerBenchmark, VaryPredicateSelectivity)->Iterations(1);
+BENCHMARK_REGISTER_F(FilterManagerBenchmark, VarySamplingRate)->Iterations(1);
 
 }  // namespace tpl
