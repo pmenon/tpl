@@ -8,6 +8,7 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
+#include "vm/vm_defs.h"
 
 namespace tpl::sema {
 class ErrorReporter;
@@ -53,8 +54,9 @@ class ExecutableQuery {
     /**
      * Run this fragment using the provided opaque query state object.
      * @param query_state The query state.
+     * @param mode The execution mode to run the query with.
      */
-    void Run(byte query_state[]) const;
+    void Run(byte query_state[], vm::ExecutionMode mode) const;
 
     /**
      * @return True if this fragment is compiled and executable.
@@ -97,8 +99,9 @@ class ExecutableQuery {
   /**
    * Execute the query.
    * @param exec_ctx The context in which to execute the query.
+   * @param mode The execution mode to use when running the query. By default, its interpreted.
    */
-  void Run(ExecutionContext *exec_ctx);
+  void Run(ExecutionContext *exec_ctx, vm::ExecutionMode mode = vm::ExecutionMode::Interpret);
 
   /**
    * @return The physical plan this executable query implements.

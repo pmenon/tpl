@@ -162,7 +162,7 @@ class HashJoinTranslator : public OperatorTranslator {
   // table.
   ast::Identifier build_row_var_;
   ast::Identifier build_row_type_;
-  // For exotic joins
+  // For mark-based joins.
   ast::Identifier build_mark_;
 
   // The left build-side pipeline.

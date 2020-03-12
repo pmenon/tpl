@@ -23,11 +23,11 @@ ExecutableQuery::Fragment::Fragment(std::vector<std::string> &&functions,
 
 ExecutableQuery::Fragment::~Fragment() = default;
 
-void ExecutableQuery::Fragment::Run(byte query_state[]) const {
+void ExecutableQuery::Fragment::Run(byte query_state[], vm::ExecutionMode mode) const {
   using Function = std::function<void(void *)>;
   for (const auto &func_name : functions_) {
     Function func;
-    if (!module_->GetFunction(func_name, vm::ExecutionMode::Compiled, func)) {
+    if (!module_->GetFunction(func_name, mode, func)) {
       throw Exception(ExceptionType::Execution,
                       fmt::format("Could not find function '{}' in query fragment", func_name));
     }
@@ -65,14 +65,14 @@ void ExecutableQuery::Setup(std::vector<std::unique_ptr<Fragment>> &&fragments,
            fragments_.size() > 1 ? "s" : "", query_state_size_);
 }
 
-void ExecutableQuery::Run(ExecutionContext *exec_ctx) {
+void ExecutableQuery::Run(ExecutionContext *exec_ctx, vm::ExecutionMode mode) {
   // First, allocate the query state and move the execution context into it.
   auto query_state = std::make_unique<byte[]>(query_state_size_);
   *reinterpret_cast<ExecutionContext **>(query_state.get()) = exec_ctx;
 
   // Now run through fragments.
   for (const auto &fragment : fragments_) {
-    fragment->Run(query_state.get());
+    fragment->Run(query_state.get(), mode);
   }
 }
 

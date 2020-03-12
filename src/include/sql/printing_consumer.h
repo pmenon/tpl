@@ -29,13 +29,13 @@ class PrintingConsumer : public ResultConsumer {
   void Consume(const OutputBuffer &batch) override;
 
  private:
-  // Print one tuple
+  // Print one tuple.
   void PrintTuple(const byte *tuple) const;
 
  private:
-  // The output stream
+  // The output stream where query results are printed.
   std::ostream &os_;
-  // The output schema
+  // The output schema.
   const planner::OutputSchema *output_schema_;
 };
 

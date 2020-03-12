@@ -12,7 +12,7 @@ namespace tpl::sql {
 
 namespace planner {
 class OutputSchema;
-}
+}  // namespace planner
 
 class MemoryPool;
 class Schema;

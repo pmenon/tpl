@@ -3,12 +3,13 @@
 #include "common/common.h"
 #include "sql/result_consumer.h"
 #include "util/chunked_vector.h"
+#include "util/spin_latch.h"
 
 namespace tpl::sql {
 
 namespace planner {
 class OutputSchema;
-}
+}  // namespace planner
 
 class MemoryPool;
 class Schema;
@@ -64,15 +65,11 @@ class ResultBuffer {
  private:
   // Buffer storing output tuples
   OutputBuffer tuples_;
-
   // The consumer of the results
   ResultConsumer *consumer_;
-
   // The batch size
   uint32_t batch_size_;
-
   // Lock for parallel output.
-  // TODO(Amadou): Should parallel output even be allowed?
   util::SpinLatch output_latch_;
 };
 
