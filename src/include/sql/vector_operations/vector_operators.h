@@ -483,7 +483,7 @@ class VectorOps : public AllStatic {
    */
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&f) {
-    const auto *data = reinterpret_cast<const T *>(vector.GetData());
+    const auto *RESTRICT data = reinterpret_cast<const T *>(vector.GetData());
     Exec(vector, [&](const uint64_t i, const uint64_t k) { f(data[i], i, k); });
   }
 };
