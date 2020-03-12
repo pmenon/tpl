@@ -87,7 +87,10 @@ class ExecutableQuery {
 
   /**
    * Setup the compiled query using the provided fragments.
-   * @param fragments
+   * @param fragments The fragments making up the query. These are provided as a vector in the order
+   *                  they're to be executed.
+   * @param query_state_size The size of the state structure this query needs. This value is
+   *                         represented in bytes.
    */
   void Setup(std::vector<std::unique_ptr<Fragment>> &&fragments, std::size_t query_state_size);
 
