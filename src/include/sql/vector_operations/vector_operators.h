@@ -426,17 +426,20 @@ class VectorOps : public AllStatic {
 
     if (tid_list != nullptr) {
       // If we're scanning all TIDs in the list, it's faster to use ForEach().
-      // If we're scanning only a subset range of TIDs in the list, we fall
-      // back to the slower TID iterator API.
+      // If we're scanning only a subset range of TIDs in the list, we convert
+      // the list into a selection vector.
       // TODO(pmenon): Pull optimization into TupleIdList ?
 
       if (offset == 0 && count == vector.GetCount()) {
         uint64_t k = 0;
         tid_list->ForEach([&](const uint64_t i) { f(i, k++); });
       } else {
-        uint64_t k = offset;
-        const auto iter = tid_list->begin() + offset;
-        std::for_each(iter, iter + count, [&](const uint64_t i) { f(i, k++); });
+        TPL_ASSERT(tid_list->GetCapacity() <= kDefaultVectorSize, "TID list too large");
+        alignas(CACHELINE_SIZE) sel_t sel_vector[kDefaultVectorSize];
+        UNUSED uint64_t size = tid_list->ToSelectionVector(sel_vector);
+        for (uint64_t i = offset; i < count; i++) {
+          f(sel_vector[i], i);
+        }
       }
     } else {
       for (uint64_t i = offset; i < count; i++) {
