@@ -85,6 +85,12 @@ class FilterManager {
      */
     std::vector<uint32_t> GetOptimalTermOrder() const;
 
+    /**
+     * @return The total time spend in adaptive overhead when processing this filter clause. Time is
+     *         reported in microseconds.
+     */
+    double GetOverheadMicros() const { return overhead_micros_; }
+
    private:
     // Indicates if statistics for all terms should be recollected.
     bool ShouldReRank();
@@ -114,6 +120,7 @@ class FilterManager {
     double sample_freq_;
     // The number of times samples have been collected.
     uint32_t sample_count_;
+    double overhead_micros_;
     // Random number generator.
     std::mt19937 gen_;
     std::uniform_real_distribution<double> dist_;
@@ -179,6 +186,18 @@ class FilterManager {
    *         change over the course of a manager's use.
    */
   std::vector<const Clause *> GetOptimalClauseOrder() const;
+
+  /**
+   * @return The total time spent in adaptive overhead when processing the filter. Time is reported
+   *         in microseconds.
+   */
+  double GetTotalOverheadMicros() const {
+    double overhead = 0;
+    for (const auto &clause : clauses_) {
+      overhead += clause->GetOverheadMicros();
+    }
+    return overhead;
+  }
 
  private:
   // Flag indicating if the filter should try to optimize itself.

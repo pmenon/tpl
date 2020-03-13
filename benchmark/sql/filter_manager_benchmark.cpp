@@ -272,7 +272,8 @@ const sql::Table *GetTestTable(double selectivity) {
 // Using the provided filter terms and adaptation flag.
 void RunScanWithTermOrder(uint16_t table_id, bool adapt,
                           const std::vector<sql::FilterManager::MatchFn> &terms,
-                          std::vector<double> *results) {
+                          std::vector<double> *results, double *overhead) {
+  *overhead = 0.0;
   for (uint32_t r = 0; r < kNumRuns; r++) {
     std::vector<double> run_results;
     run_results.reserve(2000);
@@ -289,6 +290,10 @@ void RunScanWithTermOrder(uint16_t table_id, bool adapt,
       run_results.push_back(exec_micros);
     }
 
+    // Overhead.
+    *overhead += filter.GetTotalOverheadMicros();
+
+    // Per-partition stats.
     if (r == 0) {
       *results = run_results;
     } else {
@@ -299,6 +304,7 @@ void RunScanWithTermOrder(uint16_t table_id, bool adapt,
   }
 
   // Average out.
+  *overhead /= kNumRuns;
   for (std::size_t i = 0; i < results->size(); i++) {
     (*results)[i] /= static_cast<double>(kNumRuns);
   }
@@ -310,16 +316,19 @@ void RunExperiment(uint16_t table_id, std::vector<std::vector<double>> *all_resu
   std::vector<uint32_t> term_order = {0, 1, 2};
   do {
     std::vector<double> timings;
-    RunScanWithTermOrder(table_id, false, GetTermsByOrder(term_order), &timings);
+    double overhead;
+    RunScanWithTermOrder(table_id, false, GetTermsByOrder(term_order), &timings, &overhead);
     all_results->emplace_back(std::move(timings));
   } while (std::next_permutation(term_order.begin(), term_order.end()));
 
   // 2. Run oracle mode.
+  double oracle_overhead;
   RunScanWithTermOrder(table_id, false, {kOracleTerms[0], kOracleTerms[1], kOracleTerms[2]},
-                       oracle_results);
+                       oracle_results, &oracle_overhead);
 
   // 3. Run adaptive mode.
-  RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), adapt_results);
+  double adapt_overhead;
+  RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), adapt_results, &adapt_overhead);
 }
 
 }  // namespace
@@ -423,7 +432,7 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VarySamplingRate)(benchmark::State &s
   const auto table_id = GetTestTable(0.02)->GetId();
 
   // Total time per sampling-rate.
-  std::vector<double> results;
+  std::vector<double> results, overheads;
   // One result for each sampling rate.
   std::vector<double> sample_freqs = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50,
                                       0.60, 0.70, 0.80, 0.90, 1.00};
@@ -433,16 +442,18 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VarySamplingRate)(benchmark::State &s
     Settings::Instance()->SetDouble(Settings::Name::AdaptivePredicateOrderSamplingFrequency,
                                     sample_freq);
     // Run experiment.
+    double overhead;
     std::vector<double> sample_results;
-    RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), &sample_results);
+    RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), &sample_results, &overhead);
     results.push_back(std::accumulate(sample_results.begin(), sample_results.end(), 0.0));
+    overheads.push_back(overhead);
   }
 
   // Write out.
   std::ofstream out_file("filter-vary-sampling.csv");
   for (uint32_t i = 0; i < results.size(); i++) {
     out_file << std::fixed << std::setprecision(2);
-    out_file << sample_freqs[i] << ", " << results[i] << std::endl;
+    out_file << sample_freqs[i] << ", " << overheads[i] << ", " << results[i] << std::endl;
   }
   out_file.close();
 }

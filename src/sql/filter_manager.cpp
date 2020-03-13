@@ -8,6 +8,8 @@
 #include "sql/vector_projection_iterator.h"
 #include "util/timer.h"
 
+#define COLLECT_OVERHEAD 0
+
 namespace tpl::sql {
 
 //===----------------------------------------------------------------------===//
@@ -22,6 +24,7 @@ FilterManager::Clause::Clause(void *opaque_context, double stat_sample_freq)
       temp_(kDefaultVectorSize),
       sample_freq_(stat_sample_freq),
       sample_count_(0),
+      overhead_micros_(0),
 #ifndef NDEBUG
       // In DEBUG mode, use a fixed seed so we get repeatable randomness
       gen_(0),
@@ -67,6 +70,21 @@ void FilterManager::Clause::RunFilter(VectorProjection *input_batch, TupleIdList
   // as we apply the terms of the clause.
   input_copy_.AssignFrom(*tid_list);
 
+#if COLLECT_OVERHEAD == 1
+  util::Timer<std::micro> timer;
+  timer.Start();
+
+  for (const auto &term : terms_) {
+    term->fn(input_batch, tid_list, opaque_context_);
+    if (tid_list->IsEmpty()) break;
+  }
+  timer.Stop();
+  const double fast = timer.GetElapsed();
+
+  tid_list->AssignFrom(input_copy_);
+  timer.Start();
+#endif
+
   const auto tuple_count = tid_list->GetTupleCount();
   const auto input_selectivity = tid_list->ComputeSelectivity();
   for (const auto &term : terms_) {
@@ -97,6 +115,12 @@ void FilterManager::Clause::RunFilter(VectorProjection *input_batch, TupleIdList
 
   // Update sample count.
   sample_count_++;
+
+#if COLLECT_OVERHEAD == 1
+  timer.Stop();
+  double slow = timer.GetElapsed();
+  overhead_ += (slow - fast);
+#endif
 }
 
 std::vector<uint32_t> FilterManager::Clause::GetOptimalTermOrder() const {
