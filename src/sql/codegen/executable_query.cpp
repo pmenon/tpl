@@ -1,6 +1,6 @@
 #include "sql/codegen/executable_query.h"
 
-#include "llvm/ADT/STLExtras.h"
+#include <algorithm>
 
 #include "ast/context.h"
 #include "common/exception.h"
@@ -51,12 +51,12 @@ ExecutableQuery::ExecutableQuery(const planner::AbstractPlanNode &plan)
 ExecutableQuery::~ExecutableQuery() = default;
 
 void ExecutableQuery::Setup(std::vector<std::unique_ptr<Fragment>> &&fragments,
-                            size_t query_state_size) {
-  TPL_ASSERT(llvm::all_of(fragments, [](auto &fragment) { return fragment->IsCompiled(); }),
+                            const std::size_t query_state_size) {
+  TPL_ASSERT(std::all_of(fragments.begin(), fragments.end(),
+                         [](const auto &fragment) { return fragment->IsCompiled(); }),
              "All query fragments are not compiled!");
-  TPL_ASSERT(
-      query_state_size >= sizeof(void *),
-      "Query state size must be large enough to store at least a pointer to the ExecutionContext.");
+  TPL_ASSERT(query_state_size >= sizeof(void *),
+             "Query state must be large enough to store at least an ExecutionContext pointer.");
 
   fragments_ = std::move(fragments);
   query_state_size_ = query_state_size;
