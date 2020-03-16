@@ -54,6 +54,12 @@ void PrintingConsumer::PrintTuple(const byte *tuple) const {
         tuple += sizeof(DateVal);
         break;
       }
+      case SqlTypeId::Timestamp: {
+        const auto val = reinterpret_cast<const TimestampVal *>(tuple);
+        os_ << (val->is_null ? "NULL" : val->val.ToString());
+        tuple += sizeof(TimestampVal);
+        break;
+      }
       case SqlTypeId::Char:
       case SqlTypeId::Varchar: {
         const auto val = reinterpret_cast<const StringVal *>(tuple);

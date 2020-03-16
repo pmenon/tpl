@@ -385,6 +385,41 @@ class DateType : public SqlType {
 };
 
 /**
+ * A SQL timestamp type.
+ */
+class TimestampType : public SqlType {
+ public:
+  static const TimestampType &InstanceNonNullable();
+
+  static const TimestampType &InstanceNullable();
+
+  static const TimestampType &Instance(bool nullable) {
+    return (nullable ? InstanceNullable() : InstanceNonNullable());
+  }
+
+  const SqlType &GetNonNullableVersion() const override { return InstanceNonNullable(); }
+
+  const SqlType &GetNullableVersion() const override { return InstanceNullable(); }
+
+  TypeId GetPrimitiveTypeId() const override;
+
+  std::string GetName() const override;
+
+  bool Equals(const SqlType &that) const override;
+
+  bool IsIntegral() const override { return false; }
+
+  bool IsFloatingPoint() const override { return false; }
+
+  bool IsArithmetic() const override { return false; }
+
+  static bool classof(const SqlType *type) { return type->GetId() == SqlTypeId::Date; }
+
+ private:
+  explicit TimestampType(bool nullable);
+};
+
+/**
  * A SQL char type.
  */
 class CharType : public SqlType {

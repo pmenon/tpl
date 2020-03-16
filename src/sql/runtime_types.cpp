@@ -383,6 +383,20 @@ Timestamp Timestamp::FromYMDHMS(int32_t year, int32_t month, int32_t day, int32_
   return Timestamp(result);
 }
 
+std::string Timestamp::ToString() const {
+  int64_t date, time;
+  StripTime(value_, &date, &time);
+
+  int32_t year, month, day;
+  SplitJulianDate(date, &year, &month, &day);
+
+  int32_t hour, min, sec;
+  double fsec;
+  SplitTime(time, &hour, &min, &sec, &fsec);
+
+  return fmt::format("{}-{:02}-{:02} {:02}:{:02}:{:02}", year, month, day, hour, min, sec);
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Varlen

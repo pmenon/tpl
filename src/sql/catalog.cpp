@@ -214,6 +214,7 @@ std::pair<byte *, uint32_t *> GenerateColumnData(ColumnInsertMeta *col_meta, uin
       break;
     }
     case SqlTypeId::Date:
+    case SqlTypeId::Timestamp:
     case SqlTypeId::Char:
     case SqlTypeId::Varchar: {
       throw NotImplementedException(

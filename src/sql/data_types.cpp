@@ -301,6 +301,36 @@ bool DateType::Equals(const SqlType &that) const {
 DateType::DateType(bool nullable) : SqlType(SqlTypeId::Date, nullable) {}
 
 // ---------------------------------------------------------
+// Timestamp
+// ---------------------------------------------------------
+
+const TimestampType &TimestampType::InstanceNonNullable() {
+  static TimestampType kNonNullableTimestamp(false);
+  return kNonNullableTimestamp;
+}
+
+const TimestampType &TimestampType::InstanceNullable() {
+  static TimestampType kNullableTimestamp(true);
+  return kNullableTimestamp;
+}
+
+TypeId TimestampType::GetPrimitiveTypeId() const { return TypeId::Timestamp; }
+
+std::string TimestampType::GetName() const {
+  std::string str = "Timestamp";
+  if (IsNullable()) {
+    str.append("[NULLABLE]");
+  }
+  return str;
+}
+
+bool TimestampType::Equals(const SqlType &that) const {
+  return that.Is<TimestampType>() && IsNullable() && that.IsNullable();
+}
+
+TimestampType::TimestampType(bool nullable) : SqlType(SqlTypeId::Timestamp, nullable) {}
+
+// ---------------------------------------------------------
 // Fixed-length strings
 // ---------------------------------------------------------
 
