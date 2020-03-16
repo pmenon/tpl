@@ -30,6 +30,9 @@ std::size_t ComputeRowSize(const planner::OutputSchema &schema) {
       case SqlTypeId::Date:
         tuple_size += sizeof(DateVal);
         break;
+      case SqlTypeId::Timestamp:
+        tuple_size += sizeof(TimestampVal);
+        break;
       case SqlTypeId::Char:
       case SqlTypeId::Varchar:
         tuple_size += sizeof(StringVal);

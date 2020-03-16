@@ -25,6 +25,7 @@ enum class TypeId : uint8_t {
   Float,     // float
   Double,    // double
   Date,      // Date objects
+  Timestamp, // Timestamp objects
   Varchar,   // char*, representing a null-terminated UTF-8 string
   Varbinary  // blobs representing arbitrary bytes
 };
@@ -34,16 +35,17 @@ enum class TypeId : uint8_t {
  */
 enum class SqlTypeId : uint8_t {
   Boolean,
-  TinyInt,   // 1-byte integer
-  SmallInt,  // 2-byte integer
-  Integer,   // 4-byte integer
-  BigInt,    // 8-byte integer
-  Real,      // 4-byte float
-  Double,    // 8-byte float
-  Decimal,   // Arbitrary-precision numeric
-  Date,      // Dates
-  Char,      // Fixed-length string
-  Varchar    // Variable-length string
+  TinyInt,    // 1-byte integer
+  SmallInt,   // 2-byte integer
+  Integer,    // 4-byte integer
+  BigInt,     // 8-byte integer
+  Real,       // 4-byte float
+  Double,     // 8-byte float
+  Decimal,    // Arbitrary-precision numeric
+  Date,       // Dates
+  Timestamp,  // Timestamps
+  Char,       // Fixed-length string
+  Varchar     // Variable-length string
 };
 
 /**
