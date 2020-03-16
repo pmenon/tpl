@@ -43,10 +43,14 @@ class CastingFunctions : public AllStatic {
 // The functions below are inlined in the header for performance. Don't move it unless you know what
 // you're doing.
 
-#define CAST_HIDE_NULL_FAST(FROM_TYPE, TO_TYPE)                                         \
-  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &v) {  \
-    result->is_null = v.is_null;                                                        \
-    result->val = tpl::sql::Cast::Apply<decltype(v.val), decltype(result->val)>(v.val); \
+// TODO(pmenon): Catch cast exceptions!
+
+#define CAST_HIDE_NULL_FAST(FROM_TYPE, TO_TYPE)                                        \
+  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &v) { \
+    using InputType = decltype(v.val);                                                 \
+    using OutputType = decltype(result->val);                                          \
+    result->is_null = v.is_null;                                                       \
+    tpl::sql::TryCast<InputType, OutputType>{}(v.val, &result->val);                      \
   }
 
 CAST_HIDE_NULL_FAST(Integer, BoolVal);

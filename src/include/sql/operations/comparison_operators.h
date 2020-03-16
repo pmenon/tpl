@@ -8,18 +8,15 @@
 
 namespace tpl::sql {
 
-template <typename>
-struct Equal;
-template <typename>
-struct GreaterThan;
-template <typename>
-struct GreaterThanEqual;
-template <typename>
-struct LessThan;
-template <typename>
-struct LessThanEqual;
-template <typename>
-struct NotEqual;
+// Forward-declare all comparisons since they're used before defined.
+// clang-format off
+template <typename> struct Equal;
+template <typename> struct GreaterThan;
+template <typename> struct GreaterThanEqual;
+template <typename> struct LessThan;
+template <typename> struct LessThanEqual;
+template <typename> struct NotEqual;
+// clang-format on
 
 /**
  * Equality operator.
@@ -28,7 +25,10 @@ template <typename T>
 struct Equal {
   using SymmetricOp = Equal<T>;
 
-  static bool Apply(T left, T right) { return left == right; }
+  /**
+   * @return True if left == right; false otherwise.
+   */
+  constexpr bool operator()(T left, T right) const { return left == right; }
 };
 
 /**
@@ -38,7 +38,10 @@ template <typename T>
 struct GreaterThan {
   using SymmetricOp = LessThan<T>;
 
-  static bool Apply(T left, T right) { return left > right; }
+  /**
+   * @return True if left > right; false otherwise.
+   */
+  constexpr bool operator()(T left, T right) const { return left > right; }
 };
 
 /**
@@ -48,7 +51,10 @@ template <typename T>
 struct GreaterThanEqual {
   using SymmetricOp = LessThanEqual<T>;
 
-  static bool Apply(T left, T right) { return left >= right; }
+  /**
+   * @return True if left >= right; false otherwise.
+   */
+  constexpr bool operator()(T left, T right) const { return left >= right; }
 };
 
 /**
@@ -58,7 +64,10 @@ template <typename T>
 struct LessThan {
   using SymmetricOp = GreaterThan<T>;
 
-  static bool Apply(T left, T right) { return left < right; }
+  /**
+   * @return True if left < right; false otherwise.
+   */
+  constexpr bool operator()(T left, T right) const { return left < right; }
 };
 
 /**
@@ -68,7 +77,10 @@ template <typename T>
 struct LessThanEqual {
   using SymmetricOp = GreaterThanEqual<T>;
 
-  static bool Apply(T left, T right) { return left <= right; }
+  /**
+   * @return True if left <= right; false otherwise.
+   */
+  constexpr bool operator()(T left, T right) const { return left <= right; }
 };
 
 /**
@@ -78,7 +90,10 @@ template <typename T>
 struct NotEqual {
   using SymmetricOp = NotEqual<T>;
 
-  static bool Apply(T left, T right) { return left != right; }
+  /**
+   * @return True if left != right; false otherwise.
+   */
+  constexpr bool operator()(T left, T right) const { return left != right; }
 };
 
 }  // namespace tpl::sql

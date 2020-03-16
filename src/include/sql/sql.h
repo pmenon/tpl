@@ -94,6 +94,8 @@ constexpr inline TypeId GetTypeId() {
     return TypeId::Double;
   } else if constexpr (std::is_same<std::remove_const_t<T>, Date>()) {
     return TypeId::Date;
+  } else if constexpr (std::is_same<std::remove_const_t<T>, Timestamp>()) {
+    return TypeId::Timestamp;
   } else if constexpr (std::is_same<std::remove_const_t<T>, char *>() ||
                        std::is_same<std::remove_const_t<T>, const char *>() ||
                        std::is_same<std::remove_const_t<T>, std::string>() ||

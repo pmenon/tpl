@@ -7,45 +7,51 @@ namespace tpl::sql {
 /**
  * In-place addition.
  */
+template <typename T>
 struct AddInPlace {
-  template <typename T>
-  static void Apply(T *a, T b) {
-    *a += b;
-  }
+  constexpr void operator()(T *a, T b) const noexcept { *a += b; }
 };
 
 /**
  * In-place modulus.
  */
+template <typename T>
 struct ModuloInPlace {
-  template <typename T>
-  static void Apply(T *a, T b) {
+  constexpr void operator()(T *a, T b) const noexcept {
     // Ensure divisor isn't zero. This should have been checked before here!
     TPL_ASSERT(b != 0, "Divide by zero");
     *a %= b;
   }
 };
 
+/**
+ * Specialization of in-place modulo for floats.
+ */
 template <>
-inline void ModuloInPlace::Apply(float *a, float b) {
-  TPL_ASSERT(b != 0, "Divide by zero");
-  *a = std::fmod(*a, b);
-}
+struct ModuloInPlace<float> {
+  constexpr void operator()(float *a, float b) const noexcept {
+    TPL_ASSERT(b != 0, "Divide by zero");
+    *a = std::fmod(*a, b);
+  }
+};
 
+/**
+ * Specialization of in-place modulo for double-precision floats.
+ */
 template <>
-inline void ModuloInPlace::Apply(double *a, double b) {
-  TPL_ASSERT(b != 0, "Divide by zero");
-  *a = std::fmod(*a, b);
-}
+struct ModuloInPlace<double> {
+  void operator()(double *a, double b) const noexcept {
+    TPL_ASSERT(b != 0, "Divide by zero");
+    *a = std::fmod(*a, b);
+  }
+};
 
 /**
  * In-place bitwise AND.
  */
+template <typename T>
 struct BitwiseANDInPlace {
-  template <typename T>
-  static void Apply(T *a, T b) {
-    *a &= b;
-  }
+  constexpr void operator()(T *a, T b) const noexcept { *a &= b; }
 };
 
 }  // namespace tpl::sql

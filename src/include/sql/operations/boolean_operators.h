@@ -6,14 +6,14 @@ namespace tpl::sql {
  * Boolean negation.
  */
 struct Not {
-  static bool Apply(const bool left) { return !left; }
+  bool operator()(const bool left) const noexcept { return !left; }
 };
 
 /**
  * Boolean AND.
  */
 struct And {
-  static bool Apply(const bool left, bool right) { return left && right; }
+  bool operator()(const bool left, bool right) const noexcept { return left && right; }
 };
 
 /**
@@ -34,8 +34,8 @@ struct And {
  * (2) Either input is true and the other is NULL.
  */
 struct AndNullMask {
-  static bool Apply(const bool left, const bool right, const bool left_null,
-                    const bool right_null) {
+  bool operator()(const bool left, const bool right, const bool left_null,
+                  const bool right_null) const noexcept {
     return (left_null && (right_null || right)) || (left && right_null);
   }
 };
@@ -44,7 +44,7 @@ struct AndNullMask {
  * Boolean OR.
  */
 struct Or {
-  static bool Apply(const bool left, const bool right) { return left || right; }
+  bool operator()(const bool left, const bool right) const noexcept { return left || right; }
 };
 
 /**
@@ -65,8 +65,8 @@ struct Or {
  * (2) Either input is false and the other is NULL.
  */
 struct OrNullMask {
-  static bool Apply(const bool left, const bool right, const bool left_null,
-                    const bool right_null) {
+  bool operator()(const bool left, const bool right, const bool left_null,
+                  const bool right_null) const noexcept {
     return (left_null && (right_null || !right)) || (!left && right_null);
   }
 };

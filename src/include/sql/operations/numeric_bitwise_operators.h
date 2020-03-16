@@ -3,63 +3,51 @@
 namespace tpl::sql {
 
 /**
- * Bitwise AND two numeric elements.
+ * Bitwise AND two elements.
  */
+template <typename T>
 struct BitwiseAnd {
-  template <typename T>
-  static T Apply(const T &a, const T &b) {
-    return a & b;
-  }
+  constexpr T operator()(const T &a, const T &b) const noexcept { return a & b; }
 };
 
 /**
- * Bitwise OR two numeric elements.
+ * Bitwise OR two elements.
  */
+template <typename T>
 struct BitwiseOr {
-  template <typename T>
-  static T Apply(const T &a, const T &b) {
-    return a | b;
-  }
+  constexpr T operator()(const T &a, const T &b) const noexcept { return a | b; }
 };
 
 /**
  * Left-shift a numeric element.
  */
+template <typename T>
 struct BitwiseShiftLeft {
-  template <typename T>
-  static T Apply(const T &a, const T &b) {
-    return a << b;
-  }
+  constexpr T operator()(const T &a, const T &b) const noexcept { return a << b; }
 };
 
 /**
  * Right-shift a numeric element.
  */
+template <typename T>
 struct BitwiseShiftRight {
-  template <typename T>
-  static T Apply(const T &a, const T &b) {
-    return a >> b;
-  }
+  constexpr T operator()(const T &a, const T &b) const noexcept { return a >> b; }
 };
 
 /**
  * Bitwise negate a numeric element.
  */
+template <typename T>
 struct BitwiseNot {
-  template <typename T>
-  static T Apply(const T &input) {
-    return ~input;
-  }
+  constexpr T operator()(const T &input) const noexcept { return ~input; }
 };
 
 /**
  * Bitwise XOR a numeric element.
  */
+template <typename T>
 struct BitwiseXor {
-  template <typename T>
-  static T Apply(const T &a, const T &b) {
-    return a ^ b;
-  }
+  constexpr T operator()(const T &a, const T &b) const noexcept { return a ^ b; }
 };
 
 }  // namespace tpl::sql

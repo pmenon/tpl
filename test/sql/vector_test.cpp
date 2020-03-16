@@ -350,7 +350,7 @@ TEST_F(VectorTest, Cast) {
   // Case 3: try down-cast int16_t -> int8_t with one value out-of-range
   // vec = [1, 150, NULL, 8] -- 150 is in an invalid int8_t
   vec->SetValue(1, GenericValue::CreateSmallInt(150));
-  EXPECT_THROW(vec->Cast(TypeId::TinyInt), std::runtime_error);
+  EXPECT_THROW(vec->Cast(TypeId::TinyInt), ValueOutOfRangeException);
 }
 
 TEST_F(VectorTest, CastWithNulls) {

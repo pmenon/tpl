@@ -12,7 +12,7 @@ namespace tpl::sql {
 
 class ArithmeticFunctionsTests : public TplTest {
  protected:
-  double cotan(const double arg) { return Cot::Apply(arg); }
+  static double cotan(const double arg) { return Cot<double>{}(arg); }
 };
 
 TEST_F(ArithmeticFunctionsTests, IntegerValue) {

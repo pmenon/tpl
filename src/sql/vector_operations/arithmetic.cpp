@@ -2,7 +2,7 @@
 
 #include "common/settings.h"
 #include "sql/operations/numeric_binary_operators.h"
-#include "sql/vector_operations/binary_op_helpers.h"
+#include "sql/vector_operations/binary_operation_executor.h"
 
 namespace tpl::sql {
 
@@ -10,10 +10,10 @@ namespace traits {
 
 // Specialized struct to enable full-computation.
 template <typename T, typename Op>
-struct ShouldPerformFullCompute<
-    T, Op,
-    std::enable_if_t<std::is_same_v<Op, tpl::sql::Add> || std::is_same_v<Op, tpl::sql::Subtract> ||
-                     std::is_same_v<Op, tpl::sql::Multiply>>> {
+struct ShouldPerformFullCompute<T, Op,
+                                std::enable_if_t<std::is_same_v<Op, tpl::sql::Add<T>> ||
+                                                 std::is_same_v<Op, tpl::sql::Subtract<T>> ||
+                                                 std::is_same_v<Op, tpl::sql::Multiply<T>>>> {
   bool operator()(const TupleIdList *tid_list) {
     auto full_compute_threshold =
         Settings::Instance()->GetDouble(Settings::Name::ArithmeticFullComputeOptThreshold);
@@ -25,16 +25,31 @@ struct ShouldPerformFullCompute<
 
 namespace {
 
-// TODO(pmenon): Instead of doing a branching zero-check, use a TID list to
-//               quickly select which are non-zero, then iterate over that sub list?
-// TODO(pmenon): Overflow?
+// Check:
+// 1. Input vectors have the same type.
+// 2. Input vectors have the same shape.
+// 3. Input and output vectors have the same type.
+void CheckBinaryOperation(const Vector &left, const Vector &right, Vector *result) {
+  if (left.GetTypeId() != right.GetTypeId()) {
+    throw TypeMismatchException(left.GetTypeId(), right.GetTypeId(),
+                                "left and right vector types to binary operation must be the same");
+  }
+  if (left.GetTypeId() != result->GetTypeId()) {
+    throw TypeMismatchException(left.GetTypeId(), result->GetTypeId(),
+                                "result type of binary operation must be the same as input types");
+  }
+  if (!left.IsConstant() && !right.IsConstant() && left.GetCount() != right.GetCount()) {
+    throw Exception(ExceptionType::Cardinality,
+                    "left and right input vectors to binary operation must have the same size");
+  }
+}
 
-template <typename LeftType, typename RightType, typename ResultType, typename Op>
+template <typename T, typename Op>
 void TemplatedDivModOperation_Constant_Vector(const Vector &left, const Vector &right,
-                                              Vector *result) {
-  auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
-  auto *right_data = reinterpret_cast<RightType *>(right.GetData());
-  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
+                                              Vector *result, Op op) {
+  auto *left_data = reinterpret_cast<T *>(left.GetData());
+  auto *right_data = reinterpret_cast<T *>(right.GetData());
+  auto *result_data = reinterpret_cast<T *>(result->GetData());
 
   result->Resize(right.GetSize());
   result->SetFilteredTupleIdList(right.GetFilteredTupleIdList(), right.GetCount());
@@ -45,21 +60,21 @@ void TemplatedDivModOperation_Constant_Vector(const Vector &left, const Vector &
     result->GetMutableNullMask()->Copy(right.GetNullMask());
 
     VectorOps::Exec(right, [&](uint64_t i, uint64_t k) {
-      if (right_data[i] == RightType(0)) {
+      if (right_data[i] == T(0)) {
         result->GetMutableNullMask()->Set(i);
       } else {
-        result_data[i] = Op::Apply(left_data[0], right_data[i]);
+        result_data[i] = op(left_data[0], right_data[i]);
       }
     });
   }
 }
 
-template <typename LeftType, typename RightType, typename ResultType, typename Op>
+template <typename T, typename Op>
 void TemplatedDivModOperation_Vector_Constant(const Vector &left, const Vector &right,
-                                              Vector *result) {
-  auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
-  auto *right_data = reinterpret_cast<RightType *>(right.GetData());
-  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
+                                              Vector *result, Op op) {
+  auto *left_data = reinterpret_cast<T *>(left.GetData());
+  auto *right_data = reinterpret_cast<T *>(right.GetData());
+  auto *result_data = reinterpret_cast<T *>(result->GetData());
 
   result->Resize(left.GetSize());
   result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
@@ -70,52 +85,49 @@ void TemplatedDivModOperation_Vector_Constant(const Vector &left, const Vector &
     result->GetMutableNullMask()->Copy(left.GetNullMask());
 
     VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
-      if (left_data[i] == LeftType(0)) {
+      if (left_data[i] == T(0)) {
         result->GetMutableNullMask()->Set(i);
       } else {
-        result_data[i] = Op::Apply(left_data[i], right_data[0]);
+        result_data[i] = op(left_data[i], right_data[0]);
       }
     });
   }
 }
 
-template <typename LeftType, typename RightType, typename ResultType, typename Op>
-void TemplatedDivModOperation_Vector_Vector(const Vector &left, const Vector &right,
-                                            Vector *result) {
-  auto *left_data = reinterpret_cast<LeftType *>(left.GetData());
-  auto *right_data = reinterpret_cast<RightType *>(right.GetData());
-  auto *result_data = reinterpret_cast<ResultType *>(result->GetData());
+template <typename T, typename Op>
+void TemplatedDivModOperation_Vector_Vector(const Vector &left, const Vector &right, Vector *result,
+                                            Op op) {
+  auto *left_data = reinterpret_cast<T *>(left.GetData());
+  auto *right_data = reinterpret_cast<T *>(right.GetData());
+  auto *result_data = reinterpret_cast<T *>(result->GetData());
 
   result->Resize(left.GetSize());
   result->GetMutableNullMask()->Copy(left.GetNullMask()).Union(right.GetNullMask());
   result->SetFilteredTupleIdList(left.GetFilteredTupleIdList(), left.GetCount());
 
   VectorOps::Exec(left, [&](uint64_t i, uint64_t k) {
-    if (left_data[i] == LeftType(0) || right_data[i] == RightType(0)) {
+    if (right_data[i] == T(0)) {
       result->GetMutableNullMask()->Set(i);
     } else {
-      result_data[i] = Op::Apply(left_data[i], right_data[i]);
+      result_data[i] = op(left_data[i], right_data[i]);
     }
   });
 }
 
-template <typename LeftType, typename RightType, typename ResultType, typename Op>
+template <typename T, template <typename...> typename Op>
 void XTemplatedDivModOperation(const Vector &left, const Vector &right, Vector *result) {
   if (left.IsConstant()) {
-    TemplatedDivModOperation_Constant_Vector<LeftType, RightType, ResultType, Op>(left, right,
-                                                                                  result);
+    TemplatedDivModOperation_Constant_Vector<T>(left, right, result, Op<T>{});
   } else if (right.IsConstant()) {
-    TemplatedDivModOperation_Vector_Constant<LeftType, RightType, ResultType, Op>(left, right,
-                                                                                  result);
+    TemplatedDivModOperation_Vector_Constant<T>(left, right, result, Op<T>{});
   } else {
-    TemplatedDivModOperation_Vector_Vector<LeftType, RightType, ResultType, Op>(left, right,
-                                                                                result);
+    TemplatedDivModOperation_Vector_Vector<T>(left, right, result, Op<T>{});
   }
 }
 
 // Helper function to execute a divide or modulo operations. The operations are
 // performed only on the active elements in the input vectors.
-template <typename Op>
+template <template <typename...> typename Op>
 void DivModOperation(const Vector &left, const Vector &right, Vector *result) {
   // Sanity check
   CheckBinaryOperation(left, right, result);
@@ -123,33 +135,35 @@ void DivModOperation(const Vector &left, const Vector &right, Vector *result) {
   // Lift-off
   switch (left.GetTypeId()) {
     case TypeId::TinyInt:
-      XTemplatedDivModOperation<int8_t, int8_t, int8_t, Op>(left, right, result);
+      XTemplatedDivModOperation<int8_t, Op>(left, right, result);
       break;
     case TypeId::SmallInt:
-      XTemplatedDivModOperation<int16_t, int16_t, int16_t, Op>(left, right, result);
+      XTemplatedDivModOperation<int16_t, Op>(left, right, result);
       break;
     case TypeId::Integer:
-      XTemplatedDivModOperation<int32_t, int32_t, int32_t, Op>(left, right, result);
+      XTemplatedDivModOperation<int32_t, Op>(left, right, result);
       break;
     case TypeId::BigInt:
-      XTemplatedDivModOperation<int64_t, int64_t, int64_t, Op>(left, right, result);
+      XTemplatedDivModOperation<int64_t, Op>(left, right, result);
       break;
     case TypeId::Float:
-      XTemplatedDivModOperation<float, float, float, Op>(left, right, result);
+      XTemplatedDivModOperation<float, Op>(left, right, result);
       break;
     case TypeId::Double:
-      XTemplatedDivModOperation<double, double, double, Op>(left, right, result);
-      break;
-    case TypeId::Pointer:
-      XTemplatedDivModOperation<uint64_t, uint64_t, uint64_t, Op>(left, right, result);
+      XTemplatedDivModOperation<double, Op>(left, right, result);
       break;
     default:
       throw InvalidTypeException(left.GetTypeId(), "Invalid type for arithmetic operation");
   }
 }
 
+template <typename T, template <typename> typename Op>
+void TemplatedBinaryArithmeticOperation(const Vector &left, const Vector &right, Vector *result) {
+  BinaryOperationExecutor::Execute<T, T, T, Op<T>>(left, right, result);
+}
+
 // Dispatch to the generic BinaryOperation() function with full types.
-template <typename Op>
+template <template <typename> typename Op>
 void BinaryArithmeticOperation(const Vector &left, const Vector &right, Vector *result) {
   // Sanity check
   CheckBinaryOperation(left, right, result);
@@ -157,25 +171,25 @@ void BinaryArithmeticOperation(const Vector &left, const Vector &right, Vector *
   // Lift-off
   switch (left.GetTypeId()) {
     case TypeId::TinyInt:
-      TemplatedBinaryOperation<int8_t, int8_t, int8_t, Op>(left, right, result);
+      TemplatedBinaryArithmeticOperation<int8_t, Op>(left, right, result);
       break;
     case TypeId::SmallInt:
-      TemplatedBinaryOperation<int16_t, int16_t, int16_t, Op>(left, right, result);
+      TemplatedBinaryArithmeticOperation<int16_t, Op>(left, right, result);
       break;
     case TypeId::Integer:
-      TemplatedBinaryOperation<int32_t, int32_t, int32_t, Op>(left, right, result);
+      TemplatedBinaryArithmeticOperation<int32_t, Op>(left, right, result);
       break;
     case TypeId::BigInt:
-      TemplatedBinaryOperation<int64_t, int64_t, int64_t, Op>(left, right, result);
+      TemplatedBinaryArithmeticOperation<int64_t, Op>(left, right, result);
       break;
     case TypeId::Float:
-      TemplatedBinaryOperation<float, float, float, Op>(left, right, result);
+      TemplatedBinaryArithmeticOperation<float, Op>(left, right, result);
       break;
     case TypeId::Double:
-      TemplatedBinaryOperation<double, double, double, Op>(left, right, result);
+      TemplatedBinaryArithmeticOperation<double, Op>(left, right, result);
       break;
     case TypeId::Pointer:
-      TemplatedBinaryOperation<uint64_t, uint64_t, uint64_t, Op>(left, right, result);
+      TemplatedBinaryArithmeticOperation<uintptr_t, Op>(left, right, result);
       break;
     default:
       throw InvalidTypeException(left.GetTypeId(), "Invalid type for arithmetic operation");

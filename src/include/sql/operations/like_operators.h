@@ -15,8 +15,8 @@ struct Like {
   static bool Apply(const char *str, std::size_t str_len, const char *pattern,
                     std::size_t pattern_len, char escape = kDefaultEscape);
 
-  static bool Apply(const VarlenEntry &str, const VarlenEntry &pattern,
-                    char escape = kDefaultEscape) {
+  bool operator()(const VarlenEntry &str, const VarlenEntry &pattern,
+                  char escape = kDefaultEscape) const {
     return Apply(reinterpret_cast<const char *>(str.GetContent()), str.GetSize(),
                  reinterpret_cast<const char *>(pattern.GetContent()), pattern.GetSize(), escape);
   }
@@ -31,8 +31,8 @@ struct NotLike {
     return !Like::Apply(str, str_len, pattern, pattern_len, escape);
   }
 
-  static bool Apply(const VarlenEntry &str, const VarlenEntry &pattern,
-                    char escape = kDefaultEscape) {
+  bool operator()(const VarlenEntry &str, const VarlenEntry &pattern,
+                  char escape = kDefaultEscape) const {
     return !Like::Apply(reinterpret_cast<const char *>(str.GetContent()), str.GetSize(),
                         reinterpret_cast<const char *>(pattern.GetContent()), pattern.GetSize(),
                         escape);

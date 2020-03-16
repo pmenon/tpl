@@ -155,7 +155,7 @@ class VectorOps : public AllStatic {
    * @param[in,out] left The left input into the bitwise operation.
    * @param right The right input into the bitwise operation.
    */
-  static void BitwiseANDInPlace(Vector *left, const Vector &right);
+  static void BitwiseAndInPlace(Vector *left, const Vector &right);
 
   // -------------------------------------------------------
   //

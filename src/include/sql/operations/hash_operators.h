@@ -20,18 +20,18 @@ struct HashCombine;
 /**
  * Primitive hashing.
  */
-#define DECL_HASH(Type, ...)                                          \
-  template <>                                                         \
-  struct Hash<Type> {                                                 \
-    static hash_t Apply(Type input, bool null) {                      \
-      return null ? hash_t(0) : util::HashUtil::HashCrc(input);       \
-    }                                                                 \
-  };                                                                  \
-  template <>                                                         \
-  struct HashCombine<Type> {                                          \
-    static hash_t Apply(Type input, bool null, const hash_t seed) {   \
-      return null ? hash_t(0) : util::HashUtil::HashCrc(input, seed); \
-    }                                                                 \
+#define DECL_HASH(Type, ...)                                                     \
+  template <>                                                                    \
+  struct Hash<Type> {                                                            \
+    hash_t operator()(Type input, bool null) const noexcept {                    \
+      return null ? hash_t(0) : util::HashUtil::HashCrc(input);                  \
+    }                                                                            \
+  };                                                                             \
+  template <>                                                                    \
+  struct HashCombine<Type> {                                                     \
+    hash_t operator()(Type input, bool null, const hash_t seed) const noexcept { \
+      return null ? hash_t(0) : util::HashUtil::HashCrc(input, seed);            \
+    }                                                                            \
   };
 
 BOOL_TYPES(DECL_HASH)
@@ -44,7 +44,9 @@ FLOAT_TYPES(DECL_HASH)
  */
 template <>
 struct Hash<Date> {
-  static hash_t Apply(Date input, bool null) { return null ? hash_t(0) : input.Hash(); }
+  hash_t operator()(Date input, bool null) const noexcept {
+    return null ? hash_t(0) : input.Hash();
+  }
 };
 
 /**
@@ -52,7 +54,7 @@ struct Hash<Date> {
  */
 template <>
 struct HashCombine<Date> {
-  static hash_t Apply(Date input, bool null, const hash_t seed) {
+  hash_t operator()(Date input, bool null, const hash_t seed) const noexcept {
     return null ? hash_t(0) : input.Hash(seed);
   }
 };
@@ -62,7 +64,9 @@ struct HashCombine<Date> {
  */
 template <>
 struct Hash<Timestamp> {
-  static hash_t Apply(Timestamp input, bool null) { return null ? hash_t(0) : input.Hash(); }
+  hash_t operator()(Timestamp input, bool null) const noexcept {
+    return null ? hash_t(0) : input.Hash();
+  }
 };
 
 /**
@@ -70,7 +74,7 @@ struct Hash<Timestamp> {
  */
 template <>
 struct HashCombine<Timestamp> {
-  static hash_t Apply(Timestamp input, bool null, const hash_t seed) {
+  hash_t operator()(Timestamp input, bool null, const hash_t seed) const noexcept {
     return null ? hash_t(0) : input.Hash(seed);
   }
 };
@@ -80,7 +84,7 @@ struct HashCombine<Timestamp> {
  */
 template <>
 struct Hash<VarlenEntry> {
-  static hash_t Apply(const VarlenEntry &input, bool null) {
+  hash_t operator()(const VarlenEntry &input, bool null) const noexcept {
     return null ? hash_t(0) : input.Hash();
   }
 };
@@ -90,7 +94,7 @@ struct Hash<VarlenEntry> {
  */
 template <>
 struct HashCombine<VarlenEntry> {
-  static hash_t Apply(const VarlenEntry &input, bool null, const hash_t seed) {
+  hash_t operator()(const VarlenEntry &input, bool null, const hash_t seed) const noexcept {
     return null ? hash_t(0) : input.Hash(seed);
   }
 };

@@ -20,26 +20,24 @@ namespace tpl::sql {
  * Return the value of the mathematical constant PI.
  */
 struct Pi {
-  static double Apply() { return M_PI; }
+  constexpr double operator()() const noexcept { return M_PI; }
 };
 
 /**
  * Return the value of the mathematical constant E.
  */
 struct E {
-  static double Apply() { return M_E; }
+  constexpr double operator()() { return M_E; }
 };
 
+template <typename T>
 struct Abs {
-  template <typename T>
-  static T Apply(T input) {
-    return input < 0 ? -input : input;
-  }
+  constexpr T operator()(T input) { return input < 0 ? -input : input; }
 };
 
+template <typename T>
 struct Acos {
-  template <typename T>
-  static double Apply(T input) {
+  constexpr double operator()(T input) {
     if (input < -1 || input > 1) {
       throw std::runtime_error("ACos is undefined outside [-1,1]");
     }
@@ -47,9 +45,9 @@ struct Acos {
   }
 };
 
+template <typename T>
 struct Asin {
-  template <typename T>
-  static double Apply(T input) {
+  constexpr double operator()(T input) {
     if (input < -1 || input > 1) {
       throw std::runtime_error("ASin is undefined outside [-1,1]");
     }
@@ -57,185 +55,143 @@ struct Asin {
   }
 };
 
+template <typename T>
 struct Atan {
-  template <typename T>
-  static double Apply(T input) {
-    return std::atan(input);
-  }
+  constexpr double operator()(T input) { return std::atan(input); }
 };
 
+template <typename T>
 struct Atan2 {
-  template <typename T>
-  static double Apply(T a, T b) {
-    return std::atan2(a, b);
-  }
+  constexpr double operator()(T a, T b) { return std::atan2(a, b); }
 };
 
+template <typename T>
 struct Cbrt {
-  template <typename T>
-  static double Apply(T input) {
-    return std::cbrt(input);
-  }
+  constexpr double operator()(T input) { return std::cbrt(input); }
 };
 
+template <typename T>
 struct Ceil {
-  template <typename T>
-  static T Apply(T input) {
-    return std::ceil(input);
-  }
+  constexpr T operator()(T input) { return std::ceil(input); }
 };
 
+template <typename T>
 struct Cos {
-  template <typename T>
-  static double Apply(T input) {
-    return std::cos(input);
-  }
+  constexpr double operator()(T input) { return std::cos(input); }
 };
 
+template <typename T>
 struct Cosh {
-  template <typename T>
-  static double Apply(T input) {
-    return std::cosh(input);
-  }
+  constexpr double operator()(T input) { return std::cosh(input); }
 };
 
+template <typename T>
 struct Cot {
-  static double cotan(const double arg) { return (1.0 / std::tan(arg)); }
-
-  template <typename T>
-  static double Apply(T input) {
-    return cotan(input);
-  }
+  constexpr double operator()(T input) { return (1.0 / std::tan(input)); }
 };
 
+template <typename T>
 struct Degrees {
-  template <typename T>
-  static double Apply(T input) {
-    return input * 180.0 / M_PI;
-  }
+  constexpr double operator()(T input) { return input * 180.0 / M_PI; }
 };
 
+template <typename T>
 struct Exp {
-  template <typename T>
-  static double Apply(T input) {
-    return std::exp(input);
-  }
+  constexpr double operator()(T input) { return std::exp(input); }
 };
 
+template <typename T>
 struct Floor {
-  template <typename T>
-  static T Apply(T input) {
-    return std::floor(input);
-  }
+  constexpr T operator()(T input) { return std::floor(input); }
 };
 
+template <typename T>
 struct Ln {
-  template <typename T>
-  static T Apply(T input) {
-    return std::log(input);
-  }
+  constexpr T operator()(T input) { return std::log(input); }
 };
 
+template <typename T>
 struct Log {
-  template <typename T>
-  static T Apply(T input, T base) {
-    return std::log(input) / std::log(base);
-  }
+  constexpr T operator()(T input, T base) { return std::log(input) / std::log(base); }
 };
 
+template <typename T>
 struct Log2 {
-  template <typename T>
-  static T Apply(T input) {
-    return std::log2(input);
-  }
+  constexpr T operator()(T input) { return std::log2(input); }
 };
 
+template <typename T>
 struct Log10 {
-  template <typename T>
-  static T Apply(T input) {
-    return std::log10(input);
-  }
+  constexpr T operator()(T input) { return std::log10(input); }
 };
 
+template <typename T, typename U>
 struct Pow {
-  template <typename T, typename U>
-  static double Apply(T a, U b) {
-    return std::pow(a, b);
-  }
+  constexpr double operator()(T a, U b) { return std::pow(a, b); }
 };
 
+template <typename T>
 struct Radians {
-  template <typename T>
-  static double Apply(T input) {
-    return input * M_PI / 180.0;
-  }
+  constexpr double operator()(T input) { return input * M_PI / 180.0; }
 };
 
+template <typename T>
 struct Round {
-  template <typename T>
-  static T Apply(T input) {
-    return input + ((input < 0) ? -0.5 : 0.5);
-  }
+  constexpr T operator()(T input) { return input + ((input < 0) ? -0.5 : 0.5); }
 };
 
+template <typename T, typename U>
 struct RoundUpTo {
-  template <typename T, typename U>
-  static T Apply(T input, U scale) {
+  constexpr T operator()(T input, U scale) {
     if (scale < 0) {
       scale = 0;
     }
-    T modifier = std::pow(10, scale);
+    T modifier = std::pow(10U, scale);
     return (static_cast<int64_t>(input * modifier)) / modifier;
   }
 };
 
+template <>
+struct RoundUpTo<void, void> {
+  template <typename T, typename U>
+  constexpr T operator()(T input, U scale) {
+    return RoundUpTo<T, U>{}(input, scale);
+  }
+};
+
+template <typename T>
 struct Sign {
-  template <typename T>
-  static T Apply(T input) {
-    return (input > 0) ? 1 : ((input < 0) ? -1.0 : 0);
-  }
+  constexpr T operator()(T input) { return (input > 0) ? 1 : ((input < 0) ? -1.0 : 0); }
 };
 
+template <typename T>
 struct Sin {
-  template <typename T>
-  static double Apply(T input) {
-    return std::sin(input);
-  }
+  constexpr double operator()(T input) { return std::sin(input); }
 };
 
+template <typename T>
 struct Sinh {
-  template <typename T>
-  static double Apply(T input) {
-    return std::sinh(input);
-  }
+  constexpr double operator()(T input) { return std::sinh(input); }
 };
 
+template <typename T>
 struct Sqrt {
-  template <typename T>
-  static T Apply(T input) {
-    return std::sqrt(input);
-  }
+  constexpr T operator()(T input) { return std::sqrt(input); }
 };
 
+template <typename T>
 struct Tan {
-  template <typename T>
-  static double Apply(T input) {
-    return std::tan(input);
-  }
+  constexpr double operator()(T input) { return std::tan(input); }
 };
 
+template <typename T>
 struct Tanh {
-  template <typename T>
-  static double Apply(T input) {
-    return std::tanh(input);
-  }
+  constexpr double operator()(T input) { return std::tanh(input); }
 };
 
+template <typename T>
 struct Truncate {
-  template <typename T>
-  static T Apply(T input) {
-    return std::trunc(input);
-  }
+  constexpr T operator()(T input) { return std::trunc(input); }
 };
 
 }  // namespace tpl::sql

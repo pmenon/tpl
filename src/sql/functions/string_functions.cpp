@@ -353,8 +353,7 @@ void StringFunctions::Like(UNUSED ExecutionContext *ctx, BoolVal *result, const 
   }
 
   result->is_null = false;
-  result->val = Like::Apply(string.GetContent(), string.GetLength(), pattern.GetContent(),
-                            pattern.GetLength());
+  result->val = tpl::sql::Like{}(string.val, pattern.val);
 }
 
 }  // namespace tpl::sql

@@ -140,15 +140,21 @@ class ValueOutOfRangeException : public Exception {
  public:
   template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>, uint32_t>>
   ValueOutOfRangeException(T value, sql::TypeId src_type, sql::TypeId dest_type)
-      : ValueOutOfRangeException() {
+      : ValueOutOfRangeException(
+            "Type {} with value {} cannot be cast because the value is out of range for the "
+            "target type {}") {
+    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
+  }
+
+  ValueOutOfRangeException(sql::TypeId src_type, sql::TypeId dest_type)
+      : ValueOutOfRangeException(
+            "Type {} cannot be cast because the value is out of range for the target type {}") {
     Format(TypeIdToString(src_type), TypeIdToString(dest_type));
   }
 
  private:
-  ValueOutOfRangeException()
-      : Exception(ExceptionType::OutOfRange,
-                  "Type {} with value {} cannot be cast because the value is out of range for the "
-                  "target type {}") {}
+  explicit ValueOutOfRangeException(const std::string &message)
+      : Exception(ExceptionType::OutOfRange, message) {}
 };
 
 }  // namespace tpl

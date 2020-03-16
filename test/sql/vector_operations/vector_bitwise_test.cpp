@@ -13,7 +13,7 @@ TEST_F(VectorBitwiseTest, InPlaceBitwiseAND) {
   {                                                                                       \
     auto a = Make##TYPE##Vector(100);                                                     \
     VectorOps::Generate(a.get(), 0, 2);                                                   \
-    VectorOps::BitwiseANDInPlace(a.get(), ConstantVector(GenericValue::Create##TYPE(3))); \
+    VectorOps::BitwiseAndInPlace(a.get(), ConstantVector(GenericValue::Create##TYPE(3))); \
     EXPECT_EQ(100, a->GetSize());                                                         \
     EXPECT_EQ(100, a->GetCount());                                                        \
     EXPECT_EQ(nullptr, a->GetFilteredTupleIdList());                                      \

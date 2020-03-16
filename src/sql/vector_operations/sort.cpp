@@ -14,9 +14,8 @@ template <typename T>
 void TemplatedSort(const Vector &input, const TupleIdList &non_null_selections, sel_t result[]) {
   const auto *data = reinterpret_cast<const T *>(input.GetData());
   const auto size = non_null_selections.ToSelectionVector(result);
-  ips4o::sort(result, result + size, [&](auto idx1, auto idx2) {
-    return LessThanEqual<T>::Apply(data[idx1], data[idx2]);
-  });
+  ips4o::sort(result, result + size,
+              [&](auto idx1, auto idx2) { return LessThanEqual<T>{}(data[idx1], data[idx2]); });
 }
 
 }  // namespace

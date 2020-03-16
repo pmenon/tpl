@@ -22,14 +22,14 @@ void TemplatedHashOperation(const Vector &input, Vector *result) {
   result->GetMutableNullMask()->Reset();
   result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
 
+  const tpl::sql::Hash<InputType> hash_op;
   if (input.GetNullMask().Any()) {
     VectorOps::Exec(input, [&](uint64_t i, uint64_t k) {
-      result_data[i] = tpl::sql::Hash<InputType>::Apply(input_data[i], input.GetNullMask()[i]);
+      result_data[i] = hash_op(input_data[i], input.GetNullMask()[i]);
     });
   } else {
-    VectorOps::Exec(input, [&](uint64_t i, uint64_t k) {
-      result_data[i] = tpl::sql::Hash<InputType>::Apply(input_data[i], false);
-    });
+    VectorOps::Exec(
+        input, [&](uint64_t i, uint64_t k) { result_data[i] = hash_op(input_data[i], false); });
   }
 }
 
@@ -42,15 +42,14 @@ void TemplatedHashCombineOperation(const Vector &input, Vector *result) {
   result->GetMutableNullMask()->Reset();
   result->SetFilteredTupleIdList(input.GetFilteredTupleIdList(), input.GetCount());
 
+  const tpl::sql::HashCombine<InputType> hash_combine_op;
   if (input.GetNullMask().Any()) {
     VectorOps::Exec(input, [&](uint64_t i, uint64_t k) {
-      result_data[i] = tpl::sql::HashCombine<InputType>::Apply(
-          input_data[i], input.GetNullMask()[i], result_data[i]);
+      result_data[i] = hash_combine_op(input_data[i], input.GetNullMask()[i], result_data[i]);
     });
   } else {
     VectorOps::Exec(input, [&](uint64_t i, uint64_t k) {
-      result_data[i] =
-          tpl::sql::HashCombine<InputType>::Apply(input_data[i], false, result_data[i]);
+      result_data[i] = hash_combine_op(input_data[i], false, result_data[i]);
     });
   }
 }

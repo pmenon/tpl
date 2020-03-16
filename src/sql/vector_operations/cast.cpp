@@ -4,19 +4,24 @@
 
 #include "common/exception.h"
 #include "sql/operations/cast_operators.h"
-#include "sql/vector_operations/unary_op_helpers.h"
+#include "sql/vector_operations/unary_operation_executor.h"
 
 namespace tpl::sql {
 
-// TODO(pmenon): String casts are identical. Refactor.
-// TODO(pmenon): Beef up TemplatedUnaryOperation to support both templated
-//               operations and functors?
-
 namespace {
 
-NotImplementedException UnimplementedCast(TypeId source_type, TypeId target_type) {
-  return NotImplementedException("Unsupported cast: {} -> {}", TypeIdToString(source_type),
-                                 TypeIdToString(target_type));
+template <typename InType, typename OutType>
+void StandardTemplatedCastOperation(const Vector &source, Vector *target) {
+  UnaryOperationExecutor::Execute<InType, OutType, tpl::sql::Cast<InType, OutType>>(source, target);
+}
+
+template <typename InType>
+void CastToStringOperation(const Vector &source, Vector *target) {
+  TPL_ASSERT(target->GetTypeId() == TypeId::Varchar, "Result vector must be string");
+  tpl::sql::Cast<InType, std::string> cast_op;
+  UnaryOperationExecutor::Execute<InType, VarlenEntry, true>(source, target, [&](const InType in) {
+    return target->GetMutableStringHeap()->AddVarlen(cast_op(in));
+  });
 }
 
 // Cast from a numeric-ish type into one of the many supported types.
@@ -24,68 +29,69 @@ template <typename InType>
 void CastNumericOperation(const Vector &source, Vector *target, SqlTypeId target_type) {
   switch (target_type) {
     case SqlTypeId::Boolean:
-      TemplatedUnaryOperation<InType, bool, tpl::sql::Cast>(source, target);
+      StandardTemplatedCastOperation<InType, bool>(source, target);
       break;
     case SqlTypeId::TinyInt:
-      TemplatedUnaryOperation<InType, int8_t, tpl::sql::Cast>(source, target);
+      StandardTemplatedCastOperation<InType, int8_t>(source, target);
       break;
     case SqlTypeId::SmallInt:
-      TemplatedUnaryOperation<InType, int16_t, tpl::sql::Cast>(source, target);
+      StandardTemplatedCastOperation<InType, int16_t>(source, target);
       break;
     case SqlTypeId::Integer:
-      TemplatedUnaryOperation<InType, int32_t, tpl::sql::Cast>(source, target);
+      StandardTemplatedCastOperation<InType, int32_t>(source, target);
       break;
     case SqlTypeId::BigInt:
-      TemplatedUnaryOperation<InType, int64_t, tpl::sql::Cast>(source, target);
+      StandardTemplatedCastOperation<InType, int64_t>(source, target);
       break;
     case SqlTypeId::Real:
-      TemplatedUnaryOperation<InType, float, tpl::sql::Cast>(source, target);
+      StandardTemplatedCastOperation<InType, float>(source, target);
       break;
     case SqlTypeId::Double:
-      TemplatedUnaryOperation<InType, double, tpl::sql::Cast>(source, target);
+      StandardTemplatedCastOperation<InType, double>(source, target);
       break;
-    case SqlTypeId::Varchar: {
-      TPL_ASSERT(target->GetTypeId() == TypeId::Varchar, "Result vector must be string");
-      auto src_data = reinterpret_cast<InType *>(source.GetData());
-      auto result_data = reinterpret_cast<VarlenEntry *>(target->GetData());
-      VectorOps::Exec(source, [&](uint64_t i, uint64_t k) {
-        if (!source.GetNullMask()[i]) {
-          auto str = tpl::sql::Cast::template Apply<InType, std::string>(src_data[i]);
-          result_data[i] = target->GetMutableStringHeap()->AddVarlen(str);
-        }
-      });
+    case SqlTypeId::Varchar:
+      CastToStringOperation<InType>(source, target);
       break;
-    }
     default:
-      throw UnimplementedCast(source.GetTypeId(), target->GetTypeId());
+      throw NotImplementedException("Unsupported cast: {} -> {}",
+                                    TypeIdToString(source.GetTypeId()),
+                                    TypeIdToString(target->GetTypeId()));
   }
 }
 
 void CastDateOperation(const Vector &source, Vector *target, SqlTypeId target_type) {
-  target->Resize(source.GetSize());
-  target->GetMutableNullMask()->Copy(source.GetNullMask());
-  target->SetFilteredTupleIdList(source.GetFilteredTupleIdList(), source.GetCount());
-  
   switch (target_type) {
-    case SqlTypeId::Varchar: {
-      TPL_ASSERT(target->GetTypeId() == TypeId::Varchar, "Result vector must be string");
-      auto src_data = reinterpret_cast<const Date *>(source.GetData());
-      auto result_data = reinterpret_cast<VarlenEntry *>(target->GetData());
-      VectorOps::Exec(source, [&](uint64_t i, uint64_t k) {
-        if (!source.GetNullMask()[i]) {
-          auto str = tpl::sql::CastFromDate::template Apply<Date, std::string>(src_data[i]);
-          result_data[i] = target->GetMutableStringHeap()->AddVarlen(str);
-        }
-      });
+    case SqlTypeId::Timestamp:
+      StandardTemplatedCastOperation<Date, Timestamp>(source, target);
       break;
-    }
+    case SqlTypeId::Varchar:
+      CastToStringOperation<Date>(source, target);
+      break;
     default:
-      throw UnimplementedCast(source.GetTypeId(), target->GetTypeId());
+      throw NotImplementedException("Unsupported cast: {} -> {}",
+                                    TypeIdToString(source.GetTypeId()),
+                                    TypeIdToString(target->GetTypeId()));
+  }
+}
+
+void CastTimestampOperation(const Vector &source, Vector *target, SqlTypeId target_type) {
+  switch (target_type) {
+    case SqlTypeId::Date:
+      StandardTemplatedCastOperation<Timestamp, Date>(source, target);
+      break;
+    case SqlTypeId::Varchar:
+      CastToStringOperation<Timestamp>(source, target);
+      break;
+    default:
+      throw NotImplementedException("Unsupported cast: {} -> {}",
+                                    TypeIdToString(source.GetTypeId()),
+                                    TypeIdToString(target->GetTypeId()));
   }
 }
 
 void CastStringOperation(const Vector &source, Vector *target, SqlTypeId target_type) {
-  throw UnimplementedCast(source.GetTypeId(), target->GetTypeId());
+  throw NotImplementedException("Unsupported cast: {} -> {}", TypeIdToString(source.GetTypeId()),
+                                TypeIdToString(target->GetTypeId()));
 }
 
 }  // namespace
@@ -117,11 +123,16 @@ void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type
     case SqlTypeId::Date:
       CastDateOperation(source, target, target_type);
       break;
+    case SqlTypeId::Timestamp:
+      CastTimestampOperation(source, target, target_type);
+      break;
     case SqlTypeId::Char:
     case SqlTypeId::Varchar:
       CastStringOperation(source, target, target_type);
     default:
-      throw UnimplementedCast(source.GetTypeId(), target->GetTypeId());
+      throw NotImplementedException("Unsupported cast: {} -> {}",
+                                    TypeIdToString(source.GetTypeId()),
+                                    TypeIdToString(target->GetTypeId()));
   }
 }
 

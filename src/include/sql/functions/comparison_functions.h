@@ -64,18 +64,20 @@ class ComparisonFunctions : public AllStatic {
 
 #define BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TYPE, OP)                                   \
   inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const TYPE &v1, const TYPE &v2) { \
+    using CppType = decltype(v1.val);                                                            \
     result->is_null = (v1.is_null || v2.is_null);                                                \
-    result->val = OP<decltype(v1.val)>::Apply(v1.val, v2.val);                                   \
+    result->val = OP<CppType>{}(v1.val, v2.val);                                                 \
   }
 
 #define BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, TYPE, OP)                       \
   inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const StringVal &v1, \
                                               const StringVal &v2) {                \
+    using CppType = decltype(v1.val);                                               \
     if (v1.is_null || v2.is_null) {                                                 \
       *result = BoolVal::Null();                                                    \
       return;                                                                       \
     }                                                                               \
-    *result = BoolVal(OP<decltype(v1.val)>::Apply(v1.val, v2.val));                 \
+    *result = BoolVal(OP<CppType>{}(v1.val, v2.val));                               \
   }
 
 #define BINARY_COMPARISONS(NAME, OP)                             \
