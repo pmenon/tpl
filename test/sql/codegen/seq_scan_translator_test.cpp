@@ -209,13 +209,15 @@ TEST_F(SeqScanTranslatorTest, SeqScanWithProjection) {
   // 2. col1 must be less than 500, due to the filter.
   TupleCounterChecker num_checker(500);
   SingleIntComparisonChecker col1_checker(std::less<>(), 0, 500);
-  GenericChecker col1_issquare_checker([](const std::vector<const sql::Val *> &vals) {
-    // Ensure col3, which should be col1*col1, is indeed a perfect square.
-    auto col3 = static_cast<const sql::Integer *>(vals[2]);
-    EXPECT_FALSE(col3->is_null);
-    const auto root = std::round(std::sqrt(col3->val));
-    EXPECT_EQ(col3->val, root * root);
-  }, nullptr);
+  GenericChecker col1_issquare_checker(
+      [](const std::vector<const sql::Val *> &vals) {
+        // Ensure col3, which should be col1*col1, is indeed a perfect square.
+        auto col3 = static_cast<const sql::Integer *>(vals[2]);
+        EXPECT_FALSE(col3->is_null);
+        const auto root = std::round(std::sqrt(col3->val));
+        EXPECT_EQ(col3->val, root * root);
+      },
+      nullptr);
   MultiChecker multi_checker({&num_checker, &col1_checker, &col1_issquare_checker});
 
   // Create the execution context

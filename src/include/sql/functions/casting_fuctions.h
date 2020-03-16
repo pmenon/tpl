@@ -50,7 +50,7 @@ class CastingFunctions : public AllStatic {
     using InputType = decltype(v.val);                                                 \
     using OutputType = decltype(result->val);                                          \
     result->is_null = v.is_null;                                                       \
-    tpl::sql::TryCast<InputType, OutputType>{}(v.val, &result->val);                      \
+    tpl::sql::TryCast<InputType, OutputType>{}(v.val, &result->val);                   \
   }
 
 CAST_HIDE_NULL_FAST(Integer, BoolVal);

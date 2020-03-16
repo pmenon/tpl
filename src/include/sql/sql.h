@@ -15,19 +15,19 @@ namespace tpl::sql {
  * query execution.
  */
 enum class TypeId : uint8_t {
-  Boolean,   // bool
-  TinyInt,   // int8_t
-  SmallInt,  // int16_t
-  Integer,   // int32_t
-  BigInt,    // int64_t
-  Hash,      // hash_t
-  Pointer,   // uintptr_t
-  Float,     // float
-  Double,    // double
-  Date,      // Date objects
-  Timestamp, // Timestamp objects
-  Varchar,   // char*, representing a null-terminated UTF-8 string
-  Varbinary  // blobs representing arbitrary bytes
+  Boolean,    // bool
+  TinyInt,    // int8_t
+  SmallInt,   // int16_t
+  Integer,    // int32_t
+  BigInt,     // int64_t
+  Hash,       // hash_t
+  Pointer,    // uintptr_t
+  Float,      // float
+  Double,     // double
+  Date,       // Date objects
+  Timestamp,  // Timestamp objects
+  Varchar,    // char*, representing a null-terminated UTF-8 string
+  Varbinary   // blobs representing arbitrary bytes
 };
 
 /**

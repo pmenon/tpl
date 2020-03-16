@@ -25,19 +25,26 @@ struct CastOptions {
 //===----------------------------------------------------------------------===//
 
 /**
- * Cast is a "checking" cast. Cast::Apply() will attempt to cast its input of type @em InType into
- * a value of type @em OutType. If the cast operation is valid, the result is returned. If the cast
- * produces a value NOT in the valid range for the output type, a cast exception is thrown.
+ * TryCast is a function object implementing a "safe" cast. On invocation, it will attempt to cast
+ * its single input with type @em InType into a value of type @em OutType. If the cast operation is
+ * valid, it returns true and the output result parameter is set to the casted value. If the cast
+ * produces a value NOT in the valid range for the output type, the cast return false. The output
+ * parameter is in an invalid state.
+ * @tparam InType The CPP type of the input.
+ * @tparam OutType The CPP type the input type into.
+ * @tparam Options Configurable casting options.
  */
 template <typename InType, typename OutType, typename Options = CastOptions<>,
           typename Enable = void>
 struct TryCast {};
 
 /**
- *
- * @tparam InType
- * @tparam OutType
- * @tparam Options
+ * Cast is a function object implementing a "checking" cast. On invocation, it attempts to cast its
+ * input with type @em InType into a value of type @em OutType. If valid, the resulting value is
+ * returned. If the cast is invalid, a ValueOutOfRangeException exception is thrown,
+ * @tparam InType The CPP type of the input.
+ * @tparam OutType The CPP type the input type into.
+ * @tparam Options Configurable casting options.
  */
 template <typename InType, typename OutType, typename Options = CastOptions<>>
 struct Cast {
@@ -97,12 +104,12 @@ struct is_number_downcast {
   static constexpr bool value =
       // Both types are numbers.
       is_number_type_v<InType> && is_number_type_v<OutType> &&
-          // Both have the same signed-ness.
-          std::is_signed_v<InType> == std::is_signed_v<OutType> &&
-          // Both have the same integer-ness.
-          std::is_floating_point_v<InType> == std::is_floating_point_v<OutType> &&
-          // The output type has a smaller domain the input. We use storage size to determine this.
-          sizeof(OutType) < sizeof(InType);
+      // Both have the same signed-ness.
+      std::is_signed_v<InType> == std::is_signed_v<OutType> &&
+      // Both have the same integer-ness.
+      std::is_floating_point_v<InType> == std::is_floating_point_v<OutType> &&
+      // The output type has a smaller domain the input. We use storage size to determine this.
+      sizeof(OutType) < sizeof(InType);
 };
 
 // Is the cast from the given input type to the output type a cast from a signed
@@ -112,14 +119,14 @@ struct is_integral_signed_to_unsigned {
   static constexpr bool value =
       // Both types are integers (non-bool and non-float).
       is_integer_type_v<InType> && is_integer_type_v<OutType> &&
-          // The input is signed and output is unsigned.
-          std::is_signed_v<InType> && std::is_unsigned_v<OutType>;
+      // The input is signed and output is unsigned.
+      std::is_signed_v<InType> && std::is_unsigned_v<OutType>;
 };
 
 template <typename InType, typename OutType>
 struct is_integral_unsigned_to_signed {
   static constexpr bool value = is_integer_type_v<InType> && is_integer_type_v<OutType> &&
-      std::is_unsigned_v<InType> && std::is_signed_v<OutType>;
+                                std::is_unsigned_v<InType> && std::is_signed_v<OutType>;
 };
 
 template <typename InType, typename OutType>
@@ -127,14 +134,14 @@ struct is_safe_numeric_cast {
   static constexpr bool value =
       // Both inputs are numbers.
       is_number_type_v<InType> && is_number_type_v<OutType> &&
-          // Both have the same signed-ness.
-          std::is_signed_v<InType> == std::is_signed_v<OutType> &&
-          // Both have the same integer-ness.
-          std::is_integral_v<InType> == std::is_integral_v<OutType> &&
-          // The output type has a larger domain then input. We use storage size to determine this.
-          sizeof(OutType) >= sizeof(InType) &&
-          // They're different types.
-          !std::is_same_v<InType, OutType>;
+      // Both have the same signed-ness.
+      std::is_signed_v<InType> == std::is_signed_v<OutType> &&
+      // Both have the same integer-ness.
+      std::is_integral_v<InType> == std::is_integral_v<OutType> &&
+      // The output type has a larger domain then input. We use storage size to determine this.
+      sizeof(OutType) >= sizeof(InType) &&
+      // They're different types.
+      !std::is_same_v<InType, OutType>;
 };
 
 template <typename InType, typename OutType>
@@ -142,8 +149,8 @@ struct is_float_truncate {
   static constexpr bool value =
       // The input is an integer and the output is a float.
       (is_integer_type_v<InType> && is_floating_type_v<OutType>) ||
-          // Or, the input is float and output is an integer.
-          (is_floating_type_v<InType> && is_integer_type_v<OutType>);
+      // Or, the input is float and output is an integer.
+      (is_floating_type_v<InType> && is_integer_type_v<OutType>);
 };
 
 }  // namespace detail

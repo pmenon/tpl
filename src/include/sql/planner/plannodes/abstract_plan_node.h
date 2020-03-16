@@ -21,7 +21,7 @@ class AbstractPlanNode {
   template <class ConcreteType>
   class Builder {
    public:
-    Builder(): output_schema_(nullptr) {}
+    Builder() : output_schema_(nullptr) {}
 
     virtual ~Builder() = default;
 
