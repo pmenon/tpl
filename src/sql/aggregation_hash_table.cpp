@@ -126,8 +126,8 @@ void AggregationHashTable::BatchProcessState::Reset(VectorProjectionIterator *in
   // Resize the lists if they don't match the input. This should only happen
   // once, on the last input batch where the size may be less than one full
   // vector.
-  const auto count = input_batch->GetTotalTupleCount();
-  if (count != hash_and_entries.GetTotalTupleCount()) {
+  if (const auto count = input_batch->GetTotalTupleCount();
+      count != hash_and_entries.GetTotalTupleCount()) {
     hash_and_entries.Reset(count);
     groups_not_found.Resize(count);
     groups_found.Resize(count);
@@ -135,15 +135,15 @@ void AggregationHashTable::BatchProcessState::Reset(VectorProjectionIterator *in
     key_equal.Resize(count);
   }
 
-  // Initially, there are no groups found and all keys are unequal
+  // Initially, there are no groups found and all keys are unequal.
   input_batch->GetVectorProjection()->CopySelectionsTo(&groups_not_found);
   input_batch->GetVectorProjection()->CopySelectionsTo(&key_not_equal);
 
-  // Clear the rest of the lists
+  // Clear the rest of the lists.
   groups_found.Clear();
   key_equal.Clear();
 
-  // Clear the collision table
+  // Clear the collision table.
   hash_to_group_map->Clear();
 }
 
@@ -317,15 +317,12 @@ void AggregationHashTable::LookupInitial() {
                                  raw_entries[i] = hash_table_.FindChainHead(hash_val);
                                });
 
-  // Tuples that did not find a matching group will have null HashTableEntry
-  // pointers in the entries vector. Find and store their TIDs in the
-  // groups-not-found list.
+  // Tuples that found a potential match will have non-null pointers in the
+  // entries vector. These each need to be checked for key equality. Find
+  // them now and place them in the key-not-equal list which is used during
+  // key equality checking.
   ConstantVector null_ptr(GenericValue::CreatePointer(0));
-  VectorOps::SelectEqual(*batch_state_->Entries(), null_ptr, batch_state_->GroupsNotFound());
-
-  // Tuples that DID find a group still need to check for matching keys. Collect
-  // their TIDs in the key-not-equal list.
-  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->GroupsNotFound());
+  VectorOps::SelectNotEqual(*batch_state_->Entries(), null_ptr, batch_state_->KeyNotEqual());
 }
 
 void AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *input_batch,
@@ -481,17 +478,15 @@ void AggregationHashTable::CreateMissingGroups(
   input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->KeyNotEqual());
   init_agg_fn(&iter, input_batch);
 
-  // Finish up
-  batch_state_->GroupsFound()->UnionWith(*batch_state_->KeyNotEqual());
+  // All new aggregates have been created. Add in the new groups into found
+  // groups; this is the final list.
   batch_state_->GroupsFound()->UnionWith(*batch_state_->GroupsNotFound());
 }
 
 void AggregationHashTable::AdvanceGroups(
     VectorProjectionIterator *input_batch,
     const AggregationHashTable::VectorAdvanceAggFn advance_agg_fn) {
-  // The list of tuples that found a match is stored in the groups-found list.
-  // We let the callback function iterate over only these tuples and update
-  // the aggregates as need be.
+  // Let the callback handle updating the aggregates.
   VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->GroupsFound());
   input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->GroupsFound());
   advance_agg_fn(&iter, input_batch);
