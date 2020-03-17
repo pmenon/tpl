@@ -7,9 +7,6 @@
 
 #include "sql/catalog.h"
 
-// TODO(siva): Hack! Fix me!
-int32_t current_partition = -1;
-
 namespace tpl::sql {
 
 //===----------------------------------------------------------------------===//
