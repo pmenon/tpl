@@ -189,33 +189,41 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
 
 TEST_F(AggregationHashTableTest, BatchProcessTest) {
   constexpr uint32_t num_groups = 512;
-  constexpr uint32_t num_group_updates_per_batch = kDefaultVectorSize / 512;
+  constexpr uint32_t num_group_updates_per_batch = kDefaultVectorSize / num_groups;
   constexpr uint32_t count1_scale = 1;
   constexpr uint32_t count2_scale = 2;
   constexpr uint32_t count3_scale = 3;
   constexpr uint32_t num_batches = 10;
 
-  // We'll create an aggregation hash table with num_groups < 2048 groups.
-  // We'll populate the hash table in batches of 2048 tuples, thus, each
-  // group should see 2048/num_groups updates in one batch. We'll perform
-  // num_batches such updates of the hash table. Thus, in total, each
-  // group should receive (2048/num_groups)*num_batches updates.
+  // We'll try to create an aggregation table with 511 groups. To do this, we'll
+  // create create a batch (2048) of tuples that rotate keys between [0,511],
+  // but apply the filter: key != 511, thus having the 511 unique keys in the
+  // range [0,510]. Each group will receive 2048/512 updates per batch. We'll
+  // issue 10 updates.
 
   VectorProjection vector_projection;
   vector_projection.Initialize({TypeId::Integer, TypeId::Integer});
   vector_projection.Reset(kDefaultVectorSize);
 
   for (uint32_t run = 0; run < num_batches; run++) {
-    // Setup projection's key and value.
-    for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
-      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData())[i] = i % num_groups;
-      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(1)->GetData())[i] = 1;
-    }
-
-    // Shuffle grouping keys.
     {
       auto keys = reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData());
+      auto values = reinterpret_cast<uint32_t *>(vector_projection.GetColumn(1)->GetData());
+      for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
+        keys[i] = i % num_groups;
+        values[i] = 1;
+      }
+
+      // Shuffle keys.
       std::shuffle(keys, keys + kDefaultVectorSize, std::random_device());
+
+      // Filter out ONLY the last grouping key.
+      TupleIdList tids(kDefaultVectorSize);
+      for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
+        tids.Enable(i, keys[i] != num_groups - 1);
+      }
+      EXPECT_FALSE(tids.IsFull());  // Some keys have been filtered.
+      vector_projection.SetFilteredSelections(tids);
     }
 
     // Process
@@ -246,8 +254,7 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
     );
   }
 
-  EXPECT_EQ(num_groups, AggTable()->GetTupleCount());
-
+  EXPECT_EQ(num_groups - 1, AggTable()->GetTupleCount());
   for (auto iter = AHTIterator(*AggTable()); iter.HasNext(); iter.Next()) {
     auto agg = reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
     EXPECT_EQ(num_group_updates_per_batch * num_batches * count1_scale, agg->count1);
