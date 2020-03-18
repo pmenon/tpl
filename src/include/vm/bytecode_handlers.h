@@ -454,12 +454,12 @@ VM_OP_HOT void OpInitBool(tpl::sql::BoolVal *result, bool input) {
   result->val = input;
 }
 
-VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, int32_t input) {
+VM_OP_HOT void OpInitInteger(tpl::sql::Integer *result, int64_t input) {
   result->is_null = false;
   result->val = input;
 }
 
-VM_OP_HOT void OpInitReal(tpl::sql::Real *result, float input) {
+VM_OP_HOT void OpInitReal(tpl::sql::Real *result, double input) {
   result->is_null = false;
   result->val = input;
 }
