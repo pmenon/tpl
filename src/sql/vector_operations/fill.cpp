@@ -61,6 +61,9 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
     case TypeId::Date:
       TemplatedFillOperation(vector, value.value_.date_);
       break;
+    case TypeId::Timestamp:
+      TemplatedFillOperation(vector, value.value_.timestamp_);
+      break;
     case TypeId::Varchar:
       TemplatedFillOperation(vector, vector->varlen_heap_.AddVarlen(value.str_value_));
       break;

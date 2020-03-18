@@ -121,6 +121,9 @@ void GatherAndSelectOperation(const Vector &input, const Vector &pointers, const
     case TypeId::Date:
       TemplatedGatherAndSelectOperation<Date, Op>(input, pointers, offset, tid_list);
       break;
+    case TypeId::Timestamp:
+      TemplatedGatherAndSelectOperation<Timestamp, Op>(input, pointers, offset, tid_list);
+      break;
     case TypeId::Varchar:
       TemplatedGatherAndSelectOperation<VarlenEntry, Op>(input, pointers, offset, tid_list);
       break;

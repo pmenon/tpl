@@ -86,6 +86,9 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
     case TypeId::Date:
       TemplatedHashOperation<Date>(input, result);
       break;
+    case TypeId::Timestamp:
+      TemplatedHashOperation<Timestamp>(input, result);
+      break;
     case TypeId::Varchar:
       TemplatedHashOperation<VarlenEntry>(input, result);
       break;
@@ -123,6 +126,9 @@ void VectorOps::HashCombine(const Vector &input, Vector *result) {
       break;
     case TypeId::Date:
       TemplatedHashCombineOperation<Date>(input, result);
+      break;
+    case TypeId::Timestamp:
+      TemplatedHashCombineOperation<Timestamp>(input, result);
       break;
     case TypeId::Varchar:
       TemplatedHashCombineOperation<VarlenEntry>(input, result);

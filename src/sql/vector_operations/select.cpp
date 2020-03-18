@@ -172,6 +172,9 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
     case TypeId::Date:
       TemplatedSelectOperation<Date, Op>(left, right, tid_list);
       break;
+    case TypeId::Timestamp:
+      TemplatedSelectOperation<Timestamp, Op>(left, right, tid_list);
+      break;
     case TypeId::Varchar:
       TemplatedSelectOperation<VarlenEntry, Op>(left, right, tid_list);
       break;

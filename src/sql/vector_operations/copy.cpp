@@ -52,6 +52,9 @@ void GenericCopyOperation(const Vector &source, void *target, uint64_t offset,
     case TypeId::Date:
       TemplatedCopyOperation<Date>(source, target, offset, element_count);
       break;
+    case TypeId::Timestamp:
+      TemplatedCopyOperation<Timestamp>(source, target, offset, element_count);
+      break;
     default:
       throw NotImplementedException("copying vector of type '{}' not supported",
                                     TypeIdToString(source.GetTypeId()));

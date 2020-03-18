@@ -404,34 +404,37 @@ void FixGrouping(AggregationHashTable::HashToGroupIdMap *groups, const Vector &h
                  const Vector &entries, const Vector &probe_keys, TupleIdList *tid_list, F f) {
   switch (probe_keys.GetTypeId()) {
     case TypeId::Boolean:
-      TemplatedFixGrouping<bool, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<bool>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::TinyInt:
-      TemplatedFixGrouping<int8_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<int8_t>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::SmallInt:
-      TemplatedFixGrouping<int16_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<int16_t>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::Integer:
-      TemplatedFixGrouping<int32_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<int32_t>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::BigInt:
-      TemplatedFixGrouping<int64_t, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<int64_t>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::Float:
-      TemplatedFixGrouping<float, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<float>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::Double:
-      TemplatedFixGrouping<double, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<double>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::Date:
-      TemplatedFixGrouping<Date, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<Date>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Timestamp:
+      TemplatedFixGrouping<Timestamp>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::Varchar:
-      TemplatedFixGrouping<VarlenEntry, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<VarlenEntry>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     case TypeId::Varbinary:
-      TemplatedFixGrouping<Blob, F>(groups, hashes, entries, probe_keys, tid_list, f);
+      TemplatedFixGrouping<Blob>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     default:
       throw NotImplementedException("key comparison on type {} not supported",

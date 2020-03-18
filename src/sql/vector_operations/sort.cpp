@@ -60,6 +60,9 @@ void VectorOps::Sort(const Vector &input, sel_t result[]) {
     case TypeId::Date:
       TemplatedSort<Date>(input, non_nulls, non_null_result);
       break;
+    case TypeId::Timestamp:
+      TemplatedSort<Timestamp>(input, non_nulls, non_null_result);
+      break;
     case TypeId::Varchar:
       TemplatedSort<VarlenEntry>(input, non_nulls, non_null_result);
       break;

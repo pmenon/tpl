@@ -177,17 +177,19 @@ GenericValue GenericValue::CreateDate(Date date) {
 }
 
 GenericValue GenericValue::CreateDate(uint32_t year, uint32_t month, uint32_t day) {
-  GenericValue result(TypeId::Date);
-  result.value_.date_ = Date::FromYMD(year, month, day);
+  return CreateDate(Date::FromYMD(year, month, day));
+}
+
+GenericValue GenericValue::CreateTimestamp(Timestamp timestamp) {
+  GenericValue result(TypeId::Timestamp);
+  result.value_.timestamp_ = timestamp;
   result.is_null_ = false;
   return result;
 }
 
-GenericValue GenericValue::CreateTimestamp(UNUSED int32_t year, UNUSED int32_t month,
-                                           UNUSED int32_t day, UNUSED int32_t hour,
-                                           UNUSED int32_t min, UNUSED int32_t sec,
-                                           UNUSED int32_t msec) {
-  throw NotImplementedException("Timestamp generic values are not supported");
+GenericValue GenericValue::CreateTimestamp(int32_t year, int32_t month, int32_t day, int32_t hour,
+                                           int32_t min, int32_t sec) {
+  return CreateTimestamp(Timestamp::FromYMDHMS(year, month, day, hour, min, sec));
 }
 
 GenericValue GenericValue::CreateVarchar(std::string_view str) {
@@ -215,6 +217,8 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Va
       return GenericValue::CreateDouble(static_cast<const Real &>(val).val);
     case TypeId::Date:
       return GenericValue::CreateDate(static_cast<const DateVal &>(val).val);
+    case TypeId::Timestamp:
+      return GenericValue::CreateTimestamp(static_cast<const TimestampVal &>(val).val);
     case TypeId::Varchar:
       return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).val.GetStringView());
     default:

@@ -59,6 +59,9 @@ void VectorOps::Gather(const Vector &pointers, Vector *result, const std::size_t
     case TypeId::Date:
       TemplatedGatherOperation<Date>(pointers, result, offset);
       break;
+    case TypeId::Timestamp:
+      TemplatedGatherOperation<Timestamp>(pointers, result, offset);
+      break;
     case TypeId::Varchar:
       TemplatedGatherOperation<VarlenEntry>(pointers, result, offset);
       break;

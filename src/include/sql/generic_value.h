@@ -180,12 +180,24 @@ class GenericValue {
   static GenericValue CreateDate(uint32_t year, uint32_t month, uint32_t day);
 
   /**
+   * Crete a non-NULL timestamp value.
+   * @param timestamp The timestamp.
+   * @return A timestamp value.
+   */
+  static GenericValue CreateTimestamp(Timestamp timestamp);
+
+  /**
    * Create a non-NULL timestamp value.
-   * @param value The value.
+   * @param year The year of the timestamp.
+   * @param month The month of the timestamp.
+   * @param day The day of the timestamp.
+   * @param hour The hour of the timestamp.
+   * @param min The minute of the timestamp.
+   * @param sec The second of the timestamp.
    * @return A Timestamp value.
    */
   static GenericValue CreateTimestamp(int32_t year, int32_t month, int32_t day, int32_t hour,
-                                      int32_t min, int32_t sec, int32_t msec);
+                                      int32_t min, int32_t sec);
 
   /**
    * Create a non-NULL varchar value.
@@ -224,6 +236,7 @@ class GenericValue {
     hash_t hash;
     uintptr_t pointer;
     Date date_;
+    Timestamp timestamp_;
     float float_;
     double double_;
   } value_;
