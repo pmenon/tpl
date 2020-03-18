@@ -203,7 +203,13 @@ namespace tpl::vm {
   F(InitDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                          \
   F(InitString, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4)                                      \
   F(IntegerToReal, OperandType::Local, OperandType::Local)                                                             \
+  F(IntegerToString, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
   F(RealToInteger, OperandType::Local, OperandType::Local)                                                             \
+  F(RealToString, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(DateToTimestamp, OperandType::Local, OperandType::Local)                                                           \
+  F(DateToString, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(TimestampToDate, OperandType::Local, OperandType::Local)                                                           \
+  F(TimestampToString, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
   F(LessThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(LessThanEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
   F(GreaterThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                       \

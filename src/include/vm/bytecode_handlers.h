@@ -474,12 +474,41 @@ VM_OP_HOT void OpInitString(tpl::sql::StringVal *result, const uint8_t *str, uin
   result->val = tpl::sql::VarlenEntry::Create(reinterpret_cast<const byte *>(str), length);
 }
 
-VM_OP_HOT void OpIntegerToReal(tpl::sql::Real *result, const tpl::sql::Integer *input) {
+VM_OP_WARM void OpIntegerToReal(tpl::sql::Real *result, const tpl::sql::Integer *input) {
   tpl::sql::CastingFunctions::CastToReal(result, *input);
 }
 
-VM_OP_HOT void OpRealToInteger(tpl::sql::Integer *result, const tpl::sql::Real *input) {
+VM_OP_WARM void OpIntegerToString(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *exec_ctx,
+                                  const tpl::sql::Integer *input) {
+  tpl::sql::CastingFunctions::CastToStringVal(result, exec_ctx, *input);
+}
+
+VM_OP_WARM void OpRealToInteger(tpl::sql::Integer *result, const tpl::sql::Real *input) {
   tpl::sql::CastingFunctions::CastToInteger(result, *input);
+}
+
+VM_OP_WARM void OpRealToString(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *exec_ctx,
+                               const tpl::sql::Real *input) {
+  tpl::sql::CastingFunctions::CastToStringVal(result, exec_ctx, *input);
+}
+
+VM_OP_WARM void OpDateToTimestamp(tpl::sql::TimestampVal *result, const tpl::sql::DateVal *input) {
+  tpl::sql::CastingFunctions::CastToTimestampVal(result, *input);
+}
+
+VM_OP_WARM void OpDateToString(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *exec_ctx,
+                               const tpl::sql::DateVal *input) {
+  tpl::sql::CastingFunctions::CastToStringVal(result, exec_ctx, *input);
+}
+
+VM_OP_WARM void OpTimestampToDate(tpl::sql::DateVal *result, const tpl::sql::TimestampVal *input) {
+  tpl::sql::CastingFunctions::CastToDateVal(result, *input);
+}
+
+VM_OP_WARM void OpTimestampToString(tpl::sql::StringVal *result,
+                                    tpl::sql::ExecutionContext *exec_ctx,
+                                    const tpl::sql::TimestampVal *input) {
+  tpl::sql::CastingFunctions::CastToStringVal(result, exec_ctx, *input);
 }
 
 #define GEN_SQL_COMPARISONS(NAME, TYPE)                                                           \

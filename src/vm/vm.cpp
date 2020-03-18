@@ -800,7 +800,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #undef GEN_VEC_FILTER
 
   // -------------------------------------------------------
-  // SQL Integer Comparison Operations
+  // SQL Value Creation.
   // -------------------------------------------------------
 
   OP(ForceBoolTruth) : {
@@ -821,20 +821,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto *sql_int = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
     auto val = frame->LocalAt<int32_t>(READ_LOCAL_ID());
     OpInitInteger(sql_int, val);
-    DISPATCH_NEXT();
-  }
-
-  OP(IntegerToReal) : {
-    auto *real_result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    OpIntegerToReal(real_result, input);
-    DISPATCH_NEXT();
-  }
-
-  OP(RealToInteger) : {
-    auto *int_result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpRealToInteger(int_result, input);
     DISPATCH_NEXT();
   }
 
@@ -862,6 +848,74 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     OpInitString(sql_string, string, length);
     DISPATCH_NEXT();
   }
+
+  // -------------------------------------------------------
+  // SQL Value Casts.
+  // -------------------------------------------------------
+
+  OP(IntegerToReal) : {
+    auto *real_result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerToReal(real_result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerToString) : {
+    auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerToString(result, exec_ctx, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(RealToInteger) : {
+    auto *int_result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpRealToInteger(int_result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(RealToString) : {
+    auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpRealToString(result, exec_ctx, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(DateToTimestamp) : {
+    auto *result = frame->LocalAt<sql::TimestampVal *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());
+    OpDateToTimestamp(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(DateToString) : {
+    auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());
+    OpDateToString(result, exec_ctx, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(TimestampToDate) : {
+    auto *result = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::TimestampVal *>(READ_LOCAL_ID());
+    OpTimestampToDate(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(TimestampToString) : {
+    auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::TimestampVal *>(READ_LOCAL_ID());
+    OpTimestampToString(result, exec_ctx, input);
+    DISPATCH_NEXT();
+  }
+
+  // -------------------------------------------------------
+  // Comparisons.
+  // -------------------------------------------------------
 
 #define GEN_CMP(op)                                                  \
   OP(op##Bool) : {                                                   \
