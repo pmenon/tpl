@@ -88,12 +88,12 @@ class ComparisonFunctions : public AllStatic {
   BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TimestampVal, OP) \
   BINARY_COMPARISON_STRING_FN_HIDE_NULL(NAME, StringVal, OP)
 
-BINARY_COMPARISONS(Eq, Equal);
-BINARY_COMPARISONS(Ge, GreaterThanEqual);
-BINARY_COMPARISONS(Gt, GreaterThan);
-BINARY_COMPARISONS(Le, LessThanEqual);
-BINARY_COMPARISONS(Lt, LessThan);
-BINARY_COMPARISONS(Ne, NotEqual);
+BINARY_COMPARISONS(Eq, tpl::sql::Equal);
+BINARY_COMPARISONS(Ge, tpl::sql::GreaterThanEqual);
+BINARY_COMPARISONS(Gt, tpl::sql::GreaterThan);
+BINARY_COMPARISONS(Le, tpl::sql::LessThanEqual);
+BINARY_COMPARISONS(Lt, tpl::sql::LessThan);
+BINARY_COMPARISONS(Ne, tpl::sql::NotEqual);
 
 #undef BINARY_COMPARISONS
 #undef BINARY_COMPARISON_STRING_FN_HIDE_NULL

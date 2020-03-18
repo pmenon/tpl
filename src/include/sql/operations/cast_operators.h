@@ -208,16 +208,18 @@ struct TryCast<bool, OutType, Options, std::enable_if_t<detail::is_number_type_v
 //===----------------------------------------------------------------------===//
 
 /**
- * Numeric down-cast.
+ * Numeric down-cast, signed-to-unsigned, unsigned-to-signed, or float truncation cast.
  * @tparam InType The numeric input type. Must satisfy internal::is_number_type_v<InType>.
  * @tparam OutType The numeric output type.  Must satisfy internal::is_number_type_v<OutType>.
  * @tparam Options Casting options.
  */
 template <typename InType, typename OutType, typename Options>
-struct TryCast<InType, OutType, Options,
-               std::enable_if_t<detail::is_number_downcast<InType, OutType>::value ||
-                                detail::is_integral_signed_to_unsigned<InType, OutType>::value ||
-                                detail::is_integral_unsigned_to_signed<InType, OutType>::value>> {
+    struct TryCast < InType,
+    OutType, Options,
+    std::enable_if_t<detail::is_number_downcast<InType, OutType>::value ||
+                     detail::is_integral_signed_to_unsigned<InType, OutType>::value ||
+                     detail::is_integral_unsigned_to_signed<InType, OutType>::value ||
+                     detail::is_float_truncate<InType, OutType>::value>> {
   bool operator()(const InType input, OutType *output) const noexcept {
     constexpr OutType kMin = std::numeric_limits<OutType>::lowest();
     constexpr OutType kMax = std::numeric_limits<OutType>::max();
@@ -225,9 +227,8 @@ struct TryCast<InType, OutType, Options,
     *output = static_cast<OutType>(input);
     if constexpr (Options::AllowIntOverflow()) {
       return true;
-    } else {
-      return input >= kMin && input <= kMax;
     }
+    return input >= kMin && input <= kMax;
   }
 };
 
@@ -244,25 +245,6 @@ struct TryCast<InType, OutType, Options,
   bool operator()(const InType input, OutType *output) const noexcept {
     *output = static_cast<OutType>(input);
     return true;
-  }
-};
-
-/**
- * Floating-point to integer (or vice-versa) cast.
- * @tparam InType The numeric input type. Must satisfy internal::is_number_type_v<InType>.
- * @tparam OutType The numeric output type.  Must satisfy internal::is_number_type_v<OutType>.
- * @tparam Options Casting options.
- */
-template <typename InType, typename OutType, typename Options>
-struct TryCast<InType, OutType, Options,
-               std::enable_if_t<detail::is_float_truncate<InType, OutType>::value>> {
-  bool operator()(const InType input, OutType *output) const noexcept {
-    *output = static_cast<OutType>(input);
-    if constexpr (Options::AllowFloatTruncate()) {
-      return true;
-    } else {
-      return static_cast<InType>(*output) == input;
-    }
   }
 };
 
