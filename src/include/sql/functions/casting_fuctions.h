@@ -14,26 +14,27 @@ class CastingFunctions : public AllStatic {
  public:
   static void CastToBoolVal(BoolVal *result, const Integer &v);
   static void CastToBoolVal(BoolVal *result, const Real &v);
-  static void CastToBoolVal(BoolVal *result, const DateVal &v);
-  static void CastToBoolVal(BoolVal *result, const TimestampVal &v);
+  static void CastToBoolVal(BoolVal *result, const StringVal &v);
 
   static void CastToInteger(Integer *result, const BoolVal &v);
   static void CastToInteger(Integer *result, const Real &v);
   static void CastToInteger(Integer *result, const StringVal &v);
-  static void CastToInteger(Integer *result, const DateVal &v);
-  static void CastToInteger(Integer *result, const TimestampVal &v);
 
   static void CastToReal(Real *result, const BoolVal &v);
   static void CastToReal(Real *result, const Integer &v);
   static void CastToReal(Real *result, const StringVal &v);
-  static void CastToReal(Real *result, const DateVal &v);
-  static void CastToReal(Real *result, const TimestampVal &v);
 
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const BoolVal &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Integer &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const Real &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const DateVal &v);
-  static void CastToStringVal(ExecutionContext *ctx, StringVal *result, const TimestampVal &v);
+  static void CastToDateVal(DateVal *result, const TimestampVal &v);
+  static void CastToDateVal(DateVal *result, const StringVal &v);
+
+  static void CastToTimestampVal(TimestampVal *result, const DateVal &v);
+  static void CastToTimestampVal(TimestampVal *result, const StringVal &v);
+
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const BoolVal &v);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const Integer &v);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const Real &v);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const DateVal &v);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const TimestampVal &v);
 };
 
 // ---------------------------------------------------------
@@ -47,8 +48,8 @@ class CastingFunctions : public AllStatic {
 
 #define CAST_HIDE_NULL_FAST(FROM_TYPE, TO_TYPE)                                        \
   inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &v) { \
-    using InputType = decltype(v.val);                                                 \
-    using OutputType = decltype(result->val);                                          \
+    using InputType = decltype(FROM_TYPE::val);                                        \
+    using OutputType = decltype(TO_TYPE::val);                                         \
     result->is_null = v.is_null;                                                       \
     tpl::sql::TryCast<InputType, OutputType>{}(v.val, &result->val);                   \
   }
@@ -59,7 +60,31 @@ CAST_HIDE_NULL_FAST(BoolVal, Integer);
 CAST_HIDE_NULL_FAST(Real, Integer);
 CAST_HIDE_NULL_FAST(BoolVal, Real);
 CAST_HIDE_NULL_FAST(Integer, Real);
-
+CAST_HIDE_NULL_FAST(TimestampVal, DateVal);
+CAST_HIDE_NULL_FAST(DateVal, TimestampVal);
 #undef CAST_HIDE_NULL_FAST
+
+#define CAST_TO_STRING(FROM_TYPE)                                                               \
+  inline void CastingFunctions::CastToStringVal(StringVal *result, ExecutionContext *const ctx, \
+                                                const FROM_TYPE &v) {                           \
+    /*                                                                                          \
+     * TODO(pmenon): Perform an explicit if-check here because we expect string                 \
+     *               parsing to be more costly than a branch mis-prediction.                    \
+     *               Verify!                                                                    \
+     */                                                                                         \
+    if (v.is_null) {                                                                            \
+      *result = StringVal::Null();                                                              \
+      return;                                                                                   \
+    }                                                                                           \
+    const auto str = tpl::sql::Cast<decltype(FROM_TYPE::val), std::string>{}(v.val);            \
+    *result = StringVal(ctx->GetStringHeap()->AddVarlen(str));                                  \
+  }
+
+CAST_TO_STRING(BoolVal);
+CAST_TO_STRING(Integer);
+CAST_TO_STRING(Real);
+CAST_TO_STRING(DateVal);
+CAST_TO_STRING(TimestampVal);
+#undef CAST_TO_STRING
 
 }  // namespace tpl::sql
