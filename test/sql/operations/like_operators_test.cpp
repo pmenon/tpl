@@ -66,7 +66,7 @@ TEST_F(LikeOperatorsTests, MultiCharacter_Wildcard) {
 
   // Consume all '%', but also match last non-wildcard character
   p = "_%%%%%%%%x";
-  EXPECT_FALSE(Like{}(VarlenEntry::Create(s),VarlenEntry::Create(p)));
+  EXPECT_FALSE(Like{}(VarlenEntry::Create(s), VarlenEntry::Create(p)));
 
   p = "_%%%%%%%%k";
   EXPECT_TRUE(Like{}(VarlenEntry::Create(s), VarlenEntry::Create(p)));

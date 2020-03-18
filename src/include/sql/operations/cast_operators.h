@@ -214,12 +214,11 @@ struct TryCast<bool, OutType, Options, std::enable_if_t<detail::is_number_type_v
  * @tparam Options Casting options.
  */
 template <typename InType, typename OutType, typename Options>
-    struct TryCast < InType,
-    OutType, Options,
-    std::enable_if_t<detail::is_number_downcast<InType, OutType>::value ||
-                     detail::is_integral_signed_to_unsigned<InType, OutType>::value ||
-                     detail::is_integral_unsigned_to_signed<InType, OutType>::value ||
-                     detail::is_float_truncate<InType, OutType>::value>> {
+struct TryCast<InType, OutType, Options,
+               std::enable_if_t<detail::is_number_downcast<InType, OutType>::value ||
+                                detail::is_integral_signed_to_unsigned<InType, OutType>::value ||
+                                detail::is_integral_unsigned_to_signed<InType, OutType>::value ||
+                                detail::is_float_truncate<InType, OutType>::value>> {
   bool operator()(const InType input, OutType *output) const noexcept {
     constexpr OutType kMin = std::numeric_limits<OutType>::lowest();
     constexpr OutType kMax = std::numeric_limits<OutType>::max();
