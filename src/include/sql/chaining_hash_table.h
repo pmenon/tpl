@@ -16,34 +16,34 @@ namespace tpl::sql {
 
 //===----------------------------------------------------------------------===//
 //
-// Generic Hash Table
+// Chaining Hash Table
 //
 //===----------------------------------------------------------------------===//
 
 /**
  * ChainingHashTable is a simple bucket-chained table with optional pointer tagging. The use of
  * pointer tagging is controlled through the sole boolean template parameter. Pointer tagging uses
- * the first @em GenericHashTable::kNumTagBits bits (typically 16 bits) of the entry pointers in the
- * main bucket directory as a tiny bloom filter. This bloom filter is used to early-prune probe
- * misses that would normally require a full cache-unfriendly linked list traversal. We can
- * re-purpose the most-significant 16-bits of a pointer because X86_64 uses 48-bits of the VM
+ * the first @em ChainingHashTable::kNumTagBits bits of the entry pointers in the main bucket
+ * directory as a tiny bloom filter. This bloom filter is used to early-prune probe misses that
+ * would normally require a full cache-unfriendly linked list traversal. We can re-purpose the
+ * most-significant 16-bits of a pointer because X86_64 uses 48-bits of the OS virtual memory
  * address space. Pointer tagged hash tables will have to be disabled when the full 64-bit VM
  * address space is enabled.
  *
- * GenericHashTable support both serial and concurrent insertions. Both are controlled through
- * a template parameter to GenericHashTable::Insert() and GenericHashTable::InsertBatch(). The
+ * ChainingHashTable support both serial and concurrent insertions. Both are controlled through
+ * a template parameter to ChainingHashTable::Insert() and ChainingHashTable::InsertBatch(). The
  * former method inserts a single entry, while the latter method bulk-loads a batch of entries.
  * Whenever possible, prefer using the latter as it can apply some optimizations that usually
- * improve performance, such as prefetching and batched atomic additions.
+ * improve performance, such as pre-fetching and batched atomic additions.
  *
- * GenericHashTable also supports both one-at-a-time and batched probes. Like batched insertion,
+ * ChainingHashTable also supports both one-at-a-time and batched probes. Like batched insertion,
  * prefer using the batched probe because it offers greater performance.
  *
- * GenericHashTables only stores pointers into externally managed storage; it does not manage any
+ * ChainingHashTables only stores pointers into externally managed storage; it does not manage any
  * hash table data internally. In other words, the memory of all inserted HashTableEntry must be
- * owned by an external entity whose lifetime exceeds this GenericHashTable!
+ * owned by an external entity whose lifetime exceeds this ChainingHashTable!
  *
- * Note: GenericHashTable leverages the ‘next’ pointer in HashTableEntry::next to implement the
+ * Note: ChainingHashTable leverages the ‘next’ pointer in HashTableEntry::next to implement the
  * linked list bucket chain.
  */
 template <bool UseTags>
@@ -64,7 +64,7 @@ class ChainingHashTable {
 
  public:
   /**
-   * Create an empty hash table. Callers must first call GenericHashTable<UseTags>::SetSize() before
+   * Create an empty hash table. Callers must call ChainingHashTable<UseTags>::SetSize() before
    * using this hash table.
    * @param load_factor The desired load-factor for the table.
    */
