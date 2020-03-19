@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/common.h"
+#include "sql/runtime_types.h"
 #include "util/hash_util.h"
 
 namespace tpl::sql {
@@ -8,36 +9,34 @@ namespace tpl::sql {
 /**
  * Hash operation functor.
  */
-template <typename T>
-struct Hash;
+template <typename T, typename Enable = void>
+struct Hash {};
 
 /**
  * Hash-with-seed functor.
  */
-template <typename T>
-struct HashCombine;
+template <typename T, typename Enable = void>
+struct HashCombine {};
 
 /**
- * Primitive hashing.
+ * Primitive hashing: bool, 8-bit, 16-bit, 32-bit, 64-bit integers, 32-bit and 64-bit floats.
  */
-#define DECL_HASH(Type, ...)                                                     \
-  template <>                                                                    \
-  struct Hash<Type> {                                                            \
-    hash_t operator()(Type input, bool null) const noexcept {                    \
-      return null ? hash_t(0) : util::HashUtil::HashCrc(input);                  \
-    }                                                                            \
-  };                                                                             \
-  template <>                                                                    \
-  struct HashCombine<Type> {                                                     \
-    hash_t operator()(Type input, bool null, const hash_t seed) const noexcept { \
-      return null ? hash_t(0) : util::HashUtil::HashCrc(input, seed);            \
-    }                                                                            \
-  };
+template <typename T>
+struct Hash<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
+  hash_t operator()(T input, bool null) const noexcept {
+    return null ? hash_t(0) : util::HashUtil::HashCrc(input);
+  }
+};
 
-BOOL_TYPES(DECL_HASH)
-INT_TYPES(DECL_HASH)
-FLOAT_TYPES(DECL_HASH)
-#undef DECL_HASH
+/**
+ * Primitive hashing with seed.
+ */
+template <typename T>
+struct HashCombine<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
+  hash_t operator()(T input, bool null, const hash_t seed) const noexcept {
+    return null ? hash_t(0) : util::HashUtil::HashCrc(input, seed);
+  }
+};
 
 /**
  * Date hashing.
