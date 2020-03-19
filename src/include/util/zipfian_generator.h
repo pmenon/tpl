@@ -9,16 +9,24 @@
 
 #pragma once
 
-#include <cassert>
-#include <cmath>
-#include <cstdint>
 #include <limits>
 #include <mutex>
 
 namespace tpl::util {
 
 /**
- * A PRNG that generates numbers according to a Zipfian distribution.
+ * A generator that produces a sequence of elements according to a Zipfian distribution. When
+ * constructing an instance, you specify either a total item count (in which case values in the
+ * range [0, item_count] inclusive are produced), or specify a minimum and maximum value (in which
+ * case values in [min,max] inclusive are produced). You can also specify a skew constant that
+ * controls the degree to which elements are skewed towards the popular elements. A higher skew
+ * values favors popular elements.
+ *
+ * Popular elements are clustered together: min is the most popular, min+1 the second most popular,
+ * etc.
+ *
+ * The algorithm used here is from "Quickly Generating Billion-Record Synthetic Databases",
+ * Jim Gray et al, SIGMOD 1994.
  */
 class ZipfianGenerator {
  public:
@@ -30,7 +38,7 @@ class ZipfianGenerator {
   /**
    * The maximum number of items.
    */
-  constexpr static const uint64_t kMaxNumItems = (UINT64_MAX >> 24);
+  constexpr static const uint64_t kMaxNumItems = std::numeric_limits<uint64_t>::max() >> 24U;
 
   /**
    * Create a generator for items in the range [min, max] inclusive using the given zipfian skew.
