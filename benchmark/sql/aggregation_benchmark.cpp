@@ -211,11 +211,13 @@ BENCHMARK_DEFINE_F(AggregationBenchmark, Agg_VaaT)(benchmark::State &state) {
 // ---------------------------------------------------------
 
 BENCHMARK_REGISTER_F(AggregationBenchmark, Agg_TaaT)
-    ->DenseRange(0, kNumAggConfigs - 1)->Iterations(20)
+    ->DenseRange(0, kNumAggConfigs - 1)
+    ->Iterations(20)
     ->Unit(benchmark::kMillisecond);
 
 BENCHMARK_REGISTER_F(AggregationBenchmark, Agg_VaaT)
-    ->DenseRange(0, kNumAggConfigs - 1)->Iterations(20)
+    ->DenseRange(0, kNumAggConfigs - 1)
+    ->Iterations(20)
     ->Unit(benchmark::kMillisecond);
 
 }  // namespace tpl
