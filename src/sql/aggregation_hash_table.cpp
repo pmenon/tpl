@@ -31,7 +31,6 @@ class AggregationHashTable::HashToGroupIdMap {
  public:
   // An entry in the hash table.
   struct Entry {
-    uint32_t hash;
     uint16_t gid;
     uint16_t next;
   };
@@ -71,37 +70,36 @@ class AggregationHashTable::HashToGroupIdMap {
     return nullptr;
   }
 
-  // Insert a new hash-group mapping
+  // Insert a new hash-group mapping.
   void Insert(const hash_t hash, const uint16_t gid) {
     TPL_ASSERT(storage_used_ < kDefaultVectorSize, "Too many elements in table");
 
-    // Determine the spot in the storage the new entry occupies
+    // Determine the spot in the storage the new entry occupies.
     uint16_t entry_pos = storage_used_++;
     Entry *entry = &storage_[entry_pos];
 
-    // Put the new entry at the head of the chain
+    // Put the new entry at the head of the chain.
     entry->next = entries_[hash & mask_];
     entries_[hash & mask_] = entry_pos;
 
-    // Fill the entry
-    entry->hash = hash;
+    // Fill the group ID.
     entry->gid = gid;
   }
 
-  // Iterators
+  // Iterators.
   Entry *begin() { return storage_.get(); }
   Entry *end() { return storage_.get() + storage_used_; }
 
  private:
-  // The mask to use to map hashes to entry/directory slots
+  // The mask to use to map hashes to slots in the 'entries' array.
   hash_t mask_;
-  // The main directory mapping to indexes of storage entries
+  // The main entries directory mapping to indexes of storage slots.
   std::unique_ptr<uint16_t[]> entries_;
   // Main array storage of hash table data (keys, values, hashes, etc.)
   std::unique_ptr<Entry[]> storage_;
-  // The capacity of the directory
+  // The capacity of the directory.
   uint16_t capacity_;
-  // The number of slots of storage that have been used
+  // The number of slots of storage that have been used.
   uint16_t storage_used_;
 };
 
