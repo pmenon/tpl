@@ -9,12 +9,12 @@ namespace tpl::sql {
 namespace traits {
 
 // Specialized struct to enable full-computation.
-template <typename T, typename Op>
-struct ShouldPerformFullCompute<T, Op,
-                                std::enable_if_t<std::is_same_v<Op, tpl::sql::Add<T>> ||
-                                                 std::is_same_v<Op, tpl::sql::Subtract<T>> ||
-                                                 std::is_same_v<Op, tpl::sql::Multiply<T>>>> {
-  bool operator()(const TupleIdList *tid_list) {
+template <template <typename> typename Op, typename T>
+struct ShouldPerformFullCompute<Op<T>,
+                                std::enable_if_t<std::is_same_v<Op<T>, tpl::sql::Add<T>> ||
+                                                 std::is_same_v<Op<T>, tpl::sql::Subtract<T>> ||
+                                                 std::is_same_v<Op<T>, tpl::sql::Multiply<T>>>> {
+  bool operator()(const TupleIdList *tid_list) const {
     auto full_compute_threshold =
         Settings::Instance()->GetDouble(Settings::Name::ArithmeticFullComputeOptThreshold);
     return tid_list == nullptr || full_compute_threshold <= tid_list->ComputeSelectivity();

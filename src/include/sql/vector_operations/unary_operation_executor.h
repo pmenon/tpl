@@ -2,6 +2,7 @@
 
 #include "common/common.h"
 #include "sql/vector.h"
+#include "sql/vector_operations/traits.h"
 #include "sql/vector_operations/vector_operators.h"
 
 namespace tpl::sql {
@@ -85,7 +86,13 @@ class UnaryOperationExecutor : public AllStatic {
           }
         });
       } else {
-        VectorOps::Exec(input, [&](uint64_t i, uint64_t k) { result_data[i] = op(input_data[i]); });
+        if (traits::ShouldPerformFullCompute<Op>{}(input.GetFilteredTupleIdList())) {
+          VectorOps::ExecIgnoreFilter(
+              input, [&](uint64_t i, uint64_t k) { result_data[i] = op(input_data[i]); });
+        } else {
+          VectorOps::Exec(input,
+                          [&](uint64_t i, uint64_t k) { result_data[i] = op(input_data[i]); });
+        }
       }
     }
   }

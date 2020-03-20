@@ -113,7 +113,7 @@ class BinaryOperationExecutor : public AllStatic {
           }
         });
       } else {
-        if (traits::ShouldPerformFullCompute<RightType, Op>()(right.GetFilteredTupleIdList())) {
+        if (traits::ShouldPerformFullCompute<Op>()(right.GetFilteredTupleIdList())) {
           VectorOps::ExecIgnoreFilter(right, [&](uint64_t i, uint64_t k) {
             result_data[i] = op(left_data[0], right_data[i]);
           });
@@ -150,7 +150,7 @@ class BinaryOperationExecutor : public AllStatic {
           }
         });
       } else {
-        if (traits::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
+        if (traits::ShouldPerformFullCompute<Op>()(left.GetFilteredTupleIdList())) {
           VectorOps::ExecIgnoreFilter(left, [&](uint64_t i, uint64_t k) {
             result_data[i] = op(left_data[i], right_data[0]);
           });
@@ -187,7 +187,7 @@ class BinaryOperationExecutor : public AllStatic {
         }
       });
     } else {
-      if (traits::ShouldPerformFullCompute<LeftType, Op>()(left.GetFilteredTupleIdList())) {
+      if (traits::ShouldPerformFullCompute<Op>()(left.GetFilteredTupleIdList())) {
         VectorOps::ExecIgnoreFilter(left, [&](uint64_t i, uint64_t k) {
           result_data[i] = op(left_data[i], right_data[i]);
         });

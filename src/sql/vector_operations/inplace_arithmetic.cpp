@@ -9,8 +9,8 @@ namespace tpl::sql {
 namespace traits {
 
 template <typename T>
-struct ShouldPerformFullCompute<T, tpl::sql::AddInPlace<T>> {
-  bool operator()(const TupleIdList *tid_list) {
+struct ShouldPerformFullCompute<tpl::sql::AddInPlace<T>> {
+  bool operator()(const TupleIdList *tid_list) const {
     auto full_compute_threshold =
         Settings::Instance()->GetDouble(Settings::Name::ArithmeticFullComputeOptThreshold);
     return tid_list == nullptr || full_compute_threshold <= tid_list->ComputeSelectivity();

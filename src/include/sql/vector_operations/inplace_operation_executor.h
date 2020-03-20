@@ -86,7 +86,7 @@ class InPlaceOperationExecutor : public AllStatic {
       if (input.IsNull(0)) {
         result->GetMutableNullMask()->SetAll();
       } else {
-        if (traits::ShouldPerformFullCompute<InputType, Op>()(result->GetFilteredTupleIdList())) {
+        if (traits::ShouldPerformFullCompute<Op>()(result->GetFilteredTupleIdList())) {
           VectorOps::ExecIgnoreFilter(
               *result, [&](uint64_t i, uint64_t k) { op(&result_data[i], input_data[0]); });
         } else {
@@ -99,7 +99,7 @@ class InPlaceOperationExecutor : public AllStatic {
                  "Filter list of inputs to in-place operation do not match");
 
       result->GetMutableNullMask()->Union(input.GetNullMask());
-      if (traits::ShouldPerformFullCompute<InputType, Op>()(result->GetFilteredTupleIdList())) {
+      if (traits::ShouldPerformFullCompute<Op>()(result->GetFilteredTupleIdList())) {
         VectorOps::ExecIgnoreFilter(
             *result, [&](uint64_t i, uint64_t k) { op(&result_data[i], input_data[i]); });
       } else {
