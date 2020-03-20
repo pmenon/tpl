@@ -55,7 +55,7 @@ class UnaryOperationExecutor : public AllStatic {
    *                    count as the input vector.
    */
   template <typename InputType, typename ResultType, bool IgnoreNull = false, typename F>
-  static void Execute(const Vector &input, Vector *result, F &&f) {
+  static void Execute(const Vector &input, Vector *result, F f) {
     ExecuteImpl<InputType, ResultType, F, IgnoreNull>(input, result, f);
   }
 
