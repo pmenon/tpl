@@ -14,8 +14,9 @@ Loop::Loop(FunctionBuilder *function, ast::Stmt *init, ast::Expr *condition, ast
       next_(next),
       loop_body_(function_->GetCodeGen()->MakeEmptyBlock()),
       completed_(false) {
-  // Stash the current block list and set our loop body as the new list.
+  // Stash the previous statement list so we can restore it upon completion.
   prev_statements_ = function_->statements_;
+  // Swap in our loop-body statement list as the active statement list.
   function_->statements_ = loop_body_;
 }
 
@@ -34,7 +35,7 @@ void Loop::EndLoop() {
     return;
   }
 
-  TPL_ASSERT(codegen_->CurrentFunction() != nullptr, "Not within a function!");
+  // Restore the previous statement list, now that we're done.
   function_->statements_ = prev_statements_;
 
   // Create and append the if statement.

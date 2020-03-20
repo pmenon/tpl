@@ -13,14 +13,17 @@ If::If(FunctionBuilder *function, ast::Expr *condition)
       then_stmts_(function_->GetCodeGen()->MakeEmptyBlock()),
       else_stmts_(nullptr),
       completed_(false) {
-  TPL_ASSERT(codegen_->CurrentFunction() != nullptr, "Not within a function!");
+  // Stash the previous statement list so we can restore it upon completion.
   prev_func_stmt_list_ = function_->statements_;
+  // Swap in our 'then' statement list as the active statement list.
   function_->statements_ = then_stmts_;
 }
 
 If::~If() { EndIf(); }
 
 void If::Else() {
+  // Create a new statement list for the 'else' block and activate it in the
+  // current function.
   else_stmts_ = function_->GetCodeGen()->MakeEmptyBlock();
   function_->statements_ = else_stmts_;
 }
@@ -30,7 +33,7 @@ void If::EndIf() {
     return;
   }
 
-  TPL_ASSERT(codegen_->CurrentFunction() != nullptr, "Not within a function!");
+  // Restore the previous statement list, now that we're done.
   function_->statements_ = prev_func_stmt_list_;
 
   // Create and append the if statement.
