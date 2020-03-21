@@ -74,4 +74,31 @@ TEST_F(VectorSortTest, NullsNoFilter) {
   EXPECT_EQ(1u, sorted[9]);
 }
 
+TEST_F(VectorSortTest, NullsAndFilter) {
+  // vec = [-1.2,NULL,NULL,3.45,NULL,-67.89,NULL,NULL,NULL,123.45]
+  auto vec = MakeFloatVector({-1.2F, 0, 0, 3.45, 0, -67.89F, 0, 0, 0, 123.45F},
+                             {false, true, true, false, true, false, true, true, true, false});
+  vec->SetNull(1, true);
+  vec->SetNull(2, true);
+  vec->SetNull(4, true);
+  vec->SetNull(6, true);
+  vec->SetNull(7, true);
+  vec->SetNull(8, true);
+
+  // vec = [-1.2,NULL,NULL,3.45,123.45]
+  TupleIdList selections(vec->GetSize());
+  selections = {0, 1, 2, 3, 9};
+  vec->SetFilteredTupleIdList(&selections, selections.GetTupleCount());
+
+  // Sorted: vec = [NULL,NULL,-1.2,3.45,123.45], sorted = [1,2,0,3,9]
+  sel_t sorted[kDefaultVectorSize];
+  VectorOps::Sort(*vec, sorted);
+
+  EXPECT_EQ(1u, sorted[0]);
+  EXPECT_EQ(2u, sorted[1]);
+  EXPECT_EQ(0u, sorted[2]);
+  EXPECT_EQ(3u, sorted[3]);
+  EXPECT_EQ(9u, sorted[4]);
+}
+
 }  // namespace tpl::sql
