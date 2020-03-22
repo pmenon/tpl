@@ -1,5 +1,6 @@
 #include "common/exception.h"
 
+#include <iostream>
 #include <string>
 
 namespace tpl {

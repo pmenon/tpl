@@ -1,5 +1,7 @@
 #include "ast/ast_pretty_print.h"
 
+#include <iostream>
+
 #include "ast/ast_visitor.h"
 
 namespace tpl::ast {

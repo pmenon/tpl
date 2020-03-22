@@ -1,6 +1,7 @@
 #include "sema/error_reporter.h"
 
 #include <cstring>
+#include <iostream>
 #include <string>
 
 #include "ast/type.h"
