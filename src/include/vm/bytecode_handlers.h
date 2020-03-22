@@ -1303,6 +1303,11 @@ VM_OP_WARM void OpCharLength(tpl::sql::ExecutionContext *ctx, tpl::sql::Integer 
   tpl::sql::StringFunctions::CharLength(ctx, result, *str);
 }
 
+VM_OP_WARM void OpConcat(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+                         const tpl::sql::StringVal *left, const tpl::sql::StringVal *right) {
+  tpl::sql::StringFunctions::Concat(ctx, result, *left, *right);
+}
+
 VM_OP_WARM void OpLeft(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
                        const tpl::sql::StringVal *str, const tpl::sql::Integer *n) {
   tpl::sql::StringFunctions::Left(ctx, result, *str, *n);

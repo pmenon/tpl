@@ -18,6 +18,9 @@ class StringFunctions : public AllStatic {
     Length(ctx, result, str);
   }
 
+  static void Concat(ExecutionContext *ctx, StringVal *result, const StringVal &left,
+                     const StringVal &right);
+
   static void Left(ExecutionContext *ctx, StringVal *result, const StringVal &str,
                    const Integer &n);
 

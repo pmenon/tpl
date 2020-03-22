@@ -9,6 +9,22 @@
 
 namespace tpl::sql {
 
+void StringFunctions::Concat(ExecutionContext *ctx, StringVal *result, const StringVal &left,
+                             const StringVal &right) {
+  if (left.is_null || right.is_null) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  const std::size_t length = left.GetLength() + right.GetLength();
+  char *const ptr = ctx->GetStringHeap()->PreAllocate(length);
+
+  // Copy contents into result.
+  std::memcpy(ptr, left.GetContent(), left.GetLength());
+  std::memcpy(ptr + left.GetLength(), right.GetContent(), right.GetLength());
+  *result = StringVal(ptr, length);
+}
+
 void StringFunctions::Substring(UNUSED ExecutionContext *ctx, StringVal *result,
                                 const StringVal &str, const Integer &pos, const Integer &len) {
   if (str.is_null || pos.is_null || len.is_null) {

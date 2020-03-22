@@ -28,6 +28,31 @@ class StringFunctionsTests : public TplTest {
   ExecutionContext ctx_;
 };
 
+TEST_F(StringFunctionsTests, Concat) {
+  // Nulls
+  {
+    auto result = StringVal("");
+    StringFunctions::Concat(ctx(), &result, StringVal::Null(), StringVal::Null());
+    EXPECT_TRUE(result.is_null);
+
+    StringFunctions::Concat(ctx(), &result, StringVal::Null(), StringVal("xy"));
+    EXPECT_TRUE(result.is_null);
+
+    StringFunctions::Concat(ctx(), &result, StringVal("xy"), StringVal::Null());
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // Simple Case
+  {
+    auto result = StringVal("");
+    auto x = StringVal("xyz");
+    auto a = StringVal("abc");
+
+    StringFunctions::Concat(ctx(), &result, x, a);
+    EXPECT_TRUE(StringVal("xyzabc") == result);
+  }
+}
+
 TEST_F(StringFunctionsTests, Substring) {
   // Nulls
   {
