@@ -3,6 +3,7 @@
 #include <iosfwd>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "ast/identifier.h"
@@ -20,9 +21,10 @@ class Type;
 namespace sema {
 
 namespace detail {
+
 template <typename T>
 struct PassArgument {
-  typedef T type;
+  using type = T;
 };
 
 }  // namespace detail
@@ -74,48 +76,31 @@ class ErrorReporter {
   void PrintErrors(std::ostream &os);
 
  private:
-  /*
-   * A single argument in the error message
-   */
+  // A single argument in the error message.
   class MessageArgument {
    public:
-    enum Kind { CString, Int, Position, Token, Type };
-
-    explicit MessageArgument(const char *str) : kind_(Kind::CString), raw_str_(str) {}
-
-    explicit MessageArgument(int32_t integer) : kind_(Kind::Int), integer_(integer) {}
+    explicit MessageArgument(const char *str) : arg_(str) {}
 
     explicit MessageArgument(ast::Identifier str) : MessageArgument(str.GetData()) {}
 
-    explicit MessageArgument(ast::Type *type) : kind_(Kind::Type), type_(type) {}
+    explicit MessageArgument(SourcePosition pos) : arg_(pos) {}
 
-    explicit MessageArgument(const parsing::Token::Type type)
-        : MessageArgument(static_cast<std::underlying_type_t<parsing::Token::Type>>(type)) {
-      kind_ = Kind::Token;
-    }
+    explicit MessageArgument(int32_t integer) : arg_(integer) {}
 
-    explicit MessageArgument(const SourcePosition &pos) : kind_(Kind::Position), pos_(pos) {}
+    explicit MessageArgument(ast::Type *type) : arg_(type) {}
 
-    Kind kind() const { return kind_; }
+    explicit MessageArgument(parsing::Token::Type type) : arg_(type) {}
 
    private:
     friend class ErrorReporter;
     void FormatMessageArgument(std::string &str) const;
 
    private:
-    Kind kind_;
-    union {
-      const char *raw_str_;
-      int32_t integer_;
-      SourcePosition pos_;
-      ast::Type *type_;
-    };
+    std::variant<const char *, int32_t, SourcePosition, parsing::Token::Type, ast::Type *> arg_;
   };
 
-  /*
-   * An encapsulated error message with proper argument types that can be
-   * formatted and printed.
-   */
+  // An encapsulated error message with proper argument types that can be
+  // formatted and printed.
   class MessageWithArgs {
    public:
     template <typename... ArgTypes>
