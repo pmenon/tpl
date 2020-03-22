@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "common/common.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/traits.h"
@@ -20,7 +22,8 @@ class UnaryOperationExecutor : public AllStatic {
    * the provided output vector. The unary function to execute is provided as a template parameter.
    * Like other operators, it's logic must be implemented in Op::Apply().
    *
-   * @pre The input vector is allowed to be either a constant or a full vector, filtered or not.
+   * @pre The input vector is allowed to be either a constant or a full vector, filtered or not. The
+   *      template operator must be invokable as: <code>OutputType out = f(InputType in)</code>
    * @post The result vector will have the same shape as the input.
    *
    * @tparam InputType The native CPP type of the values in the input vector.
@@ -42,21 +45,22 @@ class UnaryOperationExecutor : public AllStatic {
    * the provided output vector. The unary functor is provided as the last argument parameter. Its
    * signature
    *
-   * @pre The input vector is allowed to be either a constant or a full vector, filtered or not.
+   * @pre The input vector is allowed to be either a constant or a full vector, filtered or not. The
+   *      template operator must be invokable as: <code>OutputType out = f(InputType in)</code>
    * @post The result vector will have the same shape as the input.
    *
    * @tparam InputType The native CPP type of the values in the input vector.
    * @tparam ResultType The native CPP type of the values in the result vector.
-   * @tparam F The type of the unary functor.
    * @tparam IgnoreNull Flag indicating if the operation should skip NULL values in the input.
+   * @tparam Op The type of the unary functor.
    * @param input The input vector to read values from.
    * @param[out] result The output vector where the results of the unary operation are written into.
    *                    The result vector will have the same set of NULLs, selection vector, and
    *                    count as the input vector.
    */
-  template <typename InputType, typename ResultType, bool IgnoreNull = false, typename F>
-  static void Execute(const Vector &input, Vector *result, F f) {
-    ExecuteImpl<InputType, ResultType, F, IgnoreNull>(input, result, f);
+  template <typename InputType, typename ResultType, bool IgnoreNull = false, typename Op>
+  static void Execute(const Vector &input, Vector *result, Op op) {
+    ExecuteImpl<InputType, ResultType, Op, IgnoreNull>(input, result, op);
   }
 
  private:
@@ -66,6 +70,10 @@ class UnaryOperationExecutor : public AllStatic {
   // on functors.
   template <typename InputType, typename ResultType, typename Op, bool IgnoreNull>
   static inline void ExecuteImpl(const Vector &input, Vector *result, Op op) {
+    // Ensure operator has correct interface.
+    static_assert(std::is_invocable_r_v<ResultType, Op, InputType>,
+                  "Unary operation has invalid interface for given template arguments");
+
     auto *RESTRICT input_data = reinterpret_cast<const InputType *>(input.GetData());
     auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->GetData());
 

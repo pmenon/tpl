@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "common/common.h"
 #include "common/exception.h"
 #include "sql/vector.h"
@@ -73,6 +75,11 @@ class BinaryOperationExecutor : public AllStatic {
   template <typename LeftType, typename RightType, typename ResultType, typename Op,
             bool IgnoreNull = false>
   static void Execute(const Vector &left, const Vector &right, Vector *result, Op op) {
+    // Ensure operator has correct interface.
+    static_assert(std::is_invocable_r_v<ResultType, Op, LeftType, RightType>,
+                  "Binary operation has invalid interface for given template arguments.");
+
+    // Ensure at least one of the inputs are vectors.
     TPL_ASSERT(!left.IsConstant() || !right.IsConstant(),
                "Both inputs to binary cannot be constants");
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "common/exception.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/traits.h"
@@ -79,6 +81,10 @@ class InPlaceOperationExecutor : public AllStatic {
    */
   template <typename ResultType, typename InputType, class Op>
   static void Execute(Vector *result, const Vector &input, Op op) {
+    // Ensure operator has correct interface.
+    static_assert(std::is_invocable_v<Op, ResultType *, InputType>,
+                  "In-place operation has invalid interface for given template arguments.");
+
     auto input_data = reinterpret_cast<InputType *>(input.GetData());
     auto result_data = reinterpret_cast<ResultType *>(result->GetData());
 
