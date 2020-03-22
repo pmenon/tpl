@@ -720,8 +720,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 
   GEN_HASH(Int, sql::Integer)
   GEN_HASH(Real, sql::Real)
-  GEN_HASH(String, sql::StringVal)
   GEN_HASH(Date, sql::DateVal)
+  GEN_HASH(Timestamp, sql::TimestampVal)
+  GEN_HASH(String, sql::StringVal)
 #undef GEN_HASH
 
   OP(HashCombine) : {

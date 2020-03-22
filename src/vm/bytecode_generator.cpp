@@ -764,25 +764,22 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
     LocalVar input = VisitExpressionForLValue(call->Arguments()[idx]);
     const auto *type = call->Arguments()[idx]->GetType()->As<ast::BuiltinType>();
     switch (type->GetKind()) {
-      case ast::BuiltinType::Integer: {
+      case ast::BuiltinType::Integer:
         GetEmitter()->Emit(Bytecode::HashInt, hash_val, input, hash_val.ValueOf());
         break;
-      }
-      case ast::BuiltinType::Real: {
+      case ast::BuiltinType::Real:
         GetEmitter()->Emit(Bytecode::HashReal, hash_val, input, hash_val.ValueOf());
         break;
-      }
-      case ast::BuiltinType::StringVal: {
+      case ast::BuiltinType::StringVal:
         GetEmitter()->Emit(Bytecode::HashString, hash_val, input, hash_val.ValueOf());
         break;
-      }
-      case ast::BuiltinType::Date: {
+      case ast::BuiltinType::Date:
         GetEmitter()->Emit(Bytecode::HashDate, hash_val, input, hash_val.ValueOf());
         break;
-      }
-      default: {
+      case ast::BuiltinType::Timestamp:
+        GetEmitter()->Emit(Bytecode::HashTimestamp, hash_val, input, hash_val.ValueOf());
+      default:
         UNREACHABLE("Hashing this type isn't supported!");
-      }
     }
   }
 

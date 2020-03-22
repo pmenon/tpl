@@ -261,8 +261,9 @@ namespace tpl::vm {
   /* Hashing */                                                                                                        \
   F(HashInt, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
   F(HashReal, OperandType::Local, OperandType::Local, OperandType::Local)                                              \
-  F(HashString, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(HashDate, OperandType::Local, OperandType::Local, OperandType::Local)                                              \
+  F(HashTimestamp, OperandType::Local, OperandType::Local, OperandType::Local)                                         \
+  F(HashString, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(HashCombine, OperandType::Local, OperandType::Local)                                                               \
                                                                                                                        \
   /* Aggregation Hash Table */                                                                                         \

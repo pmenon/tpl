@@ -394,6 +394,11 @@ VM_OP_HOT void OpHashDate(hash_t *const hash_val, const tpl::sql::DateVal *const
   *hash_val = input->is_null ? 0 : input->val.Hash(seed);
 }
 
+VM_OP_HOT void OpHashTimestamp(hash_t *const hash_val, const tpl::sql::TimestampVal *const input,
+                               const hash_t seed) {
+  *hash_val = input->is_null ? 0 : input->val.Hash(seed);
+}
+
 VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {
   *hash_val = tpl::util::HashUtil::CombineHashes(*hash_val, new_hash_val);
 }
