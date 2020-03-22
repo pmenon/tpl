@@ -4,7 +4,7 @@ project(tpl)
 
 # The version number.
 set(TPL_VERSION_MAJOR 0)
-set(TPL_VERSION_MINOR 1)
+set(TPL_VERSION_MINOR 5)
 
 # For external projects
 include(CMakeParseArguments)
