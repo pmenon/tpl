@@ -16,31 +16,34 @@ constexpr const char *kErrorStrings[] = {MESSAGE_LIST(F)};
 #undef F
 
 // Helper template class for MessageArgument::FormatMessageArgument().
-template <class T> struct always_false : std::false_type {};
+template <class T>
+struct always_false : std::false_type {};
 
 }  // namespace
 
 void ErrorReporter::MessageArgument::FormatMessageArgument(std::string &str) const {
-  std::visit([&](auto &&arg) {
-    using T = std::decay_t<decltype(arg)>;
-    if constexpr (std::is_same_v<T, const char *>) {
-      str.append(arg);
-    } else if constexpr (std::is_same_v<T, int32_t>) {
-      str.append(std::to_string(arg));
-    } else if constexpr (std::is_same_v<T, SourcePosition>) {
-      str.append("[line/col: ")
-          .append(std::to_string(arg.line))
-          .append("/")
-          .append(std::to_string(arg.column))
-          .append("]");
-    } else if constexpr (std::is_same_v<T, parsing::Token::Type>) {
-      str.append(parsing::Token::GetString(static_cast<parsing::Token::Type>(arg)));
-    } else if constexpr (std::is_same_v<T, ast::Type *>) {
-      str.append(ast::Type::ToString(arg));
-    } else {
-      static_assert(always_false<T>::value, "non-exhaustive visitor");
-    }
-  }, arg_);
+  std::visit(
+      [&](auto &&arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, const char *>) {
+          str.append(arg);
+        } else if constexpr (std::is_same_v<T, int32_t>) {
+          str.append(std::to_string(arg));
+        } else if constexpr (std::is_same_v<T, SourcePosition>) {
+          str.append("[line/col: ")
+              .append(std::to_string(arg.line))
+              .append("/")
+              .append(std::to_string(arg.column))
+              .append("]");
+        } else if constexpr (std::is_same_v<T, parsing::Token::Type>) {
+          str.append(parsing::Token::GetString(static_cast<parsing::Token::Type>(arg)));
+        } else if constexpr (std::is_same_v<T, ast::Type *>) {
+          str.append(ast::Type::ToString(arg));
+        } else {
+          static_assert(always_false<T>::value, "non-exhaustive visitor");
+        }
+      },
+      arg_);
 }
 
 std::string ErrorReporter::MessageWithArgs::FormatMessage() const {
