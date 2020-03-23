@@ -16,6 +16,7 @@
 #include "sql/constant_vector.h"
 #include "sql/generic_value.h"
 #include "sql/thread_state_container.h"
+#include "sql/vector_operations/unary_operation_executor.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/bit_util.h"
@@ -306,19 +307,17 @@ void AggregationHashTable::ComputeHash(VectorProjectionIterator *input_batch,
 }
 
 void AggregationHashTable::LookupInitial() {
-  // For every active hash value in the hashes vector, perform a lookup in the
-  // hash table and store the head of the bucket chain into the entries vector.
-  auto *RESTRICT raw_entries =
-      reinterpret_cast<const HashTableEntry **>(batch_state_->Entries()->GetData());
-  VectorOps::ExecTyped<hash_t>(*batch_state_->Hashes(),
-                               [&](const hash_t hash_val, const uint64_t i, const uint64_t k) {
-                                 raw_entries[i] = hash_table_.FindChainHead(hash_val);
-                               });
+  // Probe the hash table for every active hash in the hashes vector. Store the
+  // result in the entries vector, copying NULLs and the filter, too.
+  // TODO(pmenon): Move bulk lookup into ChainingHashTable? Batch lookups should
+  //               use SIMD gathers if hashes vector is full. For some reason it
+  //               isn't. Investigate why.
+  UnaryOperationExecutor::Execute<hash_t, const HashTableEntry *>(
+      *batch_state_->Hashes(), batch_state_->Entries(),
+      [&](const hash_t hash) noexcept { return hash_table_.FindChainHead(hash); });
 
-  // Tuples that found a potential match will have non-null pointers in the
-  // entries vector. These each need to be checked for key equality. Find
-  // them now and place them in the key-not-equal list which is used during
-  // key equality checking.
+  // Find non-null entries whose keys must be checked and place them in the
+  // key-not-equal list which is used during key equality checking.
   ConstantVector null_ptr(GenericValue::CreatePointer(0));
   VectorOps::SelectNotEqual(*batch_state_->Entries(), null_ptr, batch_state_->KeyNotEqual());
 }
