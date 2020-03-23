@@ -69,8 +69,8 @@ class CSVSource {
  * CSV source implementation for files.
  */
 class CSVFile : public CSVSource {
-  static constexpr uint32_t kDefaultBufferSize = 64 * KB;
-  static constexpr uint64_t kMaxAllocSize = 1 * GB;
+  constexpr static std::size_t kDefaultBufferSize = 64 * KB;
+  constexpr static std::size_t kMaxAllocSize = 1 * GB;
 
  public:
   /**
