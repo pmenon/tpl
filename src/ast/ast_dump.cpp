@@ -103,8 +103,8 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
       {
         WithColor color(this, llvm::raw_ostream::BLUE);
         out_ << "\n";
-        out_ << prefix_ << (last_child ? "`" : "|") << "-";
-        prefix_.append(last_child ? " " : "|").append(" ");
+        out_ << prefix_ << " " << (last_child ? "└" : "├") << "—";
+        prefix_.append(last_child ? "  " : " |").append(" ");
       }
 
       first_child_ = true;
@@ -116,7 +116,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
         pending_.pop_back_val()(true);
       }
 
-      prefix_.resize(prefix_.size() - 2);
+      prefix_.resize(prefix_.size() - 3);
     };
 
     if (first_child_) {
