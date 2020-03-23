@@ -119,19 +119,15 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
   // 2. Joined columns should be equal.
   // 3. The 4th column is the sum of the 1rst and 3rd columns.
   TupleCounterChecker tuple_count_check(80);
+  SingleIntJoinChecker join_col_check(1, 2);
   GenericChecker row_check([](const std::vector<const sql::Val *> &vals) {
-    // Read cols
+    // Check that col4 = col1 + col3.
     auto col1 = static_cast<const sql::Integer *>(vals[0]);
-    auto col2 = static_cast<const sql::Integer *>(vals[1]);
     auto col3 = static_cast<const sql::Integer *>(vals[2]);
     auto col4 = static_cast<const sql::Integer *>(vals[3]);
-    ASSERT_FALSE(col1->is_null || col2->is_null);
-    // Check join cols.
-    ASSERT_EQ(col2->val, col3->val);
-    // Check that col4 = col1 + col3.
     ASSERT_EQ(col4->val, col1->val + col3->val);
   }, nullptr);
-  MultiChecker multi_check({&tuple_count_check, &row_check});
+  MultiChecker multi_check({&tuple_count_check, &join_col_check, &row_check});
 
   // Setup for execution.
   OutputCollectorAndChecker store(&multi_check, nl_join->GetOutputSchema());

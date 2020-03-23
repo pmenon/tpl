@@ -159,7 +159,7 @@ class SingleIntJoinChecker : public OutputChecker {
     for (const auto &vals : output) {
       auto val1 = static_cast<const sql::Integer *>(vals[col1_]);
       auto val2 = static_cast<const sql::Integer *>(vals[col2_]);
-      EXPECT_EQ(val1->val, val2->val);
+      ASSERT_EQ(val1->val, val2->val);
     }
   }
 
