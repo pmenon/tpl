@@ -606,16 +606,12 @@ class VarlenEntry {
   bool operator>=(const VarlenEntry &that) const { return Compare(*this, that) >= 0; }
 
  private:
-  // The size of the contents
+  // The size of the contents.
   int32_t size_;
-  // A small prefix for the string. Immediately valid when content is inlined, but used when content
-  // is not inlined as well.
+  // The inlined prefix of the contents.
   byte prefix_[kPrefixLength];
-  // Pointer to the content when not inlined
-  union {
-    byte inlined_[sizeof(byte *)];
-    const byte *content_;
-  };
+  // Pointer to the content when not inlined.
+  const byte *content_;
 };
 
 static_assert(sizeof(VarlenEntry) == 16U, "VarlenEntry expected to be 16 bytes");
