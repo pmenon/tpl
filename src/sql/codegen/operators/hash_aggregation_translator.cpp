@@ -433,9 +433,9 @@ void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *work_conte
     // Check having clause.
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
       If check_having(function, work_context->DeriveValue(*having, this));
-      work_context->Push(function);
+      work_context->Consume(function);
     } else {
-      work_context->Push(function);
+      work_context->Consume(function);
     }
   }
   loop.EndLoop();

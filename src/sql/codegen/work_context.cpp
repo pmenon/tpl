@@ -28,7 +28,7 @@ ast::Expr *WorkContext::DeriveValue(const planner::AbstractExpression &expr,
   return result;
 }
 
-void WorkContext::Push(FunctionBuilder *function) {
+void WorkContext::Consume(FunctionBuilder *function) {
   if (++pipeline_iter_ == pipeline_end_) {
     return;
   }

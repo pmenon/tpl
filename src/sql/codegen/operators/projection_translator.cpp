@@ -23,7 +23,7 @@ ProjectionTranslator::ProjectionTranslator(const planner::ProjectionPlanNode &pl
 
 void ProjectionTranslator::PerformPipelineWork(WorkContext *work_context,
                                                FunctionBuilder *function) const {
-  work_context->Push(function);
+  work_context->Consume(function);
 }
 
 ast::Expr *ProjectionTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,

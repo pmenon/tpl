@@ -42,12 +42,12 @@ void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *work_context,
     If cond(function, work_context->DeriveValue(*predicate, this));
     {
       // Valid tuple. Push to next operator in pipeline.
-      work_context->Push(function);
+      work_context->Consume(function);
     }
     cond.EndIf();
   } else {
     // No join predicate. Push to next operator in pipeline.
-    work_context->Push(function);
+    work_context->Consume(function);
   }
 }
 

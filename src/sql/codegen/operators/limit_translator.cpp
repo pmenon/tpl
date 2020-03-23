@@ -49,7 +49,7 @@ void LimitTranslator::PerformPipelineWork(WorkContext *work_context,
   }
 
   If check_limit(function, cond);
-  work_context->Push(function);
+  work_context->Consume(function);
   check_limit.EndIf();
 
   // Update running count: numTuples += 1

@@ -197,14 +197,14 @@ void HashJoinTranslator::ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *f
       // If the right mark is true, then we can perform the anti join.
       // if (right_mark)
       If right_anti_check(function, codegen->MakeExpr(right_mark_var));
-      ctx->Push(function);
+      ctx->Consume(function);
       right_anti_check.EndIf();
     } else if (join_plan.GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_SEMI) {
       // If the right mark is unset, then there is at least one match.
       // if (!right_mark)
       auto cond = codegen->UnaryOp(parsing::Token::Type::BANG, codegen->MakeExpr(right_mark_var));
       If right_semi_check(function, cond);
-      ctx->Push(function);
+      ctx->Consume(function);
       right_semi_check.EndIf();
     }
   } else {
@@ -241,7 +241,7 @@ void HashJoinTranslator::CheckJoinPredicate(WorkContext *ctx, FunctionBuilder *f
       function->Append(codegen->Assign(left_mark, codegen->ConstBool(false)));
     }
     // Move along.
-    ctx->Push(function);
+    ctx->Consume(function);
   }
   check_condition.EndIf();
 }

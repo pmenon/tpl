@@ -45,7 +45,7 @@ class WorkContext {
    * Push this context through to the next step in the pipeline.
    * @param function The function that's being built.
    */
-  void Push(FunctionBuilder *function);
+  void Consume(FunctionBuilder *function);
 
   /**
    * Clear any cached expression result values.

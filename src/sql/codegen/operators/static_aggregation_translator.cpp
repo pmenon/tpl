@@ -170,7 +170,7 @@ void StaticAggregationTranslator::PerformPipelineWork(WorkContext *work_context,
     CodeGen *codegen = GetCodeGen();
     function->Append(codegen->DeclareVarWithInit(agg_row_var_, global_aggs_.GetPtr(codegen)));
     // Push along.
-    work_context->Push(function);
+    work_context->Consume(function);
   } else {
     UpdateGlobalAggregate(work_context, function);
   }

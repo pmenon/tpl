@@ -153,7 +153,7 @@ void SeqScanTranslator::ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast
                   codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));
     {
       // Push to parent.
-      ctx->Push(function);
+      ctx->Consume(function);
     }
     vpi_loop.EndLoop();
   };
