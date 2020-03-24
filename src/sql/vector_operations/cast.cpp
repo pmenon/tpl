@@ -90,8 +90,33 @@ void CastTimestampOperation(const Vector &source, Vector *target, SqlTypeId targ
 }
 
 void CastStringOperation(const Vector &source, Vector *target, SqlTypeId target_type) {
-  throw NotImplementedException("Unsupported cast: {} -> {}", TypeIdToString(source.GetTypeId()),
-                                TypeIdToString(target->GetTypeId()));
+  switch (target_type) {
+    case SqlTypeId::Boolean:
+      StandardTemplatedCastOperation<VarlenEntry, bool>(source, target);
+      break;
+    case SqlTypeId::TinyInt:
+      StandardTemplatedCastOperation<VarlenEntry, int8_t>(source, target);
+      break;
+    case SqlTypeId::SmallInt:
+      StandardTemplatedCastOperation<VarlenEntry, int16_t>(source, target);
+      break;
+    case SqlTypeId::Integer:
+      StandardTemplatedCastOperation<VarlenEntry, int32_t>(source, target);
+      break;
+    case SqlTypeId::BigInt:
+      StandardTemplatedCastOperation<VarlenEntry, int64_t>(source, target);
+      break;
+    case SqlTypeId::Real:
+      StandardTemplatedCastOperation<VarlenEntry, float>(source, target);
+      break;
+    case SqlTypeId::Double:
+      StandardTemplatedCastOperation<VarlenEntry, double>(source, target);
+      break;
+    default:
+      throw NotImplementedException("Unsupported cast: {} -> {}",
+                                    TypeIdToString(source.GetTypeId()),
+                                    TypeIdToString(target->GetTypeId()));
+  }
 }
 
 }  // namespace

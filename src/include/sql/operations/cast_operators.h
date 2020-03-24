@@ -1,5 +1,6 @@
 #pragma once
 
+#include <charconv>
 #include <string>
 
 #include "common/common.h"
@@ -316,6 +317,67 @@ struct TryCast<Timestamp, Date, Options> {
     *output = input.ConvertToDate();
     return true;
   }
+};
+
+//===----------------------------------------------------------------------===//
+//
+// String Cast.
+//
+//===----------------------------------------------------------------------===//
+
+/**
+ * String to boolean.
+ * @tparam OutType The input type. Either a number or a boolean.
+ * @tparam Options Casting options.
+ */
+template <typename Options>
+struct TryCast<VarlenEntry, bool, Options> {
+  bool operator()(const VarlenEntry &input, bool *output) const {
+    const auto buf = reinterpret_cast<const char *>(input.GetContent());
+    if (input.GetSize() == 0) {
+      return false;
+    }
+    if (buf[0] == 't' || buf[0] == 'T') {
+      *output = true;
+    } else if (buf[0] == 'f' || buf[0] == 'F') {
+      *output = false;
+    } else {
+      return false;
+    }
+    return true;
+  }
+};
+
+/**
+ * String to integer.
+ * @tparam OutType The input type. Either a number or a boolean.
+ * @tparam Options Casting options.
+ */
+template <typename OutType, typename Options>
+struct TryCast<VarlenEntry, OutType, Options,
+               std::enable_if_t<detail::is_integer_type_v<OutType>>> {
+  bool operator()(const VarlenEntry &input, OutType *output) const {
+    const auto buf = reinterpret_cast<const char *>(input.GetContent());
+    const auto len = input.GetSize();
+    const auto [p, ec] = std::from_chars(buf, buf + len, *output);
+    return ec == std::errc();
+  }
+};
+
+/**
+ * String to single-precision float.
+ */
+template <>
+struct TryCast<VarlenEntry, float> {
+  bool operator()(const VarlenEntry &input, float *output) const;
+};
+
+/**
+ * String to double-precision float.
+ */
+template <>
+struct TryCast<VarlenEntry, double> {
+  bool operator()(const VarlenEntry &input, double *output) const;
 };
 
 }  // namespace tpl::sql

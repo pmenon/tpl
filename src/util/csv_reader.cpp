@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "logging/logger.h"
+#include "util/fast_double_parser.h"
 
 namespace tpl::util {
 
@@ -70,6 +71,12 @@ bool CSVFile::Fill() {
 // CSV Reader
 //
 //===----------------------------------------------------------------------===//
+
+double CSVReader::CSVCell::AsDouble() const {
+  double output;
+  fast_double_parser::parse_number(this->ptr, &output);
+  return output;
+}
 
 CSVReader::CSVReader(CSVSource *source, char delimiter, char quote, char escape)
     : source_(source),

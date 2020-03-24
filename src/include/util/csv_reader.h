@@ -235,14 +235,9 @@ class CSVReader {
     }
 
     /**
-     * @return This cell's value convert into a 64-bit flaoting point value.
+     * @return This cell's value convert into a 64-bit floating point value.
      */
-    double AsDouble() const {
-      TPL_ASSERT(!escaped, "Integer data cannot contain be escaped");
-      // TODO(pmenon): std::strtod() is very slow. We can probably speed this up
-      //               by implementing a custom floating-point parser.
-      return std::strtod(ptr, nullptr);
-    }
+    double AsDouble() const;
 
     /**
      * @return This cell's value as a string.

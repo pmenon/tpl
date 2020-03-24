@@ -71,29 +71,67 @@ TEST_F(CSVReaderTest, EmptyCellsAndRows) {
 TEST_F(CSVReaderTest, CheckUnquoted) {
   CSVString str(
       "1,PA,498960,30.102261,-81.711777,Residential,Masonry,1\n"
-      "2,CA,132237,30.063936,-81.707664,Residential,Wood,3\n"
+      "2,CA,132237,30.063936,101.704,Residential,Wood,3\n"
       "3,NY,190724,29.089579,-81.700455,Residential,Masonry,1\n"
-      "4,FL,0,30.063236,-81.707703,Residential,Wood,3\n"
-      "5,WA,5,30.060614,-81.702675,Residential,Masonry,1\n"
-      "6,TX,0,30.063236,-81.707703,Residential,Wood,3\n"
-      "7,MA,0,30.102226,-81.713882,Commercial,Masonry,1\n");
+      "4,FL,0,30.063236,0.7,Residential,Wood,3\n"
+      "5,WA,5,0.06,-0.75,Residential,Masonry,1\n");
   CSVReader reader(&str);
   ASSERT_TRUE(reader.Initialize());
 
-  for (uint32_t id = 1; reader.Advance(); id++) {
-    auto row = reader.GetRow();
-    EXPECT_EQ(8u, row->count);
-    // First column is increasing ID
-    EXPECT_EQ(id, row->cells[0].AsInteger());
-    // Fourth column is always negative double
-    EXPECT_LT(row->cells[4].AsDouble(), 0);
-    EXPECT_LT(row->cells[4].AsDouble(), -80);
-    EXPECT_GT(row->cells[4].AsDouble(), -82);
-    // All rows are 'Residential' except the last, which is 'Commercial'
-    EXPECT_EQ(id < 7 ? "Residential" : "Commercial", row->cells[5].AsString());
-    // Odd numbered rows are built with 'Masonry', the others are 'Wood'
-    EXPECT_EQ(id % 2 == 0 ? "Wood" : "Masonry", row->cells[6].AsString());
-  }
+  const CSVReader::CSVRow *row = nullptr;
+
+  // First row.
+  EXPECT_TRUE(reader.Advance());
+  row = reader.GetRow();
+  EXPECT_EQ(1, row->cells[0].AsInteger());
+  EXPECT_EQ("PA", row->cells[1].AsString());
+  EXPECT_DOUBLE_EQ(30.102261, row->cells[3].AsDouble());
+  EXPECT_DOUBLE_EQ(-81.711777, row->cells[4].AsDouble());
+  EXPECT_EQ("Residential", row->cells[5].AsString());
+  EXPECT_EQ("Masonry", row->cells[6].AsString());
+
+  // Second row.
+  EXPECT_TRUE(reader.Advance());
+  row = reader.GetRow();
+  EXPECT_EQ(2, row->cells[0].AsInteger());
+  EXPECT_EQ("CA", row->cells[1].AsString());
+  EXPECT_DOUBLE_EQ(30.063936, row->cells[3].AsDouble());
+  EXPECT_DOUBLE_EQ(101.704, row->cells[4].AsDouble());
+  EXPECT_EQ("Residential", row->cells[5].AsString());
+  EXPECT_EQ("Wood", row->cells[6].AsString());
+
+  // Third row.
+  EXPECT_TRUE(reader.Advance());
+  row = reader.GetRow();
+  EXPECT_EQ(3, row->cells[0].AsInteger());
+  EXPECT_EQ("NY", row->cells[1].AsString());
+  EXPECT_DOUBLE_EQ(29.089579, row->cells[3].AsDouble());
+  EXPECT_DOUBLE_EQ(-81.700455, row->cells[4].AsDouble());
+  EXPECT_EQ("Residential", row->cells[5].AsString());
+  EXPECT_EQ("Masonry", row->cells[6].AsString());
+
+  // Fourth row.
+  EXPECT_TRUE(reader.Advance());
+  row = reader.GetRow();
+  EXPECT_EQ(4, row->cells[0].AsInteger());
+  EXPECT_EQ("FL", row->cells[1].AsString());
+  EXPECT_DOUBLE_EQ(30.063236, row->cells[3].AsDouble());
+  EXPECT_DOUBLE_EQ(0.7, row->cells[4].AsDouble());
+  EXPECT_EQ("Residential", row->cells[5].AsString());
+  EXPECT_EQ("Wood", row->cells[6].AsString());
+
+  // Fifth row.
+  EXPECT_TRUE(reader.Advance());
+  row = reader.GetRow();
+  EXPECT_EQ(5, row->cells[0].AsInteger());
+  EXPECT_EQ("WA", row->cells[1].AsString());
+  EXPECT_EQ(5, row->cells[2].AsInteger());
+  EXPECT_DOUBLE_EQ(0.06, row->cells[3].AsDouble());
+  EXPECT_DOUBLE_EQ(-0.75, row->cells[4].AsDouble());
+  EXPECT_EQ("Residential", row->cells[5].AsString());
+  EXPECT_EQ("Masonry", row->cells[6].AsString());
+
+  EXPECT_FALSE(reader.Advance());
 }
 
 }  // namespace tpl::util
