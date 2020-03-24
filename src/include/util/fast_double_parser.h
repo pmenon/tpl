@@ -27,7 +27,7 @@ namespace tpl::util::fast_double_parser {
 #define unlikely(x) __builtin_expect(!!(x), 0)
 #endif  // unlikely
 #ifndef really_inline
-#define really_inline __attribute__((always_inline))
+#define really_inline __attribute__((always_inline)) inline
 #endif  // really_inline
 #endif  // _MSC_VER
 
@@ -945,7 +945,7 @@ const uint64_t mantissa_128[] = {0x419ea3bd35385e2d,
 // set to false. This should work *most of the time* (like 99% of the time).
 // We assume that power is in the [FASTFLOAT_SMALLEST_POWER,
 // FASTFLOAT_LARGEST_POWER] interval: the caller is responsible for this check.
-double compute_float_64(int64_t power, uint64_t i, bool negative, bool *success) {
+really_inline double compute_float_64(int64_t power, uint64_t i, bool negative, bool *success) {
   // we start with a fast path
   // It was described in
   // Clinger WD. How to read floating point numbers accurately.
@@ -1165,13 +1165,13 @@ const bool structural_or_whitespace_or_exponent_or_decimal_negated[256] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
-bool is_not_structural_or_whitespace_or_exponent_or_decimal(unsigned char c) {
+really_inline bool is_not_structural_or_whitespace_or_exponent_or_decimal(unsigned char c) {
   return structural_or_whitespace_or_exponent_or_decimal_negated[c];
 }
 
 // parse the number at p
 template <char... DecSeparators>
-bool parse_number_base(const char *p, double *outDouble) {
+really_inline bool parse_number_base(const char *p, double *outDouble) {
   const char *pinit = p;
   bool found_minus = (*p == '-');
   bool negative = false;
