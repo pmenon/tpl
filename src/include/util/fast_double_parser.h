@@ -1316,4 +1316,10 @@ namespace decimal_separator_comma {
 const auto parse_number = parse_number_base<','>;
 }
 
+// Hygiene.
+#undef really_inline
+#undef unlikely
+#undef FASTFLOAT_LARGEST_POWER
+#undef FASTFLOAT_SMALLEST_POWER
+
 }  // namespace tpl::util::fast_double_parser
