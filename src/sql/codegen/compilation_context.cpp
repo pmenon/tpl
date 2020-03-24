@@ -314,7 +314,7 @@ ExpressionTranslator *CompilationContext::LookupTranslator(
 }
 
 std::string CompilationContext::GetFunctionPrefix() const {
-  return fmt::format("Query{}", unique_id_);
+  return "Query" + std::to_string(unique_id_);
 }
 
 util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {

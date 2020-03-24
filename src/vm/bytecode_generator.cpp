@@ -2096,8 +2096,9 @@ void BytecodeGenerator::VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compa
 
   TPL_ASSERT(compare->Left()->GetType()->IsArithmetic() || compare->Left()->GetType()->IsBoolType(),
              "Invalid type to comparison");
-  TPL_ASSERT(compare->Right()->GetType()->IsArithmetic() || compare->Left()->right()->IsBoolType(),
-             "Invalid type to comparison");
+  TPL_ASSERT(
+      compare->Right()->GetType()->IsArithmetic() || compare->Right()->GetType()->IsBoolType(),
+      "Invalid type to comparison");
 
   LocalVar left = VisitExpressionForRValue(compare->Left());
   LocalVar right = VisitExpressionForRValue(compare->Right());
