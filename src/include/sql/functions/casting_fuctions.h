@@ -54,12 +54,27 @@ class CastingFunctions : public AllStatic {
     tpl::sql::TryCast<InputType, OutputType>{}(v.val, &result->val);                   \
   }
 
+#define CAST_HIDE_NULL(FROM_TYPE, TO_TYPE)                                             \
+  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &v) { \
+    using InputType = decltype(FROM_TYPE::val);                                        \
+    using OutputType = decltype(TO_TYPE::val);                                         \
+    if (v.is_null) {                                                                   \
+      *result = TO_TYPE::Null();                                                       \
+      return;                                                                          \
+    }                                                                                  \
+    result->is_null = false;                                                           \
+    tpl::sql::TryCast<InputType, OutputType>{}(v.val, &result->val);                   \
+  }
+
 CAST_HIDE_NULL_FAST(Integer, BoolVal);
 CAST_HIDE_NULL_FAST(Real, BoolVal);
+CAST_HIDE_NULL(StringVal, BoolVal);
 CAST_HIDE_NULL_FAST(BoolVal, Integer);
 CAST_HIDE_NULL_FAST(Real, Integer);
+CAST_HIDE_NULL(StringVal, Integer);
 CAST_HIDE_NULL_FAST(BoolVal, Real);
 CAST_HIDE_NULL_FAST(Integer, Real);
+CAST_HIDE_NULL(StringVal, Real);
 CAST_HIDE_NULL_FAST(TimestampVal, DateVal);
 CAST_HIDE_NULL_FAST(DateVal, TimestampVal);
 #undef CAST_HIDE_NULL_FAST
