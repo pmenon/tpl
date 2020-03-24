@@ -10,9 +10,10 @@ namespace tpl::sql {
 
 namespace {
 
-template <typename InType, typename OutType>
+template <typename InType, typename OutType, bool IgnoreNull = true>
 void StandardTemplatedCastOperation(const Vector &source, Vector *target) {
-  UnaryOperationExecutor::Execute<InType, OutType, tpl::sql::Cast<InType, OutType>>(source, target);
+  UnaryOperationExecutor::Execute<InType, OutType, tpl::sql::Cast<InType, OutType>, IgnoreNull>(
+      source, target);
 }
 
 template <typename InType>
@@ -92,25 +93,25 @@ void CastTimestampOperation(const Vector &source, Vector *target, SqlTypeId targ
 void CastStringOperation(const Vector &source, Vector *target, SqlTypeId target_type) {
   switch (target_type) {
     case SqlTypeId::Boolean:
-      StandardTemplatedCastOperation<VarlenEntry, bool>(source, target);
+      StandardTemplatedCastOperation<VarlenEntry, bool, true>(source, target);
       break;
     case SqlTypeId::TinyInt:
-      StandardTemplatedCastOperation<VarlenEntry, int8_t>(source, target);
+      StandardTemplatedCastOperation<VarlenEntry, int8_t, true>(source, target);
       break;
     case SqlTypeId::SmallInt:
-      StandardTemplatedCastOperation<VarlenEntry, int16_t>(source, target);
+      StandardTemplatedCastOperation<VarlenEntry, int16_t, true>(source, target);
       break;
     case SqlTypeId::Integer:
-      StandardTemplatedCastOperation<VarlenEntry, int32_t>(source, target);
+      StandardTemplatedCastOperation<VarlenEntry, int32_t, true>(source, target);
       break;
     case SqlTypeId::BigInt:
-      StandardTemplatedCastOperation<VarlenEntry, int64_t>(source, target);
+      StandardTemplatedCastOperation<VarlenEntry, int64_t, true>(source, target);
       break;
     case SqlTypeId::Real:
-      StandardTemplatedCastOperation<VarlenEntry, float>(source, target);
+      StandardTemplatedCastOperation<VarlenEntry, float, true>(source, target);
       break;
     case SqlTypeId::Double:
-      StandardTemplatedCastOperation<VarlenEntry, double>(source, target);
+      StandardTemplatedCastOperation<VarlenEntry, double, true>(source, target);
       break;
     default:
       throw NotImplementedException("Unsupported cast: {} -> {}",
@@ -154,6 +155,7 @@ void VectorOps::Cast(const Vector &source, Vector *target, SqlTypeId source_type
     case SqlTypeId::Char:
     case SqlTypeId::Varchar:
       CastStringOperation(source, target, target_type);
+      break;
     default:
       throw NotImplementedException("Unsupported cast: {} -> {}",
                                     TypeIdToString(source.GetTypeId()),

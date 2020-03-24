@@ -150,4 +150,20 @@ TEST_F(VectorCastTest, DateCast) {
   EXPECT_EQ(GenericValue::CreateVarchar("2015-08-01"), a->GetValue(5));
 }
 
+TEST_F(VectorCastTest, CastStringToFloat) {
+  // a = [NULL, "-123.45", "6.75", NULL, "0.8", "910"]
+  auto a = MakeVarcharVector({{}, "-123.45", "6.75", {}, "0.8", "910"},
+                             {true, false, false, true, false, false});
+
+  EXPECT_NO_THROW(a->Cast(TypeId::Float));
+
+  EXPECT_EQ(TypeId::Float, a->GetTypeId());
+  EXPECT_TRUE(a->IsNull(0));
+  EXPECT_EQ(GenericValue::CreateFloat(-123.45), a->GetValue(1));
+  EXPECT_EQ(GenericValue::CreateFloat(6.75), a->GetValue(2));
+  EXPECT_TRUE(a->IsNull(3));
+  EXPECT_EQ(GenericValue::CreateFloat(0.8), a->GetValue(4));
+  EXPECT_EQ(GenericValue::CreateFloat(910), a->GetValue(5));
+}
+
 }  // namespace tpl::sql
