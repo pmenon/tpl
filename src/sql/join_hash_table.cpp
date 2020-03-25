@@ -17,7 +17,7 @@
 #include "sql/memory_pool.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/unary_operation_executor.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
@@ -516,26 +516,21 @@ void JoinHashTable::Build() {
 // TODO(pmenon): Implement prefetching.
 
 void JoinHashTable::LookupBatchInChainingHashTable(const Vector &hashes, Vector *results) const {
-  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(results->GetData());
-  VectorOps::ExecTyped<hash_t>(hashes, [&](hash_t hash_val, uint64_t i, uint64_t k) {
-    raw_entries[i] = chaining_hash_table_.FindChainHead(hash_val);
-  });
+  UnaryOperationExecutor::Execute<hash_t, const HashTableEntry *>(
+      hashes, results,
+      [&](const hash_t hash_val) noexcept { return chaining_hash_table_.FindChainHead(hash_val); });
 }
 
 void JoinHashTable::LookupBatchInConciseHashTable(const Vector &hashes, Vector *results) const {
-  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(results->GetData());
-  VectorOps::ExecTyped<hash_t>(hashes, [&](hash_t hash_val, uint64_t i, uint64_t k) {
-    const auto [found, entry_idx] = concise_hash_table_.Lookup(hash_val);
-    raw_entries[i] = (found ? EntryAt(entry_idx) : nullptr);
-  });
+  UnaryOperationExecutor::Execute<hash_t, const HashTableEntry *>(
+      hashes, results, [&](const hash_t hash_val) noexcept {
+        const auto [found, entry_idx] = concise_hash_table_.Lookup(hash_val);
+        return (found ? EntryAt(entry_idx) : nullptr);
+      });
 }
 
 void JoinHashTable::LookupBatch(const Vector &hashes, Vector *results) const {
   TPL_ASSERT(IsBuilt(), "Cannot perform lookup before table is built!");
-  results->Resize(hashes.GetSize());
-  results->GetMutableNullMask()->Copy(hashes.GetNullMask());
-  results->SetFilteredTupleIdList(hashes.GetFilteredTupleIdList(), hashes.GetCount());
-
   if (UsingConciseHashTable()) {
     LookupBatchInConciseHashTable(hashes, results);
   } else {

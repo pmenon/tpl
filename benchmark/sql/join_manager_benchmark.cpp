@@ -156,9 +156,9 @@ BENCHMARK_DEFINE_F(JoinManagerBenchmark, Adaptive)(benchmark::State &state) {
 
 BENCHMARK_REGISTER_F(JoinManagerBenchmark, StaticOrder)
     ->DenseRange(0, 100, 10)
-    ->Unit(benchmark::kMicrosecond);
+    ->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(JoinManagerBenchmark, Adaptive)
     ->DenseRange(0, 100, 10)
-    ->Unit(benchmark::kMicrosecond);
+    ->Unit(benchmark::kMillisecond);
 
 }  // namespace tpl
