@@ -74,7 +74,7 @@ class BinaryOperationExecutor : public AllStatic {
    */
   template <typename LeftType, typename RightType, typename ResultType, typename Op,
             bool IgnoreNull = false>
-  static void Execute(const Vector &left, const Vector &right, Vector *result, Op op) {
+  static void Execute(const Vector &left, const Vector &right, Vector *result, Op &&op) {
     // Ensure operator has correct interface.
     static_assert(std::is_invocable_r_v<ResultType, Op, LeftType, RightType>,
                   "Binary operation has invalid interface for given template arguments.");
@@ -84,14 +84,14 @@ class BinaryOperationExecutor : public AllStatic {
                "Both inputs to binary cannot be constants");
 
     if (left.IsConstant()) {
-      ExecuteImpl_Constant_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(left, right,
-                                                                                   result, op);
+      ExecuteImpl_Constant_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(
+          left, right, result, std::forward<Op>(op));
     } else if (right.IsConstant()) {
-      ExecuteImpl_Vector_Constant<LeftType, RightType, ResultType, Op, IgnoreNull>(left, right,
-                                                                                   result, op);
+      ExecuteImpl_Vector_Constant<LeftType, RightType, ResultType, Op, IgnoreNull>(
+          left, right, result, std::forward<Op>(op));
     } else {
-      ExecuteImpl_Vector_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(left, right,
-                                                                                 result, op);
+      ExecuteImpl_Vector_Vector<LeftType, RightType, ResultType, Op, IgnoreNull>(
+          left, right, result, std::forward<Op>(op));
     }
   }
 
@@ -100,7 +100,7 @@ class BinaryOperationExecutor : public AllStatic {
   template <typename LeftType, typename RightType, typename ResultType, typename Op,
             bool IgnoreNull>
   static void ExecuteImpl_Constant_Vector(const Vector &left, const Vector &right, Vector *result,
-                                          Op op) {
+                                          Op &&op) {
     auto *RESTRICT left_data = reinterpret_cast<LeftType *>(left.GetData());
     auto *RESTRICT right_data = reinterpret_cast<RightType *>(right.GetData());
     auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->GetData());
@@ -137,7 +137,7 @@ class BinaryOperationExecutor : public AllStatic {
   template <typename LeftType, typename RightType, typename ResultType, typename Op,
             bool IgnoreNull>
   static void ExecuteImpl_Vector_Constant(const Vector &left, const Vector &right, Vector *result,
-                                          Op op) {
+                                          Op &&op) {
     auto *RESTRICT left_data = reinterpret_cast<LeftType *>(left.GetData());
     auto *RESTRICT right_data = reinterpret_cast<RightType *>(right.GetData());
     auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->GetData());
@@ -174,7 +174,7 @@ class BinaryOperationExecutor : public AllStatic {
   template <typename LeftType, typename RightType, typename ResultType, typename Op,
             bool IgnoreNull>
   static void ExecuteImpl_Vector_Vector(const Vector &left, const Vector &right, Vector *result,
-                                        Op op) {
+                                        Op &&op) {
     TPL_ASSERT(left.GetFilteredTupleIdList() == right.GetFilteredTupleIdList(),
                "Mismatched selection vectors for comparison");
     TPL_ASSERT(left.GetCount() == right.GetCount(), "Mismatched vector counts for comparison");
