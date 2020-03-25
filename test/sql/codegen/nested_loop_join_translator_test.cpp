@@ -58,9 +58,7 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
     auto schema = seq_scan_out1.MakeSchema();
     // Build.
     planner::SeqScanPlanNode::Builder builder;
-    seq_scan1 = builder.SetOutputSchema(std::move(schema))
-                    .SetTableOid(table1->GetId())
-                    .Build();
+    seq_scan1 = builder.SetOutputSchema(std::move(schema)).SetTableOid(table1->GetId()).Build();
   }
 
   // Scan small_1.
@@ -120,13 +118,15 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
   // 3. The 4th column is the sum of the 1rst and 3rd columns.
   TupleCounterChecker tuple_count_check(80);
   SingleIntJoinChecker join_col_check(1, 2);
-  GenericChecker row_check([](const std::vector<const sql::Val *> &vals) {
-    // Check that col4 = col1 + col3.
-    auto col1 = static_cast<const sql::Integer *>(vals[0]);
-    auto col3 = static_cast<const sql::Integer *>(vals[2]);
-    auto col4 = static_cast<const sql::Integer *>(vals[3]);
-    ASSERT_EQ(col4->val, col1->val + col3->val);
-  }, nullptr);
+  GenericChecker row_check(
+      [](const std::vector<const sql::Val *> &vals) {
+        // Check that col4 = col1 + col3.
+        auto col1 = static_cast<const sql::Integer *>(vals[0]);
+        auto col3 = static_cast<const sql::Integer *>(vals[2]);
+        auto col4 = static_cast<const sql::Integer *>(vals[3]);
+        ASSERT_EQ(col4->val, col1->val + col3->val);
+      },
+      nullptr);
   MultiChecker multi_check({&tuple_count_check, &join_col_check, &row_check});
 
   // Setup for execution.
