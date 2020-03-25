@@ -195,21 +195,27 @@ namespace tpl::vm {
   F(VectorFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)              \
   F(VectorFilterNotEqualVal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)           \
                                                                                                                        \
-  /* SQL type comparisons */                                                                                           \
+  /* SQL value creation */                                                                                             \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
   F(InitBool, OperandType::Local, OperandType::Local)                                                                  \
   F(InitInteger, OperandType::Local, OperandType::Local)                                                               \
   F(InitReal, OperandType::Local, OperandType::Local)                                                                  \
   F(InitDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                          \
   F(InitString, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4)                                      \
+  /* SQL value conversion */                                                                                           \
+  F(BoolToInteger, OperandType::Local, OperandType::Local)                                                             \
+  F(IntegerToBool, OperandType::Local, OperandType::Local)                                                             \
   F(IntegerToReal, OperandType::Local, OperandType::Local)                                                             \
   F(IntegerToString, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(RealToBool, OperandType::Local, OperandType::Local)                                                                \
   F(RealToInteger, OperandType::Local, OperandType::Local)                                                             \
   F(RealToString, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(DateToTimestamp, OperandType::Local, OperandType::Local)                                                           \
   F(DateToString, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(TimestampToDate, OperandType::Local, OperandType::Local)                                                           \
   F(TimestampToString, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(StringToBool, OperandType::Local, OperandType::Local)                                                              \
+  /* SQL value comparisons */                                                                                          \
   F(LessThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(LessThanEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
   F(GreaterThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                       \

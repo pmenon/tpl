@@ -479,6 +479,14 @@ VM_OP_HOT void OpInitString(tpl::sql::StringVal *result, const uint8_t *str, uin
   result->val = tpl::sql::VarlenEntry::Create(reinterpret_cast<const byte *>(str), length);
 }
 
+VM_OP_WARM void OpBoolToInteger(tpl::sql::Integer *result, const tpl::sql::BoolVal *input) {
+  tpl::sql::CastingFunctions::CastToInteger(result, *input);
+}
+
+VM_OP_WARM void OpIntegerToBool(tpl::sql::BoolVal *result, const tpl::sql::Integer *input) {
+  tpl::sql::CastingFunctions::CastToBoolVal(result, *input);
+}
+
 VM_OP_WARM void OpIntegerToReal(tpl::sql::Real *result, const tpl::sql::Integer *input) {
   tpl::sql::CastingFunctions::CastToReal(result, *input);
 }
@@ -486,6 +494,10 @@ VM_OP_WARM void OpIntegerToReal(tpl::sql::Real *result, const tpl::sql::Integer 
 VM_OP_WARM void OpIntegerToString(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *exec_ctx,
                                   const tpl::sql::Integer *input) {
   tpl::sql::CastingFunctions::CastToStringVal(result, exec_ctx, *input);
+}
+
+VM_OP_WARM void OpRealToBool(tpl::sql::BoolVal *result, const tpl::sql::Real *input) {
+  tpl::sql::CastingFunctions::CastToBoolVal(result, *input);
 }
 
 VM_OP_WARM void OpRealToInteger(tpl::sql::Integer *result, const tpl::sql::Real *input) {
@@ -514,6 +526,10 @@ VM_OP_WARM void OpTimestampToString(tpl::sql::StringVal *result,
                                     tpl::sql::ExecutionContext *exec_ctx,
                                     const tpl::sql::TimestampVal *input) {
   tpl::sql::CastingFunctions::CastToStringVal(result, exec_ctx, *input);
+}
+
+VM_OP_WARM void OpStringToBool(tpl::sql::BoolVal *result, const tpl::sql::StringVal *input) {
+  tpl::sql::CastingFunctions::CastToBoolVal(result, *input);
 }
 
 #define GEN_SQL_COMPARISONS(NAME, TYPE)                                                           \

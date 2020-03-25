@@ -854,6 +854,20 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // SQL Value Casts.
   // -------------------------------------------------------
 
+  OP(BoolToInteger) : {
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    OpBoolToInteger(result, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(IntegerToBool) : {
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    OpIntegerToBool(result, input);
+    DISPATCH_NEXT();
+  }
+
   OP(IntegerToReal) : {
     auto *real_result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
@@ -866,6 +880,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
     OpIntegerToString(result, exec_ctx, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(RealToBool) : {
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
+    OpRealToBool(result, input);
     DISPATCH_NEXT();
   }
 
@@ -911,6 +932,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<sql::TimestampVal *>(READ_LOCAL_ID());
     OpTimestampToString(result, exec_ctx, input);
+    DISPATCH_NEXT();
+  }
+
+  OP(StringToBool) : {
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    OpStringToBool(result, input);
     DISPATCH_NEXT();
   }
 
