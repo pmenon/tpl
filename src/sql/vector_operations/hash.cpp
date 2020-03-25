@@ -1,5 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/operations/hash_operators.h"
 
@@ -93,7 +95,8 @@ void VectorOps::Hash(const Vector &input, Vector *result) {
       TemplatedHashOperation<VarlenEntry>(input, result);
       break;
     default:
-      throw NotImplementedException("hashing vector type '{}'", TypeIdToString(input.GetTypeId()));
+      throw NotImplementedException(
+          fmt::format("hashing vector type '{}'", TypeIdToString(input.GetTypeId())));
   }
 }
 
@@ -134,7 +137,8 @@ void VectorOps::HashCombine(const Vector &input, Vector *result) {
       TemplatedHashCombineOperation<VarlenEntry>(input, result);
       break;
     default:
-      throw NotImplementedException("hashing vector type '{}'", TypeIdToString(input.GetTypeId()));
+      throw NotImplementedException(
+          fmt::format("hashing vector type '{}'", TypeIdToString(input.GetTypeId())));
   }
 }
 

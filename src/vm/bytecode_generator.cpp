@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "spdlog/fmt/fmt.h"
+
 #include "ast/builtins.h"
 #include "ast/context.h"
 #include "ast/type.h"
@@ -294,8 +296,8 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       break;
     }
     default: {
-      throw NotImplementedException("'{}' cast is not implemented",
-                                    ast::CastKindToString(node->GetCastKind()));
+      throw NotImplementedException(
+          fmt::format("'{}' cast is not implemented", ast::CastKindToString(node->GetCastKind())));
     }
   }
 }

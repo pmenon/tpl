@@ -4,6 +4,8 @@
 #include <atomic>
 #include <sstream>
 
+#include "spdlog/fmt/fmt.h"
+
 #include "ast/context.h"
 #include "common/exception.h"
 #include "common/macros.h"
@@ -215,8 +217,9 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
       break;
     }
     default: {
-      throw NotImplementedException("Code generation for plan node type '{}'",
-                                    planner::PlanNodeTypeToString(plan.GetPlanNodeType()));
+      throw NotImplementedException(
+          fmt::format("code generation for plan node type '{}'",
+                      planner::PlanNodeTypeToString(plan.GetPlanNodeType())));
     }
   }
 
@@ -289,8 +292,8 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
     }
     default: {
       throw NotImplementedException(
-          "Code generation for expression type '{}' not supported",
-          planner::ExpressionTypeToString(expression.GetExpressionType(), false));
+          fmt::format("Code generation for expression type '{}' not supported",
+                      planner::ExpressionTypeToString(expression.GetExpressionType(), false)));
     }
   }
 

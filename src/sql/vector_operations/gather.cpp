@@ -1,5 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 
 namespace tpl::sql {
@@ -66,8 +68,8 @@ void VectorOps::Gather(const Vector &pointers, Vector *result, const std::size_t
       TemplatedGatherOperation<VarlenEntry>(pointers, result, offset);
       break;
     default:
-      throw NotImplementedException("Gathering '{}' types not supported",
-                                    TypeIdToString(result->GetTypeId()));
+      throw NotImplementedException(
+          fmt::format("gathering '{}' types not supported", TypeIdToString(result->GetTypeId())));
   }
 }
 

@@ -1,5 +1,7 @@
 #include "sql/codegen/expression/conjunction_translator.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
@@ -27,8 +29,8 @@ ast::Expr *ConjunctionTranslator::DeriveValue(WorkContext *ctx,
     case planner::ExpressionType::CONJUNCTION_OR:
       return codegen->BinaryOp(parsing::Token::Type::OR, left_val, right_val);
     default: {
-      throw NotImplementedException("Translation of conjunction type {}",
-                                    planner::ExpressionTypeToString(expr_type, true));
+      throw NotImplementedException(fmt::format("Translation of conjunction type {}",
+                                                planner::ExpressionTypeToString(expr_type, true)));
     }
   }
 }

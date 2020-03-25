@@ -2,6 +2,8 @@
 
 #include "ips4o/ips4o.hpp"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/operations/comparison_operators.h"
 #include "util/bit_vector.h"
@@ -67,8 +69,8 @@ void VectorOps::Sort(const Vector &input, sel_t result[]) {
       TemplatedSort<VarlenEntry>(input, non_nulls, non_null_result);
       break;
     default:
-      throw NotImplementedException("cannot sort vector of type {}",
-                                    TypeIdToString(input.GetTypeId()));
+      throw NotImplementedException(
+          fmt::format("cannot sort vector of type {}", TypeIdToString(input.GetTypeId())));
   }
 }
 

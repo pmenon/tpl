@@ -4,8 +4,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "spdlog/fmt/fmt.h"
-
 #include "common/macros.h"
 #include "sql/sql.h"
 
@@ -58,9 +56,7 @@ class Exception : public std::exception {
 
  protected:
   template <typename... Args>
-  void Format(const Args &... args) {
-    exception_message_ = fmt::format(exception_message_, args...);
-  }
+  void Format(const Args &... args);
 
  private:
   // The type of the exception
@@ -81,10 +77,7 @@ std::ostream &operator<<(std::ostream &os, const Exception &e);
  */
 class CastException : public Exception {
  public:
-  CastException(sql::TypeId src_type, sql::TypeId dest_type)
-      : Exception(ExceptionType::Conversion, "Type {} cannot be cast as {}") {
-    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
-  }
+  CastException(sql::TypeId src_type, sql::TypeId dest_type);
 };
 
 /**
@@ -92,11 +85,8 @@ class CastException : public Exception {
  */
 class ConversionException : public Exception {
  public:
-  template <typename... Args>
-  explicit ConversionException(const std::string &msg, const Args &... args)
-      : Exception(ExceptionType::Conversion, msg) {
-    Format(args...);
-  }
+  explicit ConversionException(const std::string &msg)
+      : Exception(ExceptionType::Conversion, msg) {}
 };
 
 /**
@@ -104,10 +94,7 @@ class ConversionException : public Exception {
  */
 class InvalidTypeException : public Exception {
  public:
-  InvalidTypeException(sql::TypeId type, const std::string &msg)
-      : Exception(ExceptionType::InvalidType, "Invalid type ['{}']: " + msg) {
-    Format(TypeIdToString(type));
-  }
+  InvalidTypeException(sql::TypeId type, const std::string &msg);
 };
 
 /**
@@ -115,11 +102,8 @@ class InvalidTypeException : public Exception {
  */
 class NotImplementedException : public Exception {
  public:
-  template <typename... Args>
-  explicit NotImplementedException(const std::string &msg, const Args &... args)
-      : Exception(ExceptionType::NotImplemented, msg) {
-    Format(args...);
-  }
+  explicit NotImplementedException(const std::string &msg)
+      : Exception(ExceptionType::NotImplemented, msg) {}
 };
 
 /**
@@ -127,10 +111,7 @@ class NotImplementedException : public Exception {
  */
 class TypeMismatchException : public Exception {
  public:
-  TypeMismatchException(sql::TypeId src_type, sql::TypeId dest_type, const std::string &msg)
-      : Exception(ExceptionType::TypeMismatch, "Type '{}' does not match type '{}'. " + msg) {
-    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
-  }
+  TypeMismatchException(sql::TypeId src_type, sql::TypeId dest_type, const std::string &msg);
 };
 
 /**
@@ -138,19 +119,7 @@ class TypeMismatchException : public Exception {
  */
 class ValueOutOfRangeException : public Exception {
  public:
-  template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>, uint32_t>>
-  ValueOutOfRangeException(T value, sql::TypeId src_type, sql::TypeId dest_type)
-      : ValueOutOfRangeException(
-            "Type {} with value {} cannot be cast because the value is out of range for the "
-            "target type {}") {
-    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
-  }
-
-  ValueOutOfRangeException(sql::TypeId src_type, sql::TypeId dest_type)
-      : ValueOutOfRangeException(
-            "Type {} cannot be cast because the value is out of range for the target type {}") {
-    Format(TypeIdToString(src_type), TypeIdToString(dest_type));
-  }
+  ValueOutOfRangeException(sql::TypeId src_type, sql::TypeId dest_type);
 
  private:
   explicit ValueOutOfRangeException(const std::string &message)

@@ -1,5 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/operations/comparison_operators.h"
 
@@ -131,7 +133,8 @@ void GatherAndSelectOperation(const Vector &input, const Vector &pointers, const
       TemplatedGatherAndSelectOperation<Blob, Op>(input, pointers, offset, tid_list);
       break;
     default:
-      throw NotImplementedException("gather+select on type {}", TypeIdToString(input.GetTypeId()));
+      throw NotImplementedException(
+          fmt::format("gather+select on type {}", TypeIdToString(input.GetTypeId())));
   }
 }
 

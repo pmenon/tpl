@@ -1,5 +1,7 @@
 #include "sql/codegen/expression/null_check_translator.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/work_context.h"
@@ -23,8 +25,8 @@ ast::Expr *NullCheckTranslator::DeriveValue(WorkContext *ctx,
       return codegen->UnaryOp(parsing::Token::Type::BANG,
                               codegen->CallBuiltin(ast::Builtin::IsValNull, {input}));
     default:
-      throw NotImplementedException("Operator expression type {}",
-                                    planner::ExpressionTypeToString(type, false));
+      throw NotImplementedException(
+          fmt::format("operator expression type {}", planner::ExpressionTypeToString(type, false)));
   }
 }
 

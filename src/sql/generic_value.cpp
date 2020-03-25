@@ -1,6 +1,9 @@
 #include "sql/generic_value.h"
 
+#include <sql/generic_value.h>
 #include <string>
+
+#include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
 #include "common/macros.h"
@@ -45,8 +48,8 @@ bool GenericValue::Equals(const GenericValue &other) const {
     case TypeId::Varchar:
       return str_value_ == other.str_value_;
     default:
-      throw NotImplementedException("Equality of '{}' generic value is unsupported",
-                                    TypeIdToString(type_id_));
+      throw NotImplementedException(
+          fmt::format("Equality of '{}' generic value is unsupported", TypeIdToString(type_id_)));
   }
   return false;
 }
@@ -85,14 +88,15 @@ std::string GenericValue::ToString() const {
       return std::to_string(value_.float_);
     case TypeId::Double:
       return std::to_string(value_.double_);
-    case TypeId::Date: {
+    case TypeId::Date:
       return value_.date_.ToString();
-    }
+    case TypeId::Timestamp:
+      return value_.timestamp_.ToString();
     case TypeId::Varchar:
       return "'" + str_value_ + "'";
     default:
-      throw NotImplementedException("String-ification of '{}' generic value is unsupported",
-                                    TypeIdToString(type_id_));
+      throw NotImplementedException(fmt::format(
+          "string-ification of '{}' generic value is unsupported", TypeIdToString(type_id_)));
   }
 }
 
@@ -222,8 +226,8 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Va
     case TypeId::Varchar:
       return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).val.GetStringView());
     default:
-      throw NotImplementedException("Run-time value of type '{}' not supported as generic value",
-                                    TypeIdToString(type_id));
+      throw NotImplementedException(fmt::format(
+          "run-time value of type '{}' not supported as generic value", TypeIdToString(type_id)));
   }
 }
 

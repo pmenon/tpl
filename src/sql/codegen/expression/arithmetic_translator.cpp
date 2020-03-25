@@ -1,5 +1,7 @@
 #include "sql/codegen/expression/arithmetic_translator.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
@@ -33,8 +35,8 @@ ast::Expr *ArithmeticTranslator::DeriveValue(WorkContext *ctx,
     case planner::ExpressionType::OPERATOR_MOD:
       return codegen->BinaryOp(parsing::Token::Type::PERCENT, left_val, right_val);
     default: {
-      throw NotImplementedException("Translation of arithmetic type {}",
-                                    planner::ExpressionTypeToString(expr_type, true));
+      throw NotImplementedException(fmt::format("Translation of arithmetic type {}",
+                                                planner::ExpressionTypeToString(expr_type, true)));
     }
   }
 }

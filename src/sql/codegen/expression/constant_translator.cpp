@@ -1,5 +1,7 @@
 #include "sql/codegen/expression/constant_translator.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/work_context.h"
@@ -35,8 +37,8 @@ ast::Expr *ConstantTranslator::DeriveValue(WorkContext *ctx,
     case TypeId::Varchar:
       return codegen->StringToSql(val.str_value_);
     default:
-      throw NotImplementedException("Translation of constant type {}",
-                                    TypeIdToString(val.GetTypeId()));
+      throw NotImplementedException(
+          fmt::format("Translation of constant type {}", TypeIdToString(val.GetTypeId())));
   }
 }
 

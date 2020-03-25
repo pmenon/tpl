@@ -8,6 +8,8 @@
 
 #include "count/hll.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "tbb/parallel_for_each.h"
 
 #include "common/cpu_info.h"
@@ -434,8 +436,8 @@ void FixGrouping(AggregationHashTable::HashToGroupIdMap *groups, const Vector &h
       TemplatedFixGrouping<Blob>(groups, hashes, entries, probe_keys, tid_list, f);
       break;
     default:
-      throw NotImplementedException("key comparison on type {} not supported",
-                                    TypeIdToString(probe_keys.GetTypeId()));
+      throw NotImplementedException(fmt::format("key comparison on type {} not supported",
+                                                TypeIdToString(probe_keys.GetTypeId())));
   }
 }
 

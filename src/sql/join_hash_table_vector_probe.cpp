@@ -1,5 +1,7 @@
 #include "sql/join_hash_table_vector_probe.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/cpu_info.h"
 #include "common/exception.h"
 #include "sql/constant_vector.h"
@@ -8,6 +10,7 @@
 #include "sql/static_vector.h"
 #include "sql/vector_operations/vector_operators.h"
 #include "sql/vector_projection.h"
+
 namespace tpl::sql {
 
 JoinHashTableVectorProbe::JoinHashTableVectorProbe(const JoinHashTable &table,
@@ -193,7 +196,8 @@ bool JoinHashTableVectorProbe::Next(VectorProjection *input) {
       has_next = NextRightJoin(input);
       break;
     default:
-      throw NotImplementedException("Join type []", planner::JoinTypeToString(join_type_));
+      throw NotImplementedException(
+          fmt::format("join type []", planner::JoinTypeToString(join_type_)));
   }
 
   // Filter the match vector now so GetMatches() returns the filtered list.

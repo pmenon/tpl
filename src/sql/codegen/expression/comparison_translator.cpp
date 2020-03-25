@@ -1,5 +1,7 @@
 #include "sql/codegen/expression/comparison_translator.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
@@ -39,8 +41,8 @@ ast::Expr *ComparisonTranslator::DeriveValue(WorkContext *ctx,
     case planner::ExpressionType::COMPARE_NOT_LIKE:
       return codegen->NotLike(left_val, right_val);
     default: {
-      throw NotImplementedException("Translation of comparison type {}",
-                                    planner::ExpressionTypeToString(expr_type, true));
+      throw NotImplementedException(fmt::format("Translation of comparison type {}",
+                                                planner::ExpressionTypeToString(expr_type, true)));
     }
   }
 }

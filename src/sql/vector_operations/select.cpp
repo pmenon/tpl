@@ -1,5 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "common/settings.h"
 #include "sql/operations/comparison_operators.h"
@@ -179,8 +181,8 @@ void SelectOperation(const Vector &left, const Vector &right, TupleIdList *tid_l
       TemplatedSelectOperation<VarlenEntry, Op>(left, right, tid_list);
       break;
     default:
-      throw NotImplementedException("selections on vector type '{}' not supported",
-                                    TypeIdToString(left.GetTypeId()));
+      throw NotImplementedException(fmt::format("selections on vector type '{}' not supported",
+                                                TypeIdToString(left.GetTypeId())));
   }
 }
 

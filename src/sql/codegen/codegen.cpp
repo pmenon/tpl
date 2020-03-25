@@ -1,5 +1,7 @@
 #include "sql/codegen/codegen.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/context.h"
@@ -205,7 +207,8 @@ ast::Expr *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId ret_t
       } else if (ret_type == TypeId::Varchar) {
         return BuiltinType(ast::BuiltinType::StringMinAggregate);
       } else {
-        throw NotImplementedException("MIN() aggregates on type {}", TypeIdToString(ret_type));
+        throw NotImplementedException(
+            fmt::format("MIN() aggregates on type {}", TypeIdToString(ret_type)));
       }
     case planner::ExpressionType::AGGREGATE_MAX:
       if (IsTypeIntegral(ret_type)) {
@@ -217,7 +220,8 @@ ast::Expr *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId ret_t
       } else if (ret_type == TypeId::Varchar) {
         return BuiltinType(ast::BuiltinType::StringMaxAggregate);
       } else {
-        throw NotImplementedException("MAX() aggregates on type {}", TypeIdToString(ret_type));
+        throw NotImplementedException(
+            fmt::format("MAX() aggregates on type {}", TypeIdToString(ret_type)));
       }
     case planner::ExpressionType::AGGREGATE_SUM:
       TPL_ASSERT(IsTypeNumeric(ret_type), "Only arithmetic types have sums.");
@@ -470,8 +474,8 @@ ast::Expr *CodeGen::VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, u
       ret_kind = ast::BuiltinType::StringVal;
       break;
     default:
-      throw NotImplementedException("CodeGen: Reading type {} from VPI not supported.",
-                                    TypeIdToString(type_id));
+      throw NotImplementedException(
+          fmt::format("CodeGen: Reading type {} from VPI not supported.", TypeIdToString(type_id)));
   }
   ast::Expr *call = CallBuiltin(builtin, {vpi, Const32(idx)});
   call->SetType(ast::BuiltinType::Get(context_, ret_kind));
@@ -502,8 +506,9 @@ ast::Expr *CodeGen::VPIFilter(ast::Expr *vp, planner::ExpressionType comp_type, 
       builtin = ast::Builtin::VectorFilterGreaterThanEqual;
       break;
     default:
-      throw NotImplementedException("CodeGen: Vector filter type {} from VPI not supported.",
-                                    planner::ExpressionTypeToString(comp_type, true));
+      throw NotImplementedException(
+          fmt::format("CodeGen: Vector filter type {} from VPI not supported.",
+                      planner::ExpressionTypeToString(comp_type, true)));
   }
   ast::Expr *call = CallBuiltin(builtin, {vp, Const32(col_idx), filter_val, tids});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));

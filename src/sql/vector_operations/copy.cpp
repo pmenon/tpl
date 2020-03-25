@@ -1,5 +1,7 @@
 #include "sql/vector_operations/vector_operators.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 
 namespace tpl::sql {
@@ -56,8 +58,8 @@ void GenericCopyOperation(const Vector &source, void *target, uint64_t offset,
       TemplatedCopyOperation<Timestamp>(source, target, offset, element_count);
       break;
     default:
-      throw NotImplementedException("copying vector of type '{}' not supported",
-                                    TypeIdToString(source.GetTypeId()));
+      throw NotImplementedException(fmt::format("copying vector of type '{}' not supported",
+                                                TypeIdToString(source.GetTypeId())));
   }
 }
 

@@ -7,6 +7,8 @@
 
 #include "csv/csv.hpp"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "common/memory.h"
 #include "logging/logger.h"
@@ -87,8 +89,8 @@ void ParseCol(byte *data, uint32_t *null_bitmap, const Schema::ColumnInfo &col, 
       break;
     }
     default:
-      throw NotImplementedException("Parsing column type '{}' not supported",
-                                    col.sql_type.GetName());
+      throw NotImplementedException(
+          fmt::format("Parsing column type '{}' not supported", col.sql_type.GetName()));
   }
 }
 

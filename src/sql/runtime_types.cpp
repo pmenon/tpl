@@ -177,7 +177,8 @@ Date Date::FromString(const char *str, std::size_t len) {
 
   uint32_t year = 0, month = 0, day = 0;
 
-#define ERROR throw ConversionException("{} is not a valid date", std::string(str, len));
+#define ERROR \
+  throw ConversionException(fmt::format("{} is not a valid date", std::string(str, len)));
 
   // Year
   while (true) {
@@ -222,12 +223,12 @@ Date Date::FromString(const char *str, std::size_t len) {
 Date Date::FromYMD(int32_t year, int32_t month, int32_t day) {
   // Check calendar date.
   if (!IsValidCalendarDate(year, month, day)) {
-    throw ConversionException("{}-{}-{} is not a valid date", year, month, day);
+    throw ConversionException(fmt::format("{}-{}-{} is not a valid date", year, month, day));
   }
 
   // Check if date would overflow Julian calendar.
   if (!IsValidJulianDate(year, month, day)) {
-    throw ConversionException("{}-{}-{} is not a valid date", year, month, day);
+    throw ConversionException(fmt::format("{}-{}-{} is not a valid date", year, month, day));
   }
 
   return Date(BuildJulianDate(year, month, day));
@@ -358,7 +359,7 @@ Timestamp Timestamp::FromYMDHMS(int32_t year, int32_t month, int32_t day, int32_
                                 int32_t sec) {
   // Check date component.
   if (!IsValidCalendarDate(year, month, day) || !IsValidJulianDate(year, month, day)) {
-    throw ConversionException("date field {}-{}-{} out of range", year, month, day);
+    throw ConversionException(fmt::format("date field {}-{}-{} out of range", year, month, day));
   }
 
   // Check time component.
@@ -366,7 +367,7 @@ Timestamp Timestamp::FromYMDHMS(int32_t year, int32_t month, int32_t day, int32_
       hour > kHoursPerDay ||
       // Check for > 24:00:00.
       (hour == kHoursPerDay && (min > 0 || sec > 0))) {
-    throw ConversionException("time field {}:{}:{} out of range", hour, min, sec);
+    throw ConversionException(fmt::format("time field {}:{}:{} out of range", hour, min, sec));
   }
 
   const int64_t date = BuildJulianDate(year, month, day);
@@ -375,8 +376,8 @@ Timestamp Timestamp::FromYMDHMS(int32_t year, int32_t month, int32_t day, int32_
 
   // Check for major overflow.
   if ((result - time) / kMicroSecondsPerDay != date) {
-    throw ConversionException("timestamp out of range {}-{}-{} {}:{}:{} out of range", year, month,
-                              day, hour, min, sec);
+    throw ConversionException(fmt::format("timestamp out of range {}-{}-{} {}:{}:{} out of range",
+                                          year, month, day, hour, min, sec));
   }
 
   // Loos good.
