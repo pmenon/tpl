@@ -61,11 +61,6 @@ class AggregationHashTable {
   using KeyEqFn = bool (*)(const void *, const void *);
 
   /**
-   * Function that takes an input element and computes a hash value.
-   */
-  using HashFn = hash_t (*)(void *);
-
-  /**
    * Function to initialize a new aggregate.
    * Convention: First argument is the aggregate to initialize, second argument is the input tuple
    *             to initialize the aggregate with.
@@ -202,9 +197,9 @@ class AggregationHashTable {
    *
    * The thread states container is assumed to already have been configured prior to this scan call.
    *
-   * The callback scan function accepts two opaque state objects: an query state and a thread state.
-   * The query state is provided as a function argument. The thread state will be pulled from the
-   * provided ThreadStateContainer object.
+   * The callback scan function accepts three arguments of which the first two are opaque state
+   * objects: a query state and a thread state. The query state is provided by the user here. The
+   * thread state is pulled from the provided ThreadStateContainer object for the thread.
    *
    * @param query_state The (opaque) query state.
    * @param thread_states The container holding all thread states.
