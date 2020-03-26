@@ -62,7 +62,7 @@ class CastingFunctions : public AllStatic {
       *result = TO_TYPE::Null();                                                       \
       return;                                                                          \
     }                                                                                  \
-    OutputType output;                                                                 \
+    OutputType output{};                                                               \
     tpl::sql::TryCast<InputType, OutputType>{}(v.val, &output);                        \
     *result = TO_TYPE(output);                                                         \
   }
@@ -87,8 +87,7 @@ CAST_HIDE_NULL_FAST(DateVal, TimestampVal);
                                                 const FROM_TYPE &v) {                           \
     /*                                                                                          \
      * TODO(pmenon): Perform an explicit if-check here because we expect string                 \
-     *               parsing to be more costly than a branch mis-prediction.                    \
-     *               Verify!                                                                    \
+     *               parsing to be costlier than a branch mis-prediction. Check!                \
      */                                                                                         \
     if (v.is_null) {                                                                            \
       *result = StringVal::Null();                                                              \
