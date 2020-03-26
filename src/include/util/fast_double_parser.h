@@ -36,7 +36,7 @@ struct value128 {
   uint64_t high;
 };
 
-value128 full_multiplication(uint64_t value1, uint64_t value2) {
+static inline value128 full_multiplication(uint64_t value1, uint64_t value2) {
   value128 answer;
 #ifdef _MSC_VER
   // todo: this might fail under visual studio for ARM
@@ -50,7 +50,7 @@ value128 full_multiplication(uint64_t value1, uint64_t value2) {
 }
 
 /* result might be undefined when input_num is zero */
-int leading_zeroes(uint64_t input_num) {
+static inline int leading_zeroes(uint64_t input_num) {
 #ifdef _MSC_VER
   unsigned long leading_zero = 0;
   // Search the mask data from most significant bit (MSB)
