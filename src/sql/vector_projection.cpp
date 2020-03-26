@@ -9,7 +9,7 @@
 #include "sql/column_vector_iterator.h"
 #include "sql/tuple_id_list.h"
 #include "sql/vector.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 
 namespace tpl::sql {
 

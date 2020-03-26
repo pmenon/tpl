@@ -9,7 +9,7 @@
 #include "sql/catalog.h"
 #include "sql/generic_value.h"
 #include "sql/table_vector_iterator.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/fast_rand.h"
@@ -83,7 +83,7 @@ void InitTestTables() {
 
     // Populate it.
     auto exec_micros = util::Time<std::micro>([&] { LoadTestTable(table_meta, table.get()); });
-    LOG_INFO("Populated table {} ({} ms)", table_meta.name, exec_micros);
+    LOG_DEBUG("Populated table {} ({} ms)", table_meta.name, exec_micros);
 
     // Insert into catalog.
     catalog->InsertTable(table_meta.name, std::move(table));

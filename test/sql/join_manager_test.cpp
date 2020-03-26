@@ -5,7 +5,7 @@
 #include "sql/join_hash_table.h"
 #include "sql/join_manager.h"
 #include "sql/table_vector_iterator.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "util/hash_util.h"
 #include "util/test_harness.h"
 

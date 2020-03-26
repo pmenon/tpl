@@ -10,7 +10,7 @@
 #include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "util/bit_util.h"
 
 namespace tpl::sql {

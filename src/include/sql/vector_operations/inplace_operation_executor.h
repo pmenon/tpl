@@ -5,7 +5,7 @@
 #include "common/exception.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/traits.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 
 namespace tpl::sql {
 

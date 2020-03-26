@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "sql/tuple_id_list.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection.h"
 #include "util/test_harness.h"
 

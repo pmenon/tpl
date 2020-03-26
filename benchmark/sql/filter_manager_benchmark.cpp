@@ -13,7 +13,7 @@
 #include "sql/schema.h"
 #include "sql/table.h"
 #include "sql/table_vector_iterator.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "util/timer.h"
 
 ////////////////////////////////////////////////////////////////////////////////

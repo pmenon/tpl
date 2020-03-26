@@ -8,7 +8,7 @@
 #include "sql/generic_value.h"
 #include "sql/join_hash_table.h"
 #include "sql/static_vector.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection.h"
 
 namespace tpl::sql {

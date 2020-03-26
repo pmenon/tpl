@@ -8,7 +8,7 @@
 #include "sql/generic_value.h"
 #include "sql/sql.h"
 #include "sql/tuple_id_list.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 

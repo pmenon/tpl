@@ -1,4 +1,4 @@
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 
 #include "ips4o/ips4o.hpp"
 

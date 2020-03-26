@@ -9,7 +9,7 @@
 #include "common/macros.h"
 #include "sql/constant_vector.h"
 #include "sql/value.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "util/math_util.h"
 
 namespace tpl::sql {

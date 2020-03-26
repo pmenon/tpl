@@ -19,7 +19,7 @@
 #include "sql/generic_value.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector_operations/unary_operation_executor.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/bit_util.h"
 #include "util/math_util.h"

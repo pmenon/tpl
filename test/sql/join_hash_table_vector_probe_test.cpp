@@ -3,7 +3,7 @@
 
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_probe.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash_util.h"
