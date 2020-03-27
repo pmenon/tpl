@@ -1,6 +1,6 @@
 #include <random>
 
-#include "sql/operations/hash_operators.h"
+#include "sql/operators/hash_operators.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/vector_operations.h"
 #include "util/sql_test_harness.h"

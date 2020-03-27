@@ -14,7 +14,7 @@
 #include "sql/functions/is_null_predicate.h"
 #include "sql/functions/string_functions.h"
 #include "sql/join_hash_table.h"
-#include "sql/operations/hash_operators.h"
+#include "sql/operators/hash_operators.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"

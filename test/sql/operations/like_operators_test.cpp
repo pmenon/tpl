@@ -1,6 +1,6 @@
 #include <string>
 
-#include "sql/operations/like_operators.h"
+#include "sql/operators/like_operators.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {

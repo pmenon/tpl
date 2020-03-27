@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include "sql/operations/numeric_binary_operators.h"
-#include "sql/operations/numeric_operators.h"
+#include "sql/operators/numeric_binary_operators.h"
+#include "sql/operators/numeric_operators.h"
 #include "sql/value.h"
 
 namespace tpl::sql {

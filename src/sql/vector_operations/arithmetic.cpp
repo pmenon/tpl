@@ -1,7 +1,7 @@
 #include "sql/vector_operations/vector_operations.h"
 
 #include "common/settings.h"
-#include "sql/operations/numeric_binary_operators.h"
+#include "sql/operators/numeric_binary_operators.h"
 #include "sql/vector_operations/binary_operation_executor.h"
 
 namespace tpl::sql {

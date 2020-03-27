@@ -2,7 +2,7 @@
 #include <random>
 #include <vector>
 
-#include "sql/operations/comparison_operators.h"
+#include "sql/operators/comparison_operators.h"
 #include "sql/sorter.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"

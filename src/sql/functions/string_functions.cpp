@@ -5,7 +5,7 @@
 #include <string>
 
 #include "sql/execution_context.h"
-#include "sql/operations/like_operators.h"
+#include "sql/operators/like_operators.h"
 
 namespace tpl::sql {
 

@@ -5,7 +5,7 @@
 #include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
-#include "sql/operations/comparison_operators.h"
+#include "sql/operators/comparison_operators.h"
 #include "util/bit_vector.h"
 
 namespace tpl::sql {

@@ -1,7 +1,7 @@
 #include "sql/vector_operations/vector_operations.h"
 
 #include "common/settings.h"
-#include "sql/operations/numeric_inplace_operators.h"
+#include "sql/operators/numeric_inplace_operators.h"
 #include "sql/vector_operations/inplace_operation_executor.h"
 
 namespace tpl::sql {

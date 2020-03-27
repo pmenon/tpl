@@ -3,7 +3,7 @@
 #include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
-#include "sql/operations/hash_operators.h"
+#include "sql/operators/hash_operators.h"
 
 namespace tpl::sql {
 

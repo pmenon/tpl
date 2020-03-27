@@ -5,7 +5,7 @@
 #include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
-#include "sql/operations/cast_operators.h"
+#include "sql/operators/cast_operators.h"
 #include "sql/vector_operations/unary_operation_executor.h"
 
 namespace tpl::sql {

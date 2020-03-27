@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sql/operations/cast_operators.h"
+#include "sql/operators/cast_operators.h"
 #include "sql/value.h"
 
 namespace tpl::sql {

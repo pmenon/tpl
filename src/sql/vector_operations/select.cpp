@@ -4,7 +4,7 @@
 
 #include "common/exception.h"
 #include "common/settings.h"
-#include "sql/operations/comparison_operators.h"
+#include "sql/operators/comparison_operators.h"
 #include "sql/runtime_types.h"
 #include "sql/tuple_id_list.h"
 
