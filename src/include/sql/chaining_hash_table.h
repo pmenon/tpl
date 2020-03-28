@@ -16,28 +16,22 @@ namespace tpl::sql {
 
 //===----------------------------------------------------------------------===//
 //
-// Chaining Hash Table
+// Chaining Hash Table Base
 //
 //===----------------------------------------------------------------------===//
 
 /**
- * ChainingHashTable is a simple bucket-chained table with optional pointer tagging. The use of
- * pointer tagging is controlled through the sole boolean template parameter. Pointer tagging uses
- * the first @em ChainingHashTable::kNumTagBits bits of the entry pointers in the main bucket
- * directory as a tiny bloom filter. This bloom filter is used to early-prune probe misses that
- * would normally require a full cache-unfriendly linked list traversal. We can re-purpose the
- * most-significant 16-bits of a pointer because X86_64 uses 48-bits of the OS virtual memory
- * address space. Pointer tagged hash tables will have to be disabled when the full 64-bit VM
- * address space is enabled.
+ * ChainingHashTableBase is the base class implementing a simple bucket-chained hash table with
+ * optional pointer tagging. The use of pointer tagging is controlled through proper API usage.
+ * Pointer tagging uses the first @em ChainingHashTableBase::kNumTagBits bits of the entry pointers
+ * in the main bucket directory as a tiny bloom filter. This bloom filter is used to early-prune
+ * probe misses that would normally require a full cache-unfriendly linked list traversal. We can
+ * re-purpose the most-significant 16-bits of a pointer because X86_64 uses 48-bits of the OS
+ * virtual memory address space. Pointer tagged hash tables will have to be disabled when the full
+ * 64-bit VM address space is enabled.
  *
- * ChainingHashTable support both serial and concurrent insertions. Both are controlled through
- * a template parameter to ChainingHashTable::Insert() and ChainingHashTable::InsertBatch(). The
- * former method inserts a single entry, while the latter method bulk-loads a batch of entries.
- * Whenever possible, prefer using the latter as it can apply some optimizations that usually
- * improve performance, such as pre-fetching and batched atomic additions.
- *
- * ChainingHashTable also supports both one-at-a-time and batched probes. Like batched insertion,
- * prefer using the batched probe because it offers greater performance.
+ * ChainingHashTableBase supports both serial and concurrent insertions. Both are controlled through
+ * a template parameter to ChainingHashTableBase::Insert*() methods.
  *
  * ChainingHashTables only stores pointers into externally managed storage; it does not manage any
  * hash table data internally. In other words, the memory of all inserted HashTableEntry must be
@@ -46,8 +40,7 @@ namespace tpl::sql {
  * Note: ChainingHashTable leverages the ‘next’ pointer in HashTableEntry::next to implement the
  * linked list bucket chain.
  */
-template <bool UseTags>
-class ChainingHashTable {
+class ChainingHashTableBase {
  private:
   // X86_64 has 48-bit VM address space, leaving 16 for us to re-purpose.
   static constexpr uint32_t kNumTagBits = 16;
@@ -59,26 +52,20 @@ class ChainingHashTable {
   static constexpr uint64_t kMaskTag = (~0ull) << kNumPointerBits;
   // The minimum table size.
   static constexpr uint64_t kMinTableSize = 8;
-  // The default load factor to use.
-  static constexpr float kDefaultLoadFactor = 0.7;
 
  public:
-  /**
-   * Create an empty hash table. Callers must call ChainingHashTable<UseTags>::SetSize() before
-   * using this hash table.
-   * @param load_factor The desired load-factor for the table.
-   */
-  explicit ChainingHashTable(float load_factor = kDefaultLoadFactor) noexcept;
+  // The default load factor to use.
+  static constexpr float kDefaultLoadFactor = 0.7;
 
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(ChainingHashTable);
+  DISALLOW_COPY_AND_MOVE(ChainingHashTableBase);
 
   /**
    * Destructor.
    */
-  ~ChainingHashTable();
+  ~ChainingHashTableBase();
 
   /**
    * Explicitly set the size of the hash table to support at least @em new_size elements. The input
@@ -90,8 +77,17 @@ class ChainingHashTable {
   void SetSize(uint64_t new_size);
 
   /**
-   * Insert an entry into the hash table without tagging the entry.
-   *
+   * Insert an entry into the hash table without tagging it.
+   * @pre The input hash value @em hash should match what's stored in @em entry.
+   * @tparam Concurrent Is the insert occurring concurrently with other inserts.
+   * @param entry The entry to insert.
+   * @param hash The hash value of the entry.
+   */
+  template <bool Concurrent>
+  void InsertUntagged(HashTableEntry *entry, hash_t hash);
+
+  /**
+   * Insert an entry into the hash table after updating its tag bits.
    * @pre The input hash value @em hash should match what's stored in @em entry.
    *
    * @tparam Concurrent Is the insert occurring concurrently with other inserts.
@@ -99,16 +95,7 @@ class ChainingHashTable {
    * @param hash The hash value of the entry.
    */
   template <bool Concurrent>
-  void Insert(HashTableEntry *entry);
-
-  /**
-   * Insert a list of entries into this hash table.
-   * @tparam Concurrent Is the insertion occurring concurrently with other insertions?
-   * @tparam Allocator The allocator used by the vector.
-   * @param entries The list of entries to insert into the table.
-   */
-  template <bool Concurrent, typename Allocator>
-  void InsertBatch(util::ChunkedVector<Allocator> *entries);
+  void InsertTagged(HashTableEntry *entry, hash_t hash);
 
   /**
    * Prefetch the head of the bucket chain for the hash @em hash.
@@ -119,46 +106,26 @@ class ChainingHashTable {
   void PrefetchChainHead(hash_t hash) const;
 
   /**
-   * Given a hash value, return the head of the bucket chain ignoring any tag. This probe is
-   * performed assuming no concurrent access into the table.
-   * @param hash The hash value of the element to find
-   * @return The (potentially null) head of the bucket chain for the given hash
+   * Return the head of the bucket chain for a key with the provided hash value. This probe does no
+   * leverage tag bits and assumes no concurrent access into the table.
+   * @param hash The hash value of the key to find.
+   * @return The (potentially null) head of the bucket chain for the given hash.
    */
-  HashTableEntry *FindChainHead(hash_t hash) const;
+  HashTableEntry *FindChainHeadUntagged(hash_t hash) const;
 
   /**
-   * Perform a batch lookup of elements whose hash values are stored in @em hashes, storing the
-   * results in @em results.
-   * @param num_elements The number of hashes to lookup.
-   * @param hashes The hash values of the probe elements.
-   * @param results The heads of the bucket chain of the probed elements.
+   * Return the head of the bucket chain for a key with the provided hash value. This probe method
+   * uses the pointer tagging optimization to determine if the hash value is contained in the table.
+   * Assumes no concurrent access into the table.
+   * @param hash The hash value of the key to find.
+   * @return The (potentially null) head of the bucket chain for the given hash.
    */
-  void LookupBatch(uint64_t num_elements, const hash_t hashes[],
-                   const HashTableEntry *entries[]) const;
-
-  /**
-   * Empty all entries in this hash table into the sink functor. After this function exits, the hash
-   * table is empty.
-   * @tparam F The function must be of the form void(*)(HashTableEntry*)
-   * @param sink The sink of all entries in the hash table
-   */
-  template <typename F>
-  void FlushEntries(const F &sink);
-
-  /**
-   * @return True if the hash table is empty; false otherwise.
-   */
-  bool IsEmpty() const { return GetElementCount() == 0; }
+  HashTableEntry *FindChainHeadTagged(hash_t hash) const;
 
   /**
    * @return The total number of bytes this hash table has allocated.
    */
   uint64_t GetTotalMemoryUsage() const { return sizeof(HashTableEntry *) * GetCapacity(); }
-
-  /**
-   * @return The number of elements stored in this hash table.
-   */
-  uint64_t GetElementCount() const { return num_elements_.load(std::memory_order_relaxed); }
 
   /**
    * @return The maximum number of elements this hash table can store at its current size.
@@ -172,50 +139,13 @@ class ChainingHashTable {
    */
   float GetLoadFactor() const { return load_factor_; }
 
-  /**
-   * @return Collect and return a tuple containing the minimum, maximum, and average bucket chain in
-   *         this hash table. This is not a concurrent operation!
-   */
-  std::tuple<uint64_t, uint64_t, float> GetChainLengthStats() const;
-
- private:
-  template <bool>
-  friend class ChainingHashTableIterator;
-  template <bool>
-  friend class ChainingHashTableVectorIterator;
+ protected:
+  // Create an empty hash table. Constructor is protected to ensure base class
+  // cannot be instantiated.
+  explicit ChainingHashTableBase(float load_factor) noexcept;
 
   // Return the position of the bucket the given hash value lands into
   uint64_t BucketPosition(const hash_t hash) const { return hash & mask_; }
-
-  // Add the given value to the total element count
-  void AddElementCount(uint64_t v) { num_elements_.fetch_add(v, std::memory_order_relaxed); }
-
-  // Note: internal insertion functions do not modify the element count!
-
-  // Insert an entry into the hash table without tagging the entry.
-  template <bool Concurrent>
-  void InsertUntagged(HashTableEntry *entry, hash_t hash);
-
-  // Insert an entry into the hash table using a tagged pointers.
-  template <bool Concurrent>
-  void InsertTagged(HashTableEntry *entry, hash_t hash);
-
-  // Insert a list of entries into the hash table.
-  template <bool Prefetch, bool Concurrent, typename Allocator>
-  void InsertBatchInternal(util::ChunkedVector<Allocator> *entries);
-
-  // Given a hash value, return the head of the bucket chain ignoring any tag.
-  // This probe is performed assuming no concurrent access into the table.
-  HashTableEntry *FindChainHeadUntagged(hash_t hash) const;
-
-  // Given a hash value, return the head of the bucket chain removing the tag.
-  // This probe is performed assuming no concurrent access into the table.
-  HashTableEntry *FindChainHeadTagged(hash_t hash) const;
-
-  // Perform a batch lookup of elements.
-  template <bool Prefetch>
-  void LookupBatchInternal(uint64_t num_elements, const hash_t hashes[],
-                           const HashTableEntry *entries[]) const;
 
   // -------------------------------------------------------
   // Tag-related operations
@@ -247,10 +177,10 @@ class ChainingHashTable {
     return 1ull << (tag_bit_pos + kNumPointerBits);
   }
 
- private:
+ protected:
   // Main directory of hash table entry buckets. Each bucket is the head of a
   // linked list chain.
-  HashTableEntry **entries_;
+  std::atomic<HashTableEntry *> *entries_;
 
   // The mask to use to compute the bucket position of an entry.
   uint64_t mask_;
@@ -258,88 +188,169 @@ class ChainingHashTable {
   // The capacity of the directory.
   uint64_t capacity_;
 
-  // The current number of elements stored in the table.
-  std::atomic<uint64_t> num_elements_;
-
   // The configured load-factor.
   float load_factor_;
 };
 
-// ---------------------------------------------------------
-// Implementation below
-// ---------------------------------------------------------
-
-template <bool UseTags>
 template <bool ForRead>
-inline void ChainingHashTable<UseTags>::PrefetchChainHead(hash_t hash) const {
+inline void ChainingHashTableBase::PrefetchChainHead(hash_t hash) const {
   const uint64_t pos = BucketPosition(hash);
   Memory::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
-#define COMPARE_EXCHANGE_WEAK(ADDRESS, EXPECTED, NEW_VAL)                                     \
-  (__atomic_compare_exchange_n((ADDRESS),        /* Address to atomically CAS into */         \
-                               (EXPECTED),       /* The old value we read from the address */ \
-                               (NEW_VAL),        /* The new value we want to write there */   \
-                               true,             /* Weak exchange ?*/                         \
-                               __ATOMIC_RELEASE, /* Use release semantics for success*/       \
-                               __ATOMIC_RELAXED  /* Use relaxed semantics for failure*/       \
-                               ))
-
-template <bool UseTags>
 template <bool Concurrent>
-inline void ChainingHashTable<UseTags>::InsertUntagged(HashTableEntry *const entry,
-                                                       const hash_t hash) {
+inline void ChainingHashTableBase::InsertUntagged(HashTableEntry *const entry, const hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    HashTableEntry *old_entry = entries_[pos];
+    std::atomic<HashTableEntry *> *location = &entries_[pos];
+    HashTableEntry *old_entry = location->load();
+    HashTableEntry *new_entry = nullptr;
     do {
       entry->next = old_entry;
-    } while (!COMPARE_EXCHANGE_WEAK(entries_ + pos, &old_entry, entry));
+      new_entry = entry;
+    } while (!location->compare_exchange_weak(old_entry, new_entry));
   } else {
     entry->next = entries_[pos];
     entries_[pos] = entry;
   }
 }
 
-template <bool UseTags>
 template <bool Concurrent>
-inline void ChainingHashTable<UseTags>::InsertTagged(HashTableEntry *const entry,
-                                                     const hash_t hash) {
+inline void ChainingHashTableBase::InsertTagged(HashTableEntry *const entry, const hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
 
   TPL_ASSERT(pos < GetCapacity(), "Computed table position exceeds capacity!");
   TPL_ASSERT(entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    HashTableEntry *old_entry = entries_[pos];
+    std::atomic<HashTableEntry *> *location = &entries_[pos];
+    HashTableEntry *old_entry = location->load();
     HashTableEntry *new_entry = nullptr;
     do {
-      entry->next = UntagPointer(old_entry);    // Un-tag the old entry
-      new_entry = UpdateTag(old_entry, entry);  // Tag the new entry
-    } while (!COMPARE_EXCHANGE_WEAK(entries_ + pos, &old_entry, new_entry));
+      entry->next = UntagPointer(old_entry);    // Un-tag the old entry and link.
+      new_entry = UpdateTag(old_entry, entry);  // Tag the new entry.
+    } while (!location->compare_exchange_weak(old_entry, new_entry));
   } else {
     entry->next = UntagPointer(entries_[pos]);
     entries_[pos] = UpdateTag(entries_[pos], entry);
   }
 }
 
-#undef COMPARE_EXCHANGE_WEAK
+inline HashTableEntry *ChainingHashTableBase::FindChainHeadUntagged(hash_t hash) const {
+  const uint64_t pos = BucketPosition(hash);
+  return entries_[pos];
+}
+
+inline HashTableEntry *ChainingHashTableBase::FindChainHeadTagged(hash_t hash) const {
+  const HashTableEntry *const candidate = FindChainHeadUntagged(hash);
+  auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
+  return (exists_in_chain ? UntagPointer(candidate) : nullptr);
+}
+
+//===----------------------------------------------------------------------===//
+//
+// Chaining Hash Table
+//
+//===----------------------------------------------------------------------===//
+
+/**
+ * The main chaining hash table implementation.
+ * @tparam UseTags Boolean
+ */
+template <bool UseTags>
+class ChainingHashTable : public ChainingHashTableBase {
+  // clang-format off
+  template <bool> friend class ChainingHashTableIterator;
+  template <bool> friend class ChainingHashTableVectorIterator;
+  // clang-format on
+
+ public:
+  /**
+   *
+   * @param load_factor
+   */
+  explicit ChainingHashTable(float load_factor = kDefaultLoadFactor);
+
+  /**
+   *
+   * @param new_size
+   */
+  void SetSize(uint64_t new_size);
+
+  /**
+   *
+   * @tparam Concurrent
+   * @param entry
+   */
+  template <bool Concurrent>
+  void Insert(HashTableEntry *entry);
+
+  /**
+   *
+   * @tparam Concurrent
+   * @tparam Allocator
+   * @param entries
+   */
+  template <bool Concurrent, typename Allocator>
+  void InsertBatch(util::ChunkedVector<Allocator> *entries);
+
+  /**
+   *
+   * @param hash
+   * @return
+   */
+  HashTableEntry *FindChainHead(hash_t hash) const;
+
+  /**
+   *
+   * @tparam F
+   * @param f
+   */
+  template <typename F>
+  void FlushEntries(F &&sink);
+
+  /**
+   * @return Collect and return a tuple containing the minimum, maximum, and average bucket
+   * chain in this hash table. This is not a concurrent operation!
+   */
+  std::tuple<uint64_t, uint64_t, float> GetChainLengthStats() const;
+
+  /**
+   *
+   * @return
+   */
+  bool IsEmpty() const { return GetElementCount() == 0; }
+
+  /**
+   *
+   * @return
+   */
+  uint64_t GetElementCount() const { return num_elements_.load(std::memory_order_relaxed); }
+
+ private:
+  template <bool Prefetch, bool Concurrent, typename Allocator>
+  void InsertBatchInternal(util::ChunkedVector<Allocator> *entries);
+
+ private:
+  // The current number of elements stored in the table.
+  std::atomic<uint64_t> num_elements_;
+};
 
 template <bool UseTags>
 template <bool Concurrent>
-inline void ChainingHashTable<UseTags>::Insert(HashTableEntry *const entry) {
+inline void ChainingHashTable<UseTags>::Insert(HashTableEntry *entry) {
   if constexpr (UseTags) {
     InsertTagged<Concurrent>(entry, entry->hash);
   } else {
     InsertUntagged<Concurrent>(entry, entry->hash);
   }
 
-  // Update element count
-  AddElementCount(1);
+  // Update element count.
+  num_elements_++;
 }
 
 template <bool UseTags>
@@ -375,20 +386,7 @@ inline void ChainingHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocato
   }
 
   // Update element count
-  AddElementCount(entries->size());
-}
-
-template <bool UseTags>
-inline HashTableEntry *ChainingHashTable<UseTags>::FindChainHeadUntagged(hash_t hash) const {
-  const uint64_t pos = BucketPosition(hash);
-  return entries_[pos];
-}
-
-template <bool UseTags>
-inline HashTableEntry *ChainingHashTable<UseTags>::FindChainHeadTagged(hash_t hash) const {
-  const HashTableEntry *const candidate = FindChainHeadUntagged(hash);
-  auto exists_in_chain = reinterpret_cast<uintptr_t>(candidate) & TagHash(hash);
-  return (exists_in_chain ? UntagPointer(candidate) : nullptr);
+  num_elements_ += entries->size();
 }
 
 template <bool UseTags>
@@ -401,41 +399,8 @@ inline HashTableEntry *ChainingHashTable<UseTags>::FindChainHead(hash_t hash) co
 }
 
 template <bool UseTags>
-template <bool Prefetch>
-inline void ChainingHashTable<UseTags>::LookupBatchInternal(const uint64_t num_elements,
-                                                            const hash_t hashes[],
-                                                            const HashTableEntry *entries[]) const {
-  for (uint64_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elements;
-       idx++, prefetch_idx++) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < num_elements)) {
-        PrefetchChainHead<true>(hashes[prefetch_idx]);
-      }
-    }
-
-    if constexpr (UseTags) {
-      entries[idx] = FindChainHeadTagged(hashes[idx]);
-    } else {
-      entries[idx] = FindChainHeadUntagged(hashes[idx]);
-    }
-  }
-}
-
-template <bool UseTags>
-inline void ChainingHashTable<UseTags>::LookupBatch(const uint64_t num_elements,
-                                                    const hash_t hashes[],
-                                                    const HashTableEntry *entries[]) const {
-  const uint64_t l3_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (bool out_of_cache = GetTotalMemoryUsage() > l3_size; out_of_cache) {
-    LookupBatchInternal<true>(num_elements, hashes, entries);
-  } else {
-    LookupBatchInternal<false>(num_elements, hashes, entries);
-  }
-}
-
-template <bool UseTags>
 template <typename F>
-inline void ChainingHashTable<UseTags>::FlushEntries(const F &sink) {
+inline void ChainingHashTable<UseTags>::FlushEntries(F &&sink) {
   static_assert(std::is_invocable_v<F, HashTableEntry *>);
 
   for (uint64_t idx = 0; idx < capacity_; idx++) {
@@ -459,6 +424,62 @@ inline void ChainingHashTable<UseTags>::FlushEntries(const F &sink) {
 
 using TaggedChainingHashTable = ChainingHashTable<true>;
 using UntaggedChainingHashTable = ChainingHashTable<false>;
+
+//===----------------------------------------------------------------------===//
+//
+// Templated Chaining Hash Table
+//
+//===----------------------------------------------------------------------===//
+
+template <typename Key, typename Value, bool UseTags>
+class ChainingHashTableX : public ChainingHashTable<UseTags> {
+ public:
+  /**
+   *
+   * @param load_factor
+   */
+  ChainingHashTableX(float load_factor);
+
+  /**
+   *
+   * @param k
+   * @param v
+   */
+  void Insert(Key &&k, Value &&v);
+
+  /**
+   *
+   * @param k
+   * @param v
+   */
+  void Insert(Key k, Value v);
+
+  /**
+   *
+   * @tparam Iterator
+   * @param begin
+   * @param end
+   */
+  template <typename Iterator>
+  void InsertBatch(Iterator begin, Iterator end);
+
+  /**
+   *
+   * @param key
+   * @return
+   */
+  Value *LookupOne(const Key &key) const;
+
+  /**
+   *
+   * @tparam F
+   * @param key
+   * @param f
+   * @return
+   */
+  template <typename F>
+  Value *LookupAll(const Key &key, F &&f) const;
+};
 
 //===----------------------------------------------------------------------===//
 //

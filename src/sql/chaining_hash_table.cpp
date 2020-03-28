@@ -7,19 +7,22 @@
 
 namespace tpl::sql {
 
-template <bool UseTags>
-ChainingHashTable<UseTags>::ChainingHashTable(float load_factor) noexcept
-    : entries_(nullptr), mask_(0), capacity_(0), num_elements_(0), load_factor_(load_factor) {}
+//===----------------------------------------------------------------------===//
+//
+// Chaining Hash Table Base
+//
+//===----------------------------------------------------------------------===//
 
-template <bool UseTags>
-ChainingHashTable<UseTags>::~ChainingHashTable() {
+ChainingHashTableBase::ChainingHashTableBase(float load_factor) noexcept
+    : entries_(nullptr), mask_(0), capacity_(0), load_factor_(load_factor) {}
+
+ChainingHashTableBase::~ChainingHashTableBase() {
   if (entries_ != nullptr) {
     Memory::FreeHugeArray(entries_, GetCapacity());
   }
 }
 
-template <bool UseTags>
-void ChainingHashTable<UseTags>::SetSize(uint64_t new_size) {
+void ChainingHashTableBase::SetSize(uint64_t new_size) {
   new_size = std::max(new_size, kMinTableSize);
 
   if (entries_ != nullptr) {
@@ -33,8 +36,23 @@ void ChainingHashTable<UseTags>::SetSize(uint64_t new_size) {
 
   capacity_ = next_size;
   mask_ = capacity_ - 1;
+  entries_ = Memory::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
+}
+
+//===----------------------------------------------------------------------===//
+//
+// Chaining Hash Table
+//
+//===----------------------------------------------------------------------===//
+
+template <bool UseTags>
+ChainingHashTable<UseTags>::ChainingHashTable(float load_factor)
+    : ChainingHashTableBase(load_factor), num_elements_(0) {}
+
+template <bool UseTags>
+void ChainingHashTable<UseTags>::SetSize(uint64_t new_size) {
   num_elements_ = 0;
-  entries_ = Memory::MallocHugeArray<HashTableEntry *>(capacity_, true);
+  ChainingHashTableBase::SetSize(new_size);
 }
 
 template <bool UseTags>
@@ -61,9 +79,11 @@ std::tuple<uint64_t, uint64_t, float> ChainingHashTable<UseTags>::GetChainLength
 template class ChainingHashTable<true>;
 template class ChainingHashTable<false>;
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Vector Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 template <bool UseTag>
 ChainingHashTableVectorIterator<UseTag>::ChainingHashTableVectorIterator(
