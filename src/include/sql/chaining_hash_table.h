@@ -69,9 +69,8 @@ class ChainingHashTableBase {
 
   /**
    * Explicitly set the size of the hash table to support at least @em new_size elements. The input
-   * size @em new_size serves as a lower-bound of the expected number of elements. This resize
-   * operation may resize to a larger value to (1) respect the load factor or to (2) ensure a power
-   * of two size.
+   * size is a lower-bound of the expected number of elements. The sizing operation may compute a
+   * larger value to (1) respect the load factor or to (2) ensure a power-of-two size.
    * @param new_size The expected number of elements that will be inserted into the table.
    */
   void SetSize(uint64_t new_size);
@@ -89,7 +88,6 @@ class ChainingHashTableBase {
   /**
    * Insert an entry into the hash table after updating its tag bits.
    * @pre The input hash value @em hash should match what's stored in @em entry.
-   *
    * @tparam Concurrent Is the insert occurring concurrently with other inserts.
    * @param entry The entry to insert.
    * @param hash The hash value of the entry.
@@ -128,7 +126,7 @@ class ChainingHashTableBase {
   uint64_t GetTotalMemoryUsage() const { return sizeof(HashTableEntry *) * GetCapacity(); }
 
   /**
-   * @return The maximum number of elements this hash table can store at its current size.
+   * @return The size of the main entry directory.
    */
   uint64_t GetCapacity() const { return capacity_; }
 
@@ -214,8 +212,10 @@ inline void ChainingHashTableBase::InsertUntagged(HashTableEntry *const entry, c
       new_entry = entry;
     } while (!location->compare_exchange_weak(old_entry, new_entry));
   } else {
-    entry->next = entries_[pos];
-    entries_[pos] = entry;
+    std::atomic<HashTableEntry *> *location = &entries_[pos];
+    HashTableEntry *old_entry = location->load(std::memory_order_relaxed);
+    entry->next = old_entry;
+    location->store(entry, std::memory_order_relaxed);
   }
 }
 
@@ -235,8 +235,10 @@ inline void ChainingHashTableBase::InsertTagged(HashTableEntry *const entry, con
       new_entry = UpdateTag(old_entry, entry);  // Tag the new entry.
     } while (!location->compare_exchange_weak(old_entry, new_entry));
   } else {
-    entry->next = UntagPointer(entries_[pos]);
-    entries_[pos] = UpdateTag(entries_[pos], entry);
+    std::atomic<HashTableEntry *> *location = &entries_[pos];
+    HashTableEntry *old_entry = location->load(std::memory_order_relaxed);
+    entry->next = UntagPointer(old_entry);
+    location->store(UpdateTag(old_entry, entry), std::memory_order_relaxed);
   }
 }
 
