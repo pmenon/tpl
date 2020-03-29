@@ -22,23 +22,27 @@ namespace tpl::sql {
 
 /**
  * ChainingHashTableBase is the base class implementing a simple bucket-chained hash table with
- * optional pointer tagging. The use of pointer tagging is controlled through proper API usage.
- * Pointer tagging uses the first @em ChainingHashTableBase::kNumTagBits bits of the entry pointers
- * in the main bucket directory as a tiny bloom filter. This bloom filter is used to early-prune
- * probe misses that would normally require a full cache-unfriendly linked list traversal. We can
- * re-purpose the most-significant 16-bits of a pointer because X86_64 uses 48-bits of the OS
- * virtual memory address space. Pointer tagged hash tables will have to be disabled when the full
- * 64-bit VM address space is enabled.
+ * optional pointer tagging. Pointer tagging uses the first @em ChainingHashTableBase::kNumTagBits
+ * bits of the entry pointers in the main bucket directory as a tiny bloom filter. This bloom filter
+ * is used to early-prune probe misses that would normally require a full cache-unfriendly linked
+ * list traversal. We can re-purpose the most-significant 16-bits of a pointer because X86_64 uses
+ * 48-bits of the OS virtual memory address space. Pointer tagged hash tables will have to be
+ * disabled when the full 64-bit VM address space is enabled.
+ *
+ * The use of pointer tagging is controlled through proper API usage: InsertTagged() performs a
+ * tagged insertion, while InsertUntagged() performs an untagged insertion. This dichotomy carries
+ * over when probing the hash table: FindChainHeadTagged() and FindChainUntagged() uses a tagged and
+ * untagged probing process, respectively.
  *
  * ChainingHashTableBase supports both serial and concurrent insertions. Both are controlled through
  * a template parameter to ChainingHashTableBase::Insert*() methods.
  *
- * ChainingHashTables only stores pointers into externally managed storage; it does not manage any
- * hash table data internally. In other words, the memory of all inserted HashTableEntry must be
- * owned by an external entity whose lifetime exceeds this ChainingHashTable!
- *
- * Note: ChainingHashTable leverages the ‘next’ pointer in HashTableEntry::next to implement the
- * linked list bucket chain.
+ * Note 1: ChainingHashTables only store pointers into externally managed storage; it does not
+ *         manage any hash table data internally. In other words, the memory of all inserted
+ *         HashTableEntry must be owned by an external entity whose lifetime exceeds this
+ *         ChainingHashTable!
+ * Note 2: ChainingHashTable leverages the ‘next’ pointer in HashTableEntry::next to implement the
+ *         linked list bucket chain.
  */
 class ChainingHashTableBase {
  private:
@@ -179,13 +183,10 @@ class ChainingHashTableBase {
   // Main directory of hash table entry buckets. Each bucket is the head of a
   // linked list chain.
   std::atomic<HashTableEntry *> *entries_;
-
   // The mask to use to compute the bucket position of an entry.
   uint64_t mask_;
-
   // The capacity of the directory.
   uint64_t capacity_;
-
   // The configured load-factor.
   float load_factor_;
 };
@@ -272,45 +273,53 @@ class ChainingHashTable : public ChainingHashTableBase {
 
  public:
   /**
-   *
-   * @param load_factor
+   * Create an empty hash table. Users must first call SetSize() before use.
+   * @param load_factor The desired load factor.
    */
   explicit ChainingHashTable(float load_factor = kDefaultLoadFactor);
 
   /**
-   *
-   * @param new_size
+   * Explicitly set the size of the hash table to support at least @em new_size elements. The input
+   * size is a lower-bound of the expected number of elements. The sizing operation may compute a
+   * larger value to (1) respect the load factor or to (2) ensure a power-of-two size. Also resets
+   * the element count.
+   * @param new_size The expected number of elements that will be inserted into the table.
    */
   void SetSize(uint64_t new_size);
 
   /**
-   *
-   * @tparam Concurrent
-   * @param entry
+   * Insert the given hash table entry into this hash table.
+   * @pre The hash value for the entry must already be computed and stored in entry->hash.
+   * @tparam Concurrent Is the insert occurring concurrently with other inserts.
+   * @param entry The entry to insert.
    */
   template <bool Concurrent>
   void Insert(HashTableEntry *entry);
 
   /**
-   *
-   * @tparam Concurrent
-   * @tparam Allocator
-   * @param entries
+   * Insert all entries in the given vector into this hash table. All entries must have their hash
+   * values already computed.
+   * @pre All hash values must have been computed already.
+   * @tparam Concurrent Is the insert occurring concurrently with other inserts.
+   * @tparam Allocator The allocator the vector uses. Templated to allow different vectors.
+   * @param entries The list of entries to insert.
    */
   template <bool Concurrent, typename Allocator>
   void InsertBatch(util::ChunkedVector<Allocator> *entries);
 
   /**
-   *
-   * @param hash
-   * @return
+   * Return the head of the bucket chain for a key with the provided hash value. Probing assumes no
+   * concurrent modifications to the hash table. Thus, is suitable for WORM based workloads.
+   * @param hash The hash value of the key to find.
+   * @return The (potentially null) head of the bucket chain for the given hash.
    */
   HashTableEntry *FindChainHead(hash_t hash) const;
 
   /**
-   *
-   * @tparam F
-   * @param f
+   * Empty all entries in this hash table into the sink functor. After this function exits, the hash
+   * table is empty.
+   * @tparam F The function must be of the form void(*)(HashTableEntry*)
+   * @param sink The sink of all entries in the hash table
    */
   template <typename F>
   void FlushEntries(F &&sink);
@@ -322,18 +331,20 @@ class ChainingHashTable : public ChainingHashTableBase {
   std::tuple<uint64_t, uint64_t, float> GetChainLengthStats() const;
 
   /**
-   *
-   * @return
+   * @return True if the hash table is empty; false otherwise.
    */
   bool IsEmpty() const { return GetElementCount() == 0; }
 
   /**
-   *
-   * @return
+   * @return The number of elements stored in this hash table.
    */
   uint64_t GetElementCount() const { return num_elements_.load(std::memory_order_relaxed); }
 
  private:
+  // Add the given value to the total element count.
+  void AddElementCount(uint64_t v) { num_elements_.fetch_add(v, std::memory_order_relaxed); }
+
+  // Bulk insertion with configurable pre-fetching.
   template <bool Prefetch, bool Concurrent, typename Allocator>
   void InsertBatchInternal(util::ChunkedVector<Allocator> *entries);
 
@@ -352,7 +363,7 @@ inline void ChainingHashTable<UseTags>::Insert(HashTableEntry *entry) {
   }
 
   // Update element count.
-  num_elements_++;
+  AddElementCount(1);
 }
 
 template <bool UseTags>
@@ -387,8 +398,8 @@ inline void ChainingHashTable<UseTags>::InsertBatch(util::ChunkedVector<Allocato
     InsertBatchInternal<false, Concurrent>(entries);
   }
 
-  // Update element count
-  num_elements_ += entries->size();
+  // Update element count.
+  AddElementCount(entries->size());
 }
 
 template <bool UseTags>
@@ -426,62 +437,6 @@ inline void ChainingHashTable<UseTags>::FlushEntries(F &&sink) {
 
 using TaggedChainingHashTable = ChainingHashTable<true>;
 using UntaggedChainingHashTable = ChainingHashTable<false>;
-
-//===----------------------------------------------------------------------===//
-//
-// Templated Chaining Hash Table
-//
-//===----------------------------------------------------------------------===//
-
-template <typename Key, typename Value, bool UseTags>
-class ChainingHashTableX : public ChainingHashTable<UseTags> {
- public:
-  /**
-   *
-   * @param load_factor
-   */
-  ChainingHashTableX(float load_factor);
-
-  /**
-   *
-   * @param k
-   * @param v
-   */
-  void Insert(Key &&k, Value &&v);
-
-  /**
-   *
-   * @param k
-   * @param v
-   */
-  void Insert(Key k, Value v);
-
-  /**
-   *
-   * @tparam Iterator
-   * @param begin
-   * @param end
-   */
-  template <typename Iterator>
-  void InsertBatch(Iterator begin, Iterator end);
-
-  /**
-   *
-   * @param key
-   * @return
-   */
-  Value *LookupOne(const Key &key) const;
-
-  /**
-   *
-   * @tparam F
-   * @param key
-   * @param f
-   * @return
-   */
-  template <typename F>
-  Value *LookupAll(const Key &key, F &&f) const;
-};
 
 //===----------------------------------------------------------------------===//
 //
