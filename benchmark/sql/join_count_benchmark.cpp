@@ -63,10 +63,10 @@ struct JoinMeta {
     {{0.850, 0.750, 0.650, 0.550, 0.438}},  // 5 joins: 0.85*0.75*0.65*0.55*0.438=0.1
 };
 
-int32_t *GenColumnData(uint32_t num_vals) {
+int32_t *GenColumnData(uint32_t min_val, uint32_t num_vals) {
   auto *data =
       static_cast<int32_t *>(Memory::MallocAligned(sizeof(int32_t) * num_vals, CACHELINE_SIZE));
-  std::iota(data, data + num_vals, 0);
+  std::iota(data, data + num_vals, min_val);
   std::shuffle(data, data + num_vals, std::random_device());
   return data;
 }
@@ -80,7 +80,7 @@ void LoadTestTable(sql::Table *table) {
   for (uint32_t i = 0; i < num_batches; i++) {
     std::vector<sql::ColumnSegment> columns;
     for (uint32_t j = 0; j < kNumTableCols; j++) {
-      auto *col_data = reinterpret_cast<byte *>(GenColumnData(batch_size));
+      auto *col_data = reinterpret_cast<byte *>(GenColumnData(i * batch_size, batch_size));
       columns.emplace_back(sql::IntegerType::Instance(false), col_data, nullptr, batch_size);
     }
 
@@ -174,6 +174,7 @@ void BuildHT(sql::JoinHashTable *jht, double selectivity) {
     }
   }
   jht->Build();
+  LOG_DEBUG("JHT built with {} entries", jht->GetTupleCount());
 }
 
 void BuildAllJHTs(const JoinMeta &meta, QueryState *state) {
