@@ -262,7 +262,7 @@ inline HashTableEntry *ChainingHashTableBase::FindChainHeadTagged(hash_t hash) c
 
 /**
  * The main chaining hash table implementation.
- * @tparam UseTags Boolean
+ * @tparam UseTags Boolean flag indicating whether to use the pointer tagging optimizations.
  */
 template <bool UseTags>
 class ChainingHashTable : public ChainingHashTableBase {
@@ -435,6 +435,7 @@ inline void ChainingHashTable<UseTags>::FlushEntries(F &&sink) {
   num_elements_ = 0;
 }
 
+// Useful aliases.
 using TaggedChainingHashTable = ChainingHashTable<true>;
 using UntaggedChainingHashTable = ChainingHashTable<false>;
 
