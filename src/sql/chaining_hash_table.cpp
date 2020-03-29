@@ -36,7 +36,7 @@ void ChainingHashTableBase::SetSize(uint64_t new_size) {
 
   capacity_ = next_size;
   mask_ = capacity_ - 1;
-  entries_ = Memory::MallocHugeArray<std::atomic<HashTableEntry *>>(capacity_, true);
+  entries_ = Memory::MallocHugeArray<HashTableEntry *>(capacity_, true);
 }
 
 //===----------------------------------------------------------------------===//

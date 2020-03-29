@@ -180,9 +180,8 @@ class ChainingHashTableBase {
   }
 
  protected:
-  // Main directory of hash table entry buckets. Each bucket is the head of a
-  // linked list chain.
-  std::atomic<HashTableEntry *> *entries_;
+  // Main directory of hash table entry buckets.
+  HashTableEntry **entries_;
   // The mask to use to compute the bucket position of an entry.
   uint64_t mask_;
   // The capacity of the directory.
@@ -197,6 +196,15 @@ inline void ChainingHashTableBase::PrefetchChainHead(hash_t hash) const {
   Memory::Prefetch<ForRead, Locality::Low>(entries_ + pos);
 }
 
+#define COMPARE_EXCHANGE_WEAK(ADDRESS, EXPECTED, NEW_VAL)                                      \
+  (__atomic_compare_exchange_n((ADDRESS),        /* Address to atomically CAS into. */         \
+                               (EXPECTED),       /* The old value we read from the address. */ \
+                               (NEW_VAL),        /* The new value we want to write there. */   \
+                               true,             /* Weak exchange? Yes, for performance. */    \
+                               __ATOMIC_RELEASE, /* Use release semantics for success */       \
+                               __ATOMIC_RELAXED  /* Use relaxed semantics for failure */       \
+                               ))
+
 template <bool Concurrent>
 inline void ChainingHashTableBase::InsertUntagged(HashTableEntry *const entry, const hash_t hash) {
   const uint64_t pos = BucketPosition(hash);
@@ -205,18 +213,13 @@ inline void ChainingHashTableBase::InsertUntagged(HashTableEntry *const entry, c
   TPL_ASSERT(entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    std::atomic<HashTableEntry *> *location = &entries_[pos];
-    HashTableEntry *old_entry = location->load();
-    HashTableEntry *new_entry = nullptr;
+    HashTableEntry *old_entry = entries_[pos];
     do {
       entry->next = old_entry;
-      new_entry = entry;
-    } while (!location->compare_exchange_weak(old_entry, new_entry));
+    } while (!COMPARE_EXCHANGE_WEAK(&entries_[pos], &old_entry, entry));
   } else {
-    std::atomic<HashTableEntry *> *location = &entries_[pos];
-    HashTableEntry *old_entry = location->load(std::memory_order_relaxed);
-    entry->next = old_entry;
-    location->store(entry, std::memory_order_relaxed);
+    entry->next = entries_[pos];
+    entries_[pos] = entry;
   }
 }
 
@@ -228,20 +231,19 @@ inline void ChainingHashTableBase::InsertTagged(HashTableEntry *const entry, con
   TPL_ASSERT(entry->hash == hash, "Hash value not set in entry!");
 
   if constexpr (Concurrent) {
-    std::atomic<HashTableEntry *> *location = &entries_[pos];
-    HashTableEntry *old_entry = location->load();
+    HashTableEntry *old_entry = entries_[pos];
     HashTableEntry *new_entry = nullptr;
     do {
       entry->next = UntagPointer(old_entry);    // Un-tag the old entry and link.
       new_entry = UpdateTag(old_entry, entry);  // Tag the new entry.
-    } while (!location->compare_exchange_weak(old_entry, new_entry));
+    } while (!COMPARE_EXCHANGE_WEAK(&entries_[pos], &old_entry, new_entry));
   } else {
-    std::atomic<HashTableEntry *> *location = &entries_[pos];
-    HashTableEntry *old_entry = location->load(std::memory_order_relaxed);
-    entry->next = UntagPointer(old_entry);
-    location->store(UpdateTag(old_entry, entry), std::memory_order_relaxed);
+    entry->next = UntagPointer(entries_[pos]);
+    entries_[pos] = UpdateTag(entries_[pos], entry);
   }
 }
+
+#undef COMPARE_EXCHANGE_WEAK
 
 inline HashTableEntry *ChainingHashTableBase::FindChainHeadUntagged(hash_t hash) const {
   const uint64_t pos = BucketPosition(hash);
