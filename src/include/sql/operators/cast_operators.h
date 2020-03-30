@@ -9,16 +9,6 @@
 
 namespace tpl::sql {
 
-template <bool IntOverflow = false,    // Default: No integer overflow casts.
-          bool FloatTruncate = false,  // Default: No floating point truncation.
-          bool TimeTruncate = false,   // Default: No time truncation.
-          bool TimeOverflow = false,   // Default: No time overflow.
-          bool InvalidUtf8 = false>    // Default: No invalid UTF-8 characters.
-struct CastOptions {
-  static constexpr bool AllowIntOverflow() noexcept { return IntOverflow; }
-  static constexpr bool AllowFloatTruncate() noexcept { return FloatTruncate; }
-};
-
 //===----------------------------------------------------------------------===//
 //
 // Checked Cast.
@@ -33,10 +23,8 @@ struct CastOptions {
  * parameter is in an invalid state.
  * @tparam InType The CPP type of the input.
  * @tparam OutType The CPP type the input type into.
- * @tparam Options Configurable casting options.
  */
-template <typename InType, typename OutType, typename Options = CastOptions<>,
-          typename Enable = void>
+template <typename InType, typename OutType, typename Enable = void>
 struct TryCast {};
 
 /**
@@ -45,13 +33,12 @@ struct TryCast {};
  * returned. If the cast is invalid, a ValueOutOfRangeException exception is thrown,
  * @tparam InType The CPP type of the input.
  * @tparam OutType The CPP type the input type into.
- * @tparam Options Configurable casting options.
  */
-template <typename InType, typename OutType, typename Options = CastOptions<>>
+template <typename InType, typename OutType>
 struct Cast {
   OutType operator()(InType input) const {
     OutType result;
-    if (!TryCast<InType, OutType, Options>{}(input, &result)) {
+    if (!TryCast<InType, OutType>{}(input, &result)) {
       throw ValueOutOfRangeException(GetTypeId<InType>(), GetTypeId<OutType>());
     }
     return result;
@@ -64,8 +51,8 @@ struct Cast {
 //
 //===----------------------------------------------------------------------===//
 
-template <typename T, typename Options>
-struct TryCast<T, T, Options> {
+template <typename T>
+struct TryCast<T, T> {
   bool operator()(const T input, T *output) const noexcept {
     *output = input;
     return true;
@@ -182,11 +169,10 @@ constexpr bool is_float_truncate_v = is_float_truncate<InType, OutType>::value;
 /**
  * Cast a numeric value into a boolean.
  * @tparam InType The numeric input type.
- * @tparam Options Trait capturing options for how the cast should be performed.
  */
-template <typename InType, typename Options>
+template <typename InType>
 struct TryCast<
-    InType, bool, Options,
+    InType, bool,
     std::enable_if_t<detail::is_number_type_v<InType> && !std::is_same_v<InType, bool>>> {
   bool operator()(const InType input, bool *output) noexcept {
     *output = static_cast<bool>(input);
@@ -203,10 +189,9 @@ struct TryCast<
 /**
  * Cast a boolean into a numeric value.
  * @tparam OutType The numeric output type.
- * @tparam Options Trait capturing options for how the cast should be performed.
  */
-template <typename OutType, typename Options>
-struct TryCast<bool, OutType, Options, std::enable_if_t<detail::is_number_type_v<OutType>>> {
+template <typename OutType>
+struct TryCast<bool, OutType, std::enable_if_t<detail::is_number_type_v<OutType>>> {
   bool operator()(const bool input, OutType *output) const noexcept {
     *output = static_cast<OutType>(input);
     return true;
@@ -229,10 +214,9 @@ struct TryCast<bool, OutType, Options, std::enable_if_t<detail::is_number_type_v
  * Numeric down-cast, signed-to-unsigned, unsigned-to-signed, or float truncation cast.
  * @tparam InType The numeric input type. Must satisfy internal::is_number_type_v<InType>.
  * @tparam OutType The numeric output type.  Must satisfy internal::is_number_type_v<OutType>.
- * @tparam Options Casting options.
  */
-template <typename InType, typename OutType, typename Options>
-struct TryCast<InType, OutType, Options,
+template <typename InType, typename OutType>
+struct TryCast<InType, OutType,
                std::enable_if_t<detail::is_number_downcast_v<InType, OutType> ||
                                 detail::is_integral_signed_to_unsigned_v<InType, OutType> ||
                                 detail::is_integral_unsigned_to_signed_v<InType, OutType> ||
@@ -242,9 +226,6 @@ struct TryCast<InType, OutType, Options,
     constexpr OutType kMax = std::numeric_limits<OutType>::max();
 
     *output = static_cast<OutType>(input);
-    if constexpr (Options::AllowIntOverflow()) {
-      return true;
-    }
     return input >= kMin && input <= kMax;
   }
 };
@@ -253,10 +234,9 @@ struct TryCast<InType, OutType, Options,
  * Safe numeric up-cast, i.e., a regular cast.
  * @tparam InType The numeric input type. Must satisfy internal::is_number_type_v<InType>.
  * @tparam OutType The numeric output type.  Must satisfy internal::is_number_type_v<OutType>.
- * @tparam Options Casting options.
  */
-template <typename InType, typename OutType, typename Options>
-struct TryCast<InType, OutType, Options,
+template <typename InType, typename OutType>
+struct TryCast<InType, OutType,
                std::enable_if_t<detail::is_safe_numeric_cast_v<InType, OutType> &&
                                 !detail::is_number_downcast_v<InType, OutType>>> {
   bool operator()(const InType input, OutType *output) const noexcept {
@@ -268,10 +248,9 @@ struct TryCast<InType, OutType, Options,
 /**
  * Numeric value to Date. This isn't a real cast, but let's support it for now.
  * @tparam InType The numeric input type. Must satisfy internal::is_number_type_v<InType>
- * @tparam Options Casting options.
  */
-template <typename InType, typename Options>
-struct TryCast<InType, Date, Options, std::enable_if_t<detail::is_integer_type_v<InType>>> {
+template <typename InType>
+struct TryCast<InType, Date, std::enable_if_t<detail::is_integer_type_v<InType>>> {
   bool operator()(const InType input, Date *output) const noexcept {
     *output = Date(input);
     return true;
@@ -281,10 +260,9 @@ struct TryCast<InType, Date, Options, std::enable_if_t<detail::is_integer_type_v
 /**
  * Boolean or numeric value to string.
  * @tparam InType The input type. Either a number or a boolean.
- * @tparam Options Casting options.
  */
-template <typename InType, typename Options>
-struct TryCast<InType, std::string, Options,
+template <typename InType>
+struct TryCast<InType, std::string,
                std::enable_if_t<detail::is_number_type_v<InType> || std::is_same_v<InType, bool>>> {
   bool operator()(const InType input, std::string *output) const noexcept {
     *output = std::to_string(input);
@@ -300,11 +278,11 @@ struct TryCast<InType, std::string, Options,
 
 /**
  * Date or Timestamp to string conversion.
- * @tparam Options Casting options.
+ * @tparam InType The type of the input, either a Date or Timestamp.
  */
-template <typename InType, typename Options>
+template <typename InType>
 struct TryCast<
-    InType, std::string, Options,
+    InType, std::string,
     std::enable_if_t<std::is_same_v<InType, Date> || std::is_same_v<InType, Timestamp>>> {
   bool operator()(const InType input, std::string *output) const noexcept {
     *output = input.ToString();
@@ -314,10 +292,9 @@ struct TryCast<
 
 /**
  * Date to Timestamp conversion.
- * @tparam Options Casting options.
  */
-template <typename Options>
-struct TryCast<Date, Timestamp, Options> {
+template <>
+struct TryCast<Date, Timestamp> {
   bool operator()(const Date input, Timestamp *output) const noexcept {
     *output = input.ConvertToTimestamp();
     return true;
@@ -326,10 +303,9 @@ struct TryCast<Date, Timestamp, Options> {
 
 /**
  * Timestamp to Date conversion.
- * @tparam Options Casting options.
  */
-template <typename Options>
-struct TryCast<Timestamp, Date, Options> {
+template <>
+struct TryCast<Timestamp, Date> {
   bool operator()(const Timestamp input, Date *output) const noexcept {
     *output = input.ConvertToDate();
     return true;
@@ -345,10 +321,9 @@ struct TryCast<Timestamp, Date, Options> {
 /**
  * String to boolean.
  * @tparam OutType The input type. Either a number or a boolean.
- * @tparam Options Casting options.
  */
-template <typename Options>
-struct TryCast<VarlenEntry, bool, Options> {
+template <>
+struct TryCast<VarlenEntry, bool> {
   bool operator()(const VarlenEntry &input, bool *output) const {
     const auto buf = reinterpret_cast<const char *>(input.GetContent());
     if (input.GetSize() == 0) {
@@ -368,11 +343,9 @@ struct TryCast<VarlenEntry, bool, Options> {
 /**
  * String to integer.
  * @tparam OutType The input type. Either a number or a boolean.
- * @tparam Options Casting options.
  */
-template <typename OutType, typename Options>
-struct TryCast<VarlenEntry, OutType, Options,
-               std::enable_if_t<detail::is_integer_type_v<OutType>>> {
+template <typename OutType>
+struct TryCast<VarlenEntry, OutType, std::enable_if_t<detail::is_integer_type_v<OutType>>> {
   bool operator()(const VarlenEntry &input, OutType *output) const {
     const auto buf = reinterpret_cast<const char *>(input.GetContent());
     const auto len = input.GetSize();
