@@ -2,106 +2,121 @@
 
 namespace tpl::sql {
 
-Integer DateTimeFunctions::Century(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Century(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
+
   const auto year = time.val.ExtractYear();
   if (year > 0) {
-    return Integer((year + 99) / 100);
+    *result = Integer((year + 99) / 100);
   } else {
-    return Integer(-((99 - (year - 1)) / 100));
+    *result = Integer(-((99 - (year - 1)) / 100));
   }
 }
 
-Integer DateTimeFunctions::Decade(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Decade(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
+
   const auto year = time.val.ExtractYear();
   if (year >= 0) {
-    return Integer(year / 10);
+    *result = Integer(year / 10);
   } else {
-    return Integer(-((8 - (year - 1)) / 10));
+    *result = Integer(-((8 - (year - 1)) / 10));
   }
 }
 
-Integer DateTimeFunctions::Year(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Year(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractYear());
+  *result = Integer(time.val.ExtractYear());
 }
 
-Integer DateTimeFunctions::Quarter(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Quarter(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
   const auto month = time.val.ExtractMonth();
-  return Integer((month - 1) / 3 + 1);
+  *result = Integer((month - 1) / 3 + 1);
 }
 
-Integer DateTimeFunctions::Month(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Month(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractMonth());
+  *result = Integer(time.val.ExtractMonth());
 }
 
-Integer DateTimeFunctions::Day(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Day(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractDay());
+  *result = Integer(time.val.ExtractDay());
 }
 
-Integer DateTimeFunctions::DayOfWeek(const TimestampVal &time) noexcept {
+void DateTimeFunctions::DayOfWeek(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractDayOfWeek());
+  *result = Integer(time.val.ExtractDayOfWeek());
 }
 
-Integer DateTimeFunctions::DayOfYear(const TimestampVal &time) noexcept {
+void DateTimeFunctions::DayOfYear(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractDayOfYear());
+  *result = Integer(time.val.ExtractDayOfYear());
 }
 
-Integer DateTimeFunctions::Hour(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Hour(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractHour());
+  *result = Integer(time.val.ExtractHour());
 }
 
-Integer DateTimeFunctions::Minute(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Minute(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractMinute());
+  *result = Integer(time.val.ExtractMinute());
 }
 
-Integer DateTimeFunctions::Second(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Second(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractSecond());
+  *result = Integer(time.val.ExtractSecond());
 }
 
-Integer DateTimeFunctions::Millisecond(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Millisecond(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractMillis());
+  *result = Integer(time.val.ExtractMillis());
 }
 
-Integer DateTimeFunctions::Microseconds(const TimestampVal &time) noexcept {
+void DateTimeFunctions::Microseconds(Integer *result, const TimestampVal &time) noexcept {
   if (time.is_null) {
-    return Integer::Null();
+    *result = Integer::Null();
+    return;
   }
-  return Integer(time.val.ExtractMicros());
+  *result = Integer(time.val.ExtractMicros());
 }
 
 }  // namespace tpl::sql
