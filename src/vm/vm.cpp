@@ -1641,145 +1641,145 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // -------------------------------------------------------
 
   OP(Concat) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *left = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *right = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpConcat(exec_ctx, result, left, right);
+    OpConcat(result, exec_ctx, left, right);
     DISPATCH_NEXT();
   }
 
   OP(Left) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpLeft(exec_ctx, result, input, n);
+    OpLeft(result, exec_ctx, input, n);
     DISPATCH_NEXT();
   }
 
   OP(Length) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpLength(exec_ctx, result, input);
+    OpLength(result, exec_ctx, input);
     DISPATCH_NEXT();
   }
 
   OP(Like) : {
-    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
     auto *pattern = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     OpLike(result, input, pattern);
     DISPATCH_NEXT();
   }
 
   OP(Lower) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpLower(exec_ctx, result, input);
+    OpLower(result, exec_ctx, input);
     DISPATCH_NEXT();
   }
 
   OP(LPad) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpLPad(exec_ctx, result, input, n, chars);
+    OpLPad(result, exec_ctx, input, n, chars);
     DISPATCH_NEXT();
   }
 
   OP(LTrim) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpLTrim(exec_ctx, result, input, chars);
+    OpLTrim(result, exec_ctx, input, chars);
     DISPATCH_NEXT();
   }
 
   OP(Repeat) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpRepeat(exec_ctx, result, input, n);
+    OpRepeat(result, exec_ctx, input, n);
     DISPATCH_NEXT();
   }
 
   OP(Reverse) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpReverse(exec_ctx, result, input);
+    OpReverse(result, exec_ctx, input);
     DISPATCH_NEXT();
   }
 
   OP(Right) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpRight(exec_ctx, result, input, n);
+    OpRight(result, exec_ctx, input, n);
     DISPATCH_NEXT();
   }
 
   OP(RPad) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpRPad(exec_ctx, result, input, n, chars);
+    OpRPad(result, exec_ctx, input, n, chars);
     DISPATCH_NEXT();
   }
 
   OP(RTrim) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpRTrim(exec_ctx, result, input, chars);
+    OpRTrim(result, exec_ctx, input, chars);
     DISPATCH_NEXT();
   }
 
   OP(SplitPart) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *str = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *delim = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *field = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpSplitPart(exec_ctx, result, str, delim, field);
+    OpSplitPart(result, exec_ctx, str, delim, field);
     DISPATCH_NEXT();
   }
 
   OP(Substring) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *str = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *pos = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
     auto *len = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpSubstring(exec_ctx, result, str, pos, len);
+    OpSubstring(result, exec_ctx, str, pos, len);
     DISPATCH_NEXT();
   }
 
   OP(Trim) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *str = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpTrim(exec_ctx, result, str, chars);
+    OpTrim(result, exec_ctx, str, chars);
     DISPATCH_NEXT();
   }
 
   OP(Upper) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *str = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpUpper(exec_ctx, result, str);
+    OpUpper(result, exec_ctx, str);
     DISPATCH_NEXT();
   }
 

@@ -1314,93 +1314,93 @@ VM_OP_WARM void OpValIsNotNull(bool *result, const tpl::sql::Val *val) {
 // String functions
 // ---------------------------------------------------------
 
-VM_OP_WARM void OpCharLength(tpl::sql::ExecutionContext *ctx, tpl::sql::Integer *result,
+VM_OP_WARM void OpCharLength(tpl::sql::Integer *result, tpl::sql::ExecutionContext *ctx,
                              const tpl::sql::StringVal *str) {
-  tpl::sql::StringFunctions::CharLength(ctx, result, *str);
+  tpl::sql::StringFunctions::CharLength(result, ctx, *str);
 }
 
-VM_OP_WARM void OpConcat(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpConcat(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                          const tpl::sql::StringVal *left, const tpl::sql::StringVal *right) {
-  tpl::sql::StringFunctions::Concat(ctx, result, *left, *right);
+  tpl::sql::StringFunctions::Concat(result, ctx, *left, *right);
 }
 
-VM_OP_WARM void OpLeft(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpLeft(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                        const tpl::sql::StringVal *str, const tpl::sql::Integer *n) {
-  tpl::sql::StringFunctions::Left(ctx, result, *str, *n);
+  tpl::sql::StringFunctions::Left(result, ctx, *str, *n);
 }
 
 VM_OP_WARM void OpLike(tpl::sql::BoolVal *result, const tpl::sql::StringVal *str,
                        const tpl::sql::StringVal *pattern) {
-  tpl::sql::StringFunctions::Like(nullptr, result, *str, *pattern);
+  tpl::sql::StringFunctions::Like(result, nullptr, *str, *pattern);
 }
 
-VM_OP_WARM void OpLength(tpl::sql::ExecutionContext *ctx, tpl::sql::Integer *result,
+VM_OP_WARM void OpLength(tpl::sql::Integer *result, tpl::sql::ExecutionContext *ctx,
                          const tpl::sql::StringVal *str) {
-  tpl::sql::StringFunctions::Length(ctx, result, *str);
+  tpl::sql::StringFunctions::Length(result, ctx, *str);
 }
 
-VM_OP_WARM void OpLower(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpLower(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                         const tpl::sql::StringVal *str) {
-  tpl::sql::StringFunctions::Lower(ctx, result, *str);
+  tpl::sql::StringFunctions::Lower(result, ctx, *str);
 }
 
-VM_OP_WARM void OpLPad(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpLPad(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                        const tpl::sql::StringVal *str, const tpl::sql::Integer *len,
                        const tpl::sql::StringVal *pad) {
-  tpl::sql::StringFunctions::Lpad(ctx, result, *str, *len, *pad);
+  tpl::sql::StringFunctions::Lpad(result, ctx, *str, *len, *pad);
 }
 
-VM_OP_WARM void OpLTrim(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpLTrim(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                         const tpl::sql::StringVal *str, const tpl::sql::StringVal *chars) {
-  tpl::sql::StringFunctions::Ltrim(ctx, result, *str, *chars);
+  tpl::sql::StringFunctions::Ltrim(result, ctx, *str, *chars);
 }
 
-VM_OP_WARM void OpRepeat(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpRepeat(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                          const tpl::sql::StringVal *str, const tpl::sql::Integer *n) {
-  tpl::sql::StringFunctions::Repeat(ctx, result, *str, *n);
+  tpl::sql::StringFunctions::Repeat(result, ctx, *str, *n);
 }
 
-VM_OP_WARM void OpReverse(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpReverse(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                           const tpl::sql::StringVal *str) {
-  tpl::sql::StringFunctions::Reverse(ctx, result, *str);
+  tpl::sql::StringFunctions::Reverse(result, ctx, *str);
 }
 
-VM_OP_WARM void OpRight(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpRight(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                         const tpl::sql::StringVal *str, const tpl::sql::Integer *n) {
-  tpl::sql::StringFunctions::Right(ctx, result, *str, *n);
+  tpl::sql::StringFunctions::Right(result, ctx, *str, *n);
 }
 
-VM_OP_WARM void OpRPad(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpRPad(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                        const tpl::sql::StringVal *str, const tpl::sql::Integer *n,
                        const tpl::sql::StringVal *pad) {
-  tpl::sql::StringFunctions::Rpad(ctx, result, *str, *n, *pad);
+  tpl::sql::StringFunctions::Rpad(result, ctx, *str, *n, *pad);
 }
 
-VM_OP_WARM void OpRTrim(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpRTrim(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                         const tpl::sql::StringVal *str, const tpl::sql::StringVal *chars) {
-  tpl::sql::StringFunctions::Rtrim(ctx, result, *str, *chars);
+  tpl::sql::StringFunctions::Rtrim(result, ctx, *str, *chars);
 }
 
-VM_OP_WARM void OpSplitPart(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpSplitPart(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                             const tpl::sql::StringVal *str, const tpl::sql::StringVal *delim,
                             const tpl::sql::Integer *field) {
-  tpl::sql::StringFunctions::SplitPart(ctx, result, *str, *delim, *field);
+  tpl::sql::StringFunctions::SplitPart(result, ctx, *str, *delim, *field);
 }
 
-VM_OP_WARM void OpSubstring(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpSubstring(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                             const tpl::sql::StringVal *str, const tpl::sql::Integer *pos,
                             const tpl::sql::Integer *len) {
-  tpl::sql::StringFunctions::Substring(ctx, result, *str, *pos, *len);
+  tpl::sql::StringFunctions::Substring(result, ctx, *str, *pos, *len);
 }
 
-VM_OP_WARM void OpTrim(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpTrim(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                        const tpl::sql::StringVal *str, const tpl::sql::StringVal *chars) {
-  tpl::sql::StringFunctions::Trim(ctx, result, *str, *chars);
+  tpl::sql::StringFunctions::Trim(result, ctx, *str, *chars);
 }
 
-VM_OP_WARM void OpUpper(tpl::sql::ExecutionContext *ctx, tpl::sql::StringVal *result,
+VM_OP_WARM void OpUpper(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
                         const tpl::sql::StringVal *str) {
-  tpl::sql::StringFunctions::Upper(ctx, result, *str);
+  tpl::sql::StringFunctions::Upper(result, ctx, *str);
 }
 
 // ---------------------------------
