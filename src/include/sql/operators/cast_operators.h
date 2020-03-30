@@ -113,6 +113,9 @@ struct is_number_downcast {
       sizeof(OutType) < sizeof(InType);
 };
 
+template <typename InType, typename OutType>
+constexpr bool is_number_downcast_v = is_number_downcast<InType, OutType>::value;
+
 // Is the cast from the given input type to the output type a cast from a signed
 // to an unsigned integer type?
 template <typename InType, typename OutType>
@@ -125,10 +128,18 @@ struct is_integral_signed_to_unsigned {
 };
 
 template <typename InType, typename OutType>
+constexpr bool is_integral_signed_to_unsigned_v =
+    is_integral_signed_to_unsigned<InType, OutType>::value;
+
+template <typename InType, typename OutType>
 struct is_integral_unsigned_to_signed {
   static constexpr bool value = is_integer_type_v<InType> && is_integer_type_v<OutType> &&
                                 std::is_unsigned_v<InType> && std::is_signed_v<OutType>;
 };
+
+template <typename InType, typename OutType>
+constexpr bool is_integral_unsigned_to_signed_v =
+    is_integral_unsigned_to_signed<InType, OutType>::value;
 
 template <typename InType, typename OutType>
 struct is_safe_numeric_cast {
@@ -146,6 +157,9 @@ struct is_safe_numeric_cast {
 };
 
 template <typename InType, typename OutType>
+constexpr bool is_safe_numeric_cast_v = is_safe_numeric_cast<InType, OutType>::value;
+
+template <typename InType, typename OutType>
 struct is_float_truncate {
   static constexpr bool value =
       // The input is an integer and the output is a float.
@@ -153,6 +167,9 @@ struct is_float_truncate {
       // Or, the input is float and output is an integer.
       (is_floating_type_v<InType> && is_integer_type_v<OutType>);
 };
+
+template <typename InType, typename OutType>
+constexpr bool is_float_truncate_v = is_float_truncate<InType, OutType>::value;
 
 }  // namespace detail
 
@@ -216,10 +233,10 @@ struct TryCast<bool, OutType, Options, std::enable_if_t<detail::is_number_type_v
  */
 template <typename InType, typename OutType, typename Options>
 struct TryCast<InType, OutType, Options,
-               std::enable_if_t<detail::is_number_downcast<InType, OutType>::value ||
-                                detail::is_integral_signed_to_unsigned<InType, OutType>::value ||
-                                detail::is_integral_unsigned_to_signed<InType, OutType>::value ||
-                                detail::is_float_truncate<InType, OutType>::value>> {
+               std::enable_if_t<detail::is_number_downcast_v<InType, OutType> ||
+                                detail::is_integral_signed_to_unsigned_v<InType, OutType> ||
+                                detail::is_integral_unsigned_to_signed_v<InType, OutType> ||
+                                detail::is_float_truncate_v<InType, OutType>>> {
   bool operator()(const InType input, OutType *output) const noexcept {
     constexpr OutType kMin = std::numeric_limits<OutType>::lowest();
     constexpr OutType kMax = std::numeric_limits<OutType>::max();
@@ -240,8 +257,8 @@ struct TryCast<InType, OutType, Options,
  */
 template <typename InType, typename OutType, typename Options>
 struct TryCast<InType, OutType, Options,
-               std::enable_if_t<detail::is_safe_numeric_cast<InType, OutType>::value &&
-                                !detail::is_number_downcast<InType, OutType>::value>> {
+               std::enable_if_t<detail::is_safe_numeric_cast_v<InType, OutType> &&
+                                !detail::is_number_downcast_v<InType, OutType>>> {
   bool operator()(const InType input, OutType *output) const noexcept {
     *output = static_cast<OutType>(input);
     return true;
