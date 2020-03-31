@@ -163,8 +163,8 @@ void LoadTestTable(sql::Table *table, uint32_t num_rows, double s1, double s2, d
   const uint32_t num_batches = num_rows / batch_size;
   const uint32_t num_batches_per_phase = num_batches / num_phases;
   if (num_rows % batch_size != 0 || num_rows % num_phases != 0) {
-    throw NotImplementedException("Number of rows ({}) must be a multiple of batch size ({})",
-                                  num_rows, batch_size);
+    throw NotImplementedException(fmt::format(
+        "Number of rows ({}) must be a multiple of batch size ({})", num_rows, batch_size));
   }
 
   int32_t min_a, max_a;
@@ -238,8 +238,9 @@ void InitTestTables() {
     timer.Start();
     auto [s1, s2, s3] = table_meta.col_selectivities;
     if (!util::MathUtil::ApproxEqual(table_meta.selectivity, s1 * s2 * s3)) {
-      throw NotImplementedException("Computed selectivity [{}] doesn't match expected [{}].",
-                                    s1 * s2 * s3, table_meta.selectivity);
+      throw NotImplementedException(
+          fmt::format("Computed selectivity [{}] doesn't match expected [{}].", s1 * s2 * s3,
+                      table_meta.selectivity));
     }
     LoadTestTable(table.get(), kNumTableRows, s1, s2, s3);
     timer.Stop();
