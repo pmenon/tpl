@@ -119,7 +119,7 @@ void FilterManager::Clause::RunFilter(VectorProjection *input_batch, TupleIdList
 #if COLLECT_OVERHEAD == 1
   timer.Stop();
   double slow = timer.GetElapsed();
-  overhead_ += (slow - fast);
+  overhead_micros_ += (slow - fast);
 #endif
 }
 
