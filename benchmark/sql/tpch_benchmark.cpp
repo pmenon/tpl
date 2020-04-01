@@ -29,6 +29,7 @@
 #include "vm/bytecode_module.h"
 #include "vm/llvm_engine.h"
 #include "vm/module.h"
+#include "sql/printing_consumer.h"
 
 namespace tpl::sql::codegen {
 
@@ -2176,10 +2177,19 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
     l_seq_scan_out.AddOutput("l_shipmode", l_shipmode);
     l_seq_scan_out.AddOutput("l_shipinstruct", l_shipinstruct);
     auto schema = l_seq_scan_out.MakeSchema();
+
+    // Predicate.
+    auto shipmode_comp =
+        expr_maker.ConjunctionOr(expr_maker.CompareEq(l_shipmode, expr_maker.Constant("AIR")),
+                                 expr_maker.CompareEq(l_shipmode, expr_maker.Constant("AIR REG")));
+    auto shipinstruct_comp =
+        expr_maker.CompareEq(l_shipinstruct, expr_maker.Constant("DELIVER IN PERSON"));
+    auto predicate = expr_maker.ConjunctionAnd(shipmode_comp, shipinstruct_comp);
+
     // Build
     planner::SeqScanPlanNode::Builder builder;
     l_seq_scan = builder.SetOutputSchema(std::move(schema))
-                     .SetScanPredicate(nullptr)
+                     .SetScanPredicate(predicate)
                      .SetTableOid(l_table->GetId())
                      .Build();
   }
@@ -2218,8 +2228,6 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
     // Right columns
     auto l_partkey = l_seq_scan_out.GetOutput("l_partkey");
     auto l_quantity = l_seq_scan_out.GetOutput("l_quantity");
-    auto l_shipmode = l_seq_scan_out.GetOutput("l_shipmode");
-    auto l_shipinstruct = l_seq_scan_out.GetOutput("l_shipinstruct");
     auto l_discount = l_seq_scan_out.GetOutput("l_discount");
     auto l_extendedprice = l_seq_scan_out.GetOutput("l_extendedprice");
     // Output Schema
@@ -2246,19 +2254,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
       auto size_lo_comp = expr_maker.CompareGe(p_size, expr_maker.Constant(lo_size));
       auto size_hi_comp = expr_maker.CompareLe(p_size, expr_maker.Constant(hi_size));
       auto size_comp = expr_maker.ConjunctionAnd(size_lo_comp, size_hi_comp);
-      auto shipmode_comp = expr_maker.ConjunctionOr(
-          expr_maker.CompareEq(l_shipmode, expr_maker.Constant("AIR")),
-          expr_maker.CompareEq(l_shipmode, expr_maker.Constant("AIR REG")));
-      auto shipinstruct_comp =
-          expr_maker.CompareEq(l_shipinstruct, expr_maker.Constant("DELIVER IN PERSON"));
 
       return expr_maker.ConjunctionAnd(
-          brand_comp, expr_maker.ConjunctionAnd(
-                          container_comp,
-                          expr_maker.ConjunctionAnd(
-                              qty_comp, expr_maker.ConjunctionAnd(
-                                            size_comp, expr_maker.ConjunctionAnd(
-                                                           shipmode_comp, shipinstruct_comp)))));
+          brand_comp, expr_maker.ConjunctionAnd(container_comp,
+                                                expr_maker.ConjunctionAnd(qty_comp, size_comp)));
     };
     predicate1 =
         gen_predicate_clause("Brand#12", {"SM CASE", "SM BOX", "SM PACK", "SM PKG"}, 1, 11, 1, 5);
@@ -2308,7 +2307,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 
   // Compile plan
   auto last_op = agg.get();
-  NoOpResultConsumer consumer;
+//  NoOpResultConsumer consumer;
+  PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
