@@ -57,39 +57,6 @@ constexpr const sql::FilterManager::MatchFn kAllTerms[] = {
     },
 };
 
-constexpr const sql::FilterManager::MatchFn kOracleTerms[] = {
-    [](auto input, auto tids, auto ctx) {
-      uint32_t run = *reinterpret_cast<uint32_t *>(ctx);
-      if (run <= 500) {
-        kAllTerms[2](input, tids, ctx);
-      } else if (run <= 1000) {
-        kAllTerms[0](input, tids, ctx);
-      } else {
-        kAllTerms[1](input, tids, ctx);
-      }
-    },
-    [](auto input, auto tids, auto ctx) {
-      uint32_t run = *reinterpret_cast<uint32_t *>(ctx);
-      if (run <= 500) {
-        kAllTerms[1](input, tids, ctx);
-      } else if (run <= 1000) {
-        kAllTerms[2](input, tids, ctx);
-      } else {
-        kAllTerms[0](input, tids, ctx);
-      }
-    },
-    [](auto input, auto tids, auto ctx) {
-      uint32_t run = *reinterpret_cast<uint32_t *>(ctx);
-      if (run <= 500) {
-        kAllTerms[0](input, tids, ctx);
-      } else if (run <= 1000) {
-        kAllTerms[1](input, tids, ctx);
-      } else {
-        kAllTerms[2](input, tids, ctx);
-      }
-    },
-};
-
 // Get a specific ordering of filtering terms.
 std::vector<sql::FilterManager::MatchFn> GetTermsByOrder(const std::vector<uint32_t> &term_order) {
   std::vector<sql::FilterManager::MatchFn> result;
@@ -273,22 +240,48 @@ const sql::Table *GetTestTable(double selectivity) {
 // Using the provided filter terms and adaptation flag.
 void RunScanWithTermOrder(uint16_t table_id, bool adapt,
                           const std::vector<sql::FilterManager::MatchFn> &terms,
-                          std::vector<double> *results, double *overhead) {
+                          std::vector<double> *results, double *overhead, bool for_oracle) {
   *overhead = 0.0;
   for (uint32_t r = 0; r < kNumRuns; r++) {
     std::vector<double> run_results;
     run_results.reserve(2000);
 
-    uint32_t vec_idx = 0;
-    sql::FilterManager filter(adapt, &vec_idx);
+    sql::FilterManager filter(adapt);
     filter.StartNewClause();
     filter.InsertClauseTerms(terms);
 
     sql::TableVectorIterator tvi(static_cast<uint16_t>(table_id));
-    for (tvi.Init(); tvi.Advance(); vec_idx++) {
-      auto vpi = tvi.GetVectorProjectionIterator();
-      const auto exec_micros = util::Time<std::micro>([&] { filter.RunFilters(vpi); });
-      run_results.push_back(exec_micros);
+    if (!tvi.Init()) throw std::runtime_error("Unable to initialize TVI");
+
+    if (for_oracle) {
+      sql::TupleIdList tids(kDefaultVectorSize);
+      for (uint32_t idx = 0; tvi.Advance(); idx++) {
+        auto vpi = tvi.GetVectorProjectionIterator();
+        const auto exec_micros = util::Time<std::micro>([&] {
+          auto vp = vpi->GetVectorProjection();
+          vp->CopySelectionsTo(&tids);
+          if (idx <= 500) {
+            kAllTerms[2](vp, &tids, nullptr);
+            kAllTerms[1](vp, &tids, nullptr);
+            kAllTerms[0](vp, &tids, nullptr);
+          } else if (idx <= 1000) {
+            kAllTerms[0](vp, &tids, nullptr);
+            kAllTerms[1](vp, &tids, nullptr);
+            kAllTerms[2](vp, &tids, nullptr);
+          } else {
+            kAllTerms[1](vp, &tids, nullptr);
+            kAllTerms[0](vp, &tids, nullptr);
+            kAllTerms[2](vp, &tids, nullptr);
+          }
+        });
+        run_results.push_back(exec_micros);
+      }
+    } else {
+      for (uint32_t idx = 0; tvi.Advance(); idx++) {
+        auto vpi = tvi.GetVectorProjectionIterator();
+        const auto exec_micros = util::Time<std::micro>([&] { filter.RunFilters(vpi); });
+        run_results.push_back(exec_micros);
+      }
     }
 
     // Overhead.
@@ -318,18 +311,19 @@ void RunExperiment(uint16_t table_id, std::vector<std::vector<double>> *all_resu
   do {
     std::vector<double> timings;
     double overhead;
-    RunScanWithTermOrder(table_id, false, GetTermsByOrder(term_order), &timings, &overhead);
+    RunScanWithTermOrder(table_id, false, GetTermsByOrder(term_order), &timings, &overhead, false);
     all_results->emplace_back(std::move(timings));
   } while (std::next_permutation(term_order.begin(), term_order.end()));
 
-  // 2. Run oracle mode.
+  // 2. Run oracle mode. This elides the filter manager altogether.
   double oracle_overhead;
-  RunScanWithTermOrder(table_id, false, {kOracleTerms[0], kOracleTerms[1], kOracleTerms[2]},
-                       oracle_results, &oracle_overhead);
+  RunScanWithTermOrder(table_id, false, GetTermsByOrder({0, 1, 2}), oracle_results,
+                       &oracle_overhead, true);
 
   // 3. Run adaptive mode.
   double adapt_overhead;
-  RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), adapt_results, &adapt_overhead);
+  RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), adapt_results, &adapt_overhead,
+                       false);
 }
 
 }  // namespace
@@ -445,7 +439,7 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VarySamplingRate)(benchmark::State &s
     // Run experiment.
     double overhead;
     std::vector<double> sample_results;
-    RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), &sample_results, &overhead);
+    RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), &sample_results, &overhead, false);
     results.push_back(std::accumulate(sample_results.begin(), sample_results.end(), 0.0));
     overheads.push_back(overhead);
   }
@@ -453,8 +447,10 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VarySamplingRate)(benchmark::State &s
   // Write out.
   std::ofstream out_file("filter-vary-sampling.csv");
   for (uint32_t i = 0; i < results.size(); i++) {
+    const auto overhead = overheads[i];
+    const auto exec_time = results[i] - overhead;
     out_file << std::fixed << std::setprecision(2);
-    out_file << sample_freqs[i] << ", " << overheads[i] << ", " << results[i] << std::endl;
+    out_file << sample_freqs[i] << ", " << overhead << ", " << exec_time << std::endl;
   }
   out_file.close();
 }
