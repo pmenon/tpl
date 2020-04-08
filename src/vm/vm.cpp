@@ -806,8 +806,8 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 
   OP(ForceBoolTruth) : {
     auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
-    auto *sql_int = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
-    OpForceBoolTruth(result, sql_int);
+    auto *sql_bool = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    OpForceBoolTruth(result, sql_bool);
     DISPATCH_NEXT();
   }
 
@@ -1667,8 +1667,8 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
   OP(Like) : {
-    auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *pattern = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     OpLike(result, input, pattern);
     DISPATCH_NEXT();
