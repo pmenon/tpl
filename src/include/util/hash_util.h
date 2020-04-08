@@ -117,6 +117,41 @@ class HashUtil : public AllStatic {
     return HashCrc(val, 0);
   }
 
+  static hash_t HashCrc(const uint8_t *buf, uint32_t len, hash_t seed) {
+    uint64_t hash = seed;
+
+    // Process as many 8-byte chunks as possible.
+    for (; len >= 8; buf += 8, len -= 8) {
+      hash = HashCrc(*reinterpret_cast<const uint64_t *>(buf), hash);
+    }
+
+    // If there's at least a 4-byte chunk, process that.
+    if (len >= 4) {
+      hash = HashCrc(*reinterpret_cast<const uint32_t *>(buf), hash);
+      buf += 4;
+      len -= 4;
+    }
+
+    // Process the tail.
+    switch (len) {
+      case 3:
+        hash ^= (static_cast<uint64_t>(buf[2])) << 16u;
+        FALLTHROUGH;
+      case 2:
+        hash ^= (static_cast<uint64_t>(buf[1])) << 8u;
+        FALLTHROUGH;
+      case 1:
+        hash ^= buf[0];
+        FALLTHROUGH;
+      default:
+        break;
+    }
+
+    return hash;
+  }
+
+  static hash_t HashCrc(const uint8_t *buf, uint32_t len) { return HashCrc(buf, len, 0); }
+
   // -------------------------------------------------------
   // Murmur3 Hashing - Integers Only
   // -------------------------------------------------------

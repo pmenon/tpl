@@ -400,16 +400,6 @@ std::string Timestamp::ToString() const {
 
 //===----------------------------------------------------------------------===//
 //
-// Varlen
-//
-//===----------------------------------------------------------------------===//
-
-hash_t VarlenEntry::Hash(const hash_t seed) const {
-  return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(GetContent()), GetSize(), seed);
-}
-
-//===----------------------------------------------------------------------===//
-//
 // Blob
 //
 //===----------------------------------------------------------------------===//
@@ -417,5 +407,6 @@ hash_t VarlenEntry::Hash(const hash_t seed) const {
 hash_t Blob::Hash(hash_t seed) const {
   return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(data_), size_, seed);
 }
+
 
 }  // namespace tpl::sql

@@ -516,7 +516,14 @@ class VarlenEntry {
    * @param seed The value to seed the hash with.
    * @return The hash value for this string instance.
    */
-  hash_t Hash(hash_t seed) const;
+  hash_t Hash(hash_t seed) const {
+    // "small" strings use CRC hashing, "long" strings use XXH3.
+    if (IsInlined()) {
+      return util::HashUtil::HashCrc(reinterpret_cast<const uint8_t *>(prefix_), size_, seed);
+    } else {
+      return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(content_), size_, seed);
+    }
+  }
 
   /**
    * @return The hash value of this variable-length string.
