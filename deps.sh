@@ -72,7 +72,7 @@ install_mac() {
   brew ls --versions coreutils || brew install coreutils
   brew ls --versions doxygen || brew install doxygen
   brew ls --versions git || brew install git
-  (brew ls --versions llvm@8 | grep 8) || brew install llvm@8
+  (brew ls --versions llvm@9 | grep 9) || brew install llvm@9
   brew ls --versions jemalloc || brew install jemalloc
   brew ls --versions tbb || brew install tbb
 }
@@ -83,15 +83,15 @@ install_linux() {
   # Install packages.
   apt-get -y install  \
       build-essential \
-      clang-tidy-8    \
-      clang-format-8  \
+      clang-tidy-9    \
+      clang-format-9  \
       cmake           \
       doxygen         \
       git             \
       lld             \
-      g++-8           \
-      clang-8         \
-      llvm-8          \
+      g++-9           \
+      clang-9         \
+      llvm-9          \
       libjemalloc-dev \
       libtbb-dev
 }
