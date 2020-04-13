@@ -10,36 +10,36 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install
-        run: |
-          # LLVM 9 is not in Bionic's repositories so we add the official LLVM repository.
-          sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
-          sudo apt-get update
+      run: |
+        # LLVM 9 is not in Bionic's repositories so we add the official LLVM repository.
+        sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
+        sudo apt-get update
 
-          # Remove previous versions of Clang tools.
-          sudo apt-get remove -y clang-format-8 clang-tidy-8 clang-8 llvm-8 libllvm8
-          sudo apt-get purge
-          sudo apt-get autoremove
+        # Remove previous versions of Clang tools.
+        sudo apt-get remove -y clang-format-8 clang-tidy-8 clang-8 llvm-8 libllvm8
+        sudo apt-get purge
+        sudo apt-get autoremove
 
-          # Install dependencies.
-          echo y | sudo ./deps.sh
+        # Install dependencies.
+        echo y | sudo ./deps.sh
 
-          # Configure system.
-          echo "::set-env name=CC::gcc-9
-          echo "::set-env name=CXX::g++-9
+        # Configure system.
+        echo "::set-env name=CC::gcc-9
+        echo "::set-env name=CXX::g++-9
 
     - name: Build & Test Debug x64 With Sanitizers
-        run: |
-          cmake -E remove_directory build
-          cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
-          cmake --build build
-          cd build
-          make check
-          make check-tpl
+      run: |
+        cmake -E remove_directory build
+        cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
+        cmake --build build
+        cd build
+        make check
+        make check-tpl
 
     - name: Build & Test Release x64
-        run: |
-          cmake -E remove_directory build
-          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
-          cmake --build build
-          cd build
-          make check-tpl
+      run: |
+        cmake -E remove_directory build
+        cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
+        cd build
+        make check-tpl
