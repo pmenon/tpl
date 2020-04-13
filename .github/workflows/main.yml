@@ -24,8 +24,8 @@ jobs:
         echo y | sudo ./deps.sh
 
         # Configure system.
-        echo "::set-env name=CC::gcc-9
-        echo "::set-env name=CXX::g++-9
+        echo "::set-env name=CC::gcc-9"
+        echo "::set-env name=CXX::g++-9"
 
     - name: Build & Test Debug x64 With Sanitizers
       run: |
