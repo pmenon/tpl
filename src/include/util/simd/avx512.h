@@ -302,7 +302,7 @@ class Vec8Mask {
   Vec8Mask() = default;
   explicit Vec8Mask(const __mmask8 &mask) : mask_(mask) {}
 
-  uint32_t ToPositions(uint32_t *positions, uint32_t offset) const {
+  sel_t ToPositions(sel_t *positions, uint32_t offset) const {
     __m512i sequence = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
     __m512i pos_vec = _mm512_add_epi64(sequence, _mm512_set1_epi64(offset));
     __m128i pos_vec_comp = _mm512_cvtepi64_epi16(pos_vec);
