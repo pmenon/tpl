@@ -523,8 +523,26 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
       break;
     }
     case ast::Builtin::SqlToBool: {
-      auto input = VisitExpressionForRValue(call->Arguments()[0]);
+      auto input = VisitExpressionForLValue(call->Arguments()[0]);
       GetEmitter()->Emit(Bytecode::ForceBoolTruth, dest, input);
+      GetExecutionResult()->SetDestination(dest.ValueOf());
+      break;
+    }
+    case ast::Builtin::ConvertBoolToInteger: {
+      auto input = VisitExpressionForLValue(call->Arguments()[0]);
+      GetEmitter()->Emit(Bytecode::BoolToInteger, dest, input);
+      GetExecutionResult()->SetDestination(dest.ValueOf());
+      break;
+    }
+    case ast::Builtin::ConvertIntegerToReal: {
+      auto input = VisitExpressionForLValue(call->Arguments()[0]);
+      GetEmitter()->Emit(Bytecode::IntegerToReal, dest, input);
+      GetExecutionResult()->SetDestination(dest.ValueOf());
+      break;
+    }
+    case ast::Builtin::ConvertDateToTimestamp: {
+      auto input = VisitExpressionForLValue(call->Arguments()[0]);
+      GetEmitter()->Emit(Bytecode::DateToTimestamp, dest, input);
       GetExecutionResult()->SetDestination(dest.ValueOf());
       break;
     }
@@ -1543,7 +1561,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::FloatToSql:
     case ast::Builtin::DateToSql:
     case ast::Builtin::StringToSql:
-    case ast::Builtin::SqlToBool: {
+    case ast::Builtin::SqlToBool:
+    case ast::Builtin::ConvertBoolToInteger:
+    case ast::Builtin::ConvertIntegerToReal:
+    case ast::Builtin::ConvertDateToTimestamp: {
       VisitSqlConversionCall(call, builtin);
       break;
     }

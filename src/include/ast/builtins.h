@@ -16,6 +16,11 @@ namespace tpl::ast {
   F(SqlToBool, sqlToBool)                                       \
   F(IsValNull, isValNull)                                       \
                                                                 \
+  /* SQL Conversions */                                         \
+  F(ConvertBoolToInteger, convertBoolToInt)                     \
+  F(ConvertIntegerToReal, convertIntToReal)                     \
+  F(ConvertDateToTimestamp, convertDateToTime)                  \
+                                                                \
   /* SQL Functions */                                           \
   F(Like, like)                                                 \
   F(ExtractYear, extractYear)                                   \

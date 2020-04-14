@@ -36,7 +36,7 @@ bool AreAllFunctions(const ArgTypes... type) {
 
 }  // namespace
 
-void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
   // Handle this builtin because it's API is different than the other builtins; we expect three
   // 32-bit integer arguments.
   if (builtin == ast::Builtin::DateToSql) {
@@ -100,6 +100,30 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
         return;
       }
       call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::ConvertBoolToInteger: {
+      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+        ReportIncorrectCallArg(call, 0, "SQL boolean");
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+      break;
+    }
+    case ast::Builtin::ConvertIntegerToReal: {
+      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
+        ReportIncorrectCallArg(call, 0, "SQL integer");
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Real));
+      break;
+    }
+    case ast::Builtin::ConvertDateToTimestamp: {
+      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Date)) {
+        ReportIncorrectCallArg(call, 0, "SQL date");
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Timestamp));
       break;
     }
     default: {
@@ -1569,8 +1593,11 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::FloatToSql:
     case ast::Builtin::DateToSql:
     case ast::Builtin::StringToSql:
-    case ast::Builtin::SqlToBool: {
-      CheckBuiltinSqlConversionCall(call, builtin);
+    case ast::Builtin::SqlToBool:
+    case ast::Builtin::ConvertBoolToInteger:
+    case ast::Builtin::ConvertIntegerToReal:
+    case ast::Builtin::ConvertDateToTimestamp: {
+      CheckSqlConversionCall(call, builtin);
       break;
     }
     case ast::Builtin::IsValNull: {

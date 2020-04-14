@@ -36,6 +36,14 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
    */
   DISALLOW_COPY_AND_MOVE(BytecodeGenerator);
 
+  /**
+   * Main entry point to convert a valid (i.e., parsed and type-checked) AST into a bytecode module.
+   * @param root The root of the AST.
+   * @param name The (optional) name of the program.
+   * @return A compiled bytecode module.
+   */
+  static std::unique_ptr<BytecodeModule> Compile(ast::AstNode *root, const std::string &name);
+
   // Declare all node visit methods here
 #define DECLARE_VISIT_METHOD(type) void Visit##type(ast::type *node);
   AST_NODES(DECLARE_VISIT_METHOD)
@@ -45,14 +53,6 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
    * @return The emitter used by this generator to write bytecode.
    */
   BytecodeEmitter *GetEmitter() { return &emitter_; }
-
-  /**
-   * Convert a parse and type-checked TPL AST into a TBC unit.
-   * @param root The root of the AST.
-   * @param name The (optional) name of the program.
-   * @return A compiled TBC unit.
-   */
-  static std::unique_ptr<BytecodeModule> Compile(ast::AstNode *root, const std::string &name);
 
  private:
   // Private constructor to force users to call Compile()
