@@ -181,6 +181,8 @@ ast::Expr *CodeGen::TplType(sql::TypeId type) {
       return BuiltinType(ast::BuiltinType::Integer);
     case sql::TypeId::Date:
       return BuiltinType(ast::BuiltinType::Date);
+    case sql::TypeId::Timestamp:
+      return BuiltinType(ast::BuiltinType::Timestamp);
     case sql::TypeId::Double:
     case sql::TypeId::Float:
       return BuiltinType(ast::BuiltinType::Real);
