@@ -443,6 +443,10 @@ ast::Expr *CodeGen::VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, u
   ast::Builtin builtin;
   ast::BuiltinType::Kind ret_kind;
   switch (type_id) {
+    case sql::TypeId::Boolean:
+      builtin = ast::Builtin::VPIGetBool;
+      ret_kind = ast::BuiltinType::Boolean;
+      break;
     case sql::TypeId::TinyInt:
       builtin = ast::Builtin::VPIGetTinyInt;
       ret_kind = ast::BuiltinType::Integer;
