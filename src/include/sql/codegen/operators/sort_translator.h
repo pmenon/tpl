@@ -113,17 +113,9 @@ class SortTranslator : public OperatorTranslator {
   }
 
  private:
-  // Get the bottom/build pipeline.
-  Pipeline *GetBuildPipeline() { return &child_pipeline_; }
-  const Pipeline &GetBuildPipeline() const { return child_pipeline_; }
-
-  // Get the top/scan pipeline.
-  Pipeline *GetScanPipeline() { return GetPipeline(); }
-  const Pipeline &GetScanPipeline() const { return *GetPipeline(); }
-
   // Check if the given pipelines are t
-  bool IsBuildPipeline(const Pipeline &pipeline) const { return &GetBuildPipeline() == &pipeline; }
-  bool IsScanPipeline(const Pipeline &pipeline) const { return &GetScanPipeline() == &pipeline; }
+  bool IsBuildPipeline(const Pipeline &pipeline) const { return &build_pipeline_ == &pipeline; }
+  bool IsScanPipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
 
   // Initialize and destroy the given sorter.
   void InitializeSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const;
@@ -153,7 +145,7 @@ class SortTranslator : public OperatorTranslator {
   ast::Identifier compare_func_;
 
   // Build-side pipeline.
-  Pipeline child_pipeline_;
+  Pipeline build_pipeline_;
 
   // Where the global and thread-local sorter instances are.
   StateDescriptor::Entry global_sorter_;

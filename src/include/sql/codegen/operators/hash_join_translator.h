@@ -113,19 +113,11 @@ class HashJoinTranslator : public OperatorTranslator {
   }
 
  private:
-  // Return the left pipeline.
-  Pipeline *LeftPipeline() { return &left_pipeline_; }
-  const Pipeline &LeftPipeline() const { return left_pipeline_; }
-
-  // Return the right pipeline.
-  Pipeline *RightPipeline() { return GetPipeline(); }
-  const Pipeline &RightPipeline() const { return *GetPipeline(); }
-
   // Is the given pipeline this join's left pipeline?
-  bool IsLeftPipeline(const Pipeline &pipeline) const { return &LeftPipeline() == &pipeline; }
+  bool IsLeftPipeline(const Pipeline &pipeline) const { return &left_pipeline_ == &pipeline; }
 
   // Is the given pipeline this join's right pipeline?
-  bool IsRightPipeline(const Pipeline &pipeline) const { return &RightPipeline() == &pipeline; }
+  bool IsRightPipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
 
   // Initialize the given join hash table instance, provided as a *JHT.
   void InitializeJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;

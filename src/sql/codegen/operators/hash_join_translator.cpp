@@ -26,10 +26,10 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   TPL_ASSERT(plan.GetJoinPredicate() != nullptr, "Hash-join must have a join predicate!");
 
   pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
-  pipeline->LinkSourcePipeline(LeftPipeline());
+  pipeline->LinkSourcePipeline(&left_pipeline_);
 
-  compilation_context->Prepare(*plan.GetChild(0), LeftPipeline());
-  compilation_context->Prepare(*plan.GetChild(1), RightPipeline());
+  compilation_context->Prepare(*plan.GetChild(0), &left_pipeline_);
+  compilation_context->Prepare(*plan.GetChild(1), pipeline);
 
   compilation_context->Prepare(*plan.GetJoinPredicate());
   for (const auto left_hash_key : plan.GetLeftHashKeys()) {
@@ -80,14 +80,14 @@ void HashJoinTranslator::TearDownQueryState(FunctionBuilder *function) const {
 
 void HashJoinTranslator::InitializePipelineState(const Pipeline &pipeline,
                                                  FunctionBuilder *function) const {
-  if (IsLeftPipeline(pipeline) && LeftPipeline().IsParallel()) {
+  if (IsLeftPipeline(pipeline) && left_pipeline_.IsParallel()) {
     InitializeJoinHashTable(function, local_join_ht_.GetPtr(GetCodeGen()));
   }
 }
 
 void HashJoinTranslator::TearDownPipelineState(const Pipeline &pipeline,
                                                FunctionBuilder *function) const {
-  if (IsLeftPipeline(pipeline) && LeftPipeline().IsParallel()) {
+  if (IsLeftPipeline(pipeline) && left_pipeline_.IsParallel()) {
     TearDownJoinHashTable(function, local_join_ht_.GetPtr(GetCodeGen()));
   }
 }
@@ -276,7 +276,7 @@ void HashJoinTranslator::FinishPipelineWork(const Pipeline &pipeline,
   if (IsLeftPipeline(pipeline)) {
     auto codegen = GetCodeGen();
     auto jht = global_join_ht_.GetPtr(codegen);
-    if (LeftPipeline().IsParallel()) {
+    if (left_pipeline_.IsParallel()) {
       auto tls = GetThreadStateContainer();
       auto offset = local_join_ht_.OffsetFromState(codegen);
       function->Append(codegen->JoinHashTableBuildParallel(jht, tls, offset));

@@ -23,12 +23,12 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
       lhs_row_(GetCodeGen()->MakeIdentifier("lhs")),
       rhs_row_(GetCodeGen()->MakeIdentifier("rhs")),
       compare_func_(GetCodeGen()->MakeFreshIdentifier("Compare")),
-      child_pipeline_(this, Pipeline::Parallelism::Parallel),
+      build_pipeline_(this, Pipeline::Parallelism::Parallel),
       current_row_(CurrentRow::Child) {
   pipeline->RegisterStep(this, Pipeline::Parallelism::Serial);
-  pipeline->LinkSourcePipeline(GetBuildPipeline());
+  pipeline->LinkSourcePipeline(&build_pipeline_);
 
-  compilation_context->Prepare(*plan.GetChild(0), GetBuildPipeline());
+  compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
 
   for (const auto &[expr, _] : plan.GetSortKeys()) {
     (void)_;
@@ -43,9 +43,9 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
 
   // Register another Sorter instance in the pipeline-local state if the
   // build pipeline is parallel.
-  if (child_pipeline_.IsParallel()) {
+  if (build_pipeline_.IsParallel()) {
     local_sorter_ =
-        child_pipeline_.GetPipelineState()->DeclareStateEntry(GetCodeGen(), "sorter", sorter_type);
+        build_pipeline_.GetPipelineState()->DeclareStateEntry(GetCodeGen(), "sorter", sorter_type);
   }
 }
 
@@ -58,7 +58,7 @@ void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *
 
 void SortTranslator::GenerateComparisonFunction(FunctionBuilder *function) {
   CodeGen *codegen = GetCodeGen();
-  WorkContext context(GetCompilationContext(), *GetBuildPipeline());
+  WorkContext context(GetCompilationContext(), build_pipeline_);
   context.SetExpressionCacheEnable(false);
   int32_t ret_value;
   for (const auto &[expr, sort_order] : GetPlanAs<planner::OrderByPlanNode>().GetSortKeys()) {
@@ -117,14 +117,14 @@ void SortTranslator::TearDownQueryState(FunctionBuilder *function) const {
 
 void SortTranslator::InitializePipelineState(const Pipeline &pipeline,
                                              FunctionBuilder *function) const {
-  if (IsBuildPipeline(pipeline) && GetBuildPipeline().IsParallel()) {
+  if (IsBuildPipeline(pipeline) && build_pipeline_.IsParallel()) {
     InitializeSorter(function, local_sorter_.GetPtr(GetCodeGen()));
   }
 }
 
 void SortTranslator::TearDownPipelineState(const Pipeline &pipeline,
                                            FunctionBuilder *function) const {
-  if (IsBuildPipeline(pipeline) && GetBuildPipeline().IsParallel()) {
+  if (IsBuildPipeline(pipeline) && build_pipeline_.IsParallel()) {
     TearDownSorter(function, local_sorter_.GetPtr(GetCodeGen()));
   }
 }
@@ -216,7 +216,7 @@ void SortTranslator::FinishPipelineWork(const Pipeline &pipeline, FunctionBuilde
   if (IsBuildPipeline(pipeline)) {
     CodeGen *codegen = GetCodeGen();
     ast::Expr *sorter_ptr = global_sorter_.GetPtr(codegen);
-    if (GetBuildPipeline().IsParallel()) {
+    if (build_pipeline_.IsParallel()) {
       // Build pipeline is parallel, so we need to issue a parallel sort. Issue
       // a SortParallel() or a SortParallelTopK() depending on whether a limit
       // was provided in the plan.

@@ -30,6 +30,14 @@ class ExpressionMaker {
   using AggExpression = const planner::AggregateExpression *;
 
   /**
+   * @return A constant expression with the given boolean value.
+   */
+  Expression Constant(bool val) {
+    return Alloc(
+        std::make_unique<planner::ConstantValueExpression>(sql::GenericValue::CreateBoolean(val)));
+  }
+
+  /**
    * Create an integer constant expression
    */
   Expression Constant(int32_t val) {
