@@ -96,7 +96,6 @@ class JoinManagerBenchmark : public benchmark::Fixture {
     });
   }
 
-
   uint16_t GetProbeTableId() {
     auto table = sql::Catalog::Instance()->LookupTableByName(kProbeTableName);
     if (table == nullptr) throw std::runtime_error("No table!");

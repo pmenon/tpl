@@ -439,7 +439,8 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VarySamplingRate)(benchmark::State &s
     // Run experiment.
     double overhead;
     std::vector<double> sample_results;
-    RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), &sample_results, &overhead, false);
+    RunScanWithTermOrder(table_id, true, GetTermsByOrder({0, 1, 2}), &sample_results, &overhead,
+                         false);
     results.push_back(std::accumulate(sample_results.begin(), sample_results.end(), 0.0));
     overheads.push_back(overhead);
   }

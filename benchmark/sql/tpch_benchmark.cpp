@@ -22,6 +22,7 @@
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/output_schema.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
+#include "sql/printing_consumer.h"
 #include "sql/table.h"
 #include "sql/tablegen/table_generator.h"
 #include "sql/value.h"
@@ -29,7 +30,6 @@
 #include "vm/bytecode_module.h"
 #include "vm/llvm_engine.h"
 #include "vm/module.h"
-#include "sql/printing_consumer.h"
 
 namespace tpl::sql::codegen {
 
@@ -2307,7 +2307,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 
   // Compile plan
   auto last_op = agg.get();
-//  NoOpResultConsumer consumer;
+  //  NoOpResultConsumer consumer;
   PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
