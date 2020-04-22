@@ -2307,8 +2307,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 
   // Compile plan
   auto last_op = agg.get();
-  //  NoOpResultConsumer consumer;
-  PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
+  NoOpResultConsumer consumer;
+  //PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
@@ -2321,13 +2321,20 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
   }
 }
 
-BENCHMARK_REGISTER_F(TpchBenchmark, Q1);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q4);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q5);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q6);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q7);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q11);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q16);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q18);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q19);
+// ---------------------------------------------------------
+//
+// Benchmark Configs
+//
+// ---------------------------------------------------------
+
+BENCHMARK_REGISTER_F(TpchBenchmark, Q1)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q4)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q5)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q6)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q7)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q11)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q16)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q18)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q19)->Unit(benchmark::kMillisecond);
+
 }  // namespace tpl::sql::codegen
