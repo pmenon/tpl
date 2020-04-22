@@ -69,7 +69,7 @@ class ChainingHashTableBase {
   /**
    * Destructor.
    */
-  ~ChainingHashTableBase();
+  virtual ~ChainingHashTableBase();
 
   /**
    * Explicitly set the size of the hash table to support at least @em new_size elements. The input

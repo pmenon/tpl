@@ -54,6 +54,9 @@ std::unique_ptr<ExecutableQuery::Fragment> ExecutableQueryFragmentBuilder::Compi
   compiler::Compiler::RunCompilation(input, &timer);
   std::unique_ptr<vm::Module> module = callbacks.ReleaseModule();
 
+  LOG_DEBUG("Type-check: {:.2f} ms, Bytecode Gen: {:.2f} ms, Module Gen: {:.2f} ms",
+            timer.GetSemaTimeMs(), timer.GetBytecodeGenTimeMs(), timer.GetModuleGenTimeMs());
+
   // Create the fragment.
   return std::make_unique<ExecutableQuery::Fragment>(std::move(step_functions_), std::move(module));
 }
