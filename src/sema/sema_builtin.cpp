@@ -768,6 +768,11 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
 
   switch (builtin) {
     case ast::Builtin::ThreadStateContainerClear: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::ThreadStateContainerGetState: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
     case ast::Builtin::ThreadStateContainerReset: {
@@ -782,8 +787,7 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
       }
       // Third and fourth arguments must be functions
       // TODO(pmenon): More thorough check
-      if (!call_args[2]->GetType()->IsFunctionType() ||
-          !call_args[3]->GetType()->IsFunctionType()) {
+      if (!AreAllFunctions(call_args[2]->GetType(), call_args[3]->GetType())) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
@@ -792,6 +796,7 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
         ReportIncorrectCallArg(call, 4, GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::ThreadStateContainerIterate: {
@@ -808,15 +813,13 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     default: {
       UNREACHABLE("Impossible table iteration call");
     }
   }
-
-  // All these calls return nil
-  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -1618,6 +1621,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       break;
     }
     case ast::Builtin::ThreadStateContainerReset:
+    case ast::Builtin::ThreadStateContainerGetState:
     case ast::Builtin::ThreadStateContainerIterate:
     case ast::Builtin::ThreadStateContainerClear: {
       CheckBuiltinThreadStateContainerCall(call, builtin);

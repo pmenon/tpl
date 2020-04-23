@@ -658,6 +658,16 @@ class CodeGen {
   [[nodiscard]] ast::Expr *ExecCtxGetTLS(ast::Expr *exec_ctx);
 
   /**
+   * Call @tlsGetCurrentThreadState(). Retrieves the current threads state in the state container.
+   * It's assumed a previous call to @tlsReset() was made to specify the state parameters.
+   * @param tls The state container pointer.
+   * @param state_type_name The name of the expected state type to cast the result to.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *TLSAccessCurrentThreadState(ast::Expr *tls,
+                                                       ast::Identifier state_type_name);
+
+  /**
    * Call @tlsIterate(). Invokes the provided callback function for all thread-local state objects.
    * The context is provided as the first argument, and the thread-local state as the second.
    * @param tls A pointer to the thread state container.

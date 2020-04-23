@@ -29,6 +29,7 @@ namespace tpl::ast {
   F(ExecutionContextGetMemoryPool, execCtxGetMem)               \
   F(ExecutionContextGetTLS, execCtxGetTLS)                      \
   F(ThreadStateContainerReset, tlsReset)                        \
+  F(ThreadStateContainerGetState, tlsGetCurrentThreadState)     \
   F(ThreadStateContainerIterate, tlsIterate)                    \
   F(ThreadStateContainerClear, tlsClear)                        \
                                                                 \

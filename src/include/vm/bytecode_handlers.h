@@ -205,6 +205,11 @@ VM_OP_WARM void OpExecutionContextGetTLS(
   *thread_state_container = exec_ctx->GetThreadStateContainer();
 }
 
+VM_OP_WARM void OpThreadStateContainerAccessCurrentThreadState(
+    byte **state, tpl::sql::ThreadStateContainer *thread_state_container) {
+  *state = thread_state_container->AccessCurrentThreadState();
+}
+
 VM_OP_WARM void OpThreadStateContainerReset(tpl::sql::ThreadStateContainer *thread_state_container,
                                             const uint32_t size,
                                             tpl::sql::ThreadStateContainer::InitFn init_fn,

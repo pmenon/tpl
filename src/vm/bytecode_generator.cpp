@@ -1461,6 +1461,12 @@ void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(ast::CallExpr *call
                                                              ast::Builtin builtin) {
   LocalVar tls = VisitExpressionForRValue(call->Arguments()[0]);
   switch (builtin) {
+    case ast::Builtin::ThreadStateContainerGetState: {
+      LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+      GetEmitter()->Emit(Bytecode::ThreadStateContainerAccessCurrentThreadState, result, tls);
+      GetExecutionResult()->SetDestination(result.ValueOf());
+      break;
+    }
     case ast::Builtin::ThreadStateContainerIterate: {
       LocalVar ctx = VisitExpressionForRValue(call->Arguments()[1]);
       FunctionId iterate_fn =
@@ -1586,6 +1592,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       break;
     }
     case ast::Builtin::ThreadStateContainerIterate:
+    case ast::Builtin::ThreadStateContainerGetState:
     case ast::Builtin::ThreadStateContainerReset:
     case ast::Builtin::ThreadStateContainerClear: {
       VisitBuiltinThreadStateContainerCall(call, builtin);

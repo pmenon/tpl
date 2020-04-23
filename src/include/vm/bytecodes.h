@@ -104,6 +104,7 @@ namespace tpl::vm {
                                                                                                                        \
   /* Thread State Container */                                                                                         \
   F(ThreadStateContainerIterate, OperandType::Local, OperandType::Local, OperandType::FunctionId)                      \
+  F(ThreadStateContainerAccessCurrentThreadState, OperandType::Local, OperandType::Local)                              \
   F(ThreadStateContainerReset, OperandType::Local, OperandType::Local, OperandType::FunctionId,                        \
       OperandType::FunctionId, OperandType::Local)                                                                     \
   F(ThreadStateContainerClear, OperandType::Local)                                                                     \
