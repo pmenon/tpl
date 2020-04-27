@@ -23,7 +23,7 @@ ProjectionTranslator::ProjectionTranslator(const planner::ProjectionPlanNode &pl
 
 void ProjectionTranslator::PerformPipelineWork(WorkContext *context,
                                                FunctionBuilder *function) const {
-  context->Consume(function);
+  context->Push(function);
 }
 
 }  // namespace tpl::sql::codegen

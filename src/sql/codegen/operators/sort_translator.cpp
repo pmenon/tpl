@@ -194,7 +194,7 @@ void SortTranslator::ScanSorter(WorkContext *ctx, FunctionBuilder *function) con
     auto row = codegen->SorterIterGetRow(iter, sort_row_type_);
     function->Append(codegen->DeclareVarWithInit(sort_row_var_, row));
     // Move along
-    ctx->Consume(function);
+    ctx->Push(function);
   }
   loop.EndLoop();
 

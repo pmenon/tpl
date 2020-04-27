@@ -172,10 +172,10 @@ void StaticAggregationTranslator::PerformPipelineWork(WorkContext *context,
 
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
       If check_having(function, context->DeriveValue(*having, this));
-      context->Consume(function);
+      context->Push(function);
       check_having.EndIf();
     } else {
-      context->Consume(function);
+      context->Push(function);
     }
   } else {
     UpdateGlobalAggregate(context, function);
