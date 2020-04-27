@@ -36,7 +36,7 @@ namespace tpl::sql::codegen {
 namespace {
 
 // Change this path to where your TPC-H data is.
-constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-1";
+constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-0.1";
 
 // Flag used to ensure the TPCH database is only loaded once.
 std::once_flag kLoadTpchDatabaseOnce{};
@@ -235,7 +235,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q4)(benchmark::State &state) {
     auto lo_date = expr_maker.Constant(1993, 7, 1);
     auto hi_date = expr_maker.Constant(1993, 10, 1);
     auto lo_comp = expr_maker.CompareGe(o_orderdate, lo_date);
-    auto hi_comp = expr_maker.CompareLe(o_orderdate, hi_date);
+    auto hi_comp = expr_maker.CompareLt(o_orderdate, hi_date);
     auto predicate = expr_maker.ConjunctionAnd(lo_comp, hi_comp);
     // Build
     planner::SeqScanPlanNode::Builder builder;
@@ -268,7 +268,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q4)(benchmark::State &state) {
   }
   // Semi Join
   std::unique_ptr<planner::AbstractPlanNode> semi_join;
-  planner::OutputSchemaHelper semi_join_out{&expr_maker, 1};
+  planner::OutputSchemaHelper semi_join_out{&expr_maker, 0};
   {
     // Read all needed columns
     // Left
@@ -2308,7 +2308,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
   // Compile plan
   auto last_op = agg.get();
   NoOpResultConsumer consumer;
-  //PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
+  // PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
@@ -2327,14 +2327,14 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 //
 // ---------------------------------------------------------
 
-BENCHMARK_REGISTER_F(TpchBenchmark, Q1)->Unit(benchmark::kMillisecond);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q4)->Unit(benchmark::kMillisecond);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q5)->Unit(benchmark::kMillisecond);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q6)->Unit(benchmark::kMillisecond);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q7)->Unit(benchmark::kMillisecond);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q11)->Unit(benchmark::kMillisecond);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q16)->Unit(benchmark::kMillisecond);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q18)->Unit(benchmark::kMillisecond);
-BENCHMARK_REGISTER_F(TpchBenchmark, Q19)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q1)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q4)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q5)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q6)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q7)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q11)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q16)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q18)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q19)->Iterations(10)->Unit(benchmark::kMillisecond);
 
 }  // namespace tpl::sql::codegen
