@@ -233,20 +233,20 @@ void SortTranslator::FinishPipelineWork(const Pipeline &pipeline, FunctionBuilde
   }
 }
 
-ast::Expr *SortTranslator::GetChildOutput(WorkContext *work_context, UNUSED uint32_t child_idx,
+ast::Expr *SortTranslator::GetChildOutput(WorkContext *context, UNUSED uint32_t child_idx,
                                           uint32_t attr_idx) const {
-  if (IsScanPipeline(work_context->GetPipeline())) {
+  if (IsScanPipeline(context->GetPipeline())) {
     return GetSortRowAttribute(sort_row_var_, attr_idx);
   }
 
-  TPL_ASSERT(IsBuildPipeline(work_context->GetPipeline()), "Pipeline not known to sorter");
+  TPL_ASSERT(IsBuildPipeline(context->GetPipeline()), "Pipeline not known to sorter");
   switch (current_row_) {
     case CurrentRow::Lhs:
       return GetSortRowAttribute(lhs_row_, attr_idx);
     case CurrentRow::Rhs:
       return GetSortRowAttribute(rhs_row_, attr_idx);
     case CurrentRow::Child: {
-      return OperatorTranslator::GetChildOutput(work_context, child_idx, attr_idx);
+      return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
     }
   }
   UNREACHABLE("Impossible output row option");

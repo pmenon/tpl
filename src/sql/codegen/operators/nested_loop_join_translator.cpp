@@ -35,19 +35,19 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
   }
 }
 
-void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *work_context,
+void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *context,
                                                    FunctionBuilder *function) const {
   const auto *predicate = GetPlanAs<planner::NestedLoopJoinPlanNode>().GetJoinPredicate();
   if (predicate != nullptr) {
-    If cond(function, work_context->DeriveValue(*predicate, this));
+    If cond(function, context->DeriveValue(*predicate, this));
     {
       // Valid tuple. Push to next operator in pipeline.
-      work_context->Consume(function);
+      context->Consume(function);
     }
     cond.EndIf();
   } else {
     // No join predicate. Push to next operator in pipeline.
-    work_context->Consume(function);
+    context->Consume(function);
   }
 }
 

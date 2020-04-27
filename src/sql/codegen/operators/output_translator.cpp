@@ -22,7 +22,7 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan,
   compilation_context->Prepare(plan, pipeline);
 }
 
-void OutputTranslator::PerformPipelineWork(tpl::sql::codegen::WorkContext *work_context,
+void OutputTranslator::PerformPipelineWork(tpl::sql::codegen::WorkContext *context,
                                            tpl::sql::codegen::FunctionBuilder *function) const {
   // First generate the call @resultBufferAllocRow(execCtx)
   auto exec_ctx = GetExecutionContext();
@@ -39,7 +39,7 @@ void OutputTranslator::PerformPipelineWork(tpl::sql::codegen::WorkContext *work_
         GetCodeGen()->MakeIdentifier(kOutputColPrefix + std::to_string(attr_idx));
     ast::Expr *lhs =
         GetCodeGen()->AccessStructMember(GetCodeGen()->MakeExpr(output_var_), attr_name);
-    ast::Expr *rhs = child_translator->GetOutput(work_context, attr_idx);
+    ast::Expr *rhs = child_translator->GetOutput(context, attr_idx);
     function->Append(GetCodeGen()->Assign(lhs, rhs));
   }
 }

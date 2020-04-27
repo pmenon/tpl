@@ -200,8 +200,7 @@ void SeqScanTranslator::TearDownPipelineState(const Pipeline &pipeline,
   }
 }
 
-void SeqScanTranslator::PerformPipelineWork(WorkContext *work_context,
-                                            FunctionBuilder *function) const {
+void SeqScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
   CodeGen *codegen = GetCodeGen();
 
   const bool declare_local_tvi = !GetPipeline()->IsParallel() || this != GetPipeline()->Root();
@@ -215,7 +214,7 @@ void SeqScanTranslator::PerformPipelineWork(WorkContext *work_context,
   }
 
   // Scan it.
-  ScanTable(work_context, function);
+  ScanTable(context, function);
 
   // Close TVI, if need be.
   if (declare_local_tvi) {

@@ -49,9 +49,9 @@ class SeqScanTranslator : public OperatorTranslator {
 
   /**
    * Generate the scan.
-   * @param work_context The context of the work.
+   * @param context The context of the work.
    */
-  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
+  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   /**
    * Tear-down the FilterManager if required.
@@ -68,14 +68,6 @@ class SeqScanTranslator : public OperatorTranslator {
    * @param work_func The worker function that'll be called during the parallel scan.
    */
   void LaunchWork(FunctionBuilder *function, ast::Identifier work_func) const override;
-
-  /**
-   * Sequential table scans do not have children.
-   */
-  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
-                            uint32_t attr_idx) const override {
-    UNREACHABLE("Sequential scans are leaves in a plan tree.");
-  }
 
   /**
    * @return The value (or value vector) of the column with the provided column OID in the table

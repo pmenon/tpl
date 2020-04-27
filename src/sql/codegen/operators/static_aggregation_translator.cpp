@@ -163,22 +163,22 @@ void StaticAggregationTranslator::UpdateGlobalAggregate(WorkContext *ctx,
   }
 }
 
-void StaticAggregationTranslator::PerformPipelineWork(WorkContext *work_context,
+void StaticAggregationTranslator::PerformPipelineWork(WorkContext *context,
                                                       FunctionBuilder *function) const {
-  if (IsProducePipeline(work_context->GetPipeline())) {
+  if (IsProducePipeline(context->GetPipeline())) {
     // var agg_row = &state.aggs
     CodeGen *codegen = GetCodeGen();
     function->Append(codegen->DeclareVarWithInit(agg_row_var_, global_aggs_.GetPtr(codegen)));
 
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
-      If check_having(function, work_context->DeriveValue(*having, this));
-      work_context->Consume(function);
+      If check_having(function, context->DeriveValue(*having, this));
+      context->Consume(function);
       check_having.EndIf();
     } else {
-      work_context->Consume(function);
+      context->Consume(function);
     }
   } else {
-    UpdateGlobalAggregate(work_context, function);
+    UpdateGlobalAggregate(context, function);
   }
 }
 
@@ -193,18 +193,18 @@ void StaticAggregationTranslator::FinishPipelineWork(const Pipeline &pipeline,
   }
 }
 
-ast::Expr *StaticAggregationTranslator::GetChildOutput(WorkContext *work_context,
+ast::Expr *StaticAggregationTranslator::GetChildOutput(WorkContext *context,
                                                        UNUSED uint32_t child_idx,
                                                        uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");
-  if (IsProducePipeline(work_context->GetPipeline())) {
+  if (IsProducePipeline(context->GetPipeline())) {
     auto codegen = GetCodeGen();
     return codegen->AggregatorResult(
         GetAggregateTermPtr(codegen->MakeExpr(agg_row_var_), attr_idx));
   }
 
   // The request is in the build pipeline. Forward to child translator.
-  return OperatorTranslator::GetChildOutput(work_context, child_idx, attr_idx);
+  return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
 }
 
 }  // namespace tpl::sql::codegen

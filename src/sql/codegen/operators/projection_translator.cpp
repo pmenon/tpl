@@ -21,9 +21,9 @@ ProjectionTranslator::ProjectionTranslator(const planner::ProjectionPlanNode &pl
   compilation_context->Prepare(*plan.GetChild(0), pipeline);
 }
 
-void ProjectionTranslator::PerformPipelineWork(WorkContext *work_context,
+void ProjectionTranslator::PerformPipelineWork(WorkContext *context,
                                                FunctionBuilder *function) const {
-  work_context->Consume(function);
+  context->Consume(function);
 }
 
 }  // namespace tpl::sql::codegen

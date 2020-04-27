@@ -28,8 +28,7 @@ void LimitTranslator::InitializePipelineState(const Pipeline &pipeline,
   function->Append(codegen->Assign(tuple_count_.Get(codegen), codegen->Const64(0)));
 }
 
-void LimitTranslator::PerformPipelineWork(WorkContext *work_context,
-                                          FunctionBuilder *function) const {
+void LimitTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
   const auto &plan = GetPlanAs<planner::LimitPlanNode>();
   CodeGen *codegen = GetCodeGen();
 
@@ -48,7 +47,7 @@ void LimitTranslator::PerformPipelineWork(WorkContext *work_context,
   }
 
   If check_limit(function, cond);
-  work_context->Consume(function);
+  context->Consume(function);
   check_limit.EndIf();
 
   // Update running count: numTuples += 1

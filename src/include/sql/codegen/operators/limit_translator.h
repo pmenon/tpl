@@ -39,10 +39,10 @@ class LimitTranslator : public OperatorTranslator {
 
   /**
    * Implement the limit's logic.
-   * @param work_context The context of work.
+   * @param context The context of work.
    * @param function The pipeline function generator.
    */
-  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
+  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   /**
    * Limits are never the root of a pipeline.

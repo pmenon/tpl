@@ -24,9 +24,9 @@ class ProjectionTranslator : public OperatorTranslator {
 
   /**
    * Push the context through this operator to the next in the pipeline.
-   * @param work_context The context.
+   * @param context The context.
    */
-  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
+  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   /**
    * Pipeline are never pipeline roots. Hence, this should never be called.

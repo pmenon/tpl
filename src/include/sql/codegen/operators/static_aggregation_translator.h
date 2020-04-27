@@ -32,7 +32,7 @@ class StaticAggregationTranslator : public OperatorTranslator {
 
   void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
-  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
+  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
@@ -48,7 +48,7 @@ class StaticAggregationTranslator : public OperatorTranslator {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {

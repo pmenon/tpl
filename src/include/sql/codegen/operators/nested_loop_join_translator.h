@@ -25,9 +25,9 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
 
   /**
    * Generate the join condition from the two child inputs.
-   * @param work_context The context of the work.
+   * @param context The context of the work.
    */
-  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
+  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   /**
    * NLJ plans are not the root of a pipeline. Thus, this method should never be called.

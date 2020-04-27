@@ -65,9 +65,9 @@ class HashAggregationTranslator : public OperatorTranslator {
    * If the context pipeline is for the build-side, we'll aggregate the input into the aggregation
    * hash table. Otherwise, we'll perform a scan over the resulting aggregates in the aggregation
    * hash table.
-   * @param work_context The context.
+   * @param context The context.
    */
-  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
+  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   /**
    * If the provided context is for the build pipeline and we're performing a parallel aggregation,
@@ -95,7 +95,7 @@ class HashAggregationTranslator : public OperatorTranslator {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**
@@ -153,11 +153,10 @@ class HashAggregationTranslator : public OperatorTranslator {
                         ast::Identifier agg_values) const;
 
   // Merge the input row into the aggregation hash table.
-  void UpdateAggregates(WorkContext *work_context, FunctionBuilder *function,
-                        ast::Expr *agg_ht) const;
+  void UpdateAggregates(WorkContext *context, FunctionBuilder *function, ast::Expr *agg_ht) const;
 
   // Scan the final aggregation hash table.
-  void ScanAggregationHashTable(WorkContext *work_context, FunctionBuilder *function,
+  void ScanAggregationHashTable(WorkContext *context, FunctionBuilder *function,
                                 ast::Expr *agg_ht) const;
 
  private:

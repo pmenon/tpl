@@ -43,7 +43,7 @@ class OutputTranslator : public OperatorTranslator {
   /**
    * Perform the main work of the translator.
    */
-  void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
+  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   /**
    * Output translator needs to finalize the output.
