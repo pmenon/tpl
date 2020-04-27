@@ -137,15 +137,9 @@ class Pipeline {
   StepIterator End() const { return steps_.rend(); }
 
   /**
-   * @return The root/source of the pipeline.
+   * @return True if the given operator is the driver for this pipeline; false otherwise.
    */
-  OperatorTranslator *Root() const { return *Begin(); }
-
-  /**
-   * Pretty print this pipeline's information.
-   * @return A string containing pretty-printed information about this pipeline.
-   */
-  std::string PrettyPrint() const;
+  bool IsDriver(const OperatorTranslator *op) const { return op == Driver(); }
 
   /**
    * @return Arguments common to all pipeline functions.
@@ -153,6 +147,9 @@ class Pipeline {
   util::RegionVector<ast::FieldDecl *> PipelineParams() const;
 
  private:
+  // Return the driver for the pipeline.
+  OperatorTranslator *Driver() const { return *Begin(); }
+
   // Create a unique name for a function local to this pipeline.
   std::string ConstructPipelineFunctionName(const std::string &func_name) const;
 

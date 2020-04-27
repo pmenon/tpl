@@ -203,7 +203,7 @@ void SeqScanTranslator::TearDownPipelineState(const Pipeline &pipeline,
 void SeqScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
   CodeGen *codegen = GetCodeGen();
 
-  const bool declare_local_tvi = !GetPipeline()->IsParallel() || this != GetPipeline()->Root();
+  const bool declare_local_tvi = !GetPipeline()->IsParallel() || !GetPipeline()->IsDriver(this);
   if (declare_local_tvi) {
     // var tviBase: TableVectorIterator
     // var tvi = &tviBase

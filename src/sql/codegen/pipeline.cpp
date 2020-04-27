@@ -114,7 +114,19 @@ void Pipeline::Prepare() {
     parallelism_ = Pipeline::Parallelism::Parallel;
   }
 
-  LOG_INFO("Generated pipeline: {}", PrettyPrint());
+  // Pretty print.
+  {
+    std::string result;
+    bool first = true;
+    for (auto iter = Begin(), end = End(); iter != end; ++iter) {
+      if (!first) result += " -> ";
+      first = false;
+      std::string plan_type = planner::PlanNodeTypeToString((*iter)->GetPlan().GetPlanNodeType());
+      std::transform(plan_type.begin(), plan_type.end(), plan_type.begin(), ::tolower);
+      result.append(plan_type);
+    }
+    LOG_INFO("Pipeline-{}: {}", id_, result);
+  }
 }
 
 ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction() const {
@@ -166,7 +178,7 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
   auto params = PipelineParams();
 
   if (IsParallel()) {
-    auto additional_params = (*Begin())->GetWorkerParams();
+    auto additional_params = Driver()->GetWorkerParams();
     params.insert(params.end(), additional_params.begin(), additional_params.end());
   }
 
@@ -176,7 +188,7 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
     CodeGen::CodeScope code_scope(codegen_);
     // Create the working context and push it through the pipeline.
     WorkContext work_context(compilation_context_, *this);
-    Root()->PerformPipelineWork(&work_context, &builder);
+    Driver()->PerformPipelineWork(&work_context, &builder);
   }
   return builder.Finish();
 }
@@ -195,7 +207,7 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
 
     // Launch pipeline work.
     if (IsParallel()) {
-      Root()->LaunchWork(&builder, GetWorkFunctionName());
+      Driver()->LaunchWork(&builder, GetWorkFunctionName());
     } else {
       auto exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
       auto tls = codegen_->ExecCtxGetTLS(exec_ctx);
@@ -243,19 +255,6 @@ void Pipeline::GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const {
   builder->RegisterStep(GenerateInitPipelineFunction());
   builder->RegisterStep(GenerateRunPipelineFunction());
   builder->RegisterStep(GenerateTearDownPipelineFunction());
-}
-
-std::string Pipeline::PrettyPrint() const {
-  std::string result;
-  bool first = true;
-  for (auto iter = Begin(), end = End(); iter != end; ++iter) {
-    if (!first) result += " -> ";
-    first = false;
-    std::string plan_type = planner::PlanNodeTypeToString((*iter)->GetPlan().GetPlanNodeType());
-    std::transform(plan_type.begin(), plan_type.end(), plan_type.begin(), ::tolower);
-    result.append(plan_type);
-  }
-  return result;
 }
 
 }  // namespace tpl::sql::codegen
