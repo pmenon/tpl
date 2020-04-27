@@ -62,11 +62,6 @@ class HashAggregationTranslator : public OperatorTranslator {
   void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
-   * Hash aggregations don't require any pre-pipeline work.
-   */
-  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
-
-  /**
    * If the context pipeline is for the build-side, we'll aggregate the input into the aggregation
    * hash table. Otherwise, we'll perform a scan over the resulting aggregates in the aggregation
    * hash table.
@@ -97,7 +92,8 @@ class HashAggregationTranslator : public OperatorTranslator {
   void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override;
 
   /**
-   * @return The output of the child of this aggregation in the given context.
+   * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
+   *         child at the given index (@em child_idx).
    */
   ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;

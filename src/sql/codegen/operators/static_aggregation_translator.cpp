@@ -204,8 +204,7 @@ ast::Expr *StaticAggregationTranslator::GetChildOutput(WorkContext *work_context
   }
 
   // The request is in the build pipeline. Forward to child translator.
-  const auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
-  return child_translator->GetOutput(work_context, attr_idx);
+  return OperatorTranslator::GetChildOutput(work_context, child_idx, attr_idx);
 }
 
 }  // namespace tpl::sql::codegen

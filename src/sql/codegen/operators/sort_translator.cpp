@@ -246,8 +246,7 @@ ast::Expr *SortTranslator::GetChildOutput(WorkContext *work_context, UNUSED uint
     case CurrentRow::Rhs:
       return GetSortRowAttribute(rhs_row_, attr_idx);
     case CurrentRow::Child: {
-      auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
-      return child_translator->GetOutput(work_context, attr_idx);
+      return OperatorTranslator::GetChildOutput(work_context, child_idx, attr_idx);
     }
   }
   UNREACHABLE("Impossible output row option");

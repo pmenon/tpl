@@ -1,5 +1,8 @@
 #include "sql/codegen/operators/operator_translator.h"
 
+#include "spdlog/fmt/fmt.h"
+
+#include "common/exception.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
@@ -15,9 +18,33 @@ OperatorTranslator::OperatorTranslator(const planner::AbstractPlanNode &plan,
   }
 }
 
-ast::Expr *OperatorTranslator::GetOutput(WorkContext *work_context, uint32_t attr_idx) const {
-  const auto &output_col = GetPlan().GetOutputSchema()->GetColumn(attr_idx);
-  return work_context->DeriveValue(*output_col.GetExpr(), this);
+ast::Expr *OperatorTranslator::GetOutput(WorkContext *context, uint32_t attr_idx) const {
+  // Check valid output column.
+  const auto output_schema = plan_.GetOutputSchema();
+  if (attr_idx >= output_schema->NumColumns()) {
+    throw Exception(ExceptionType::CodeGen,
+                    fmt::format("Cannot read column {} from '{}' with output schema {}", attr_idx,
+                                planner::PlanNodeTypeToString(plan_.GetPlanNodeType()),
+                                output_schema->ToString()));
+  }
+
+  const auto output_expression = output_schema->GetColumn(attr_idx).GetExpr();
+  return context->DeriveValue(*output_expression, this);
+}
+
+ast::Expr *OperatorTranslator::GetChildOutput(WorkContext *context, uint32_t child_idx,
+                                              uint32_t attr_idx) const {
+  // Check valid child.
+  if (child_idx >= plan_.GetChildrenSize()) {
+    throw Exception(ExceptionType::CodeGen,
+                    fmt::format("Plan type '{}' does not have child at index {}",
+                                planner::PlanNodeTypeToString(plan_.GetPlanNodeType()), child_idx));
+  }
+
+  // Check valid output column from child.
+  auto child_translator = compilation_context_->LookupTranslator(*plan_.GetChild(child_idx));
+  TPL_ASSERT(child_translator != nullptr, "Missing translator for child!");
+  return child_translator->GetOutput(context, attr_idx);
 }
 
 CodeGen *OperatorTranslator::GetCodeGen() const { return compilation_context_->GetCodeGen(); }
@@ -44,12 +71,12 @@ void OperatorTranslator::GetAllChildOutputFields(
   CodeGen *codegen = GetCodeGen();
 
   // Reserve now to reduce allocations.
-  const auto child_output_schema = GetPlan().GetChild(child_index)->GetOutputSchema();
+  const auto child_output_schema = plan_.GetChild(child_index)->GetOutputSchema();
   fields->reserve(child_output_schema->NumColumns());
 
   // Add columns to output.
   uint32_t attr_idx = 0;
-  for (const auto &col : GetPlan().GetChild(child_index)->GetOutputSchema()->GetColumns()) {
+  for (const auto &col : plan_.GetChild(child_index)->GetOutputSchema()->GetColumns()) {
     auto field_name = codegen->MakeIdentifier(field_name_prefix + std::to_string(attr_idx++));
     auto type = codegen->TplType(col.GetExpr()->GetReturnValueType());
     fields->emplace_back(codegen->MakeField(field_name, type));

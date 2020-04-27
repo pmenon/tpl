@@ -24,40 +24,10 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
                            CompilationContext *compilation_context, Pipeline *pipeline);
 
   /**
-   * NLJ plans do not allocate state. Thus, this method is a no-op.
-   */
-  void InitializeQueryState(FunctionBuilder *) const override {}
-
-  /**
-   * NLJ plans do not allocate state. Thus, this method is a no-op.
-   */
-  void TearDownQueryState(FunctionBuilder *) const override {}
-
-  /**
-   * NLJ plans do not allocate state. Thus, this method is a no-op.
-   */
-  void InitializePipelineState(UNUSED const Pipeline &, UNUSED FunctionBuilder *) const override {}
-
-  /**
-   * NLJ plans do not perform any pre-pipeline work. This, this method is a no-op.
-   */
-  void BeginPipelineWork(UNUSED const Pipeline &, UNUSED FunctionBuilder *) const override {}
-
-  /**
    * Generate the join condition from the two child inputs.
    * @param work_context The context of the work.
    */
   void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
-
-  /**
-   * NLJ plans do not perform any post-pipeline work. Thus, this method is a no-op.
-   */
-  void FinishPipelineWork(UNUSED const Pipeline &, UNUSED FunctionBuilder *) const override {}
-
-  /**
-   * NLJ plans do not allocate state. Thus, this method is a no-op.
-   */
-  void TearDownPipelineState(UNUSED const Pipeline &, UNUSED FunctionBuilder *) const override {}
 
   /**
    * NLJ plans are not the root of a pipeline. Thus, this method should never be called.
@@ -72,12 +42,6 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
   void LaunchWork(UNUSED FunctionBuilder *, UNUSED ast::Identifier) const override {
     UNREACHABLE("NLJ are never the root of a plan and, thus, cannot be launched in parallel.");
   }
-
-  /**
-   * @return The value of the ou
-   */
-  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
 
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Nested-loop joins do not produce columns from base tables.");

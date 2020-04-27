@@ -287,13 +287,13 @@ void HashJoinTranslator::FinishPipelineWork(const Pipeline &pipeline,
 
 ast::Expr *HashJoinTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                                               uint32_t attr_idx) const {
+  // If the request is in the probe pipeline and for an attribute in the left
+  // child, we read it from the probe/materialized build row. Otherwise, we
+  // propagate to the appropriate child.
   if (IsRightPipeline(work_context->GetPipeline()) && child_idx == 0) {
     return GetBuildRowAttribute(GetCodeGen()->MakeExpr(build_row_var_), attr_idx);
   }
-
-  const auto child = GetPlan().GetChild(child_idx);
-  const auto child_translator = GetCompilationContext()->LookupTranslator(*child);
-  return child_translator->GetOutput(work_context, attr_idx);
+  return OperatorTranslator::GetChildOutput(work_context, child_idx, attr_idx);
 }
 
 }  // namespace tpl::sql::codegen

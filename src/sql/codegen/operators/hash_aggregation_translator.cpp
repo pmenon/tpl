@@ -487,10 +487,8 @@ ast::Expr *HashAggregationTranslator::GetChildOutput(WorkContext *work_context, 
     }
     return GetCodeGen()->AggregatorResult(GetAggregateTermPtr(agg_row_var_, attr_idx));
   }
-
   // The request is in the build pipeline. Forward to child translator.
-  const auto child_translator = GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(0));
-  return child_translator->GetOutput(work_context, attr_idx);
+  return OperatorTranslator::GetChildOutput(work_context, child_idx, attr_idx);
 }
 
 util::RegionVector<ast::FieldDecl *> HashAggregationTranslator::GetWorkerParams() const {

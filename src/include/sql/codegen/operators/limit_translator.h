@@ -31,18 +31,6 @@ class LimitTranslator : public OperatorTranslator {
                   Pipeline *pipeline);
 
   /**
-   * Limits only have pipeline-local state, so don't require any query-state initialization.
-   * @param function The query-state initialization function.
-   */
-  void InitializeQueryState(FunctionBuilder *function) const override {}
-
-  /**
-   * Limits only have pipeline-local state, so don't require any query-state destruction.
-   * @param function The query-state destruction function.
-   */
-  void TearDownQueryState(FunctionBuilder *function) const override {}
-
-  /**
    * Initialize the tuple counter in the pipeline local state.
    * @param pipeline The pipeline that's being generated.
    * @param function The pipeline function generator.
@@ -50,32 +38,11 @@ class LimitTranslator : public OperatorTranslator {
   void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
-   * Limits don't require any pre-pipeline work.
-   * @param pipeline The pipeline that's being generated.
-   * @param function The pipeline function generator.
-   */
-  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
-
-  /**
    * Implement the limit's logic.
    * @param work_context The context of work.
    * @param function The pipeline function generator.
    */
   void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
-
-  /**
-   * Limits don't require any post-pipeline work.
-   * @param pipeline The pipeline that's being generated.
-   * @param function The pipeline function generator.
-   */
-  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
-
-  /**
-   * Limits don't require any pipeline-state tear-down logic.
-   * @param pipeline The pipeline that's being generated.
-   * @param function The pipeline-state destruction function.
-   */
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * Limits are never the root of a pipeline.
@@ -90,16 +57,6 @@ class LimitTranslator : public OperatorTranslator {
   void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override {
     UNREACHABLE("LIMITs are never the root of a plan and, thus, cannot be launched in parallel.");
   }
-
-  /**
-   *
-   * @param work_context
-   * @param child_idx
-   * @param attr_idx
-   * @return
-   */
-  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
 
   /**
    * Limits never touch raw table data.

@@ -65,12 +65,6 @@ class SortTranslator : public OperatorTranslator {
   void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
-   * Sorters don't require any pre-pipeline logic.
-   * @param pipeline_context The pipeline context.
-   */
-  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
-
-  /**
    * Implement either the build-side or scan-side of the sort depending on the pipeline this context
    * contains.
    * @param ctx The context of the work.
@@ -100,7 +94,8 @@ class SortTranslator : public OperatorTranslator {
   }
 
   /**
-   * @return
+   * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
+   *         child at the given index (@em child_idx).
    */
   ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;

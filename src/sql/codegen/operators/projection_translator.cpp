@@ -26,11 +26,4 @@ void ProjectionTranslator::PerformPipelineWork(WorkContext *work_context,
   work_context->Consume(function);
 }
 
-ast::Expr *ProjectionTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,
-                                                uint32_t attr_idx) const {
-  const auto child_translator =
-      GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(child_idx));
-  return child_translator->GetOutput(work_context, attr_idx);
-}
-
 }  // namespace tpl::sql::codegen

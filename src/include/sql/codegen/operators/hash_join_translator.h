@@ -63,11 +63,6 @@ class HashJoinTranslator : public OperatorTranslator {
   void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
-   * Hash-joins do not have any pre-pipeline work to do. Thus, this is a no-op.
-   */
-  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
-
-  /**
    * Implement main join logic. If the context is coming from the left pipeline, the input tuples
    * are materialized into the join hash table. If the context is coming from the right pipeline,
    * the input tuples are probed in the join hash table.
@@ -95,12 +90,8 @@ class HashJoinTranslator : public OperatorTranslator {
   void LaunchWork(FunctionBuilder *, ast::Identifier) const override { UNREACHABLE("Impossible"); }
 
   /**
-   * Access the attribute at index @em attr_idx in the output of the child operator at the given
-   * index @em child_idx of the hash join plan.
-   * @param work_context The working context.
-   * @param child_idx The index of the child whose output to access.
-   * @param attr_idx The index of the attribute within the child's output.
-   * @return The attribute value.
+   * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
+   *         child at the given index (@em child_idx).
    */
   ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;

@@ -44,6 +44,10 @@ class StaticAggregationTranslator : public OperatorTranslator {
     UNREACHABLE("Static aggregations are never launched in parallel");
   }
 
+  /**
+   * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
+   *         child at the given index (@em child_idx).
+   */
   ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 

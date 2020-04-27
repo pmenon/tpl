@@ -23,40 +23,10 @@ class ProjectionTranslator : public OperatorTranslator {
                        CompilationContext *compilation_context, Pipeline *pipeline);
 
   /**
-   * Projections do not require any query state.
-   */
-  void InitializeQueryState(FunctionBuilder *) const override {}
-
-  /**
-   * Projections do not require any query state. Hence, this method is a no-op.
-   */
-  void TearDownQueryState(FunctionBuilder *) const override {}
-
-  /**
-   * Projections do not require any pipeline state. Hence, this method is a no-op.
-   */
-  void InitializePipelineState(const Pipeline &, FunctionBuilder *) const override {}
-
-  /**
-   * Projections do not require any pre-pipeline work.
-   */
-  void BeginPipelineWork(const Pipeline &, FunctionBuilder *) const override {}
-
-  /**
    * Push the context through this operator to the next in the pipeline.
    * @param work_context The context.
    */
   void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
-
-  /**
-   * Projections do not require any post-pipeline work.
-   */
-  void FinishPipelineWork(const Pipeline &, FunctionBuilder *) const override {}
-
-  /**
-   * Projections do not require any pipeline state. Hence, this method is a no-op.
-   */
-  void TearDownPipelineState(const Pipeline &, FunctionBuilder *) const override {}
 
   /**
    * Pipeline are never pipeline roots. Hence, this should never be called.
@@ -71,12 +41,6 @@ class ProjectionTranslator : public OperatorTranslator {
   void LaunchWork(FunctionBuilder *, ast::Identifier) const override {
     UNREACHABLE("Projections do not launch pipelines");
   }
-
-  /**
-   * @return The output of the given child's attribute in the provided context.
-   */
-  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
 
   /**
    * Projections do not produce columns from base tables.

@@ -37,16 +37,6 @@ class SeqScanTranslator : public OperatorTranslator {
   DISALLOW_COPY_AND_MOVE(SeqScanTranslator);
 
   /**
-   * Sequential scans don't have any state.
-   */
-  void InitializeQueryState(FunctionBuilder *func) const override {}
-
-  /**
-   * Sequential scans don't have any state.
-   */
-  void TearDownQueryState(FunctionBuilder *func) const override {}
-
-  /**
    * If the scan has a predicate, this function will define all clause functions.
    * @param decls The top-level declarations.
    */
@@ -58,20 +48,10 @@ class SeqScanTranslator : public OperatorTranslator {
   void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
-   * Sequential scans don't require any pre-pipeline logic.
-   */
-  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *func) const override {}
-
-  /**
    * Generate the scan.
    * @param work_context The context of the work.
    */
   void PerformPipelineWork(WorkContext *work_context, FunctionBuilder *function) const override;
-
-  /**
-   * Sequential scans don't rely on any post-pipeline logic.
-   */
-  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *func) const override {}
 
   /**
    * Tear-down the FilterManager if required.

@@ -57,11 +57,4 @@ void LimitTranslator::PerformPipelineWork(WorkContext *work_context,
   function->Append(codegen->Assign(tuple_count_.Get(codegen), increment));
 }
 
-ast::Expr *LimitTranslator::GetChildOutput(WorkContext *work_context, uint32_t child_idx,
-                                           uint32_t attr_idx) const {
-  const auto child_translator =
-      GetCompilationContext()->LookupTranslator(*GetPlan().GetChild(child_idx));
-  return child_translator->GetOutput(work_context, attr_idx);
-}
-
 }  // namespace tpl::sql::codegen

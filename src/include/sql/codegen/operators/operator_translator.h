@@ -111,26 +111,28 @@ class OperatorTranslator : public ColumnValueProvider {
 
   /**
    * Initialize all query state.
+   * @param The builder for the query state initialization function.
    */
-  virtual void InitializeQueryState(FunctionBuilder *function) const = 0;
+  virtual void InitializeQueryState(FunctionBuilder *function) const {}
 
   /**
    * Tear down all query state.
    */
-  virtual void TearDownQueryState(FunctionBuilder *function) const = 0;
+  virtual void TearDownQueryState(FunctionBuilder *function) const {}
 
   /**
    * Initialize any declared pipeline-local state.
-   * @param pipeline_context The pipeline context.
+   * @param pipeline The pipeline whose state is being initialized.
+   * @param function The function being built.
    */
-  virtual void InitializePipelineState(const Pipeline &pipeline,
-                                       FunctionBuilder *function) const = 0;
+  virtual void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
    * Perform any work required before beginning main pipeline work. This is executed by one thread.
-   * @param pipeline_context The pipeline context.
+   * @param pipeline The pipeline whose pre-work logic is being generated.
+   * @param function The function being built.
    */
-  virtual void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const = 0;
+  virtual void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
    * Perform the primary logic of a pipeline. This is where the operator's logic should be
@@ -153,15 +155,17 @@ class OperatorTranslator : public ColumnValueProvider {
 
   /**
    * Perform any work required <b>after</b> the main pipeline work. This is executed by one thread.
-   * @param pipeline_context The pipeline context.
+   * @param pipeline The pipeline whose post-work logic is being generated.
+   * @param function The function being built.
    */
-  virtual void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const = 0;
+  virtual void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
    * Tear down and destroy any pipeline-local state.
-   * @param pipeline_context The pipeline context.
+   * @param pipeline The pipeline whose state is being destroyed.
+   * @param function The function being built.
    */
-  virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const = 0;
+  virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
    * @return The list of extra fields added to the main work function. This is only called on
@@ -181,7 +185,14 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * @return The value (vector) of the attribute at the given index in this operator's output.
    */
-  ast::Expr *GetOutput(WorkContext *work_context, uint32_t attr_idx) const;
+  ast::Expr *GetOutput(WorkContext *context, uint32_t attr_idx) const;
+
+  /**
+   * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
+   *         child at the given index (@em child_idx).
+   */
+  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
+                            uint32_t attr_idx) const override;
 
   /**
    * @return The plan the translator is generating.

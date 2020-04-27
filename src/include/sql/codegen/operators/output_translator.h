@@ -36,35 +36,9 @@ class OutputTranslator : public OperatorTranslator {
   DISALLOW_COPY_AND_MOVE(OutputTranslator);
 
   /**
-   * Output translator does not hold state.
-   */
-  void InitializeQueryState(FunctionBuilder *function) const override {}
-
-  /**
-   * Output tranlator does not hold state.
-   */
-  void TearDownQueryState(FunctionBuilder *function) const override {}
-
-  /**
-   * Output translator does not need helper functions.
-   */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override {}
-
-  /**
    * Define the output struct.
    */
   void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
-
-  /**
-   * Output translator does not have pipeline specific work.
-   */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {
-  }
-
-  /**
-   * Output translator does not require any pre-pipeline logic.
-   */
-  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * Perform the main work of the translator.
@@ -75,11 +49,6 @@ class OutputTranslator : public OperatorTranslator {
    * Output translator needs to finalize the output.
    */
   void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
-
-  /**
-   * Nothing to tear down.
-   */
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * Cannot be start of pipeline
@@ -93,14 +62,6 @@ class OutputTranslator : public OperatorTranslator {
    */
   void LaunchWork(FunctionBuilder *function, ast::Identifier work_func) const override {
     UNREACHABLE("Output cannot be start of pipeline");
-  }
-
-  /**
-   * Should not be called here.
-   */
-  ast::Expr *GetChildOutput(WorkContext *work_context, uint32_t child_idx,
-                            uint32_t attr_idx) const override {
-    UNREACHABLE("Not value is being derived.");
   }
 
   /**
