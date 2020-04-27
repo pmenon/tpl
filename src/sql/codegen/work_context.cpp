@@ -37,4 +37,6 @@ void WorkContext::Consume(FunctionBuilder *function) {
 
 void WorkContext::ClearExpressionCache() { cache_.clear(); }
 
+bool WorkContext::IsParallel() const { return pipeline_.IsParallel(); }
+
 }  // namespace tpl::sql::codegen

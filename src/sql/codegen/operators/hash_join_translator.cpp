@@ -45,8 +45,7 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
       codegen, "joinHashTable", join_ht_type);
 
   if (left_pipeline_.IsParallel()) {
-    local_join_ht_ = left_pipeline_.GetPipelineState()->DeclareStateEntry(codegen, "joinHashTable",
-                                                                          join_ht_type);
+    local_join_ht_ = left_pipeline_.DeclarePipelineStateEntry("joinHashTable", join_ht_type);
   }
 }
 

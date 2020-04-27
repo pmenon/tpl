@@ -78,6 +78,14 @@ class Pipeline {
   void RegisterExpression(ExpressionTranslator *expression);
 
   /**
+   * Declare an entry in this pipeline's state.
+   * @param name The name of the element.
+   * @param type_repr The TPL type representation of the element.
+   * @return The slot where the inserted state exists.
+   */
+  StateDescriptor::Entry DeclarePipelineStateEntry(const std::string &name, ast::Expr *type_repr);
+
+  /**
    * Register the provided pipeline as a dependency for this pipeline. In other words, this pipeline
    * cannot begin until the provided pipeline completes.
    * @param dependency Another pipeline this pipeline is dependent on.
@@ -144,15 +152,7 @@ class Pipeline {
    */
   util::RegionVector<ast::FieldDecl *> PipelineParams() const;
 
-  /**
-   * @return This pipeline's state descriptor.
-   */
-  StateDescriptor *GetPipelineState() { return &state_; }
-
  private:
-  // Return the code generator instance.
-  CodeGen *GetCodeGen();
-
   // Create a unique name for a function local to this pipeline.
   std::string ConstructPipelineFunctionName(const std::string &func_name) const;
 
@@ -186,6 +186,8 @@ class Pipeline {
   uint32_t id_;
   // The compilation context this pipeline is part of.
   CompilationContext *compilation_context_;
+  // The code generation instance.
+  CodeGen *codegen_;
   // Operators making up the pipeline.
   std::vector<OperatorTranslator *> steps_;
   // Expressions participating in the pipeline.
@@ -196,9 +198,8 @@ class Pipeline {
   bool check_parallelism_;
   // All pipelines this one depends on completion of.
   std::vector<Pipeline *> dependencies_;
-
   // Cache of common identifiers.
-  ast::Identifier state_var_, state_type_;
+  ast::Identifier state_var_;
   // The pipeline state.
   StateDescriptor state_;
 };

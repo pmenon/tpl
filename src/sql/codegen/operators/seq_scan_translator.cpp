@@ -27,8 +27,7 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
     compilation_context->Prepare(*plan.GetScanPredicate());
 
     ast::Expr *fm_type = GetCodeGen()->BuiltinType(ast::BuiltinType::FilterManager);
-    local_filter_manager_ =
-        pipeline->GetPipelineState()->DeclareStateEntry(GetCodeGen(), "filterManager", fm_type);
+    local_filter_manager_ = pipeline->DeclarePipelineStateEntry("filterManager", fm_type);
   }
 }
 

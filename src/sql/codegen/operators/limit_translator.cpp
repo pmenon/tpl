@@ -19,8 +19,7 @@ LimitTranslator::LimitTranslator(const planner::LimitPlanNode &plan,
   compilation_context->Prepare(*plan.GetChild(0), pipeline);
   // Register state.
   CodeGen *codegen = GetCodeGen();
-  tuple_count_ =
-      pipeline->GetPipelineState()->DeclareStateEntry(codegen, "numTuples", codegen->Int32Type());
+  tuple_count_ = pipeline->DeclarePipelineStateEntry("numTuples", codegen->Int32Type());
 }
 
 void LimitTranslator::InitializePipelineState(const Pipeline &pipeline,

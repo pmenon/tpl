@@ -2,6 +2,7 @@
 
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/function_builder.h"
+#include "sql/codegen/if.h"
 #include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 
@@ -42,8 +43,7 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
       compilation_context->GetQueryState()->DeclareStateEntry(codegen, "aggs", payload_type);
 
   if (build_pipeline_.IsParallel()) {
-    local_aggs_ =
-        build_pipeline_.GetPipelineState()->DeclareStateEntry(codegen, "aggs", payload_type);
+    local_aggs_ = build_pipeline_.DeclarePipelineStateEntry("aggs", payload_type);
   }
 }
 
@@ -169,8 +169,14 @@ void StaticAggregationTranslator::PerformPipelineWork(WorkContext *work_context,
     // var agg_row = &state.aggs
     CodeGen *codegen = GetCodeGen();
     function->Append(codegen->DeclareVarWithInit(agg_row_var_, global_aggs_.GetPtr(codegen)));
-    // Push along.
-    work_context->Consume(function);
+
+    if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
+      If check_having(function, work_context->DeriveValue(*having, this));
+      work_context->Consume(function);
+      check_having.EndIf();
+    } else {
+      work_context->Consume(function);
+    }
   } else {
     UpdateGlobalAggregate(work_context, function);
   }

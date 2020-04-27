@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -130,6 +131,21 @@ class OutputSchema {
    * @return The number of output columns.
    */
   std::size_t NumColumns() const { return columns_.size(); }
+
+  /**
+   * @return A pretty printed version of this output schema.
+   */
+  std::string ToString() const {
+    std::string result = "Schema(" + std::to_string(NumColumns()) + ")=[";
+    bool first = true;
+    for (const auto &col : columns_) {
+      if (!first) result += ",";
+      first = false;
+      result += TypeIdToString(col.GetType()) + (col.GetNullable() ? "(NULLABLE)" : "");
+    }
+    result += "]";
+    return result;
+  }
 
  private:
   // The columns.

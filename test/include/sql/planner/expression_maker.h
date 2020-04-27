@@ -32,7 +32,7 @@ class ExpressionMaker {
   /**
    * @return A constant expression with the given boolean value.
    */
-  Expression Constant(bool val) {
+  Expression ConstantBool(bool val) {
     return Alloc(
         std::make_unique<planner::ConstantValueExpression>(sql::GenericValue::CreateBoolean(val)));
   }
@@ -261,6 +261,13 @@ class ExpressionMaker {
    */
   AggExpression AggCount(Expression child, bool distinct = false) {
     return AggregateTerm(planner::ExpressionType::AGGREGATE_COUNT, child, distinct);
+  }
+
+  /**
+   * Create a count aggregate expression
+   */
+  AggExpression AggCountStar() {
+    return AggregateTerm(planner::ExpressionType::AGGREGATE_COUNT, Constant(1), false);
   }
 
  private:

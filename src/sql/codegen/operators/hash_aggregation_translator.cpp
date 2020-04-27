@@ -55,8 +55,7 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
 
   // In parallel mode, declare a local hash table, too.
   if (build_pipeline_.IsParallel()) {
-    local_agg_ht_ =
-        build_pipeline_.GetPipelineState()->DeclareStateEntry(codegen, "aggHashTable", agg_ht_type);
+    local_agg_ht_ = build_pipeline_.DeclarePipelineStateEntry("aggHashTable", agg_ht_type);
   }
 }
 

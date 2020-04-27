@@ -44,8 +44,7 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
   // Register another Sorter instance in the pipeline-local state if the
   // build pipeline is parallel.
   if (build_pipeline_.IsParallel()) {
-    local_sorter_ =
-        build_pipeline_.GetPipelineState()->DeclareStateEntry(GetCodeGen(), "sorter", sorter_type);
+    local_sorter_ = build_pipeline_.DeclarePipelineStateEntry("sorter", sorter_type);
   }
 }
 

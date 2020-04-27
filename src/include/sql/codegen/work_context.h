@@ -63,6 +63,11 @@ class WorkContext {
   const Pipeline &GetPipeline() const { return pipeline_; }
 
   /**
+   * @return True if the pipeline this work is flowing on is paralle; false otherwise.
+   */
+  bool IsParallel() const;
+
+  /**
    * Controls whether expression caching is enabled in this context.
    * @param val True if caching is enabled; false otherwise.
    */

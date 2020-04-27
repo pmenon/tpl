@@ -16,6 +16,7 @@ namespace tpl {
  */
 enum class ExceptionType {
   Cardinality,     // vectors have different cardinalities
+  CodeGen,         // code generation
   Conversion,      // conversion/casting error
   Decimal,         // decimal related
   DivideByZero,    // divide by 0
