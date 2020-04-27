@@ -108,7 +108,7 @@ class StateDescriptor {
   /**
    * @return The name of this state's constructed TPL type.
    */
-  ast::Identifier GetName() const { return name_; }
+  ast::Identifier GetTypeName() const { return name_; }
 
   /**
    * @return The finalized type of the runtime query state; null if the state hasn't been finalized.

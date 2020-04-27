@@ -77,7 +77,7 @@ util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
   // The main query parameters.
   util::RegionVector<ast::FieldDecl *> query_params = compilation_context_->QueryParams();
   // Tag on the pipeline state.
-  ast::Expr *pipeline_state = codegen_->PointerType(codegen_->MakeExpr(state_.GetName()));
+  ast::Expr *pipeline_state = codegen_->PointerType(codegen_->MakeExpr(state_.GetTypeName()));
   query_params.push_back(codegen_->MakeField(state_var_, pipeline_state));
   return query_params;
 }
@@ -149,21 +149,15 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction() const {
   FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
   {
     CodeGen::CodeScope code_scope(codegen_);
-    // If this pipeline is not parallel there isn't any specific setup to do.
-    // Otherwise, the pipeline requires some thread-local state which needs to
-    // be initialized at this point. To do so, we'll call @tlsReset() and pass
-    // in the thread-local state initialization and tear-down functions.
-    if (IsParallel()) {
-      // var tls = @execCtxGetTLS(exec_ctx)
-      // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
-      ast::Expr *state_ptr = query_state->GetStatePointer(codegen_);
-      ast::Expr *exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
-      ast::Identifier tls = codegen_->MakeFreshIdentifier("tls");
-      builder.Append(codegen_->DeclareVarWithInit(tls, codegen_->ExecCtxGetTLS(exec_ctx)));
-      builder.Append(codegen_->TLSReset(codegen_->MakeExpr(tls), state_.GetName(),
-                                        GetSetupPipelineStateFunctionName(),
-                                        GetTearDownPipelineStateFunctionName(), state_ptr));
-    }
+    // var tls = @execCtxGetTLS(exec_ctx)
+    ast::Expr *exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
+    ast::Identifier tls = codegen_->MakeFreshIdentifier("threadStateContainer");
+    builder.Append(codegen_->DeclareVarWithInit(tls, codegen_->ExecCtxGetTLS(exec_ctx)));
+    // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
+    ast::Expr *state_ptr = query_state->GetStatePointer(codegen_);
+    builder.Append(codegen_->TLSReset(codegen_->MakeExpr(tls), state_.GetTypeName(),
+                                      GetSetupPipelineStateFunctionName(),
+                                      GetTearDownPipelineStateFunctionName(), state_ptr));
   }
   return builder.Finish();
 }
@@ -203,14 +197,14 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
     if (IsParallel()) {
       Root()->LaunchWork(&builder, GetWorkFunctionName());
     } else {
-      const auto gen_args = [&]() -> std::vector<ast::Expr *> {
-        ast::Expr *pipeline_state = codegen_->MakeExpr(state_var_);
-        return {builder.GetParameterByPosition(0), codegen_->AddressOf(pipeline_state)};
-      };
-      builder.Append(codegen_->DeclareVarNoInit(state_var_, codegen_->MakeExpr(state_.GetName())));
-      builder.Append(codegen_->Call(GetSetupPipelineStateFunctionName(), gen_args()));
-      builder.Append(codegen_->Call(GetWorkFunctionName(), gen_args()));
-      builder.Append(codegen_->Call(GetTearDownPipelineStateFunctionName(), gen_args()));
+      auto exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
+      auto tls = codegen_->ExecCtxGetTLS(exec_ctx);
+      auto state = codegen_->TLSAccessCurrentThreadState(tls, state_.GetTypeName());
+      // var pipelineState = @tlsGetCurrentThreadState(...)
+      // SerialWork(queryState, pipelineState)
+      builder.Append(codegen_->DeclareVarWithInit(state_var_, state));
+      builder.Append(codegen_->Call(GetWorkFunctionName(), {builder.GetParameterByPosition(0),
+                                                            codegen_->MakeExpr(state_var_)}));
     }
 
     // Let the operators perform some completion work in this pipeline.
@@ -228,10 +222,8 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen_);
     // Tear down thread local state if parallel pipeline.
-    if (IsParallel()) {
-      ast::Expr *exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
-      builder.Append(codegen_->TLSClear(codegen_->ExecCtxGetTLS(exec_ctx)));
-    }
+    ast::Expr *exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
+    builder.Append(codegen_->TLSClear(codegen_->ExecCtxGetTLS(exec_ctx)));
   }
   return builder.Finish();
 }
