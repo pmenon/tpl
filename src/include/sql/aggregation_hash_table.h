@@ -174,8 +174,8 @@ class AggregationHashTable {
                     bool partitioned_aggregation);
 
   /**
-   * Transfer all entries and overflow partitions stored in each thread-local aggregation hash table
-   * (in the thread state container) into this table.
+   * Transfer all data and entries in each thread-local aggregation hash table (in the thread state
+   * container) into this hash table.
    *
    * This function only moves memory around, no aggregation hash tables are built. It is used at the
    * end of the build-portion of a parallel aggregation before the thread state container is reset
@@ -188,12 +188,24 @@ class AggregationHashTable {
                                    MergePartitionFn merge_partition_fn);
 
   /**
-   * Execute a parallel scan over this partitioned hash table. It is assumed that this aggregation
-   * table was constructed in a partitioned manner. This function will build a new aggregation hash
-   * table for any non-empty overflow partition, merge the contents of the partition (using the
-   * merging function provided to the call to @em TransferMemoryAndPartitions()), and invoke the
-   * scan callback function to scan the newly built table. The building and scanning of the table
-   * will be performed entirely in parallel; hence, the callback function should be thread-safe.
+   * Execute a serial scan over this hash table. It is assumed that the hash table was constructed
+   * in a partitioned manner, otherwise use a simple tpl::sql::AHTITerator. This function builds a
+   * hash table for any non-empty  overflow partition (if one doesn't exist), merges the contents of
+   * the partition (using the merging function provided to the call to
+   * @em TransferMemoryAndPartitions()), and invokes the scan callback function.
+   *
+   * @param query_state The (opaque) query state.
+   * @param scan_fn The callback scan function, called once for each overflow partition hash table.
+   */
+  void ExecutePartitionedScan(void *query_state, ScanPartitionFn scan_fn);
+
+  /**
+   * Execute a parallel scan over this hash table. It is assumed that this aggregation table was
+   * constructed in a partitioned manner. This function builds a hash table for any non-empty
+   * overflow partition (if one doesn't exist), merges the contents of the partition (using the
+   * merging function provided to the call to @em TransferMemoryAndPartitions()), and invokes the
+   * scan callback function. All steps are performed in parallel; hence, the callback function
+   * must be thread-safe.
    *
    * The thread states container is assumed to already have been configured prior to this scan call.
    *
@@ -203,8 +215,7 @@ class AggregationHashTable {
    *
    * @param query_state The (opaque) query state.
    * @param thread_states The container holding all thread states.
-   * @param scan_fn The callback scan function that will scan one partition of the partitioned
-   *                aggregation hash table.
+   * @param scan_fn The callback scan function, called once for each overflow partition hash table.
    */
   void ExecuteParallelPartitionedScan(void *query_state, ThreadStateContainer *thread_states,
                                       ScanPartitionFn scan_fn);

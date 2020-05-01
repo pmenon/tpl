@@ -628,6 +628,23 @@ AggregationHashTable *AggregationHashTable::GetOrBuildTableOverPartition(
   return agg_table;
 }
 
+void AggregationHashTable::ExecutePartitionedScan(void *query_state,
+                                                  AggregationHashTable::ScanPartitionFn scan_fn) {
+  TPL_ASSERT(partition_heads_ != nullptr && merge_partition_fn_ != nullptr,
+             "No overflow partitions allocated, or no merging function allocated. Did you call "
+             "TransferMemoryAndPartitions() before issuing the partitioned scan?");
+
+  // Determine the non-empty overflow partitions.
+  for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    if (partition_heads_[part_idx] != nullptr) {
+      // Get or build the table on the partition.
+      auto agg_table_partition = GetOrBuildTableOverPartition(query_state, part_idx);
+      // Scan the partition.
+      scan_fn(query_state, nullptr, agg_table_partition);
+    }
+  }
+}
+
 void AggregationHashTable::ExecuteParallelPartitionedScan(
     void *query_state, ThreadStateContainer *thread_states,
     const AggregationHashTable::ScanPartitionFn scan_fn) {
