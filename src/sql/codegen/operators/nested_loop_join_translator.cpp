@@ -23,23 +23,22 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
   for (uint32_t i = 0; i < num_children; i++) {
     auto child_plan = plan.GetChild(i);
     if (i == num_children - 1) {
-      // Reenable the parallelism check for the outer most loop.
+      // Re-enable the parallelism check for the outer most loop.
       pipeline->SetParallelCheck(true);
     }
     compilation_context->Prepare(*child_plan, pipeline);
   }
 
   // Prepare join condition.
-  if (plan.GetJoinPredicate() != nullptr) {
-    compilation_context->Prepare(*plan.GetJoinPredicate());
+  if (const auto join_predicate = plan.GetJoinPredicate(); join_predicate != nullptr) {
+    compilation_context->Prepare(*join_predicate);
   }
 }
 
 void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *context,
                                                    FunctionBuilder *function) const {
-  const auto *predicate = GetPlanAs<planner::NestedLoopJoinPlanNode>().GetJoinPredicate();
-  if (predicate != nullptr) {
-    If cond(function, context->DeriveValue(*predicate, this));
+  if (const auto join_predicate = GetNLJPlan().GetJoinPredicate(); join_predicate != nullptr) {
+    If cond(function, context->DeriveValue(*join_predicate, this));
     {
       // Valid tuple. Push to next operator in pipeline.
       context->Push(function);

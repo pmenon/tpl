@@ -46,6 +46,12 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Nested-loop joins do not produce columns from base tables.");
   }
+
+ private:
+  // Get the NLJ plan node.
+  const planner::NestedLoopJoinPlanNode &GetNLJPlan() const {
+    return GetPlanAs<planner::NestedLoopJoinPlanNode>();
+  }
 };
 
 }  // namespace tpl::sql::codegen

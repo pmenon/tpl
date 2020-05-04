@@ -13,27 +13,59 @@ namespace tpl::sql::codegen {
 
 class FunctionBuilder;
 
+/**
+ * A translator for static aggregations.
+ */
 class StaticAggregationTranslator : public OperatorTranslator {
  public:
+  /**
+   * Create a new translator for the given static aggregation  plan. The translator occurs within the
+   * provided compilation context, and the operator is a step in the provided pipeline.
+   * @param plan The plan.
+   * @param compilation_context The context of compilation this translation is occurring in.
+   * @param pipeline The pipeline this operator is participating in.
+   */
   StaticAggregationTranslator(const planner::AggregatePlanNode &plan,
                               CompilationContext *compilation_context, Pipeline *pipeline);
 
+  /**
+   * Declare the aggregation structure.
+   * @param decls Query-level declarations.
+   */
   void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
 
+  /**
+   * When parallel, generate the partial aggregate merging function.
+   * @param decls Query-level declarations.
+   */
   void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override;
 
-  void InitializeQueryState(FunctionBuilder *function) const override {}
-
-  void TearDownQueryState(FunctionBuilder *function) const override {}
-
+  /**
+   * If the provided pipeline is the build-side, initialize the declare partial aggregate.
+   * @param pipeline The pipeline whose state is being initialized.
+   * @param function The function being built.
+   */
   void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
-
+  /**
+   * Before the pipeline begins, initial the partial aggregates.
+   * @param pipeline The pipeline whose pre-work logic is being generated.
+   * @param function The function being built.
+   */
   void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
+  /**
+   * Main aggregation logic.
+   * @param context The context of the work.
+   * @param function The function being built.
+   */
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
+  /**
+   * Finish the provided pipeline.
+   * @param pipeline The pipeline whose post-work logic is being generated.
+   * @param function The function being built.
+   */
   void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {

@@ -119,13 +119,14 @@ void Pipeline::Prepare() {
     std::string result;
     bool first = true;
     for (auto iter = Begin(), end = End(); iter != end; ++iter) {
-      if (!first) result += " -> ";
+      if (!first) result += " --> ";
       first = false;
       std::string plan_type = planner::PlanNodeTypeToString((*iter)->GetPlan().GetPlanNodeType());
       std::transform(plan_type.begin(), plan_type.end(), plan_type.begin(), ::tolower);
       result.append(plan_type);
     }
-    LOG_INFO("Pipeline-{}: {}", id_, result);
+    LOG_INFO("Pipeline-{}: parallel={}, vectorized={}, steps=[{}]", id_, IsParallel(),
+             IsVectorized(), result);
   }
 }
 

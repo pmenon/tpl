@@ -150,6 +150,7 @@ class OperatorTranslator : public ColumnValueProvider {
    *     The provided work context can be used to evaluate an expression. Expression evaluation is
    *     context sensitive. The context also provides a mechanism to cache expression results.
    * @param context The context of the work.
+   * @param function The function being built.
    */
   virtual void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const = 0;
 
