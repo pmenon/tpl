@@ -12,22 +12,17 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
                                                    CompilationContext *compilation_context,
                                                    Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline) {
+  TPL_ASSERT(plan.GetChildrenSize() == 2, "NLJ expected to have only two children.");
   pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
 
   // In a nested loop, only the outer most loop determines the parallelism level.
   // So disable the parallelism check until the last child.
   pipeline->SetParallelCheck(false);
+  compilation_context->Prepare(*plan.GetChild(0), pipeline);
 
-  // Prepare all children in this pipeline.
-  auto num_children = static_cast<uint32_t>(plan.GetChildren().size());
-  for (uint32_t i = 0; i < num_children; i++) {
-    auto child_plan = plan.GetChild(i);
-    if (i == num_children - 1) {
-      // Re-enable the parallelism check for the outer most loop.
-      pipeline->SetParallelCheck(true);
-    }
-    compilation_context->Prepare(*child_plan, pipeline);
-  }
+  // Re-enable the parallelism check for the outer most loop.
+  pipeline->SetParallelCheck(true);
+  compilation_context->Prepare(*plan.GetChild(1), pipeline);
 
   // Prepare join condition.
   if (const auto join_predicate = plan.GetJoinPredicate(); join_predicate != nullptr) {
