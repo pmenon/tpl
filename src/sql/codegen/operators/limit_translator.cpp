@@ -14,7 +14,7 @@ LimitTranslator::LimitTranslator(const planner::LimitPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline) {
   TPL_ASSERT(plan.GetOffset() != 0 || plan.GetLimit() != 0, "Both offset and limit cannot be 0");
   // Limits are serial ... for now.
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Serial);
+  pipeline->UpdateParallelism(Pipeline::Parallelism::Serial);
   // Prepare child.
   compilation_context->Prepare(*plan.GetChild(0), pipeline);
   // Register state.

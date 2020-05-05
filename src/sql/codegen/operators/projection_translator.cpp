@@ -15,8 +15,6 @@ ProjectionTranslator::ProjectionTranslator(const planner::ProjectionPlanNode &pl
                                            Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline) {
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Projections expected to have one child");
-  // Register this operator in the pipeline.
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
   // Prepare children for codegen.
   compilation_context->Prepare(*plan.GetChild(0), pipeline);
 }

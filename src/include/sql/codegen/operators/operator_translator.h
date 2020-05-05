@@ -169,21 +169,6 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
-   * @return The list of extra fields added to the main work function. This is only called on
-   *         parallel pipelines and only for the source/root of the pipeline that's responsible for
-   *         launching the worker function. By default, the first two argument of a parallel work
-   *         function are the query state and thread-local pipeline state.
-   */
-  virtual util::RegionVector<ast::FieldDecl *> GetWorkerParams() const = 0;
-
-  /**
-   * This is called on the source/root of parallel pipelines to launch the provided worker function
-   * in parallel across a set of threads.
-   * @param work_func_name The name of the work function that implements the pipeline logic.
-   */
-  virtual void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const = 0;
-
-  /**
    * @return The value (vector) of the attribute at the given index in this operator's output.
    */
   ast::Expr *GetOutput(WorkContext *context, uint32_t attr_idx) const;

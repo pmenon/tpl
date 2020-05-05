@@ -2,6 +2,7 @@
 
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
+#include "sql/codegen/pipeline_driver.h"
 #include "sql/codegen/state_descriptor.h"
 #include "sql/codegen/work_context.h"
 
@@ -16,7 +17,7 @@ class FunctionBuilder;
 /**
  * A translator for hash-based aggregations.
  */
-class HashAggregationTranslator : public OperatorTranslator {
+class HashAggregationTranslator : public OperatorTranslator, public PipelineDriver {
  public:
   /**
    * Create a new translator for the given aggregation plan.

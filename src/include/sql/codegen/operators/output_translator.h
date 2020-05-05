@@ -51,20 +51,6 @@ class OutputTranslator : public OperatorTranslator {
   void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
-   * Cannot be start of pipeline
-   */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("Output cannot be start of pipeline");
-  }
-
-  /**
-   * Cannot be start of pipeline
-   */
-  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func) const override {
-    UNREACHABLE("Output cannot be start of pipeline");
-  }
-
-  /**
    * Does not interact with tables.
    */
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {

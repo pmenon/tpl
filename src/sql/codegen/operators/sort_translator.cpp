@@ -25,11 +25,18 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
       compare_func_(GetCodeGen()->MakeFreshIdentifier("Compare")),
       build_pipeline_(this, Pipeline::Parallelism::Parallel),
       current_row_(CurrentRow::Child) {
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Serial);
+  TPL_ASSERT(plan.GetChildrenSize() == 1, "Sorts expected to have a single child.");
+  // Register this as the source for the pipeline. It must be serial to maintain
+  // sorted output order.
+  pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
+
+  // The build pipeline must complete before the produce pipeline.
   pipeline->LinkSourcePipeline(&build_pipeline_);
 
+  // Prepare the child.
   compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
 
+  // Prepare the sort-key expressions.
   for (const auto &[expr, _] : plan.GetSortKeys()) {
     (void)_;
     compilation_context->Prepare(*expr);

@@ -23,16 +23,21 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
       build_pipeline_(this, Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(plan.GetGroupByTerms().empty(), "Global aggregations shouldn't have grouping keys");
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Global aggregations should only have one child");
+  // The produce-side is serial since it only generates one output tuple.
+  pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
 
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Serial);
+  // The produce-side begins after the build-side.
   pipeline->LinkSourcePipeline(&build_pipeline_);
 
+  // Prepare the child.
   compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
 
+  // Prepare each of the aggregate expressions.
   for (const auto agg_term : plan.GetAggregateTerms()) {
     compilation_context->Prepare(*agg_term->GetChild(0));
   }
 
+  // If there's a having clause, prepare it, too.
   if (const auto having_clause = plan.GetHavingClausePredicate(); having_clause != nullptr) {
     compilation_context->Prepare(*having_clause);
   }

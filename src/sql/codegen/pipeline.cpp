@@ -12,6 +12,7 @@
 #include "sql/codegen/executable_query_builder.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/operator_translator.h"
+#include "sql/codegen/pipeline_driver.h"
 #include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
 
@@ -29,11 +30,21 @@ Pipeline::Pipeline(CompilationContext *ctx)
 
 Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism)
     : Pipeline(op->GetCompilationContext()) {
-  RegisterStep(op, parallelism);
+  RegisterStep(op);
 }
 
-void Pipeline::RegisterStep(OperatorTranslator *op, Parallelism parallelism) {
+void Pipeline::RegisterStep(OperatorTranslator *op) {
+  TPL_ASSERT(std::count(steps_.begin(), steps_.end(), op) == 0,
+             "Duplicate registration of operator in pipeline.");
   steps_.push_back(op);
+}
+
+void Pipeline::RegisterSource(PipelineDriver *driver, Pipeline::Parallelism parallelism) {
+  driver_ = driver;
+  UpdateParallelism(parallelism);
+}
+
+void Pipeline::UpdateParallelism(Pipeline::Parallelism parallelism) {
   if (check_parallelism_) {
     parallelism_ = std::min(parallelism, parallelism_);
   }
@@ -188,8 +199,8 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen_);
     // Create the working context and push it through the pipeline.
-    WorkContext work_context(compilation_context_, *this);
-    Driver()->PerformPipelineWork(&work_context, &builder);
+    WorkContext context(compilation_context_, *this);
+    (*Begin())->PerformPipelineWork(&context, &builder);
   }
   return builder.Finish();
 }

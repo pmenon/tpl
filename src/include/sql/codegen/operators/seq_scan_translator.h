@@ -6,6 +6,7 @@
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
+#include "sql/codegen/pipeline_driver.h"
 #include "sql/schema.h"
 
 namespace tpl::sql::planner {
@@ -20,7 +21,7 @@ class FunctionBuilder;
 /**
  * A translator for sequential table scans.
  */
-class SeqScanTranslator : public OperatorTranslator {
+class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
  public:
   /**
    * Create a translator for the given plan.

@@ -29,20 +29,6 @@ class ProjectionTranslator : public OperatorTranslator {
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   /**
-   * Pipeline are never pipeline roots. Hence, this should never be called.
-   */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("Projections do not launch pipeline");
-  }
-
-  /**
-   * Pipelines are never pipeline roots. Hence, this should never be called.
-   */
-  void LaunchWork(FunctionBuilder *, ast::Identifier) const override {
-    UNREACHABLE("Projections do not launch pipelines");
-  }
-
-  /**
    * Projections do not produce columns from base tables.
    */
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {

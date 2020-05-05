@@ -29,20 +29,25 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
   TPL_ASSERT(plan.GetAggregateStrategyType() == planner::AggregateStrategyType::HASH,
              "Expected hash-based aggregation plan node");
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Hash aggregations should only have one child");
-
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
+  // The produce pipeline begins after the build.
   pipeline->LinkSourcePipeline(&build_pipeline_);
 
+  // Prepare the child.
   compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
 
+  // If the build-side is parallel, the produce side is parallel.
+  pipeline->RegisterSource(this, build_pipeline_.IsParallel() ? Pipeline::Parallelism::Parallel
+                                                              : Pipeline::Parallelism::Serial);
+
+  // Prepare all grouping and aggregte expressions.
   for (const auto group_by_term : plan.GetGroupByTerms()) {
     compilation_context->Prepare(*group_by_term);
   }
-
   for (const auto agg_term : plan.GetAggregateTerms()) {
     compilation_context->Prepare(*agg_term->GetChild(0));
   }
 
+  // If there's a having clause, prepare it, too.
   if (const auto having_clause = plan.GetHavingClausePredicate(); having_clause != nullptr) {
     compilation_context->Prepare(*having_clause);
   }

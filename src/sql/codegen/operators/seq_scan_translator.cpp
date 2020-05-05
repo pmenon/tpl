@@ -21,7 +21,7 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline),
       tvi_var_(GetCodeGen()->MakeFreshIdentifier("tvi")),
       vpi_var_(GetCodeGen()->MakeFreshIdentifier("vpi")) {
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
+  pipeline->RegisterSource(this, Pipeline::Parallelism::Parallel);
   // If there's a predicate, prepare the expression and register a filter manager.
   if (HasPredicate()) {
     compilation_context->Prepare(*plan.GetScanPredicate());

@@ -13,7 +13,6 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
                                                    Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline) {
   TPL_ASSERT(plan.GetChildrenSize() == 2, "NLJ expected to have only two children.");
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
 
   // In a nested loop, only the outer most loop determines the parallelism level.
   // So disable the parallelism check until the last child.

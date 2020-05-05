@@ -18,7 +18,7 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline),
       output_var_(GetCodeGen()->MakeFreshIdentifier("outRow")),
       output_struct_(GetCodeGen()->MakeFreshIdentifier("OutputStruct")) {
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
+  // Prepare the child.
   compilation_context->Prepare(plan, pipeline);
 }
 

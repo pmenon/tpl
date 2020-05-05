@@ -45,20 +45,6 @@ class LimitTranslator : public OperatorTranslator {
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
   /**
-   * Limits are never the root of a pipeline.
-   */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("LIMITs are never the root of a pipeline.");
-  }
-
-  /**
-   * Limits are never the root of a pipeline.
-   */
-  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override {
-    UNREACHABLE("LIMITs are never the root of a plan and, thus, cannot be launched in parallel.");
-  }
-
-  /**
    * Limits never touch raw table data.
    */
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {

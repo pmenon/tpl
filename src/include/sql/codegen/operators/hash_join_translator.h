@@ -78,18 +78,6 @@ class HashJoinTranslator : public OperatorTranslator {
   void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
-   * Hash-joins are never the root of a pipeline. Thus, this should never be called.
-   */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("Impossible");
-  }
-
-  /**
-   * Hash-joins are never the root of a pipeline. Thus, this should never be called.
-   */
-  void LaunchWork(FunctionBuilder *, ast::Identifier) const override { UNREACHABLE("Impossible"); }
-
-  /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */

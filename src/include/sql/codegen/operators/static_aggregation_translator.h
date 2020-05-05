@@ -4,6 +4,7 @@
 
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
+#include "sql/codegen/pipeline_driver.h"
 
 namespace tpl::sql::planner {
 class AggregatePlanNode;
@@ -16,11 +17,11 @@ class FunctionBuilder;
 /**
  * A translator for static aggregations.
  */
-class StaticAggregationTranslator : public OperatorTranslator {
+class StaticAggregationTranslator : public OperatorTranslator, public PipelineDriver {
  public:
   /**
-   * Create a new translator for the given static aggregation  plan. The translator occurs within the
-   * provided compilation context, and the operator is a step in the provided pipeline.
+   * Create a new translator for the given static aggregation  plan. The translator occurs within
+   * the provided compilation context, and the operator is a step in the provided pipeline.
    * @param plan The plan.
    * @param compilation_context The context of compilation this translation is occurring in.
    * @param pipeline The pipeline this operator is participating in.

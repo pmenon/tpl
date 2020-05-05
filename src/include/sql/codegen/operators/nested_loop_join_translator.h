@@ -29,20 +29,6 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
    */
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
-  /**
-   * NLJ plans are not the root of a pipeline. Thus, this method should never be called.
-   */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("NLJ are never the root of a plan and, thus, cannot be launched in parallel.");
-  }
-
-  /**
-   * NLJ plans are not the root of a pipeline. Thus, this method should never be called.
-   */
-  void LaunchWork(UNUSED FunctionBuilder *, UNUSED ast::Identifier) const override {
-    UNREACHABLE("NLJ are never the root of a plan and, thus, cannot be launched in parallel.");
-  }
-
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Nested-loop joins do not produce columns from base tables.");
   }

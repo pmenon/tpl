@@ -18,6 +18,7 @@ class CompilationContext;
 class ExecutableQueryFragmentBuilder;
 class ExpressionTranslator;
 class OperatorTranslator;
+class PipelineDriver;
 
 /**
  * A pipeline represents an ordered sequence of relational operators that operate on tuple data
@@ -63,11 +64,24 @@ class Pipeline {
    * @param op The operator to add to the pipeline.
    * @param parallelism The operator's requested parallelism.
    */
-  void RegisterStep(OperatorTranslator *op, Parallelism parallelism);
+  void RegisterStep(OperatorTranslator *op);
+
+  /**
+   * Register the source/driver for the pipeline.
+   * @param driver The single driver for the pipeline.
+   * @param parallelism The driver's requested parallelism.
+   */
+  void RegisterSource(PipelineDriver *driver, Parallelism parallelism);
+
+  /**
+   * Update the current parallelism level for this pipeline to the value provided.
+   * @param parallelism The desired parallelism level.
+   */
+  void UpdateParallelism(Parallelism parallelism);
 
   /**
    * Enable or disable the pipeline's parallelism check during register RegisterStep.
-   * @param check Wether the to check for parallelism or not.
+   * @param check Whether the to check for parallelism or not.
    */
   void SetParallelCheck(bool check);
 
@@ -139,7 +153,7 @@ class Pipeline {
   /**
    * @return True if the given operator is the driver for this pipeline; false otherwise.
    */
-  bool IsDriver(const OperatorTranslator *op) const { return op == Driver(); }
+  bool IsDriver(const PipelineDriver *driver) const { return driver == Driver(); }
 
   /**
    * @return Arguments common to all pipeline functions.
@@ -148,7 +162,7 @@ class Pipeline {
 
  private:
   // Return the driver for the pipeline.
-  OperatorTranslator *Driver() const { return *Begin(); }
+  PipelineDriver *Driver() const { return driver_; }
 
   // Create a unique name for a function local to this pipeline.
   std::string ConstructPipelineFunctionName(const std::string &func_name) const;
@@ -187,6 +201,8 @@ class Pipeline {
   CodeGen *codegen_;
   // Operators making up the pipeline.
   std::vector<OperatorTranslator *> steps_;
+  // The driver.
+  PipelineDriver *driver_;
   // Expressions participating in the pipeline.
   std::vector<ExpressionTranslator *> expressions_;
   // Configured parallelism.

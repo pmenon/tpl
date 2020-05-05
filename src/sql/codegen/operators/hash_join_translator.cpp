@@ -24,13 +24,13 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
   TPL_ASSERT(!plan.GetRightHashKeys().empty(), "Hash-join must have join keys from right input");
   TPL_ASSERT(plan.GetJoinPredicate() != nullptr, "Hash-join must have a join predicate!");
-
-  pipeline->RegisterStep(this, Pipeline::Parallelism::Parallel);
+  // Probe pipeline begins after build pipeline.
   pipeline->LinkSourcePipeline(&left_pipeline_);
-
+  // Register left and right child in their appropriate pipelines.
   compilation_context->Prepare(*plan.GetChild(0), &left_pipeline_);
   compilation_context->Prepare(*plan.GetChild(1), pipeline);
 
+  // Prepare join predicate, left, and right hash keys.
   compilation_context->Prepare(*plan.GetJoinPredicate());
   for (const auto left_hash_key : plan.GetLeftHashKeys()) {
     compilation_context->Prepare(*left_hash_key);
@@ -39,6 +39,7 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
     compilation_context->Prepare(*right_hash_key);
   }
 
+  // Declare global state.
   CodeGen *codegen = GetCodeGen();
   ast::Expr *join_ht_type = codegen->BuiltinType(ast::BuiltinType::JoinHashTable);
   global_join_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(

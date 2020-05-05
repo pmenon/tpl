@@ -4,6 +4,7 @@
 
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
+#include "sql/codegen/pipeline_driver.h"
 #include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
@@ -17,7 +18,7 @@ class FunctionBuilder;
 /**
  * A translator for order-by plans.
  */
-class SortTranslator : public OperatorTranslator {
+class SortTranslator : public OperatorTranslator, public PipelineDriver {
  public:
   /**
    * Create a translator for the given order-by plan node.
