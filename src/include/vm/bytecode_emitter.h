@@ -105,50 +105,55 @@ class BytecodeEmitter {
   // Special
   // -------------------------------------------------------
 
+  // Initialize a SQL string from a raw string.
   void EmitInitString(LocalVar dest, LocalVar static_local_string, uint32_t string_len);
 
-  // Iterate over all the states in the container
+  // Iterate over all the states in the container.
   void EmitThreadStateContainerIterate(LocalVar tls, LocalVar ctx, FunctionId iterate_fn);
 
-  // Reset a thread state container with init and destroy functions
+  // Reset a thread state container with init and destroy functions.
   void EmitThreadStateContainerReset(LocalVar tls, LocalVar state_size, FunctionId init_fn,
                                      FunctionId destroy_fn, LocalVar ctx);
 
-  // Initialize a table iterator
+  // Initialize a table iterator.
   void EmitTableIterInit(Bytecode bytecode, LocalVar iter, uint16_t table_id);
-  // Emit a parallel table scan
+
+  // Emit a parallel table scan.
   void EmitParallelTableScan(uint16_t table_id, LocalVar ctx, LocalVar thread_states,
                              FunctionId scan_fn);
 
-  // Reading values from an iterator
+  // Reading values from an iterator.
   void EmitVPIGet(Bytecode bytecode, LocalVar out, LocalVar vpi, uint32_t col_idx);
 
-  // Setting values in an iterator
+  // Setting values in an iterator.
   void EmitVPISet(Bytecode bytecode, LocalVar vpi, LocalVar input, uint32_t col_idx);
 
-  // Insert a filter flavor into the filter manager builder
+  // Insert a filter flavor into the filter manager builder.
   void EmitFilterManagerInsertFilter(LocalVar filter_manager, FunctionId func);
 
-  // Lookup a single entry in the aggregation hash table
+  // Lookup a single entry in the aggregation hash table.
   void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash, FunctionId key_eq_fn,
                               LocalVar arg);
 
-  // Emit code to process a batch of input into the aggregation hash table
+  // Emit code to process a batch of input into the aggregation hash table.
   void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar vpi, uint32_t num_keys,
                                     LocalVar key_cols, FunctionId init_agg_fn,
                                     FunctionId merge_agg_fn, LocalVar partitioned);
 
-  // Emit code to move thread-local data into main agg table
+  // Emit code to move thread-local data into main agg table.
   void EmitAggHashTableMovePartitions(LocalVar agg_ht, LocalVar tls, LocalVar aht_offset,
                                       FunctionId merge_part_fn);
 
-  // Emit code to scan an agg table in parallel
+  // Emit code to scan an agg table in parallel.
   void EmitAggHashTableParallelPartitionedScan(LocalVar agg_ht, LocalVar context, LocalVar tls,
                                                FunctionId scan_part_fn);
 
-  // Initialize a sorter instance
+  // Initialize a sorter instance.
   void EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVar region, FunctionId cmp_fn,
                       LocalVar tuple_size);
+
+  // Initialize a CSV reader.
+  void EmitCSVReaderInit(LocalVar creader, LocalVar static_local_string, uint32_t string_len);
 
  private:
   // Copy a scalar immediate value into the bytecode stream

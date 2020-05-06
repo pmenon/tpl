@@ -77,13 +77,7 @@ class CSVFile : public CSVSource {
    * Create an instance using a file at the given path.
    * @param path Accessible path to the CSV file.
    */
-  explicit CSVFile(const std::string &path);
-
-  /**
-   * C interface for creating an instance using a file at the given path.
-   * @param path Accessible path to the CSV file.
-   */
-  explicit CSVFile(const char *path) : CSVFile(std::string(path)) {}
+  explicit CSVFile(std::string_view path);
 
   /**
    * Prepare the file for reading.
@@ -287,7 +281,8 @@ class CSVReader {
    * @param quote The quoting character used to quote data (i.e., strings).
    * @param escape The character appearing before the quote character.
    */
-  explicit CSVReader(CSVSource *source, char delimiter = ',', char quote = '"', char escape = '"');
+  explicit CSVReader(std::unique_ptr<CSVSource> source, char delimiter = ',', char quote = '"',
+                     char escape = '"');
 
   /**
    * Initialize the scan.
@@ -320,6 +315,12 @@ class CSVReader {
    */
   const Stats *GetStatistics() const { return &stats_; }
 
+  /**
+   * @return The current record number. This also represents the number of records that have been
+   *         parsed and processed thus far.
+   */
+  uint64_t GetRecordNumber() const { return stats_.num_lines; }
+
  private:
   // The result of an attempted parse
   enum class ParseResult { Ok, NeedMoreData, NeedMoreCells };
@@ -329,7 +330,7 @@ class CSVReader {
 
  private:
   // The source of CSV data.
-  CSVSource *source_;
+  std::unique_ptr<CSVSource> source_;
 
   // [buf,buf_end] represents a valid contiguous range of bytes provided by the
   // CSV source. At any point in time, buf points to the start of a row. When

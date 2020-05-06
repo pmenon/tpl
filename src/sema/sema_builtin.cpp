@@ -1253,6 +1253,77 @@ void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
+void Sema::CheckCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+
+  const auto &call_args = call->Arguments();
+
+  // First argument must be a *CSVReader.
+  const auto csv_reader = ast::BuiltinType::CSVReader;
+  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), csv_reader)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(csv_reader));
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::CSVReaderInit: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+
+      // Second argument is either a raw string, or a string representing the
+      // name of the CSV file to read. At this stage, we don't care. It just
+      // needs to be a string.
+      if (!call_args[1]->GetType()->IsStringType()) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(csv_reader));
+        return;
+      }
+
+      // Third, fourth, and fifth must be characters.
+
+      // Returns boolean indicating if initialization succeeded.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::CSVReaderAdvance: {
+      // Returns a boolean indicating if there's more data.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::CSVReaderGetField: {
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+      // Second argument must be the index, third is a pointer to a SQL string.
+      if (!call_args[1]->GetType()->IsIntegerType()) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Uint32));
+      }
+      // Second argument must be the index, third is a pointer to a SQL string.
+      const auto string_kind = ast::BuiltinType::StringVal;
+      if (!IsPointerToSpecificBuiltin(call_args[2]->GetType(), string_kind)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(string_kind)->PointerTo());
+      }
+      // Returns nothing.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::CSVReaderGetRecordNumber: {
+      // Returns a 32-bit number indicating the current record number.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint32));
+      break;
+    }
+    case ast::Builtin::CSVReaderClose: {
+      // Returns nothing.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    default:
+      UNREACHABLE("Impossible math trig function call");
+  }
+}
+
 void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
   if (!CheckArgCount(call, 1)) {
     return;
@@ -1788,6 +1859,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::ResultBufferAllocOutRow:
     case ast::Builtin::ResultBufferFinalize: {
       CheckResultBufferCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::CSVReaderInit:
+    case ast::Builtin::CSVReaderAdvance:
+    case ast::Builtin::CSVReaderGetField:
+    case ast::Builtin::CSVReaderGetRecordNumber:
+    case ast::Builtin::CSVReaderClose: {
+      CheckCSVReaderCall(call, builtin);
       break;
     }
     case ast::Builtin::ACos:

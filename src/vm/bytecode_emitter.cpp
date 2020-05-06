@@ -338,4 +338,9 @@ void BytecodeEmitter::EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVa
   EmitAll(bytecode, sorter, region, cmp_fn, tuple_size);
 }
 
+void BytecodeEmitter::EmitCSVReaderInit(LocalVar reader, LocalVar file_name,
+                                        uint32_t file_name_len) {
+  EmitAll(Bytecode::CSVReaderInit, reader, file_name, file_name_len);
+}
+
 }  // namespace tpl::vm

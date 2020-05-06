@@ -15,6 +15,7 @@
 #include "sql/value.h"
 #include "sql/vector_filter_executor.h"
 #include "sql/vector_projection_iterator.h"
+#include "util/csv_reader.h"
 
 namespace tpl::ast {
 

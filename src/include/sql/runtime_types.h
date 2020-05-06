@@ -295,9 +295,7 @@ class Timestamp {
    * @param str The string to convert.
    * @return The constructed Timestamp. May be invalid.
    */
-  static Timestamp FromString(std::string_view str) {
-    return FromString(str.data(), str.size());
-  }
+  static Timestamp FromString(std::string_view str) { return FromString(str.data(), str.size()); }
 
   /**
    * Given year, month, day, hour, minute, second components construct a TPL timestamp. If any

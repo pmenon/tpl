@@ -14,7 +14,7 @@ namespace tpl::util {
 //
 //===----------------------------------------------------------------------===//
 
-CSVFile::CSVFile(const std::string &path)
+CSVFile::CSVFile(std::string_view path)
     : file_(path, util::File::FLAG_OPEN | util::File::FLAG_READ),
       buffer_(std::unique_ptr<char[]>(new char[kDefaultBufferSize + kNumExtraPaddingChars])),
       read_pos_(0),
@@ -78,8 +78,8 @@ double CSVReader::CSVCell::AsDouble() const {
   return output;
 }
 
-CSVReader::CSVReader(CSVSource *source, char delimiter, char quote, char escape)
-    : source_(source),
+CSVReader::CSVReader(std::unique_ptr<CSVSource> source, char delimiter, char quote, char escape)
+    : source_(std::move(source)),
       buf_(nullptr),
       buf_end_(nullptr),
       delimiter_(delimiter),

@@ -4,12 +4,16 @@
 
 namespace tpl::util {
 
-class CSVReaderTest : public TplTest {};
+class CSVReaderTest : public TplTest {
+ protected:
+  std::unique_ptr<CSVString> MakeSource(const std::string &s) {
+    return std::make_unique<CSVString>(s);
+  }
+};
 
 TEST_F(CSVReaderTest, CheckEscaping) {
   {
-    CSVString str("10,\"BLAHBLAH\",\"Special \"\"AF\"\" string\",1000\n");
-    CSVReader reader(&str);
+    CSVReader reader(MakeSource("10,\"BLAHBLAH\",\"Special \"\"AF\"\" string\",1000\n"));
 
     ASSERT_TRUE(reader.Initialize());
     ASSERT_TRUE(reader.Advance());
@@ -23,10 +27,9 @@ TEST_F(CSVReaderTest, CheckEscaping) {
   }
 
   {
-    CSVString str(
-        "1,two,\"\nNewRow\n\"\n"
-        "3,four,NormalRow\n");
-    CSVReader reader(&str);
+    CSVReader reader(
+        MakeSource("1,two,\"\nNewRow\n\"\n"
+                   "3,four,NormalRow\n"));
     ASSERT_TRUE(reader.Initialize());
 
     // First row
@@ -39,11 +42,10 @@ TEST_F(CSVReaderTest, CheckEscaping) {
 }
 
 TEST_F(CSVReaderTest, EmptyCellsAndRows) {
-  CSVString str(
-      "1,two,three\n"
-      ",,\n"
-      "4,,six\n");
-  CSVReader reader(&str);
+  CSVReader reader(
+      MakeSource("1,two,three\n"
+                 ",,\n"
+                 "4,,six\n"));
   reader.Initialize();
 
   // First row
@@ -69,13 +71,12 @@ TEST_F(CSVReaderTest, EmptyCellsAndRows) {
 }
 
 TEST_F(CSVReaderTest, CheckUnquoted) {
-  CSVString str(
-      "1,PA,498960,30.102261,-81.711777,Residential,Masonry,1\n"
-      "2,CA,132237,30.063936,101.704,Residential,Wood,3\n"
-      "3,NY,190724,29.089579,-81.700455,Residential,Masonry,1\n"
-      "4,FL,0,30.063236,0.7,Residential,Wood,3\n"
-      "5,WA,5,0.06,-0.75,Residential,Masonry,1\n");
-  CSVReader reader(&str);
+  CSVReader reader(
+      MakeSource("1,PA,498960,30.102261,-81.711777,Residential,Masonry,1\n"
+                 "2,CA,132237,30.063936,101.704,Residential,Wood,3\n"
+                 "3,NY,190724,29.089579,-81.700455,Residential,Masonry,1\n"
+                 "4,FL,0,30.063236,0.7,Residential,Wood,3\n"
+                 "5,WA,5,0.06,-0.75,Residential,Masonry,1\n"));
   ASSERT_TRUE(reader.Initialize());
 
   const CSVReader::CSVRow *row = nullptr;

@@ -24,6 +24,7 @@
 #include "sql/thread_state_container.h"
 #include "sql/value.h"
 #include "sql/vector_filter_executor.h"
+#include "util/csv_reader.h"
 #include "util/math_util.h"
 
 namespace tpl::ast {

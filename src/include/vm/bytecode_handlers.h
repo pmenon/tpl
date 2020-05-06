@@ -19,6 +19,7 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector_filter_executor.h"
+#include "util/csv_reader.h"
 
 // All VM bytecode op handlers must use this macro
 #define VM_OP
@@ -1199,6 +1200,31 @@ VM_OP_WARM void OpResultBufferAllocOutputRow(byte **result, tpl::sql::ExecutionC
 VM_OP_WARM void OpResultBufferFinalize(tpl::sql::ExecutionContext *ctx) {
   ctx->GetResultBuffer()->Finalize();
 }
+
+// ---------------------------------------------------------
+// CSV Reader
+// ---------------------------------------------------------
+
+VM_OP void OpCSVReaderInit(tpl::util::CSVReader *reader, const uint8_t *file_name, uint32_t len);
+
+VM_OP void OpCSVReaderPerformInit(bool *result, tpl::util::CSVReader *reader);
+
+VM_OP_WARM void OpCSVReaderAdvance(bool *has_more, tpl::util::CSVReader *reader) {
+  *has_more = reader->Advance();
+}
+
+VM_OP_WARM void OpCSVReaderGetField(tpl::util::CSVReader *reader, const uint32_t field_index,
+                                    tpl::sql::StringVal *result) {
+  // TODO(pmenon): There's an extra copy here. Revisit if it's a performance issue.
+  const std::string field_string = reader->GetRowCell(field_index)->AsString();
+  *result = tpl::sql::StringVal(tpl::sql::VarlenEntry::Create(field_string));
+}
+
+VM_OP_WARM void OpCSVReaderGetRecordNumber(uint32_t *result, tpl::util::CSVReader *reader) {
+  *result = reader->GetRecordNumber();
+}
+
+VM_OP void OpCSVReaderClose(tpl::util::CSVReader *reader);
 
 // ---------------------------------------------------------
 // Trig functions

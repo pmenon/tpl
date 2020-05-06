@@ -539,7 +539,6 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
   case Builtin: {                                                \
     auto input = VisitExpressionForLValue(call->Arguments()[0]); \
     GetEmitter()->Emit(Bytecode, dest, input);                   \
-    /*GetExecutionResult()->SetDestination(dest.ValueOf());*/        \
     break;                                                       \
   }
       GEN_CASE(ast::Builtin::ConvertBoolToInteger, Bytecode::BoolToInteger);
@@ -1444,6 +1443,47 @@ void BytecodeGenerator::VisitResultBufferCall(ast::CallExpr *call, ast::Builtin 
   }
 }
 
+void BytecodeGenerator::VisitCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin) {
+  LocalVar reader = VisitExpressionForRValue(call->Arguments()[0]);
+  switch (builtin) {
+    case ast::Builtin::CSVReaderInit: {
+      LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+      TPL_ASSERT(call->Arguments()[1]->IsLitExpr(),
+                 "Second argument expected to be string literal");
+      auto string_lit = call->Arguments()[1]->As<ast::LitExpr>()->StringVal();
+      auto file_name = NewStaticString(call->GetType()->GetContext(), string_lit);
+      GetEmitter()->EmitCSVReaderInit(reader, file_name, string_lit.GetLength());
+      GetEmitter()->Emit(Bytecode::CSVReaderPerformInit, result, reader);
+      GetExecutionResult()->SetDestination(result.ValueOf());
+      break;
+    }
+    case ast::Builtin::CSVReaderAdvance: {
+      LocalVar has_more = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+      GetEmitter()->Emit(Bytecode::CSVReaderAdvance, has_more, reader);
+      GetExecutionResult()->SetDestination(has_more.ValueOf());
+      break;
+    }
+    case ast::Builtin::CSVReaderGetField: {
+      LocalVar field_index = VisitExpressionForRValue(call->Arguments()[1]);
+      LocalVar field = VisitExpressionForRValue(call->Arguments()[2]);
+      GetEmitter()->Emit(Bytecode::CSVReaderGetField, reader, field_index, field);
+      break;
+    }
+    case ast::Builtin::CSVReaderGetRecordNumber: {
+      LocalVar record_number = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+      GetEmitter()->Emit(Bytecode::CSVReaderGetRecordNumber, record_number, reader);
+      break;
+    }
+    case ast::Builtin::CSVReaderClose: {
+      GetEmitter()->Emit(Bytecode::CSVReaderClose, reader);
+      break;
+    }
+    default: {
+      UNREACHABLE("Invalid CSV reader call!");
+    }
+  }
+}
+
 void BytecodeGenerator::VisitExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin) {
   LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
   LocalVar exec_ctx = VisitExpressionForRValue(call->Arguments()[0]);
@@ -1750,6 +1790,14 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitResultBufferCall(call, builtin);
       break;
     }
+    case ast::Builtin::CSVReaderInit:
+    case ast::Builtin::CSVReaderAdvance:
+    case ast::Builtin::CSVReaderGetField:
+    case ast::Builtin::CSVReaderGetRecordNumber:
+    case ast::Builtin::CSVReaderClose: {
+      VisitCSVReaderCall(call, builtin);
+      break;
+    }
     case ast::Builtin::ACos:
     case ast::Builtin::ASin:
     case ast::Builtin::ATan:
@@ -1844,23 +1892,29 @@ void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
     }
     case ast::LitExpr::LitKind::Boolean: {
       GetEmitter()->EmitAssignImm1(target, static_cast<int8_t>(node->BoolVal()));
+      GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
     case ast::LitExpr::LitKind::Int: {
       GetEmitter()->EmitAssignImm4(target, node->Int32Val());
+      GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
     case ast::LitExpr::LitKind::Float: {
       GetEmitter()->EmitAssignImm4F(target, node->Float32Val());
+      GetExecutionResult()->SetDestination(target.ValueOf());
       break;
+    }
+    case ast::LitExpr::LitKind::String: {
+      LocalVar string = NewStaticString(node->GetType()->GetContext(), node->StringVal());
+      GetEmitter()->EmitAssign(Bytecode::Assign8, target, string);
+      GetExecutionResult()->SetDestination(string.ValueOf());
     }
     default: {
       LOG_ERROR("Non-bool or non-integer literals not supported in bytecode");
       break;
     }
   }
-
-  GetExecutionResult()->SetDestination(target.ValueOf());
 }
 
 void BytecodeGenerator::VisitStructDecl(UNUSED ast::StructDecl *node) {

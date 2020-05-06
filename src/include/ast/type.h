@@ -57,7 +57,7 @@ class Context;
   NON_PRIM(AHTIterator, tpl::sql::AHTIterator)                                   \
   NON_PRIM(AHTVectorIterator, tpl::sql::AHTVectorIterator)                       \
   NON_PRIM(AHTOverflowPartitionIterator, tpl::sql::AHTOverflowPartitionIterator) \
-  NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                                   \
+  NON_PRIM(CSVReader, tpl::util::CSVReader)                                      \
   NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                         \
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                               \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                             \

@@ -865,7 +865,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(Bytecode) : {                                                             \
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());          \
     auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID()); \
-    auto *input = frame->LocalAt<InputType *>(READ_LOCAL_ID());           \
+    auto *input = frame->LocalAt<InputType *>(READ_LOCAL_ID());                \
     Op##Bytecode(result, exec_ctx, input);                                     \
     DISPATCH_NEXT();                                                           \
   }
@@ -1526,6 +1526,54 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(ResultBufferFinalize) : {
     auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     OpResultBufferFinalize(exec_ctx);
+    DISPATCH_NEXT();
+  }
+
+  // -------------------------------------------------------
+  // CSV Reader
+  // -------------------------------------------------------
+
+  OP(CSVReaderInit) : {
+    auto *reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    auto *file_name = module_->GetBytecodeModule()->AccessStaticLocalDataRaw(
+        LocalVar::Decode(READ_STATIC_LOCAL_ID()));
+    auto length = READ_UIMM4();
+    OpCSVReaderInit(reader, file_name, length);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderPerformInit) : {
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    OpCSVReaderPerformInit(result, reader);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderAdvance) : {
+    auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    OpCSVReaderAdvance(has_more, reader);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderGetField) : {
+    auto reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    auto field_index = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    auto field = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    OpCSVReaderGetField(reader, field_index, field);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderGetRecordNumber) : {
+    auto record_num = frame->LocalAt<uint32_t *>(READ_LOCAL_ID());
+    auto reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    OpCSVReaderGetRecordNumber(record_num, reader);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderClose) : {
+    auto *reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    OpCSVReaderClose(reader);
     DISPATCH_NEXT();
   }
 

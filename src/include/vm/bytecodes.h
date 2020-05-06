@@ -420,6 +420,14 @@ namespace tpl::vm {
   F(ResultBufferAllocOutputRow, OperandType::Local, OperandType::Local)                                                \
   F(ResultBufferFinalize, OperandType::Local)                                                                          \
                                                                                                                        \
+  /* CSV Reader */                                                                                                     \
+  F(CSVReaderInit, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4)                                   \
+  F(CSVReaderPerformInit, OperandType::Local, OperandType::Local)                                                      \
+  F(CSVReaderAdvance, OperandType::Local, OperandType::Local)                                                          \
+  F(CSVReaderGetField, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(CSVReaderGetRecordNumber, OperandType::Local, OperandType::Local)                                                  \
+  F(CSVReaderClose, OperandType::Local)                                                                                \
+                                                                                                                       \
   /* Trig functions */                                                                                                 \
   F(Pi, OperandType::Local)                                                                                            \
   F(E, OperandType::Local)                                                                                             \

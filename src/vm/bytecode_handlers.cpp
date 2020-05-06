@@ -149,4 +149,19 @@ void OpSorterIteratorInit(tpl::sql::SorterIterator *iter, tpl::sql::Sorter *sort
 
 void OpSorterIteratorFree(tpl::sql::SorterIterator *iter) { iter->~SorterIterator(); }
 
+// ---------------------------------------------------------
+// CSV Reader
+// ---------------------------------------------------------
+
+void OpCSVReaderInit(tpl::util::CSVReader *reader, const uint8_t *file_name, uint32_t len) {
+  std::string_view fname(reinterpret_cast<const char *>(file_name), len);
+  new (reader) tpl::util::CSVReader(std::make_unique<tpl::util::CSVFile>(fname));
+}
+
+void OpCSVReaderPerformInit(bool *result, tpl::util::CSVReader *reader) {
+  *result = reader->Initialize();
+}
+
+void OpCSVReaderClose(tpl::util::CSVReader *reader) { std::destroy_at(reader); }
+
 }  //
