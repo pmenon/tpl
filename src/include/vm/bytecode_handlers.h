@@ -537,6 +537,23 @@ VM_OP_WARM void OpStringToBool(tpl::sql::BoolVal *result, const tpl::sql::String
   tpl::sql::CastingFunctions::CastToBoolVal(result, *input);
 }
 
+VM_OP_WARM void OpStringToInteger(tpl::sql::Integer *result, const tpl::sql::StringVal *input) {
+  tpl::sql::CastingFunctions::CastToInteger(result, *input);
+}
+
+VM_OP_WARM void OpStringToReal(tpl::sql::Real *result, const tpl::sql::StringVal *input) {
+  tpl::sql::CastingFunctions::CastToReal(result, *input);
+}
+
+VM_OP_WARM void OpStringToDate(tpl::sql::DateVal *result, const tpl::sql::StringVal *input) {
+  tpl::sql::CastingFunctions::CastToDateVal(result, *input);
+}
+
+VM_OP_WARM void OpStringToTimestamp(tpl::sql::TimestampVal *result,
+                                    const tpl::sql::StringVal *input) {
+  tpl::sql::CastingFunctions::CastToTimestampVal(result, *input);
+}
+
 #define GEN_SQL_COMPARISONS(NAME, TYPE)                                                           \
   VM_OP_HOT void OpGreaterThan##NAME(tpl::sql::BoolVal *const result,                             \
                                      const tpl::sql::TYPE *const left,                            \

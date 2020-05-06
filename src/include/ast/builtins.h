@@ -20,6 +20,11 @@ namespace tpl::ast {
   F(ConvertBoolToInteger, convertBoolToInt)                     \
   F(ConvertIntegerToReal, convertIntToReal)                     \
   F(ConvertDateToTimestamp, convertDateToTime)                  \
+  F(ConvertStringToBool, convertStringToBool)                   \
+  F(ConvertStringToInt, convertStringToInt)                     \
+  F(ConvertStringToReal, convertStringToReal)                   \
+  F(ConvertStringToDate, convertStringToDate)                   \
+  F(ConvertStringToTime, convertStringToTime)                   \
                                                                 \
   /* SQL Functions */                                           \
   F(Like, like)                                                 \

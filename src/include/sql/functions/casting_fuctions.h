@@ -67,21 +67,29 @@ class CastingFunctions : public AllStatic {
     *result = TO_TYPE(output);                                                         \
   }
 
+// Something to boolean.
 CAST_HIDE_NULL_FAST(Integer, BoolVal);
 CAST_HIDE_NULL_FAST(Real, BoolVal);
 CAST_HIDE_NULL(StringVal, BoolVal);
+// Something to integer.
 CAST_HIDE_NULL_FAST(BoolVal, Integer);
 CAST_HIDE_NULL_FAST(Real, Integer);
 CAST_HIDE_NULL(StringVal, Integer);
+// Something to real.
 CAST_HIDE_NULL_FAST(BoolVal, Real);
 CAST_HIDE_NULL_FAST(Integer, Real);
 CAST_HIDE_NULL(StringVal, Real);
+// Something to date.
 CAST_HIDE_NULL_FAST(TimestampVal, DateVal);
+CAST_HIDE_NULL(StringVal, DateVal);
+// Something to timestamp.
 CAST_HIDE_NULL_FAST(DateVal, TimestampVal);
+CAST_HIDE_NULL(StringVal, TimestampVal);
 
 #undef CAST_HIDE_NULL
 #undef CAST_HIDE_NULL_FAST
 
+// Something to string.
 #define CAST_TO_STRING(FROM_TYPE)                                                               \
   inline void CastingFunctions::CastToStringVal(StringVal *result, ExecutionContext *const ctx, \
                                                 const FROM_TYPE &v) {                           \

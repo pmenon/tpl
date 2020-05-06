@@ -216,6 +216,10 @@ namespace tpl::vm {
   F(TimestampToDate, OperandType::Local, OperandType::Local)                                                           \
   F(TimestampToString, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
   F(StringToBool, OperandType::Local, OperandType::Local)                                                              \
+  F(StringToInteger, OperandType::Local, OperandType::Local)                                                           \
+  F(StringToReal, OperandType::Local, OperandType::Local)                                                              \
+  F(StringToDate, OperandType::Local, OperandType::Local)                                                              \
+  F(StringToTimestamp, OperandType::Local, OperandType::Local)                                                         \
   /* SQL value comparisons */                                                                                          \
   F(LessThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(LessThanEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                     \

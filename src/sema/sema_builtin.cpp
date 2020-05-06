@@ -102,30 +102,26 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
       call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
-    case ast::Builtin::ConvertBoolToInteger: {
-      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
-        ReportIncorrectCallArg(call, 0, "SQL boolean");
-        return;
-      }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
-      break;
-    }
-    case ast::Builtin::ConvertIntegerToReal: {
-      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Integer)) {
-        ReportIncorrectCallArg(call, 0, "SQL integer");
-        return;
-      }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Real));
-      break;
-    }
-    case ast::Builtin::ConvertDateToTimestamp: {
-      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Date)) {
-        ReportIncorrectCallArg(call, 0, "SQL date");
-        return;
-      }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Timestamp));
-      break;
-    }
+
+#define CONVERSION_CASE(Op, InputType, OutputType)                     \
+  case ast::Builtin::Op: {                                             \
+    if (!input_type->IsSpecificBuiltin(ast::BuiltinType::InputType)) { \
+      ReportIncorrectCallArg(call, 0, "SQL " #InputType);              \
+      return;                                                          \
+    }                                                                  \
+    call->SetType(GetBuiltinType(ast::BuiltinType::OutputType));       \
+    break;                                                             \
+  }
+      CONVERSION_CASE(ConvertBoolToInteger, Boolean, Integer);
+      CONVERSION_CASE(ConvertIntegerToReal, Integer, Real);
+      CONVERSION_CASE(ConvertDateToTimestamp, Date, Timestamp);
+      CONVERSION_CASE(ConvertStringToBool, StringVal, Boolean);
+      CONVERSION_CASE(ConvertStringToInt, StringVal, Integer);
+      CONVERSION_CASE(ConvertStringToReal, StringVal, Real);
+      CONVERSION_CASE(ConvertStringToDate, StringVal, Date);
+      CONVERSION_CASE(ConvertStringToTime, StringVal, Timestamp);
+#undef CONVERSION_CASE
+
     default: {
       UNREACHABLE("Impossible SQL conversion call");
     }
@@ -1599,7 +1595,12 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::SqlToBool:
     case ast::Builtin::ConvertBoolToInteger:
     case ast::Builtin::ConvertIntegerToReal:
-    case ast::Builtin::ConvertDateToTimestamp: {
+    case ast::Builtin::ConvertDateToTimestamp:
+    case ast::Builtin::ConvertStringToBool:
+    case ast::Builtin::ConvertStringToInt:
+    case ast::Builtin::ConvertStringToReal:
+    case ast::Builtin::ConvertStringToDate:
+    case ast::Builtin::ConvertStringToTime: {
       CheckSqlConversionCall(call, builtin);
       break;
     }

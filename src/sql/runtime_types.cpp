@@ -398,6 +398,10 @@ std::string Timestamp::ToString() const {
   return fmt::format("{}-{:02}-{:02} {:02}:{:02}:{:02}", year, month, day, hour, min, sec);
 }
 
+Timestamp Timestamp::FromString(const char *str, std::size_t len) {
+  throw NotImplementedException("Converting strings to timestamps not implemented.");
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Blob

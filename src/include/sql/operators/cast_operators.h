@@ -370,4 +370,26 @@ struct TryCast<VarlenEntry, double> {
   bool operator()(const VarlenEntry &input, double *output) const;
 };
 
+/**
+ * String to date.
+ */
+template <>
+struct TryCast<VarlenEntry, Date> {
+  bool operator()(const VarlenEntry &input, Date *output) const {
+    *output = Date::FromString(input.GetStringView());
+    return true;
+  }
+};
+
+/**
+ * String to timestamp.
+ */
+template <>
+struct TryCast<VarlenEntry, Timestamp> {
+  bool operator()(const VarlenEntry &input, Timestamp *output) const {
+    *output = Timestamp::FromString(input.GetStringView());
+    return true;
+  }
+};
+
 }  // namespace tpl::sql

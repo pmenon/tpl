@@ -124,7 +124,7 @@ class Date {
    * @param str The string to convert.
    * @return The constructed Date. May be invalid.
    */
-  static Date FromString(const std::string &str) { return FromString(str.c_str(), str.size()); }
+  static Date FromString(std::string_view str) { return FromString(str.data(), str.size()); }
 
   /**
    * Create a Date instance from a specified year, month, and day.
@@ -295,8 +295,8 @@ class Timestamp {
    * @param str The string to convert.
    * @return The constructed Timestamp. May be invalid.
    */
-  static Timestamp FromString(const std::string &str) {
-    return FromString(str.c_str(), str.size());
+  static Timestamp FromString(std::string_view str) {
+    return FromString(str.data(), str.size());
   }
 
   /**

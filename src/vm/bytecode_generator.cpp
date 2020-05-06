@@ -264,6 +264,12 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
       GetExecutionResult()->SetDestination(dest.ValueOf());
       break;
     }
+    case ast::CastKind::BoolToSqlBool: {
+      LocalVar dest = GetExecutionResult()->GetOrCreateDestination(node->GetType());
+      GetEmitter()->Emit(Bytecode::InitBool, dest, input);
+      GetExecutionResult()->SetDestination(dest);
+      break;
+    }
     case ast::CastKind::IntToSqlInt: {
       LocalVar dest = GetExecutionResult()->GetOrCreateDestination(node->GetType());
       GetEmitter()->Emit(Bytecode::InitInteger, dest, input);
@@ -528,24 +534,24 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
       GetExecutionResult()->SetDestination(dest.ValueOf());
       break;
     }
-    case ast::Builtin::ConvertBoolToInteger: {
-      auto input = VisitExpressionForLValue(call->Arguments()[0]);
-      GetEmitter()->Emit(Bytecode::BoolToInteger, dest, input);
-      GetExecutionResult()->SetDestination(dest.ValueOf());
-      break;
-    }
-    case ast::Builtin::ConvertIntegerToReal: {
-      auto input = VisitExpressionForLValue(call->Arguments()[0]);
-      GetEmitter()->Emit(Bytecode::IntegerToReal, dest, input);
-      GetExecutionResult()->SetDestination(dest.ValueOf());
-      break;
-    }
-    case ast::Builtin::ConvertDateToTimestamp: {
-      auto input = VisitExpressionForLValue(call->Arguments()[0]);
-      GetEmitter()->Emit(Bytecode::DateToTimestamp, dest, input);
-      GetExecutionResult()->SetDestination(dest.ValueOf());
-      break;
-    }
+
+#define GEN_CASE(Builtin, Bytecode)                              \
+  case Builtin: {                                                \
+    auto input = VisitExpressionForLValue(call->Arguments()[0]); \
+    GetEmitter()->Emit(Bytecode, dest, input);                   \
+    /*GetExecutionResult()->SetDestination(dest.ValueOf());*/        \
+    break;                                                       \
+  }
+      GEN_CASE(ast::Builtin::ConvertBoolToInteger, Bytecode::BoolToInteger);
+      GEN_CASE(ast::Builtin::ConvertIntegerToReal, Bytecode::IntegerToReal);
+      GEN_CASE(ast::Builtin::ConvertDateToTimestamp, Bytecode::DateToTimestamp);
+      GEN_CASE(ast::Builtin::ConvertStringToBool, Bytecode::StringToBool);
+      GEN_CASE(ast::Builtin::ConvertStringToInt, Bytecode::StringToInteger);
+      GEN_CASE(ast::Builtin::ConvertStringToReal, Bytecode::StringToReal);
+      GEN_CASE(ast::Builtin::ConvertStringToDate, Bytecode::StringToDate);
+      GEN_CASE(ast::Builtin::ConvertStringToTime, Bytecode::StringToTimestamp);
+#undef GEN_CASE
+
     default: {
       UNREACHABLE("Impossible SQL conversion call");
     }
@@ -1570,7 +1576,12 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::SqlToBool:
     case ast::Builtin::ConvertBoolToInteger:
     case ast::Builtin::ConvertIntegerToReal:
-    case ast::Builtin::ConvertDateToTimestamp: {
+    case ast::Builtin::ConvertDateToTimestamp:
+    case ast::Builtin::ConvertStringToBool:
+    case ast::Builtin::ConvertStringToInt:
+    case ast::Builtin::ConvertStringToReal:
+    case ast::Builtin::ConvertStringToDate:
+    case ast::Builtin::ConvertStringToTime: {
       VisitSqlConversionCall(call, builtin);
       break;
     }

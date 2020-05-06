@@ -29,6 +29,7 @@ return-expr.tpl,false,15
 simple.tpl,false,1
 short-circuit.tpl,false,1
 sql-date.tpl,false,0
+sql-conversions.tpl,false,0
 struct.tpl,false,10
 struct-debug.tpl,false,100000
 struct-empty.tpl,false,0
