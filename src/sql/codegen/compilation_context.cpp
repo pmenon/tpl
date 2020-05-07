@@ -22,6 +22,7 @@
 #include "sql/codegen/expression/null_check_translator.h"
 #include "sql/codegen/expression/unary_translator.h"
 #include "sql/codegen/function_builder.h"
+#include "sql/codegen/operators/csv_scan_translator.h"
 #include "sql/codegen/operators/hash_aggregation_translator.h"
 #include "sql/codegen/operators/hash_join_translator.h"
 #include "sql/codegen/operators/limit_translator.h"
@@ -184,6 +185,11 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
       } else {
         translator = std::make_unique<HashAggregationTranslator>(aggregation, this, pipeline);
       }
+      break;
+    }
+    case planner::PlanNodeType::CSVSCAN: {
+      const auto &scan_plan = static_cast<const planner::CSVScanPlanNode &>(plan);
+      translator = std::make_unique<CSVScanTranslator>(scan_plan, this, pipeline);
       break;
     }
     case planner::PlanNodeType::HASHJOIN: {

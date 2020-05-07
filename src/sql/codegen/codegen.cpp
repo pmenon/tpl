@@ -929,6 +929,45 @@ ast::Expr *CodeGen::NotLike(ast::Expr *str, ast::Expr *pattern) {
   return UnaryOp(parsing::Token::Type::BANG, Like(str, pattern));
 }
 
+// ---------------------------------------------------------
+// CSV
+// ---------------------------------------------------------
+
+ast::Expr *CodeGen::CSVReaderInit(ast::Expr *reader, std::string_view file_name) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderInit, {reader, ConstString(file_name)});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
+  return call;
+}
+
+ast::Expr *CodeGen::CSVReaderAdvance(ast::Expr *reader) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderAdvance, {reader});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
+  return call;
+}
+
+ast::Expr *CodeGen::CSVReaderGetField(ast::Expr *reader, uint32_t field_index, ast::Expr *result) {
+  ast::Expr *call =
+      CallBuiltin(ast::Builtin::CSVReaderGetField, {reader, Const32(field_index), result});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::CSVReaderGetRecordNumber(ast::Expr *reader) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderGetRecordNumber, {reader});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Uint32));
+  return call;
+}
+
+ast::Expr *CodeGen::CSVReaderClose(ast::Expr *reader) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderClose, {reader});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+// ---------------------------------------------------------
+// Extras
+// ---------------------------------------------------------
+
 ast::Identifier CodeGen::MakeFreshIdentifier(const std::string &str) {
   return context_->GetIdentifier(scope_->GetFreshName(str));
 }

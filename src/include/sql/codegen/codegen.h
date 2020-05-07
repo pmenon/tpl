@@ -1137,6 +1137,45 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *NotLike(ast::Expr *str, ast::Expr *pattern);
 
+  /**
+   * Call @csvReaderInit(). Initialize a CSV reader for the given file name.
+   * @param reader The reader.
+   * @param file_name The filename.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *CSVReaderInit(ast::Expr *reader, std::string_view file_name);
+
+  /**
+   * Call @csvReaderAdvance(). Advance the reader one row.
+   * @param reader The reader.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *CSVReaderAdvance(ast::Expr *reader);
+
+  /**
+   * Call @csvReaderGetField(). Read the field at the given index in the current row.
+   * @param reader The reader.
+   * @param field_index The index of the field in the row to read.
+   * @param result Where the result is written to.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *CSVReaderGetField(ast::Expr *reader, uint32_t field_index,
+                                             ast::Expr *result);
+
+  /**
+   * Call @csvReaderGetRecordNumber(). Get the current record number.
+   * @param reader The reader.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *CSVReaderGetRecordNumber(ast::Expr *reader);
+
+  /**
+   * Call @csvReaderClose(). Destroy a CSV reader.
+   * @param reader The reader.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *CSVReaderClose(ast::Expr *reader);
+
   // ---------------------------------------------------------------------------
   //
   // Identifiers

@@ -7,6 +7,8 @@
 #include "compiler/compiler.h"
 #include "sema/error_reporter.h"
 #include "vm/module.h"
+#include "ast/ast_pretty_print.h"
+#include "ast/ast_dump.h"
 
 namespace tpl::sql::codegen {
 
@@ -46,7 +48,8 @@ std::unique_ptr<ExecutableQuery::Fragment> ExecutableQueryFragmentBuilder::Compi
 
   // The file we'll compile.
   ast::File *generated_file = ctx_->GetNodeFactory()->NewFile({0, 0}, std::move(decls));
-
+  ast::AstDump::Dump(generated_file);
+  ast::AstPrettyPrint::Dump(std::cout, generated_file);
   // Compile it!
   compiler::Compiler::Input input("", ctx_, generated_file);
   Callbacks callbacks;
