@@ -328,6 +328,7 @@ class AggregationHashTable {
     // Reset state in preparation for processing the next batch.
     void Reset(VectorProjectionIterator *input_batch);
 
+    libcount::HLL *HLL() { return hll_estimator.get(); }
     VectorProjection *Projection() { return &hash_and_entries; }
     Vector *Hashes() { return hash_and_entries.GetColumn(0); }
     Vector *Entries() { return hash_and_entries.GetColumn(1); }
