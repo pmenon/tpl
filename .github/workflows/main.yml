@@ -3,20 +3,18 @@ name: CMake CI
 on: push
 
 jobs:
-  ci:
+  linux:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
-
-    - name: Install
+    - name: Install Dependencies
       run: |
         # LLVM 9 is not in Bionic's repositories so we add the official LLVM repository.
         sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
         sudo apt-get update
 
         # Remove previous versions of Clang tools.
-        sudo apt-get remove -y clang-format-8 clang-tidy-8 clang-8 llvm-8 libllvm8
+        sudo apt-get remove -y clang-6.0 clang-7 clang-8 clang-format-6.0 clang-format-7 clang-format-8 clang-tidy-8 llvm-6.0 llvm-7 llvm-8 libllvm6.0 libllvm7 libllvm8
         sudo apt-get purge
         sudo apt-get autoremove
 
@@ -30,8 +28,8 @@ jobs:
     - name: Build & Test Debug x64 With Sanitizers
       run: |
         cmake -E remove_directory build
-        cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
-        cmake --build build
+        cmake -B build -S . -DLLVM_DIR=/usr/lib/llvm-9/ -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
+        cmake --build build -j4
         cd build
         make check
         make check-tpl
@@ -39,7 +37,7 @@ jobs:
     - name: Build & Test Release x64
       run: |
         cmake -E remove_directory build
-        cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
-        cmake --build build
+        cmake -B build -S . -DLLVM_DIR=/usr/lib/llvm-9/ -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j4
         cd build
         make check-tpl
