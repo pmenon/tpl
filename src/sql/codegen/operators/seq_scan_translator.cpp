@@ -100,7 +100,8 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(
   // At this point, we create a term.
   // Signature: (vp: *VectorProjection, tids: *TupleIdList, ctx: *uint8) -> nil
   auto codegen = GetCodeGen();
-  auto fn_name = codegen->MakeFreshIdentifier("FilterClause");
+  auto fn_name =
+      codegen->MakeFreshIdentifier(GetPipeline()->CreatePipelineFunctionName("FilterClause"));
   util::RegionVector<ast::FieldDecl *> params = codegen->MakeFieldList({
       codegen->MakeField(codegen->MakeIdentifier("vp"),
                          codegen->PointerType(ast::BuiltinType::VectorProjection)),

@@ -117,13 +117,13 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   bool IsProducePipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
 
   // Declare the payload and input structures. Called from DefineHelperStructs().
-  void DefinePayloadStruct(util::RegionVector<ast::StructDecl *> *decls);
-  void DefineInputValuesStruct(util::RegionVector<ast::StructDecl *> *decls);
+  ast::StructDecl *GeneratePayloadStruct();
+  ast::StructDecl *GenerateInputValuesStruct();
 
   // Generate the overflow partition merging process.
-  void GenerateKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *decls);
-  void GeneratePartialKeyCheckFunction(util::RegionVector<ast::FunctionDecl *> *decls);
-  void GenerateMergeOverflowPartitionsFunction(util::RegionVector<ast::FunctionDecl *> *decls);
+  ast::FunctionDecl *GenerateKeyCheckFunction();
+  ast::FunctionDecl *GeneratePartialKeyCheckFunction();
+  ast::FunctionDecl *GenerateMergeOverflowPartitionsFunction();
   void MergeOverflowPartitions(FunctionBuilder *function, ast::Expr *agg_ht, ast::Expr *iter);
 
   // Initialize and destroy the input aggregation hash table. These are called

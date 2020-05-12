@@ -22,7 +22,8 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
       sort_row_type_(GetCodeGen()->MakeFreshIdentifier("SortRow")),
       lhs_row_(GetCodeGen()->MakeIdentifier("lhs")),
       rhs_row_(GetCodeGen()->MakeIdentifier("rhs")),
-      compare_func_(GetCodeGen()->MakeFreshIdentifier("Compare")),
+      compare_func_(
+          GetCodeGen()->MakeFreshIdentifier(pipeline->CreatePipelineFunctionName("Compare"))),
       build_pipeline_(this, Pipeline::Parallelism::Parallel),
       current_row_(CurrentRow::Child) {
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Sorts expected to have a single child.");

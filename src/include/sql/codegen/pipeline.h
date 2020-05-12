@@ -153,20 +153,19 @@ class Pipeline {
   /**
    * @return True if the given operator is the driver for this pipeline; false otherwise.
    */
-  bool IsDriver(const PipelineDriver *driver) const { return driver == Driver(); }
+  bool IsDriver(const PipelineDriver *driver) const { return driver == driver_; }
 
   /**
    * @return Arguments common to all pipeline functions.
    */
   util::RegionVector<ast::FieldDecl *> PipelineParams() const;
 
+  /**
+   * @return A unique name for a function local to this pipeline.
+   */
+  std::string CreatePipelineFunctionName(const std::string &func_name) const;
+
  private:
-  // Return the driver for the pipeline.
-  PipelineDriver *Driver() const { return driver_; }
-
-  // Create a unique name for a function local to this pipeline.
-  std::string ConstructPipelineFunctionName(const std::string &func_name) const;
-
   // Return the thread-local state initialization and tear-down function names.
   // This is needed when we invoke @tlsReset() from the pipeline initialization
   // function to setup the thread-local state.

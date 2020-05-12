@@ -101,8 +101,8 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   ast::Expr *GetAggregateTerm(ast::Expr *agg_row, uint32_t attr_idx) const;
   ast::Expr *GetAggregateTermPtr(ast::Expr *agg_row, uint32_t attr_idx) const;
 
-  void GeneratePayloadStruct(util::RegionVector<ast::StructDecl *> *decls);
-  void GenerateValuesStruct(util::RegionVector<ast::StructDecl *> *decls);
+  ast::StructDecl *GeneratePayloadStruct();
+  ast::StructDecl *GenerateValuesStruct();
 
   void InitializeAggregates(FunctionBuilder *function, bool local) const;
 

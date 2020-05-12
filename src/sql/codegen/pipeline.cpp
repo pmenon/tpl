@@ -63,7 +63,7 @@ StateDescriptor::Entry Pipeline::DeclarePipelineStateEntry(const std::string &na
   return state_.DeclareStateEntry(codegen_, name, type_repr);
 }
 
-std::string Pipeline::ConstructPipelineFunctionName(const std::string &func_name) const {
+std::string Pipeline::CreatePipelineFunctionName(const std::string &func_name) const {
   auto result = fmt::format("{}_Pipeline{}", compilation_context_->GetFunctionPrefix(), id_);
   if (!func_name.empty()) {
     result += "_" + func_name;
@@ -72,16 +72,16 @@ std::string Pipeline::ConstructPipelineFunctionName(const std::string &func_name
 }
 
 ast::Identifier Pipeline::GetSetupPipelineStateFunctionName() const {
-  return codegen_->MakeIdentifier(ConstructPipelineFunctionName("InitPipelineState"));
+  return codegen_->MakeIdentifier(CreatePipelineFunctionName("InitPipelineState"));
 }
 
 ast::Identifier Pipeline::GetTearDownPipelineStateFunctionName() const {
-  return codegen_->MakeIdentifier(ConstructPipelineFunctionName("TearDownPipelineState"));
+  return codegen_->MakeIdentifier(CreatePipelineFunctionName("TearDownPipelineState"));
 }
 
 ast::Identifier Pipeline::GetWorkFunctionName() const {
   return codegen_->MakeIdentifier(
-      ConstructPipelineFunctionName(IsParallel() ? "ParallelWork" : "SerialWork"));
+      CreatePipelineFunctionName(IsParallel() ? "ParallelWork" : "SerialWork"));
 }
 
 util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
@@ -169,7 +169,7 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction() const {
 
 ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction() const {
   auto query_state = compilation_context_->GetQueryState();
-  auto name = codegen_->MakeIdentifier(ConstructPipelineFunctionName("Init"));
+  auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Init"));
   FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
   {
     CodeGen::CodeScope code_scope(codegen_);
@@ -190,7 +190,7 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
   auto params = PipelineParams();
 
   if (IsParallel()) {
-    auto additional_params = Driver()->GetWorkerParams();
+    auto additional_params = driver_->GetWorkerParams();
     params.insert(params.end(), additional_params.begin(), additional_params.end());
   }
 
@@ -206,7 +206,7 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
 }
 
 ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
-  auto name = codegen_->MakeIdentifier(ConstructPipelineFunctionName("Run"));
+  auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
   FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
   {
     // Begin a new code scope for fresh variables.
@@ -219,7 +219,7 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
 
     // Launch pipeline work.
     if (IsParallel()) {
-      Driver()->LaunchWork(&builder, GetWorkFunctionName());
+      driver_->LaunchWork(&builder, GetWorkFunctionName());
     } else {
       auto exec_ctx = compilation_context_->GetExecutionContextPtrFromQueryState();
       auto tls = codegen_->ExecCtxGetTLS(exec_ctx);
@@ -240,7 +240,7 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
 }
 
 ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
-  auto name = codegen_->MakeIdentifier(ConstructPipelineFunctionName("TearDown"));
+  auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("TearDown"));
   FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
   {
     // Begin a new code scope for fresh variables.

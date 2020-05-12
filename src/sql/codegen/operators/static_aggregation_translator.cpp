@@ -52,8 +52,7 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
   }
 }
 
-void StaticAggregationTranslator::GeneratePayloadStruct(
-    util::RegionVector<ast::StructDecl *> *decls) {
+ast::StructDecl *StaticAggregationTranslator::GeneratePayloadStruct() {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   fields.reserve(GetAggPlan().GetAggregateTerms().size());
@@ -64,11 +63,10 @@ void StaticAggregationTranslator::GeneratePayloadStruct(
     auto type = codegen->AggregateType(term->GetExpressionType(), term->GetReturnValueType());
     fields.push_back(codegen->MakeField(name, type));
   }
-  decls->push_back(codegen->DeclareStruct(agg_payload_type_, std::move(fields)));
+  return codegen->DeclareStruct(agg_payload_type_, std::move(fields));
 }
 
-void StaticAggregationTranslator::GenerateValuesStruct(
-    util::RegionVector<ast::StructDecl *> *decls) {
+ast::StructDecl *StaticAggregationTranslator::GenerateValuesStruct() {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   fields.reserve(GetAggPlan().GetAggregateTerms().size());
@@ -80,13 +78,13 @@ void StaticAggregationTranslator::GenerateValuesStruct(
     fields.push_back(codegen->MakeField(field_name, type));
     term_idx++;
   }
-  decls->push_back(codegen->DeclareStruct(agg_values_type_, std::move(fields)));
+  return codegen->DeclareStruct(agg_values_type_, std::move(fields));
 }
 
 void StaticAggregationTranslator::DefineHelperStructs(
     util::RegionVector<ast::StructDecl *> *decls) {
-  GeneratePayloadStruct(decls);
-  GenerateValuesStruct(decls);
+  decls->push_back(GeneratePayloadStruct());
+  decls->push_back(GenerateValuesStruct());
 }
 
 void StaticAggregationTranslator::DefineHelperFunctions(

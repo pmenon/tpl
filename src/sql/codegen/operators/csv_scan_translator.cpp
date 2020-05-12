@@ -61,7 +61,8 @@ void CSVScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilde
   auto reader_var = codegen->MakeFreshIdentifier("csvReader");
   function->Append(codegen->DeclareVarNoInit(reader_var_base, ast::BuiltinType::CSVReader));
   function->Append(codegen->DeclareVarWithInit(reader_var, codegen->AddressOf(reader_var_base)));
-  function->Append(codegen->DeclareVarWithInit(codegen->MakeFreshIdentifier("isValid"),
+  function->Append(codegen->DeclareVarWithInit(
+      codegen->MakeFreshIdentifier("isValid"),
       codegen->CSVReaderInit(codegen->MakeExpr(reader_var), GetCSVPlan().GetFileName())));
   Loop scan_loop(function, codegen->CSVReaderAdvance(codegen->MakeExpr(reader_var)));
   {
