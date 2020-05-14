@@ -42,6 +42,14 @@ struct HashTableEntry {
   static constexpr std::size_t ComputePayloadOffset() { return sizeof(HashTableEntry); }
 
   /**
+   * @return A typed pointer to the payload content of this hash table entry.
+   */
+  template <typename T>
+  T *PayloadAs() noexcept {
+    return reinterpret_cast<T *>(payload);
+  }
+
+  /**
    * @return A const-view typed pointer to the payload content of this hash table entry.
    */
   template <typename T>
