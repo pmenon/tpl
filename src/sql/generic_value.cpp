@@ -1,12 +1,10 @@
 #include "sql/generic_value.h"
 
-#include <sql/generic_value.h>
 #include <string>
 
 #include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
-#include "common/macros.h"
 #include "sql/constant_vector.h"
 #include "sql/value.h"
 #include "sql/vector_operations/vector_operations.h"

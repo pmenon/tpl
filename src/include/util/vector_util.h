@@ -126,39 +126,22 @@ class VectorUtil : public AllStatic {
   [[nodiscard]] static uint32_t BitVectorToSelectionVector(const uint64_t *bit_vector,
                                                            uint32_t num_bits, sel_t *sel_vector);
 
-  /**
-   * Convert a bit vector into a densely packed selection vector using an algorithm optimized for
-   * sparse bit vectors.
-   *
-   * @param bit_vector The input bit vector.
-   * @param num_bits The number of bits in the bit vector. This must match the maximum capacity of
-   *                 the output selection vector!
-   * @param[out] sel_vector The output selection vector.
-   * @return The number of elements in the selection vector.
-   */
+ private:
+  FRIEND_TEST(VectorUtilTest, BitToSelectionVector_Sparse_vs_Dense);
+  FRIEND_TEST(VectorUtilTest, DiffSelected);
+  FRIEND_TEST(VectorUtilTest, DiffSelectedWithScratchPad);
+  FRIEND_TEST(VectorUtilTest, IntersectScalar);
+  FRIEND_TEST(VectorUtilTest, PerfIntersectSelected);
+  FRIEND_BENCHMARK(VectorUtilBenchmark, BitsToSelectionIndex_Sparse);
+  FRIEND_BENCHMARK(VectorUtilBenchmark, BitsToSelectionIndex_Dense);
+
   [[nodiscard]] static uint32_t BitVectorToSelectionVector_Sparse(const uint64_t *bit_vector,
                                                                   uint32_t num_bits,
                                                                   sel_t *sel_vector);
 
-  /**
-   * Convert a bit vector into a densely packed selection vector using an algorithm optimized for
-   * dense bit vectors.
-   *
-   * @param bit_vector The input bit vector.
-   * @param num_bits The number of bits in the bit vector. This must match the maximum capacity of
-   *                 the output selection vector!
-   * @param[out] sel_vector The output selection vector.
-   * @return The number of elements in the selection vector.
-   */
   [[nodiscard]] static uint32_t BitVectorToSelectionVector_Dense(const uint64_t *bit_vector,
                                                                  uint32_t num_bits,
                                                                  sel_t *sel_vector);
-
- private:
-  FRIEND_TEST(VectorUtilTest, IntersectScalar);
-  FRIEND_TEST(VectorUtilTest, DiffSelected);
-  FRIEND_TEST(VectorUtilTest, DiffSelectedWithScratchPad);
-  FRIEND_TEST(VectorUtilTest, PerfIntersectSelected);
 
   [[nodiscard]] static uint32_t BitVectorToSelectionVector_Dense_AVX2(const uint64_t *bit_vector,
                                                                       uint32_t num_bits,
