@@ -151,6 +151,37 @@ BENCHMARK_DEFINE_F(AggregationBenchmark, Agg_TaaT)(benchmark::State &state) {
   }
 }
 
+namespace {
+
+void InitAggs(sql::VectorProjectionIterator *RESTRICT a,
+              sql::VectorProjectionIterator *RESTRICT input) {
+  if (a->IsFiltered()) {
+    for (; a->HasNextFiltered(); a->AdvanceFiltered(), input->AdvanceFiltered()) {
+      auto agg = (*a->GetValue<sql::HashTableEntry *, false>(1, nullptr))->PayloadAs<AggTuple>();
+      agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
+      agg->count1 = agg->count2 = agg->count3 = 0;
+    }
+  } else {
+    for (; a->HasNext(); a->Advance(), input->Advance()) {
+      auto agg = (*a->GetValue<sql::HashTableEntry *, false>(1, nullptr))->PayloadAs<AggTuple>();
+      agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
+      agg->count1 = agg->count2 = agg->count3 = 0;
+    }
+  }
+}
+
+void UpdateAggs(sql::VectorProjectionIterator *RESTRICT a,
+                sql::VectorProjectionIterator *RESTRICT input) {
+  for (; a->HasNext(); a->Advance(), input->Advance()) {
+    auto agg = (*a->GetValue<sql::HashTableEntry *, false>(1, nullptr))->PayloadAs<AggTuple>();
+    agg->count1 += 1;
+    agg->count2 += 2;
+    agg->count3 += 3;
+  }
+}
+
+}  // namespace
+
 BENCHMARK_DEFINE_F(AggregationBenchmark, Agg_VaaT)(benchmark::State &state) {
   auto &table_meta = kAggConfigs[state.range(0)];
   auto table = sql::Catalog::Instance()->LookupTableByName(table_meta.name);
@@ -166,40 +197,7 @@ BENCHMARK_DEFINE_F(AggregationBenchmark, Agg_VaaT)(benchmark::State &state) {
     }
 
     for (uint32_t vec_idx = 0; tvi.Advance(); vec_idx++) {
-      auto vpi = tvi.GetVectorProjectionIterator();
-      aht.ProcessBatch(
-          vpi,  // Input batch
-          {0},  // Key indexes
-          [](sql::VectorProjectionIterator *RESTRICT a,
-             sql::VectorProjectionIterator *RESTRICT input) {
-            if (a->IsFiltered()) {
-              for (; a->HasNextFiltered(); a->AdvanceFiltered(), input->AdvanceFiltered()) {
-                auto *e = *a->GetValue<sql::HashTableEntry *, false>(1, nullptr);
-                auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
-                agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
-                agg->count1 = agg->count2 = agg->count3 = 0;
-              }
-            } else {
-              for (; a->HasNext(); a->Advance(), input->Advance()) {
-                auto *e = *a->GetValue<sql::HashTableEntry *, false>(1, nullptr);
-                auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
-                agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
-                agg->count1 = agg->count2 = agg->count3 = 0;
-              }
-            }
-          },
-          [](sql::VectorProjectionIterator *RESTRICT a,
-             sql::VectorProjectionIterator *RESTRICT input) {
-            for (; a->HasNext(); a->Advance(), input->Advance()) {
-              auto *e = *a->GetValue<sql::HashTableEntry *, false>(1, nullptr);
-              auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
-              agg->count1 += 1;
-              agg->count2 += 2;
-              agg->count3 += 3;
-            }
-          },
-          // Partitioned?
-          false);
+      aht.ProcessBatch(tvi.GetVectorProjectionIterator(), {0}, InitAggs, UpdateAggs, false);
     }
   }
 }
