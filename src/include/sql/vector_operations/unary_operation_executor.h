@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 #include "common/common.h"
 #include "sql/vector.h"

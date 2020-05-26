@@ -30,4 +30,5 @@ class BuiltinFunctionExpression : public AbstractExpression {
  private:
   ast::Builtin builtin_;
 };
+
 }  // namespace tpl::sql::planner

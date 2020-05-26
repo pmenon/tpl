@@ -4,11 +4,12 @@
 
 namespace tpl::sql {
 
+namespace {
 #define NextByte(p, plen) ((p)++, (plen)--)
 
-// Inspired by Postgres
-bool Like::Impl(const char *str, size_t str_len, const char *pattern, size_t pattern_len,
-                char escape) {
+// Inspired by Postgres.
+bool LikeImpl(const char *str, size_t str_len, const char *pattern, const std::size_t pattern_len,
+              char escape) {
   TPL_ASSERT(str != nullptr, "Input string cannot be NULL");
   TPL_ASSERT(pattern != nullptr, "Pattern cannot be NULL");
 
@@ -58,7 +59,7 @@ bool Like::Impl(const char *str, size_t str_len, const char *pattern, size_t pat
       }
 
       while (slen > 0) {
-        if (Like::Impl(s, slen, p, plen, escape)) {
+        if (LikeImpl(s, slen, p, plen, escape)) {
           return true;
         }
         NextByte(s, slen);
@@ -78,6 +79,13 @@ bool Like::Impl(const char *str, size_t str_len, const char *pattern, size_t pat
   }
 
   return slen == 0 && plen == 0;
+}
+
+}  // namespace
+
+bool Like::operator()(const VarlenEntry &str, const VarlenEntry &pattern, char escape) const {
+  return LikeImpl(reinterpret_cast<const char *>(str.GetContent()), str.GetSize(),
+                  reinterpret_cast<const char *>(pattern.GetContent()), pattern.GetSize(), escape);
 }
 
 }  // namespace tpl::sql

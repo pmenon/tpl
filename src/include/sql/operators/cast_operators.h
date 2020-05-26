@@ -1,6 +1,7 @@
 #pragma once
 
 #include <charconv>
+#include <limits>
 #include <string>
 
 #include "common/common.h"
