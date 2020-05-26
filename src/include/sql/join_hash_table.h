@@ -3,7 +3,6 @@
 #include <memory>
 #include <vector>
 
-#include "sql/bloom_filter.h"
 #include "sql/chaining_hash_table.h"
 #include "sql/concise_hash_table.h"
 #include "sql/memory_pool.h"
@@ -133,11 +132,6 @@ class JoinHashTable {
   }
 
   /**
-   * @return True if this table uses an early filtering bloom filter; false otherwise.
-   */
-  bool HasBloomFilter() const { return !bloom_filter_.IsEmpty(); }
-
-  /**
    * @return The total number of elements in the table, including duplicates.
    */
   uint64_t GetTupleCount() const {
@@ -165,11 +159,6 @@ class JoinHashTable {
    * @return True if this join hash table uses a concise table under the hood.
    */
   bool UsingConciseHashTable() const { return use_concise_ht_; }
-
-  /**
-   * @return The underlying bloom filter.
-   */
-  const BloomFilter *GetBloomFilter() const { return &bloom_filter_; }
 
  private:
   FRIEND_TEST(JoinHashTableTest, LazyInsertionTest);
@@ -224,9 +213,6 @@ class JoinHashTable {
 
   // The concise hash table.
   ConciseHashTable concise_hash_table_;
-
-  // The bloom filter.
-  BloomFilter bloom_filter_;
 
   // Estimator of unique elements.
   std::unique_ptr<libcount::HLL> hll_estimator_;

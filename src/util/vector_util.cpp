@@ -4,7 +4,7 @@
 
 #include "util/bit_util.h"
 #include "util/math_util.h"
-#include "util/simd/types.h"
+#include "util/vector_lookup_tables.h"
 
 namespace tpl::util {
 
@@ -114,7 +114,7 @@ uint32_t VectorUtil::ByteVectorToSelectionVector(const uint8_t *byte_vector,
     const auto mask = _pext_u64(word, 0x202020202020202);
     TPL_ASSERT(mask < 256, "Out-of-bounds mask");
     const auto match_pos_scaled =
-        _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&simd::k8BitMatchLUT[mask]));
+        _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
     const auto match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
     const auto pos_vec = _mm_add_epi16(idx, match_pos);
     idx = _mm_add_epi16(idx, eight);
@@ -229,7 +229,7 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *bit_v
       const auto mask = static_cast<uint8_t>(word);
       word >>= 8u;
       const __m128i match_pos_scaled =
-          _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&simd::k8BitMatchLUT[mask]));
+          _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
       const __m128i match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
       const __m128i pos_vec = _mm_add_epi16(idx, match_pos);
       idx = _mm_add_epi16(idx, eight);
