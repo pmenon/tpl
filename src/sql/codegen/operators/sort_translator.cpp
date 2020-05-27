@@ -65,25 +65,29 @@ void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *
 
 void SortTranslator::GenerateComparisonFunction(FunctionBuilder *function) {
   CodeGen *codegen = GetCodeGen();
+
   WorkContext context(GetCompilationContext(), build_pipeline_);
   context.SetExpressionCacheEnable(false);
-  int32_t ret_value;
+
+  // For each sorting key, generate:
+  //
+  // if (left.key < right.key) return -1;
+  // if (left.key > right.key) return 1;
+  // else return 0
+  //
+  // For multi-key sorting, we chain together checks through the else-clause.
+  // The return value is controlled through the sort order for the key.
+
   for (const auto &[expr, sort_order] : GetPlanAs<planner::OrderByPlanNode>().GetSortKeys()) {
-    if (sort_order == planner::OrderByOrderingType::ASC) {
-      ret_value = -1;
-    } else {
-      ret_value = 1;
-    }
+    int32_t ret_value = sort_order == planner::OrderByOrderingType::ASC ? -1 : 1;
     for (const auto tok : {parsing::Token::Type::LESS, parsing::Token::Type::GREATER}) {
       current_row_ = CurrentRow::Lhs;
       ast::Expr *lhs = context.DeriveValue(*expr, this);
       current_row_ = CurrentRow::Rhs;
       ast::Expr *rhs = context.DeriveValue(*expr, this);
+      // Generate the if-condition and return the appropriate value.
       If check_comparison(function, codegen->Compare(tok, lhs, rhs));
-      {
-        // Return the appropriate value based on ordering.
-        function->Append(codegen->Return(codegen->Const32(ret_value)));
-      }
+      function->Append(codegen->Return(codegen->Const32(ret_value)));
       check_comparison.EndIf();
       ret_value = -ret_value;
     }

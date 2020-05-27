@@ -150,7 +150,7 @@ TEST_F(SortTranslatorTest, TwoColumnSortTest) {
   auto last = order_by.get();
   // Checkers:
   // There should be 500 output rows, where col1 < 500.
-  // The output should be sorted by col2 ASC, then col1 DESC.
+  // The output should be sorted by col2 ASC, then col1-col2 DESC.
   uint32_t num_output_rows{0};
   uint32_t num_expected_rows{500};
   int64_t curr_col1{std::numeric_limits<int64_t>::max()};
@@ -168,7 +168,7 @@ TEST_F(SortTranslatorTest, TwoColumnSortTest) {
     // Check that output is sorted by col2 ASC, then col1 DESC
     ASSERT_LE(curr_col2, col2->val);
     if (curr_col2 == col2->val) {
-      ASSERT_GE(curr_col1, col1->val);
+      ASSERT_GE(curr_col1 - curr_col2, col1->val - col2->val);
     }
     curr_col1 = col1->val;
     curr_col2 = col2->val;
