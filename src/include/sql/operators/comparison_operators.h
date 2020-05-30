@@ -8,23 +8,11 @@
 
 namespace tpl::sql {
 
-// Forward-declare all comparisons since they're used before defined.
-// clang-format off
-template <typename> struct Equal;
-template <typename> struct GreaterThan;
-template <typename> struct GreaterThanEqual;
-template <typename> struct LessThan;
-template <typename> struct LessThanEqual;
-template <typename> struct NotEqual;
-// clang-format on
-
 /**
  * Equality operator.
  */
 template <typename T>
 struct Equal {
-  using SymmetricOp = Equal<T>;
-
   /**
    * @return True if left == right; false otherwise.
    */
@@ -33,11 +21,10 @@ struct Equal {
 
 /**
  * Greater-than operator.
+ * @tparam T The types to operate on.
  */
 template <typename T>
 struct GreaterThan {
-  using SymmetricOp = LessThan<T>;
-
   /**
    * @return True if left > right; false otherwise.
    */
@@ -46,11 +33,10 @@ struct GreaterThan {
 
 /**
  * Greater-than or equal operator.
+ * @tparam T The types to operate on.
  */
 template <typename T>
 struct GreaterThanEqual {
-  using SymmetricOp = LessThanEqual<T>;
-
   /**
    * @return True if left >= right; false otherwise.
    */
@@ -59,11 +45,10 @@ struct GreaterThanEqual {
 
 /**
  * Less-than operator.
+ * @tparam T The types to operate on.
  */
 template <typename T>
 struct LessThan {
-  using SymmetricOp = GreaterThan<T>;
-
   /**
    * @return True if left < right; false otherwise.
    */
@@ -72,11 +57,10 @@ struct LessThan {
 
 /**
  * Less-than or equal operator.
+ * @tparam T The types to operate on.
  */
 template <typename T>
 struct LessThanEqual {
-  using SymmetricOp = GreaterThanEqual<T>;
-
   /**
    * @return True if left <= right; false otherwise.
    */
@@ -85,11 +69,10 @@ struct LessThanEqual {
 
 /**
  * Inequality operator.
+ * @tparam T The types to operate on.
  */
 template <typename T>
 struct NotEqual {
-  using SymmetricOp = NotEqual<T>;
-
   /**
    * @return True if left != right; false otherwise.
    */
@@ -102,6 +85,9 @@ struct NotEqual {
  */
 template <class T>
 struct InclusiveBetweenOperator {
+  /**
+   * @return True if lower <= input <= upper; false otherwise.
+   */
   constexpr bool operator()(T input, T lower, T upper) const noexcept {
     return GreaterThanEqual<T>{}(input, lower) && LessThanEqual<T>{}(input, upper);
   }
@@ -113,6 +99,9 @@ struct InclusiveBetweenOperator {
  */
 template <class T>
 struct LowerInclusiveBetweenOperator {
+  /**
+   * @return True if lower <= input < upper; false otherwise.
+   */
   constexpr bool operator()(T input, T lower, T upper) const noexcept {
     return GreaterThanEqual<T>{}(input, lower) && LessThan<T>{}(input, upper);
   }
@@ -124,6 +113,9 @@ struct LowerInclusiveBetweenOperator {
  */
 template <class T>
 struct UpperInclusiveBetweenOperator {
+  /**
+   * @return True if lower < input <= upper; false otherwise.
+   */
   constexpr bool operator()(T input, T lower, T upper) const noexcept {
     return GreaterThan<T>{}(input, lower) && LessThanEqual<T>{}(input, upper);
   }
@@ -135,6 +127,9 @@ struct UpperInclusiveBetweenOperator {
  */
 template <class T>
 struct ExclusiveBetweenOperator {
+  /**
+   * @return True if lower < input < upper; false otherwise.
+   */
   constexpr bool operator()(T input, T lower, T upper) const noexcept {
     return GreaterThan<T>{}(input, lower) && LessThan<T>{}(input, upper);
   }

@@ -1,5 +1,6 @@
 #include "sql/vector_operations/vector_operations.h"
 
+#include "common/exception.h"
 #include "common/settings.h"
 #include "sql/operators/numeric_binary_operators.h"
 #include "sql/vector_operations/binary_operation_executor.h"

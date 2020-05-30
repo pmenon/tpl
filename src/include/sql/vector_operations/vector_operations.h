@@ -218,6 +218,28 @@ class VectorOps : public AllStatic {
    */
   static void SelectNotEqual(const Vector &left, const Vector &right, TupleIdList *tid_list);
 
+  /**
+   * Filter the list @em tid_list with the TIDs of all elements in @em input that are "between" the
+   * provided lower and upper bound. @em lower_inclusive and @em upper_inclusive determine the open-
+   * closed properties of the range:
+   *
+   *   lower | upper |       check        |
+   *  -------+-------+--------------------+
+   *   true  | true  | low <= in <= upper |
+   *   true  | false | low <= in < upper  |
+   *   false | true  | low < in <= upper  |
+   *   false | false | low < in < upper   |
+   *
+   * @param input The input to check.
+   * @param lower The lower end of the range.
+   * @param upper The upper end of the range.
+   * @param lower_inclusive If the lower input is inclusive in the range.
+   * @param upper_inclusive If the upper input is inclusive in the range.
+   * @param[in,out] tid_list
+   */
+  static void SelectBetween(const Vector &input, const Vector &lower, const Vector &upper,
+                            bool lower_inclusive, bool upper_inclusive, TupleIdList *tid_list);
+
   // -------------------------------------------------------
   //
   // NULL check operations
