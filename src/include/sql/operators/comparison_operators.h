@@ -96,4 +96,48 @@ struct NotEqual {
   constexpr bool operator()(T left, T right) const { return left != right; }
 };
 
+/**
+ * Inclusive between operator, i.e., lower <= input <= upper.
+ * @tparam T The types to operate on.
+ */
+template <class T>
+struct InclusiveBetweenOperator {
+  constexpr bool operator()(T input, T lower, T upper) const noexcept {
+    return GreaterThanEqual<T>{}(input, lower) && LessThanEqual<T>{}(input, upper);
+  }
+};
+
+/**
+ * Left-inclusive between operator, i.e., lower <= input < upper.
+ * @tparam T The types to operate on.
+ */
+template <class T>
+struct LowerInclusiveBetweenOperator {
+  constexpr bool operator()(T input, T lower, T upper) const noexcept {
+    return GreaterThanEqual<T>{}(input, lower) && LessThan<T>{}(input, upper);
+  }
+};
+
+/**
+ * Right-inclusive between operator, i.e., lower < input <= upper.
+ * @tparam T The types to operate on.
+ */
+template <class T>
+struct UpperInclusiveBetweenOperator {
+  constexpr bool operator()(T input, T lower, T upper) const noexcept {
+    return GreaterThan<T>{}(input, lower) && LessThanEqual<T>{}(input, upper);
+  }
+};
+
+/**
+ * Exclusive between, i.e., lower < input < upper.
+ * @tparam T The types to operate on.
+ */
+template <class T>
+struct ExclusiveBetweenOperator {
+  constexpr bool operator()(T input, T lower, T upper) const noexcept {
+    return GreaterThan<T>{}(input, lower) && LessThan<T>{}(input, upper);
+  }
+};
+
 }  // namespace tpl::sql
