@@ -55,7 +55,7 @@ template <template <typename> typename Op, typename T>
 struct ShouldPerformFullCompute<Op<T>, std::enable_if_t<IsComparisonOpV<Op, T> && IsNumericV<T>>> {
   bool operator()(const TupleIdList *tid_list) const {
     auto settings = Settings::Instance();
-    auto full_compute_threshold = settings->GetDouble(Settings::Name::SelectOptThreshold);
+    auto full_compute_threshold = settings->GetDouble(Settings::Name::FullSelectOptThreshold);
     return tid_list == nullptr || full_compute_threshold <= tid_list->ComputeSelectivity();
   }
 };

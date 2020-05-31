@@ -28,7 +28,7 @@ namespace tpl {
    * platforms and data types. Thus, we derive the threshold at database startup                   \
    * once using the given function.                                                                \
    */                                                                                              \
-  COMPUTED(SelectOptThreshold, double, DeriveOptimalFullSelectionThreshold)                        \
+  COMPUTED(FullSelectOptThreshold, double, DeriveOptimalFullSelectionThreshold)                    \
                                                                                                    \
   /*                                                                                               \
    * When performing arithmetic operations on vectors, this setting determines                     \
