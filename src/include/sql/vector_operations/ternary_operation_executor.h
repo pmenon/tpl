@@ -136,6 +136,9 @@ class TernaryOperationExecutor : public AllStatic {
   template <typename AType, typename BType, typename CType, typename Op>
   static void Select(const Vector &a, const Vector &b, const Vector &c, TupleIdList *tid_list,
                      Op op) {
+    static_assert(std::is_invocable_r_v<bool, Op, AType, BType, CType>,
+                  "Ternary selection has invalid interface for given template arguments.");
+
     if ((a.IsConstant() && a.IsNull(0)) || (b.IsConstant() && b.IsNull(0)) ||
         (c.IsConstant() && c.IsNull(0))) {
       tid_list->Clear();
