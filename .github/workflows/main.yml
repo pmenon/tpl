@@ -31,8 +31,8 @@ jobs:
         LLVM_DIR=/usr/lib/llvm-9/ cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
         cmake --build build -j4
         cd build
-        make check
-        make check-tpl
+        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/tpl/build-support/leaksanitizer.conf" make check
+        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/tpl/build-support/leaksanitizer.conf" make check-tpl
 
     - name: Build & Test Release x64
       run: |
@@ -40,4 +40,4 @@ jobs:
         LLVM_DIR=/usr/lib/llvm-9/ cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
         cmake --build build -j4
         cd build
-        make check-tpl
+        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/tpl/build-support/leaksanitizer.conf" make check-tpl
