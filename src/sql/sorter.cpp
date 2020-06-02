@@ -10,7 +10,6 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "tbb/parallel_for_each.h"
-#include "tbb/task_scheduler_init.h"
 
 #include "logging/logger.h"
 #include "sql/thread_state_container.h"
@@ -221,7 +220,6 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Parallel Sort Thread-Local Instances");
 
-  tbb::task_scheduler_init sched;
   tbb::parallel_for_each(tl_sorters, [](Sorter *sorter) { sorter->Sort(); });
 
   timer.ExitStage();
