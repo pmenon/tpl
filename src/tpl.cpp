@@ -6,7 +6,8 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include "sql/printing_consumer.h"
+
+#include "tbb/task_scheduler_init.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -22,6 +23,7 @@
 #include "sema/sema.h"
 #include "sql/catalog.h"
 #include "sql/execution_context.h"
+#include "sql/printing_consumer.h"
 #include "sql/tablegen/table_generator.h"
 #include "tpl.h"  // NOLINT
 #include "util/timer.h"
@@ -45,6 +47,8 @@ llvm::cl::opt<bool> kTpch("tpch", llvm::cl::desc("Should the TPCH database be lo
 llvm::cl::opt<std::string> kDataDir("data", llvm::cl::desc("Where to find data files of tables to load"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
+
+tbb::task_scheduler_init scheduler;  // NOLINT
 
 namespace tpl {
 
