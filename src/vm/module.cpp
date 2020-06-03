@@ -5,38 +5,10 @@
 #include <string>
 #include <utility>
 
-#include <tbb/task.h>  // NOLINT
-
 #define XBYAK_NO_OP_NAMES
 #include "xbyak/xbyak.h"
 
 namespace tpl::vm {
-
-// ---------------------------------------------------------
-// Async Compile Task
-// ---------------------------------------------------------
-
-// This class encapsulates the ability to asynchronously JIT compile a module.
-class Module::AsyncCompileTask : public tbb::task {
- public:
-  // Construct an asynchronous compilation task to compile the the module
-  explicit AsyncCompileTask(Module *module) : module_(module) {}
-
-  // Execute
-  tbb::task *execute() override {
-    // This simply invokes Module::CompileToMachineCode() asynchronously.
-    module_->CompileToMachineCode();
-    // Done. There's no next task, so return null.
-    return nullptr;
-  }
-
- private:
-  Module *module_;
-};
-
-// ---------------------------------------------------------
-// Module
-// ---------------------------------------------------------
 
 Module::Module(std::unique_ptr<BytecodeModule> bytecode_module)
     : Module(std::move(bytecode_module), nullptr) {}
@@ -289,8 +261,7 @@ void Module::CompileToMachineCode() {
 }
 
 void Module::CompileToMachineCodeAsync() {
-  auto *compile_task = new (tbb::task::allocate_root()) AsyncCompileTask(this);
-  tbb::task::enqueue(*compile_task);
+  std::thread([this]() { CompileToMachineCode(); }).detach();
 }
 
 }  // namespace tpl::vm

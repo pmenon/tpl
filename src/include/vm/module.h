@@ -103,9 +103,6 @@ class Module {
   friend class VM;                      // For the VM to access raw bytecode.
   friend class BytecodeTrampolineTest;  // For the tests to check private methods.
 
-  // This class encapsulates the ability to asynchronously JIT compile a module.
-  class AsyncCompileTask;
-
   // A trampoline is a stub function that serves as a landing point for all
   // functions executed in interpreted mode. The purpose of the trampoline is
   // to arrange and adjust call arguments from the C/C++ ABI to the TPL ABI.
