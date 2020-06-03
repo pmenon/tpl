@@ -29,7 +29,7 @@ jobs:
       run: |
         cmake -E remove_directory build
         LLVM_DIR=/usr/lib/llvm-9/ cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
-        cmake --build build -j4
+        cmake --build build -j$(nproc)
         cd build
         LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" make check
         LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" make check-tpl
@@ -38,6 +38,6 @@ jobs:
       run: |
         cmake -E remove_directory build
         LLVM_DIR=/usr/lib/llvm-9/ cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
-        cmake --build build -j4
+        cmake --build build -j$(nproc)
         cd build
         LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" make check-tpl
