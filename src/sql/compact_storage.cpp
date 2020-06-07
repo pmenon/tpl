@@ -48,9 +48,9 @@ CompactStorage::CompactStorage(const std::vector<TypeId> &schema) {
   null_bitmap_offset_ = reordered_offsets.back() + GetTypeIdSize(schema[reordered.back()]);
 }
 
-std::size_t CompactStorage::GetPreferredAlignment() const { return preferred_alignment_; }
-
 uint32_t CompactStorage::GetNumElements() const { return offsets_.size(); }
+
+std::size_t CompactStorage::GetPreferredAlignment() const { return preferred_alignment_; }
 
 std::size_t CompactStorage::GetRequiredSize() const {
   const auto num_null_bytes = util::MathUtil::DivRoundUp(GetNumElements(), 8);

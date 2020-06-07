@@ -52,17 +52,17 @@ class CompactStorage {
   CompactStorage(const std::vector<TypeId> &schema);
 
   /**
-   * @return The preferred alignment for this storage.
-   */
-  std::size_t GetPreferredAlignment() const;
-
-  /**
    * @return The number of elements this storage is configured to handle.
    */
   uint32_t GetNumElements() const;
 
   /**
-   * @return The total number of bytes needed by this compact storage.
+   * @return The preferred alignment for this storage.
+   */
+  std::size_t GetPreferredAlignment() const;
+
+  /**
+   * @return The total number of bytes needed by this storage.
    */
   std::size_t GetRequiredSize() const;
 
