@@ -74,13 +74,13 @@ class CompactStorage {
    * @tparam T The primitive type to store.
    * @tparam Nullable Boolean indicating of the input values are allowed to be NULL.
    * @param index The index in the input schema whose attribute/column we're to store.
-   * @param p The pointer to the row's buffer space (i.e., NOT a pointer to where you think the
-   *          attribute should be stored, but where the ROW's contents are stored).
+   * @param ptr The pointer to the row's buffer space (i.e., NOT a pointer to where you think the
+   *            attribute should be stored, but where the ROW's contents are stored).
    * @param val The value to store.
    * @param null The NULL indication flag. Garbage is the value is not NULLable.
    */
   template <typename T, bool Nullable>
-  void Write(uint32_t index, byte *p, const T &val, bool null) const;
+  void Write(uint32_t index, byte *ptr, const T &val, bool null) const;
 
   /**
    * Read the value of the column/attribute at index @em index in the row pointed to by the pointer
@@ -90,13 +90,19 @@ class CompactStorage {
    * @tparam T The primitive type to store.
    * @tparam Nullable Boolean indicating of the value is allowed to be NULL.
    * @param index The index in the input schema whose attribute/column we're to read.
-   * @param p The pointer to the row's buffer space (i.e., NOT a pointer to where you think the
-   *          attribute should be stored, but where the ROW's contents are stored).
+   * @param ptr The pointer to the row's buffer space (i.e., NOT a pointer to where you think the
+   *            attribute should be stored, but where the ROW's contents are stored).
    * @param[out] val Where the row's column/attribute data is stored.
    * @param[out] null The NULL indication flag.
    */
   template <typename T, bool Nullable>
-  void Read(uint32_t index, const byte *p, T *val, bool *null) const;
+  void Read(uint32_t index, const byte *ptr, T *val, bool *null) const;
+
+ private:
+  // Write the NULL indication bit at the given index.
+  void SetNullIndicator(byte *null_bitmap, uint32_t index, bool null) const;
+  // Read the NULL indication bit at the given index.
+  bool GetNullIndicator(const byte *null_bitmap, uint32_t index) const;
 
  private:
   // Preferred alignment.
@@ -113,64 +119,45 @@ class CompactStorage {
 //
 // ---------------------------------------------------------
 
+// Inlined here for performance. Please don't move unless you're certain of what
+// you're doing.
+//
+// Note:
+// We always blindly write the value regardless of whether it's NULL or not.
+// This may not be optimal. We can control this behavior by specializing
+// StorageHelper and using it as a trait. Add methods to it to refine precisely
+// how to serialize data into memory for your type.
+
 template <typename T>
-struct CompactStorage::StorageHelper<T, std::enable_if_t<std::is_fundamental_v<T>>> {
+struct CompactStorage::StorageHelper<
+    T, std::enable_if_t<std::is_fundamental_v<T> || std::is_same_v<T, Date> ||
+        std::is_same_v<T, Timestamp> || std::is_same_v<T, Decimal32> ||
+        std::is_same_v<T, Decimal64> || std::is_same_v<T, Decimal128> ||
+        std::is_same_v<T, VarlenEntry>>> {
   // Write a fundamental type.
   static void Write(byte *p, T val) { *reinterpret_cast<T *>(p) = val; }
   // Read a fundamental type.
   static void Read(const byte *p, T *val) { *val = *reinterpret_cast<const T *>(p); }
-  // Should we use a branching NULl indication check?
-  static constexpr bool UseBranchingNullCheck() { return false; }
 };
 
-template <>
-struct CompactStorage::StorageHelper<VarlenEntry> {
-  // Write a fundamental type.
-  static void Write(byte *p, const VarlenEntry &val) { *reinterpret_cast<VarlenEntry *>(p) = val; }
-  // Read a fundamental type.
-  static void Read(const byte *p, VarlenEntry *val) {
-    *val = *reinterpret_cast<const VarlenEntry *>(p);
-  }
-  // Should we use a branching NULl indication check?
-  static constexpr bool UseBranchingNullCheck() { return true; }
-};
+inline void CompactStorage::SetNullIndicator(byte *null_bitmap, uint32_t index, bool null) const {
+  null_bitmap[index / 8] |= static_cast<byte>(null) << (index % 8);
+}
 
-template <typename T, bool Nullable>
-inline void CompactStorage::Write(uint32_t index, byte *p, const T &val, bool null) const {
-  if constexpr (Nullable) {
-    // The values are NULL-able. Set the NULL flag.
-    auto *null_bitmap = p + null_bitmap_offset_;
-    null_bitmap[index / 8] |= static_cast<byte>(null) << (index % 8);
-    // Check if we can blindly write NULL values.
-    if constexpr (StorageHelper<T>::UseBranchingNullCheck()) {
-      if (!null) {
-        StorageHelper<T>::Write(p + offsets_[index], val);
-      }
-    } else {
-      StorageHelper<T>::Write(p + offsets_[index], val);
-    }
-  } else {
-    StorageHelper<T>::Write(p + offsets_[index], val);
-  }
+inline bool CompactStorage::GetNullIndicator(const byte *null_bitmap, uint32_t index) const {
+  return static_cast<bool>(null_bitmap[index / 8] & (byte{1} << (index % 8)));
 }
 
 template <typename T, bool Nullable>
-inline void CompactStorage::Read(uint32_t index, const byte *p, T *val, bool *null) const {
-  if constexpr (Nullable) {
-    // The values are NULL-able. Set the NULL flag.
-    auto *null_bitmap = p + null_bitmap_offset_;
-    *null = static_cast<bool>(null_bitmap[index / 8] & (std::byte(1) << (index % 8)));
+inline void CompactStorage::Write(uint32_t index, byte *ptr, const T &val, bool null) const {
+  if constexpr (Nullable) SetNullIndicator(ptr + null_bitmap_offset_, index, null);
+  StorageHelper<T>::Write(ptr + offsets_[index], val);
+}
 
-    if constexpr (StorageHelper<T>::UseBranchingNullCheck()) {
-      if (!*null) {
-        StorageHelper<T>::Read(p + offsets_[index], val);
-      }
-    } else {
-      StorageHelper<T>::Read(p + offsets_[index], val);
-    }
-  } else {
-    StorageHelper<T>::Read(p + offsets_[index], val);
-  }
+template <typename T, bool Nullable>
+inline void CompactStorage::Read(uint32_t index, const byte *ptr, T *val, bool *null) const {
+  if constexpr (Nullable) *null = GetNullIndicator(ptr + null_bitmap_offset_, index);
+  StorageHelper<T>::Read(ptr + offsets_[index], val);
 }
 
 }  // namespace tpl::sql

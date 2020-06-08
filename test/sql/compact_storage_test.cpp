@@ -57,7 +57,12 @@ TEST_F(CompactStorageTest, BasicTest) {
     storage.Write<VarlenEntry, true>(4, buffer.get(), in, true);
     storage.Read<VarlenEntry, true>(4, buffer.get(), &e, &null);
     EXPECT_TRUE(null);
-    EXPECT_NE(in, e);  // Make sure the output wasn't written to.
+
+    // Validate that the tiny int we wrote earlier is still NULL.
+    null = false;
+    int8_t tiny;
+    storage.Read<int8_t, true>(1, buffer.get(), &tiny, &null);
+    EXPECT_TRUE(null);
   }
 }
 
