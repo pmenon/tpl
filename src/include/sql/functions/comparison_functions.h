@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "sql/operators/boolean_operators.h"
 #include "sql/operators/comparison_operators.h"
 #include "sql/value.h"
 
@@ -12,6 +13,8 @@ namespace tpl::sql {
  */
 class ComparisonFunctions : public AllStatic {
  public:
+  static void NotBoolVal(BoolVal *result, const BoolVal &input);
+
   static void EqBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);
   static void GeBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);
   static void GtBoolVal(BoolVal *result, const BoolVal &v1, const BoolVal &v2);
@@ -61,6 +64,11 @@ class ComparisonFunctions : public AllStatic {
 
 // The functions below are inlined in the header for performance. Don't move it
 // unless you know what you're doing.
+
+inline void ComparisonFunctions::NotBoolVal(BoolVal *result, const BoolVal &input) {
+  result->is_null = input.is_null;
+  result->val = tpl::sql::Not{}(result->val);
+}
 
 #define BINARY_COMPARISON_NUMERIC_FN_HIDE_NULL(NAME, TYPE, OP)                                   \
   inline void ComparisonFunctions::NAME##TYPE(BoolVal *result, const TYPE &v1, const TYPE &v2) { \
