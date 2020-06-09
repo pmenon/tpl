@@ -201,6 +201,7 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *bit_vecto
   uint32_t k = 0;
   for (uint32_t i = 0; i < num_words; i++) {
     uint64_t word = bit_vector[i];
+    if (word == 0) continue;
     while (word != 0) {
       const uint64_t t = word & -word;
       const uint32_t r = BitUtil::CountTrailingZeros(word);
@@ -211,16 +212,20 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *bit_vecto
   return k;
 }
 
-uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *bit_vector,
-                                                           uint32_t num_bits, sel_t *sel_vector) {
-  // Vector of '8's = [8,8,8,8,8,8,8]
-  const auto eight = _mm_set1_epi16(8);
-
-  // Selection vector write index
+uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *const bit_vector,
+                                                           uint32_t num_bits,
+                                                           sel_t *const sel_vector) {
+  // Vector of 8's. Used to advance the vector indexes each iteration.
+  const auto add8 = _mm_set1_epi16(8);
+  // The running vector of indexes to write to the selection vector.
   auto idx = _mm_set1_epi16(0);
+  // The output position in the selection vector to write into.
+  uint16_t k = 0;
 
-  // Selection vector size
-  uint32_t k = 0;
+  // Be careful when modifying the logic below because it has been carefully
+  // structured to achieve what we believe to be optimal performance on AVX2.
+  // If you devise a more clever algorithm, as you will because you're smart,
+  // validate it using VectorUtilBenchmark.
 
   const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
   for (uint32_t i = 0; i < num_words; i++) {
@@ -232,7 +237,7 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *bit_v
           _mm_loadl_epi64(reinterpret_cast<const __m128i *>(&k8BitMatchLUT[mask]));
       const __m128i match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
       const __m128i pos_vec = _mm_add_epi16(idx, match_pos);
-      idx = _mm_add_epi16(idx, eight);
+      idx = _mm_add_epi16(idx, add8);
       _mm_storeu_si128(reinterpret_cast<__m128i *>(sel_vector + k), pos_vec);
       k += BitUtil::CountPopulation(static_cast<uint32_t>(mask));
     }

@@ -334,4 +334,123 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   LOG_INFO("Completed loading TPC-H tables ...");
 }
 
+void TableGenerator::GenerateSSBMTables(sql::Catalog *catalog, const std::string &data_dir) {
+  LOG_INFO("Loading SSBM tables ...");
+
+  // -------------------------------------------------------
+  // Part
+  // -------------------------------------------------------
+
+  {
+    auto schema = MakeSchema({
+        {"p_partkey", IntegerType::InstanceNonNullable()},
+        {"p_name", VarcharType::InstanceNonNullable(22)},
+        {"p_mfgr", VarcharType::InstanceNonNullable(6)},
+        {"p_category", VarcharType::InstanceNonNullable(7)},
+        {"p_brand1", VarcharType::InstanceNonNullable(9)},
+        {"p_color", VarcharType::InstanceNonNullable(11)},
+        {"p_type", VarcharType::InstanceNonNullable(25)},
+        {"p_size", IntegerType::InstanceNonNullable()},
+        {"p_container", VarcharType::InstanceNonNullable(10)},
+    });
+    auto table = CreateTable(catalog, "ssbm.part", std::move(schema));
+    ImportTable("part", table, data_dir);
+  }
+
+  // -------------------------------------------------------
+  // Supplier
+  // -------------------------------------------------------
+
+  {
+    auto schema = MakeSchema({
+        {"s_suppkey", IntegerType::InstanceNonNullable()},
+        {"s_name", VarcharType::InstanceNonNullable(25)},
+        {"s_address", VarcharType::InstanceNonNullable(25)},
+        {"s_city", VarcharType::InstanceNonNullable(10)},
+        {"s_nation", VarcharType::InstanceNonNullable(15)},
+        {"s_region", VarcharType::InstanceNonNullable(12)},
+        {"s_phone", VarcharType::InstanceNonNullable(15)},
+    });
+    auto table = CreateTable(catalog, "ssbm.supplier", std::move(schema));
+    ImportTable("supplier", table, data_dir);
+  }
+
+  // -------------------------------------------------------
+  // Customer
+  // -------------------------------------------------------
+
+  {
+    auto schema = MakeSchema({
+        {"c_custkey", IntegerType::InstanceNonNullable()},
+        {"c_name", VarcharType::InstanceNonNullable(25)},
+        {"c_address", VarcharType::InstanceNonNullable(25)},
+        {"c_city", VarcharType::InstanceNonNullable(10)},
+        {"c_nation", VarcharType::InstanceNonNullable(15)},
+        {"c_region", VarcharType::InstanceNonNullable(12)},
+        {"c_phone", VarcharType::InstanceNonNullable(15)},
+        {"c_mktsegment", VarcharType::InstanceNonNullable(10)},
+    });
+    auto table = CreateTable(catalog, "ssbm.customer", std::move(schema));
+    ImportTable("customer", table, data_dir);
+  }
+
+  // -------------------------------------------------------
+  // Date
+  // -------------------------------------------------------
+
+  {
+    auto schema = MakeSchema({
+        {"d_datekey", IntegerType::InstanceNonNullable()},
+        {"d_date", VarcharType::InstanceNonNullable(19)},
+        {"d_dayofweek", VarcharType::InstanceNonNullable(10)},
+        {"d_month", VarcharType::InstanceNonNullable(10)},
+        {"d_year", IntegerType::InstanceNonNullable()},
+        {"d_yearmonthnum", IntegerType::InstanceNonNullable()},
+        {"d_yearmonth", VarcharType::InstanceNonNullable(8)},
+        {"d_daynuminweek", IntegerType::InstanceNonNullable()},
+        {"d_daynuminmonth", IntegerType::InstanceNonNullable()},
+        {"d_daynuminyear", IntegerType::InstanceNonNullable()},
+        {"d_monthnuminyear", IntegerType::InstanceNonNullable()},
+        {"d_weeknuminyear", IntegerType::InstanceNonNullable()},
+        {"d_sellingseason", VarcharType::InstanceNonNullable(13)},
+        {"d_lasdayinweekfl", VarcharType::InstanceNonNullable(1)},
+        {"d_lastdayinmonthfl", VarcharType::InstanceNonNullable(1)},
+        {"d_holidyfl", VarcharType::InstanceNonNullable(1)},
+        {"d_weekdayfl", VarcharType::InstanceNonNullable(1)},
+    });
+    auto table = CreateTable(catalog, "ssbm.date", std::move(schema));
+    ImportTable("date", table, data_dir);
+  }
+
+  // -------------------------------------------------------
+  // Line-Order
+  // -------------------------------------------------------
+
+  {
+    auto schema = MakeSchema({
+        {"lo_orderkey", IntegerType::InstanceNonNullable()},
+        {"lo_linenumber", IntegerType::InstanceNonNullable()},
+        {"lo_custkey", IntegerType::InstanceNonNullable()},
+        {"lo_partkey", IntegerType::InstanceNonNullable()},
+        {"lo_suppkey", IntegerType::InstanceNonNullable()},
+        {"lo_orderdate", IntegerType::InstanceNonNullable()},
+        {"lo_orderpriority", VarcharType::InstanceNonNullable(15)},
+        {"lo_shippriority", VarcharType::InstanceNonNullable(1)},
+        {"lo_quantity", IntegerType::InstanceNonNullable()},
+        {"lo_extendedprice", IntegerType::InstanceNonNullable()},
+        {"lo_ordertotalprice", IntegerType::InstanceNonNullable()},
+        {"lo_discount", IntegerType::InstanceNonNullable()},
+        {"lo_revenue", IntegerType::InstanceNonNullable()},
+        {"lo_supplycost", IntegerType::InstanceNonNullable()},
+        {"lo_tax", IntegerType::InstanceNonNullable()},
+        {"lo_commitdate", IntegerType::InstanceNonNullable()},
+        {"lo_shipmode", VarcharType::InstanceNonNullable(10)},
+    });
+    auto table = CreateTable(catalog, "ssbm.lineorder", std::move(schema));
+    ImportTable("lineorder", table, data_dir);
+  }
+
+  LOG_INFO("Completed loading SSBM tables ...");
+}
+
 }  // namespace tpl::sql::tablegen

@@ -17,7 +17,19 @@ namespace tpl::sql::tablegen {
  */
 class TableGenerator {
  public:
+  /**
+   * Generate all TPC-H tables.
+   * @param catalog The catalog instance to insert tables into.
+   * @param data_dir The directory containing table data.
+   */
   static void GenerateTPCHTables(sql::Catalog *catalog, const std::string &data_dir);
+
+  /**
+   * Generate all Star-Schema Benchmark tables.
+   * @param catalog The catalog instance to insert tables into.
+   * @param data_dir The directory containing table data.
+   */
+  static void GenerateSSBMTables(sql::Catalog *catalog, const std::string &data_dir);
 };
 
 /**
@@ -30,7 +42,13 @@ class TPCHOutputSchemas {
   /**
    * Initialize test output schemas
    */
-  void InitTestOutput() { InitTPCHOutput(); }
+  void InitTestOutput() {
+    // TPC-H schema.
+    InitTPCHOutput();
+
+    // SSBM schema.
+    InitSSBMOutput();
+  }
 
   /**
    * @param name name of schema
@@ -55,7 +73,6 @@ class TPCHOutputSchemas {
     sql::planner::OutputSchema::Column real_col{sql::TypeId::Double, false, nullptr};
     sql::planner::OutputSchema::Column date_col{sql::TypeId::Date, false, nullptr};
     sql::planner::OutputSchema::Column string_col{sql::TypeId::Varchar, false, nullptr};
-    ;
 
     // Q1 (two strings, 7 reals, 1 int)
     {
@@ -117,6 +134,29 @@ class TPCHOutputSchemas {
     }
   }
 
+  void InitSSBMOutput() {
+    sql::planner::OutputSchema::Column big_int{sql::TypeId::BigInt, false, nullptr};
+
+    // Q1.1 (1 int)
+    {
+      std::vector<sql::planner::OutputSchema::Column> cols = {big_int};
+      AddSchema(std::make_unique<sql::planner::OutputSchema>(std::move(cols)), "q1.1");
+    }
+
+    // Q1.2 (1 int)
+    {
+      std::vector<sql::planner::OutputSchema::Column> cols = {big_int};
+      AddSchema(std::make_unique<sql::planner::OutputSchema>(std::move(cols)), "q1.2");
+    }
+
+    // Q1.3 (1 int)
+    {
+      std::vector<sql::planner::OutputSchema::Column> cols = {big_int};
+      AddSchema(std::make_unique<sql::planner::OutputSchema>(std::move(cols)), "q1.3");
+    }
+  }
+
+ private:
   std::unordered_map<std::string, std::size_t> schemas_by_name_;
   std::vector<std::unique_ptr<sql::planner::OutputSchema>> owned_schemas_;
 };
