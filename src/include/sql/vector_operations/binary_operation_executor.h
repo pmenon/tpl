@@ -289,13 +289,13 @@ class BinaryOperationExecutor : public AllStatic {
       return;
     }
 
-    auto &constant = *reinterpret_cast<const LeftType *>(left.GetData());
+    auto *RESTRICT left_data = reinterpret_cast<const LeftType *>(left.GetData());
     auto *RESTRICT right_data = reinterpret_cast<const RightType *>(right.GetData());
 
     // Safe full-compute. Refer to comment at start of file for explanation.
     if (traits::ShouldPerformFullCompute<Op>()(tid_list)) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
-      bit_vector->UpdateFull([&](uint64_t i) { return op(constant, right_data[i]); });
+      bit_vector->UpdateFull([&](uint64_t i) { return op(left_data[0], right_data[i]); });
       bit_vector->Difference(right.GetNullMask());
       return;
     }
@@ -304,7 +304,7 @@ class BinaryOperationExecutor : public AllStatic {
     tid_list->GetMutableBits()->Difference(right.GetNullMask());
 
     // Filter
-    tid_list->Filter([&](uint64_t i) { return op(constant, right_data[i]); });
+    tid_list->Filter([&](uint64_t i) { return op(left_data[0], right_data[i]); });
   }
 
   // Binary selection where the right input is a constant value.
@@ -318,12 +318,12 @@ class BinaryOperationExecutor : public AllStatic {
     }
 
     auto *RESTRICT left_data = reinterpret_cast<const LeftType *>(left.GetData());
-    auto &constant = *reinterpret_cast<const RightType *>(right.GetData());
+    auto *RESTRICT right_data = reinterpret_cast<const RightType *>(right.GetData());
 
     // Safe full-compute. Refer to comment at start of file for explanation.
     if (traits::ShouldPerformFullCompute<Op>()(tid_list)) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
-      bit_vector->UpdateFull([&](uint64_t i) { return op(left_data[i], constant); });
+      bit_vector->UpdateFull([&](uint64_t i) { return op(left_data[i], right_data[0]); });
       bit_vector->Difference(left.GetNullMask());
       return;
     }
@@ -332,7 +332,7 @@ class BinaryOperationExecutor : public AllStatic {
     tid_list->GetMutableBits()->Difference(left.GetNullMask());
 
     // Filter
-    tid_list->Filter([&](uint64_t i) { return op(left_data[i], constant); });
+    tid_list->Filter([&](uint64_t i) { return op(left_data[i], right_data[0]); });
   }
 
   // Binary selection where both inputs are vectors.
