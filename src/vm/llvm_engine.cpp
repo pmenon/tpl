@@ -52,11 +52,18 @@ bool FunctionHasDirectReturn(const ast::FunctionType *func_type) {
 }  // namespace
 
 // ---------------------------------------------------------
-// TPL's Jit Memory Manager
+// Memory Manager for JIT machine code
 // ---------------------------------------------------------
 
-class LLVMEngine::TPLMemoryManager : public llvm::SectionMemoryManager {
+class LLVMEngine::MCMemoryManager : public llvm::SectionMemoryManager {
  public:
+  // Destructor. Just free-up the exception frames.
+  ~MCMemoryManager() { llvm::RTDyldMemoryManager::deregisterEHFrames(); }
+
+  // De-register exception handling frames.
+  void deregisterEHFrames() override { llvm::RTDyldMemoryManager::deregisterEHFrames(); }
+
+  // Find a symbol during JIT linking. Rely on cache before calling into dlopen().
   llvm::JITSymbol findSymbol(const std::string &name) override {
     LOG_TRACE("Resolving symbol '{}' ...", name);
 
@@ -74,7 +81,7 @@ class LLVMEngine::TPLMemoryManager : public llvm::SectionMemoryManager {
   }
 
  private:
-  std::unordered_map<std::string, llvm::JITEvaluatedSymbol> symbols_;
+  llvm::StringMap<llvm::JITEvaluatedSymbol> symbols_;
 };
 
 // ---------------------------------------------------------
@@ -1066,7 +1073,7 @@ std::string LLVMEngine::CompiledModuleBuilder::DumpModuleAsm() {
 LLVMEngine::CompiledModule::CompiledModule(std::unique_ptr<llvm::MemoryBuffer> object_code)
     : loaded_(false),
       object_code_(std::move(object_code)),
-      memory_manager_(std::make_unique<LLVMEngine::TPLMemoryManager>()) {}
+      memory_manager_(std::make_unique<LLVMEngine::MCMemoryManager>()) {}
 
 // This destructor is needed because we have a unique_ptr to a forward-declared
 // TPLMemoryManager class.

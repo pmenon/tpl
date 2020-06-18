@@ -29,7 +29,7 @@ class LLVMEngine {
   // Helper classes
   // -------------------------------------------------------
 
-  class TPLMemoryManager;
+  class MCMemoryManager;
   class TypeMap;
   class FunctionLocalsMap;
   class CompilerOptions;
@@ -199,7 +199,7 @@ class LLVMEngine {
     // The object code.
     std::unique_ptr<llvm::MemoryBuffer> object_code_;
     // The memory manager.
-    std::unique_ptr<TPLMemoryManager> memory_manager_;
+    std::unique_ptr<MCMemoryManager> memory_manager_;
     // Function cache.
     std::unordered_map<std::string, void *> functions_;
   };
