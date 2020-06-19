@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <type_traits>
 
 #include "sql/sql.h"
 
@@ -131,9 +132,9 @@ class CompactStorage {
 template <typename T>
 struct CompactStorage::StorageHelper<
     T, std::enable_if_t<std::is_fundamental_v<T> || std::is_same_v<T, Date> ||
-        std::is_same_v<T, Timestamp> || std::is_same_v<T, Decimal32> ||
-        std::is_same_v<T, Decimal64> || std::is_same_v<T, Decimal128> ||
-        std::is_same_v<T, VarlenEntry>>> {
+                        std::is_same_v<T, Timestamp> || std::is_same_v<T, Decimal32> ||
+                        std::is_same_v<T, Decimal64> || std::is_same_v<T, Decimal128> ||
+                        std::is_same_v<T, VarlenEntry>>> {
   // Write a fundamental type.
   static void Write(byte *p, T val) { *reinterpret_cast<T *>(p) = val; }
   // Read a fundamental type.
