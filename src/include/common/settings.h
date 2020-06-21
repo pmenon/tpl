@@ -31,6 +31,13 @@ namespace tpl {
   COMPUTED(FullSelectOptThreshold, double, DeriveOptimalFullSelectionThreshold)                    \
                                                                                                    \
   /*                                                                                               \
+   * As with the full-selection setting above, it may be advantageous to perform                   \
+   * a full select-between (i.e., x < y < z). This setting controls the                            \
+   * selectivity threshold to decide when the optimization can be applied.                         \
+   */                                                                                              \
+  COMPUTED(FullSelectBetweenOptThreshold, double, DeriveOptimalFullSelectionBetweenThreshold)      \
+                                                                                                   \
+  /*                                                                                               \
    * When performing arithmetic operations on vectors, this setting determines                     \
    * the minimum required vector selectivity before switching to a full-compute                    \
    * implementation. A full computation is one that ignores the selection vector                   \
