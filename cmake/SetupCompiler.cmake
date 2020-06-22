@@ -51,6 +51,22 @@ endif ()
 
 ############################################################
 #
+# Color-ize output, if enabled.
+#
+############################################################
+
+if (${TPL_COLORIZE_OUTPUT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+    else ()
+        message(WARNING "Unable to colorize output of unknown compiler: ${CMAKE_CXX_COMPILER_ID}")
+    endif ()
+endif ()
+
+############################################################
+#
 # LLD linker setup
 #
 ############################################################
