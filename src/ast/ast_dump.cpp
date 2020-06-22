@@ -129,15 +129,15 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
   }
 
   void DumpDecl(Decl *decl) {
-    DumpChild([=] { AstVisitor<AstDumperImpl>::Visit(decl); });
+    DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(decl); });
   }
 
   void DumpExpr(Expr *expr) {
-    DumpChild([=] { AstVisitor<AstDumperImpl>::Visit(expr); });
+    DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(expr); });
   }
 
   void DumpStmt(Stmt *stmt) {
-    DumpChild([=] { AstVisitor<AstDumperImpl>::Visit(stmt); });
+    DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(stmt); });
   }
 
  private:
@@ -155,7 +155,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
 
 void AstDumperImpl::VisitFile(File *node) {
   DumpNodeCommon(node);
-  DumpChild([=] {
+  DumpChild([=, this] {
     for (auto *decl : node->Declarations()) {
       DumpDecl(decl);
     }

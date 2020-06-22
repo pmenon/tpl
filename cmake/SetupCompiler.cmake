@@ -1,5 +1,5 @@
-# ---- Force C++17
-set(CMAKE_CXX_STANDARD 17)
+# ---- Force C++20
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---- Require Clang or GCC
@@ -10,7 +10,7 @@ if (NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
 endif ()
 
 # ---- Setup initial CXX flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Werror -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a -Wall -Werror -march=native")
 
 ############################################################
 #
