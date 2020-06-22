@@ -38,6 +38,14 @@ namespace tpl {
   COMPUTED(FullSelectBetweenOptThreshold, double, DeriveOptimalFullSelectionBetweenThreshold)      \
                                                                                                    \
   /*                                                                                               \
+   * Setting to determine selectivity threshold above which we perform a full                      \
+   * hash computation. We're assuming here the hashing function is SIMD-able.                      \
+   * At the time of writing, we're using the finalizer from Murmur, or something                   \
+   * similar that does xor-right-shift + multiply.                                                 \
+   */                                                                                              \
+  COMPUTED(FullHashOptThreshold, double, DeriveOptimalFullHashThreshold)                           \
+                                                                                                   \
+  /*                                                                                               \
    * When performing arithmetic operations on vectors, this setting determines                     \
    * the minimum required vector selectivity before switching to a full-compute                    \
    * implementation. A full computation is one that ignores the selection vector                   \

@@ -21,6 +21,12 @@ double DeriveOptimalFullSelectionBetweenThreshold(UNUSED Settings *settings,
   return 0.15;
 }
 
+double DeriveOptimalFullHashThreshold(UNUSED Settings *settings, UNUSED CpuInfo *cpu_info) {
+  // TODO(pmenon): Micro-benchmark to determine this at database startup for the current machine
+  // We're assuming the hashing function is Murmur3-style xor-shift + multiply.
+  return 0.35;
+}
+
 double DeriveOptimalArithmeticFullComputeThreshold(UNUSED Settings *settings,
                                                    UNUSED CpuInfo *cpu_info) {
   // TODO(pmenon): Micro-benchmark to determine this at database startup for the current machine
