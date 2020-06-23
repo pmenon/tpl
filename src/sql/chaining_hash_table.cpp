@@ -65,15 +65,18 @@ std::tuple<uint64_t, uint64_t, float> ChainingHashTable<UseTags>::GetChainLength
       entry = UntagPointer(entry);
     }
     uint64_t length = 0;
-    for (; entry != nullptr; entry = entry->next) {
+
+    if (entry != nullptr) {
       total++;
-      length++;
+      for (; entry != nullptr; entry = entry->next) {
+        length++;
+      }
     }
     min = std::min(min, length);
     max = std::max(max, length);
   }
 
-  return {min, max, static_cast<float>(total) / capacity_};
+  return {min, max, static_cast<float>(num_elements_) / total};
 }
 
 template class ChainingHashTable<true>;
