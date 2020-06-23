@@ -11,7 +11,6 @@
 
 namespace tpl {
 
-
 class SelectionBenchmark : public benchmark::Fixture {
  protected:
   static std::unique_ptr<sql::VectorProjection> MakeInput(uint64_t selectivity) {
@@ -87,9 +86,9 @@ BENCHMARK_DEFINE_F(SelectionBenchmark, VaaT_Conjunction)(benchmark::State &state
   filter_manager.StartNewClause();
   filter_manager.InsertClauseTerms(
       {[](auto vp, auto tid_list, auto ctx) {
-        const auto const_vec = sql::ConstantVector(sql::GenericValue::CreateInteger(0));
-        sql::VectorOps::SelectEqual(*vp->GetColumn(0), const_vec, tid_list);
-      },
+         const auto const_vec = sql::ConstantVector(sql::GenericValue::CreateInteger(0));
+         sql::VectorOps::SelectEqual(*vp->GetColumn(0), const_vec, tid_list);
+       },
        [](auto vp, auto tid_list, auto ctx) {
          const auto const_vec = sql::ConstantVector(sql::GenericValue::CreateInteger(0));
          sql::VectorOps::SelectEqual(*vp->GetColumn(1), const_vec, tid_list);
