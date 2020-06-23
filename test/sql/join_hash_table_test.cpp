@@ -14,7 +14,7 @@ namespace tpl::sql {
 struct Tuple {
   uint64_t a, b, c, d;
 
-  hash_t Hash() const { return util::HashUtil::Hash(a); }
+  hash_t Hash() const { return util::HashUtil::HashMurmur(a); }
 };
 
 class JoinHashTableTest : public TplTest {

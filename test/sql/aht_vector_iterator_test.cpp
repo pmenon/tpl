@@ -23,7 +23,7 @@ struct InputTuple {
 
   InputTuple(uint64_t key, uint64_t col_a) : key(key), col_a(col_a) {}
 
-  hash_t Hash() const noexcept { return util::HashUtil::Hash(key); }
+  hash_t Hash() const noexcept { return util::HashUtil::HashMurmur(key); }
 };
 
 /**

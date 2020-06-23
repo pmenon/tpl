@@ -24,7 +24,7 @@ struct HashCombine {};
 template <typename T>
 struct Hash<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
   hash_t operator()(T input, bool null) const noexcept {
-    return null ? hash_t(0) : util::HashUtil::HashCrc(input);
+    return null ? hash_t(0) : util::HashUtil::HashMurmur(input);
   }
 };
 
@@ -34,7 +34,7 @@ struct Hash<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
 template <typename T>
 struct HashCombine<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
   hash_t operator()(T input, bool null, const hash_t seed) const noexcept {
-    return null ? hash_t(0) : util::HashUtil::HashCrc(input, seed);
+    return null ? hash_t(0) : util::HashUtil::HashMurmur(input, seed);
   }
 };
 

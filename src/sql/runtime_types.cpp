@@ -409,7 +409,7 @@ Timestamp Timestamp::FromString(const char *str, std::size_t len) {
 //===----------------------------------------------------------------------===//
 
 hash_t Blob::Hash(hash_t seed) const {
-  return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(data_), size_, seed);
+  return util::HashUtil::HashXXH3(reinterpret_cast<const uint8_t *>(data_), size_, seed);
 }
 
 }  // namespace tpl::sql

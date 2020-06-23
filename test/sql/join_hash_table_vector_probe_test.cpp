@@ -19,7 +19,7 @@ struct BuildRow {
   BuildRow(uint64_t key, uint64_t val_1, uint64_t val_2, uint64_t val_3)
       : key(key), val1(val_1), val2(val_2), val3(val_3) {}
   // Hash.
-  hash_t Hash() const { return util::HashUtil::HashCrc(key); }
+  hash_t Hash() const { return util::HashUtil::HashMurmur(key); }
 };
 
 // Build a join hash table over the given input data.

@@ -14,65 +14,10 @@
 namespace tpl::util {
 
 /**
- * Generic hashing utility class. The main entry point are the HashUtil::Hash() functions. There are
- * overloaded specialized versions for arithmetic values (integers and floats), and generic versions
- * for longer buffers (strings, c-strings, and opaque buffers).
+ * Generic hashing utility class.
  */
 class HashUtil : public AllStatic {
  public:
-  /**
-   * Compute the hash value of an arithmetic input. The input is allowed to be either an integral
-   * numbers (8- to 64-bits) or floating pointer numbers.
-   * @tparam T The input arithmetic type.
-   * @param val The input value to hash.
-   * @param seed The seed hash value to mix in.
-   * @return The computed hash.
-   */
-  template <typename T>
-  static auto Hash(T val, hash_t seed) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
-    return HashCrc(val, seed);
-  }
-
-  /**
-   * Compute the hash value of an arithmetic input. The input is allowed to be either an integral
-   * numbers (8- to 64-bits) or floating pointer numbers.
-   * @tparam T The input arithmetic type.
-   * @param val The input value to hash.
-   * @return The computed hash.
-   */
-  template <typename T>
-  static auto Hash(T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
-    return HashCrc(val);
-  }
-
-  /**
-   * Compute the hash value of the input buffer with the provided length.
-   * @param buf The input buffer.
-   * @param len The length of the input buffer to hash.
-   * @return The computed hash value based on the contents of the input buffer.
-   */
-  static auto Hash(const uint8_t *buf, std::size_t len) -> hash_t { return HashXX3(buf, len); }
-
-  /**
-   * Compute the hash value of the input buffer with the provided length and using a seed hash.
-   * @param buf The input buffer.
-   * @param len The length of the input buffer to hash.
-   * @param seed The seed hash value to mix in.
-   * @return The computed hash value based on the contents of the input buffer.
-   */
-  static auto Hash(const uint8_t *buf, std::size_t len, hash_t seed) -> hash_t {
-    return HashXX3(buf, len, seed);
-  }
-
-  /**
-   * Compute the hash value of an input string view @em s.
-   * @param s The input string.
-   * @return The computed hash value based on the contents of the input string.
-   */
-  static auto Hash(const std::string_view s) -> hash_t {
-    return HashXX3(reinterpret_cast<const uint8_t *>(s.data()), s.length());
-  }
-
   /**
    * Combine and mix two hash values into a new hash value
    * @param first_hash The first hash value
@@ -99,9 +44,18 @@ class HashUtil : public AllStatic {
   static hash_t ScrambleHash(const hash_t hash) { return XXH64_avalanche(hash); }
 
   // -------------------------------------------------------
-  // CRC Hashing - Integers Only
+  // CRC32 Hashing
   // -------------------------------------------------------
 
+  /**
+   * Compute the CRC32 hash of the input value @em val with the provided seed hash. This function
+   * uses an SSE 4.2 optimized hardware implementation of CRC32 and only works on native CPP types.
+   * @tparam T The type of value. Must be a fundamental type, i.e., bool, integral, or
+   *           floating-point number type.
+   * @param val The value to hash.
+   * @param seed The seed hash value.
+   * @return The CRC32 hash of the input.
+   */
   template <typename T>
   static auto HashCrc(T val, hash_t seed) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
     // Thanks HyPer
@@ -112,11 +66,27 @@ class HashUtil : public AllStatic {
     return ((result2 << 32u) | result1) * 0x2545f4914f6cdd1dULL;
   }
 
+  /**
+   * Compute the CRC32 hash of the input value @em val. The input must be a fundamental type,
+   * i.e., bool, integral, or floating-point number type. This function uses an SSE 4.2 optimized
+   * hardware implementation of CRC32 and only works on native CPP types.
+   * @tparam T The type of value to hash.
+   * @param val The value to hash.
+   * @return The CRC32 hash of the input.
+   */
   template <typename T>
   static auto HashCrc(T val) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
     return HashCrc(val, 0);
   }
 
+  /**
+   * Compute the CRC32 hash of the buffer pointed to by @em buf with the provided length and seed
+   * value. This function uses an SSE 4.2 optimized hardware implementation of CRC32.
+   * @param buf The buffer to hash.
+   * @param len The length of the buffer.
+   * @param seed The seed value.
+   * @return The CRC32 hash of the input buffer.
+   */
   static hash_t HashCrc(const uint8_t *buf, uint32_t len, hash_t seed) {
     uint64_t hash = seed;
 
@@ -150,46 +120,106 @@ class HashUtil : public AllStatic {
     return hash;
   }
 
+  /**
+   * Compute the CRC32 hash of the buffer pointed to by @em buf with the provided length. This
+   * function uses an SSE 4.2 optimized hardware implementation of CRC32.
+   * @param buf The buffer to hash.
+   * @param len The length of the buffer.
+   * @param seed The seed value.
+   * @return The CRC32 hash of the input buffer.
+   */
   static hash_t HashCrc(const uint8_t *buf, uint32_t len) { return HashCrc(buf, len, 0); }
 
   // -------------------------------------------------------
-  // Murmur3 Hashing - Integers Only
+  // Murmur3 Hashing
   // -------------------------------------------------------
 
+  /**
+   * Compute the Murmur3 hash of the provided input value @em val using the provided seed hash. This
+   * is just the finalizer of the Murmur3 algorithm.
+   * @tparam T The type of value. Must be a fundamental type, i.e., bool, integral, or
+   *           floating-point number type.
+   * @param val The value to hash.
+   * @param seed The seed hash.
+   * @return The Murmur3 hash of the input.
+   */
   template <typename T>
   static auto HashMurmur(T val, hash_t seed) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     auto k = static_cast<uint64_t>(val);
-    k ^= seed;
     k ^= k >> 33;
     k *= 0xff51afd7ed558ccdLLU;
     k ^= k >> 33;
     k *= 0xc4ceb9fe1a85ec53LLU;
     k ^= k >> 33;
-    return k;
+    return k ^ seed;
   }
 
+  /**
+   * Compute the Murmur3 hash of the provided input value @em val. This is just the finalizer of the
+   * Murmur3 algorithm.
+   * @tparam T The type of value. Must be a fundamental type, i.e., bool, integral, or
+   *           floating-point number type.
+   * @param val The value to hash.
+   * @return The Murmur3 hash of the input.
+   */
   template <typename T>
   static auto HashMurmur(T val) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
     return HashMurmur(val, 0);
   }
 
   // -------------------------------------------------------
-  // XXH3 Hashing - All Types
+  // XXH3 Hashing
   // -------------------------------------------------------
 
-  static hash_t HashXX3(const uint8_t *buf, uint32_t len, hash_t seed) {
+  /**
+   * Compute the XXH3 hash of the input buffer @em buf with length @em length using the provided
+   * seed hash @em seed.
+   * @param buf The buffer to hash.
+   * @param len The length of the buffer.
+   * @param seed The seed hash.
+   * @return The XXH3 hash of the input.
+   */
+  static hash_t HashXXH3(const uint8_t *buf, uint32_t len, hash_t seed) {
     return XXH3_64bits_withSeed(buf, len, seed);
   }
 
-  static hash_t HashXX3(const uint8_t *buf, uint32_t len) { return XXH3_64bits(buf, len); }
+  /**
+   * Compute the XXH3 hash of the input buffer @em buf with length @em length.
+   * @param buf The buffer to hash.
+   * @param len The length of the buffer.
+   * @return The XXH3 hash of the input.
+   */
+  static hash_t HashXXH3(const uint8_t *buf, uint32_t len) { return XXH3_64bits(buf, len); }
 
+  /**
+   * Compute the XXH3 hash of the input string @em s.
+   * @param s The string to hash.
+   * @return The XXH3 hash of the input.
+   */
+  static hash_t HashXXH3(std::string_view s) { return XXH3_64bits(s.data(), s.length()); }
+
+  /**
+   * Compute the XXH3 hash of the input value @em val using the provided seed hash @em seed.
+   * @tparam T The type of the input to hash. Must be a fundamental type, i.e., bool, integral, or
+   *           floating-point number type.
+   * @param val The value to hash.
+   * @param seed The seed hash.
+   * @return The XXH3 hash of the input.
+   */
   template <typename T>
-  static auto HashXX3(T val, hash_t seed) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+  static auto HashXXH3(T val, hash_t seed) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     return XXH3_64bits_withSeed(&val, sizeof(T), seed);
   }
 
+  /**
+   * Compute the XXH3 hash of the input value @em val.
+   * @tparam T The type of the input to hash. Must be a fundamental type, i.e., bool, integral, or
+   *           floating-point number type.
+   * @param val The value to hash.
+   * @return The XXH3 hash of the input.
+   */
   template <typename T>
-  static auto HashXX3(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+  static auto HashXXH3(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
     return XXH3_64bits(&val, sizeof(T));
   }
 };

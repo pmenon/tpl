@@ -22,7 +22,7 @@ struct TestEntry : public HashTableEntry {
     hash = Hash();
   }
 
-  hash_t Hash() { return util::HashUtil::Hash(key); }
+  hash_t Hash() { return util::HashUtil::HashMurmur(key); }
 
   bool Eq(const TestEntry &that) const {
     return hash == that.hash && key == that.key && value == that.value;

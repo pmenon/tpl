@@ -72,7 +72,7 @@ class Date {
    * @param seed The value to seed the hash with.
    * @return The hash value for this date instance.
    */
-  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashCrc(value_, seed); }
+  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashMurmur(value_, seed); }
 
   /**
    * @return The hash value of this date instance.
@@ -238,7 +238,7 @@ class Timestamp {
    * @param seed The value to seed the hash with.
    * @return The hash value for this timestamp instance.
    */
-  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashCrc(value_, seed); }
+  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashMurmur(value_, seed); }
 
   /**
    * @return The hash value of this timestamp instance.
@@ -355,7 +355,7 @@ class Decimal {
    * @param seed The value to seed the hash with.
    * @return The hash value for this decimal instance.
    */
-  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashCrc(value_); }
+  hash_t Hash(const hash_t seed) const { return util::HashUtil::HashMurmur(value_); }
 
   /**
    * @return The hash value of this decimal instance.
@@ -519,7 +519,7 @@ class VarlenEntry {
     if (IsInlined()) {
       return util::HashUtil::HashCrc(reinterpret_cast<const uint8_t *>(prefix_), size_, seed);
     } else {
-      return util::HashUtil::HashXX3(reinterpret_cast<const uint8_t *>(content_), size_, seed);
+      return util::HashUtil::HashXXH3(reinterpret_cast<const uint8_t *>(content_), size_, seed);
     }
   }
 

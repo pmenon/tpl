@@ -32,7 +32,7 @@ void BuildHT(JoinHashTable *jht, bool is_a_key, uint32_t a_max, uint32_t b_max) 
   for (uint32_t i = 0; i < bound; i++) {
     auto cola = i % a_max;
     auto colb = i % b_max;
-    auto hash_val = util::HashUtil::Hash(is_a_key ? cola : colb);
+    auto hash_val = util::HashUtil::HashMurmur(is_a_key ? cola : colb);
     auto join_row = reinterpret_cast<JoinRow *>(jht->AllocInputTuple(hash_val));
     join_row->key = is_a_key ? cola : colb;
     join_row->val = colb;
