@@ -383,12 +383,12 @@ VM_OP_HOT void OpVPIGetPointer(byte **out, tpl::sql::VectorProjectionIterator *c
 
 VM_OP_HOT void OpHashInt(hash_t *const hash_val, const tpl::sql::Integer *const input,
                          const hash_t seed) {
-  *hash_val = input->is_null ? 0 : tpl::util::HashUtil::HashCrc(input->val, seed);
+  *hash_val = input->is_null ? 0 : tpl::util::HashUtil::HashMurmur(input->val, seed);
 }
 
 VM_OP_HOT void OpHashReal(hash_t *const hash_val, const tpl::sql::Real *const input,
                           const hash_t seed) {
-  *hash_val = input->is_null ? 0 : tpl::util::HashUtil::HashCrc(input->val, seed);
+  *hash_val = input->is_null ? 0 : tpl::util::HashUtil::HashMurmur(input->val, seed);
 }
 
 VM_OP_HOT void OpHashString(hash_t *const hash_val, const tpl::sql::StringVal *const input,
