@@ -75,6 +75,7 @@ install_mac() {
   (brew ls --versions llvm@9 | grep 9) || brew install llvm@9
   brew ls --versions jemalloc || brew install jemalloc
   brew ls --versions tbb || brew install tbb
+  brew ls --versions ninja || brew install ninja
 }
 
 install_linux() {
@@ -93,7 +94,8 @@ install_linux() {
       clang-9         \
       llvm-9          \
       libjemalloc-dev \
-      libtbb-dev
+      libtbb-dev      \
+      ninja-build
 }
 
 main "$@"

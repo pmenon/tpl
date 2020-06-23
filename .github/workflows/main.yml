@@ -28,16 +28,18 @@ jobs:
     - name: Build & Test Debug x64 With Sanitizers
       run: |
         cmake -E remove_directory build
-        LLVM_DIR=/usr/lib/llvm-9/ cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
+        LLVM_DIR=/usr/lib/llvm-9/ cmake -B build -S . -GNinja -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
         cmake --build build -j$(nproc)
         cd build
-        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" make check
-        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" make check-tpl
+        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" ninja
+        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" ninja check
+        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" ninja check-tpl
 
     - name: Build & Test Release x64
       run: |
         cmake -E remove_directory build
-        LLVM_DIR=/usr/lib/llvm-9/ cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+        LLVM_DIR=/usr/lib/llvm-9/ cmake -B build -S . -GNinja -DCMAKE_BUILD_TYPE=Release
         cmake --build build -j$(nproc)
         cd build
-        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" make check-tpl
+        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" ninja
+        LSAN_OPTIONS="fast_unwind_on_malloc=0,suppressions=$GITHUB_WORKSPACE/build-support/leaksanitizer.conf" ninja check-tpl
