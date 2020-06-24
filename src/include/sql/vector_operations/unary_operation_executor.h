@@ -60,7 +60,7 @@ class UnaryOperationExecutor : public AllStatic {
    *                    count as the input vector.
    */
   template <typename InputType, typename ResultType, bool IgnoreNull = false, typename Op>
-  static void Execute(const Vector &input, Vector *result, Op &&op) {
+  static void Execute(const Vector &input, Vector *result, Op op) {
     ExecuteImpl<InputType, ResultType, Op, IgnoreNull>(input, result, std::forward<Op>(op));
   }
 
@@ -70,7 +70,7 @@ class UnaryOperationExecutor : public AllStatic {
   // common base for unary operations that rely on templates and those that rely
   // on functors.
   template <typename InputType, typename ResultType, typename Op, bool IgnoreNull>
-  static inline void ExecuteImpl(const Vector &input, Vector *result, Op &&op) {
+  static inline void ExecuteImpl(const Vector &input, Vector *result, Op op) {
     // Ensure operator has correct interface.
     static_assert(std::is_invocable_r_v<ResultType, Op, InputType>,
                   "Unary operation has invalid interface for given template arguments");
