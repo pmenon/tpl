@@ -76,7 +76,7 @@ std::tuple<uint64_t, uint64_t, float> ChainingHashTable<UseTags>::GetChainLength
     max = std::max(max, length);
   }
 
-  return {min, max, static_cast<float>(num_elements_) / total};
+  return {min, max, IsEmpty() ? 0.0 : static_cast<float>(num_elements_) / total};
 }
 
 template class ChainingHashTable<true>;
