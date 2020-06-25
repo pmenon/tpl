@@ -194,22 +194,22 @@ void VectorUtil::BitVectorToByteVector(const uint64_t *bit_vector, const uint32_
   }
 }
 
-uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *bit_vector,
-                                                       uint32_t num_bits, sel_t *sel_vector) {
-  const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
-
-  uint32_t k = 0;
+uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *RESTRICT bit_vector,
+                                                       const uint32_t num_bits,
+                                                       sel_t *RESTRICT sel_vector) {
+  const auto num_words = MathUtil::DivRoundUp(num_bits, 64);
+  const auto init_sel_vector = sel_vector;
   for (uint32_t i = 0; i < num_words; i++) {
     uint64_t word = bit_vector[i];
     if (word == 0) continue;
     while (word != 0) {
       const uint64_t t = word & -word;
       const uint32_t r = BitUtil::CountTrailingZeros(word);
-      sel_vector[k++] = i * 64 + r;
+      *sel_vector++ = i * 64 + r;
       word ^= t;
     }
   }
-  return k;
+  return sel_vector - init_sel_vector;
 }
 
 uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *const bit_vector,
