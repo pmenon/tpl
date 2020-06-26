@@ -199,14 +199,11 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *RESTRICT 
                                                        sel_t *RESTRICT sel_vector) {
   const auto num_words = MathUtil::DivRoundUp(num_bits, 64);
   const auto init_sel_vector = sel_vector;
-  for (uint32_t i = 0; i < num_words; i++) {
+  for (uint32_t i = 0, base = 0; i < num_words; i++, base += 64) {
     uint64_t word = bit_vector[i];
-    if (word == 0) continue;
     while (word != 0) {
-      const uint64_t t = word & -word;
-      const uint32_t r = BitUtil::CountTrailingZeros(word);
-      *sel_vector++ = i * 64 + r;
-      word ^= t;
+      *sel_vector++ = base + BitUtil::CountTrailingZeros(word);
+      word &= word - 1;
     }
   }
   return sel_vector - init_sel_vector;
