@@ -197,16 +197,19 @@ void VectorUtil::BitVectorToByteVector(const uint64_t *bit_vector, const uint32_
 uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *RESTRICT bit_vector,
                                                        const uint32_t num_bits,
                                                        sel_t *RESTRICT sel_vector) {
-  const auto num_words = MathUtil::DivRoundUp(num_bits, 64);
-  const auto init_sel_vector = sel_vector;
+  // The output position in the selection vector to write into.
+  uint32_t k = 0;
+  // The number of 64-bit words in the vector.
+  const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
   for (uint32_t i = 0, base = 0; i < num_words; i++, base += 64) {
     uint64_t word = bit_vector[i];
     while (word != 0) {
-      *sel_vector++ = base + BitUtil::CountTrailingZeros(word);
-      word &= word - 1;
+      const uint64_t t = word & -word;
+      sel_vector[k++] = base + BitUtil::CountTrailingZeros(word);
+      word ^= t;
     }
   }
-  return sel_vector - init_sel_vector;
+  return k;
 }
 
 uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *RESTRICT bit_vector,
@@ -216,14 +219,15 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *RESTR
   const auto add8 = _mm_set1_epi16(8);
   // The running vector of indexes to write to the selection vector.
   auto idx = _mm_set1_epi16(0);
+  // The output position in the selection vector to write into.
+  uint16_t k = 0;
 
   // Be careful when modifying the logic below because it has been carefully
   // structured to achieve what we believe to be optimal performance on AVX2.
   // If you devise a more clever algorithm, as you will because you're smart,
   // validate it using VectorUtilBenchmark.
 
-  const auto num_words = MathUtil::DivRoundUp(num_bits, 64);
-  const auto init_sel_vector = sel_vector;
+  const uint32_t num_words = MathUtil::DivRoundUp(num_bits, 64);
   for (uint32_t i = 0; i < num_words; i++) {
     uint64_t word = bit_vector[i];
     for (uint32_t j = 0; j < 8; j++) {
@@ -234,11 +238,12 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Dense_AVX2(const uint64_t *RESTR
       const __m128i match_pos = _mm_cvtepi8_epi16(match_pos_scaled);
       const __m128i pos_vec = _mm_add_epi16(idx, match_pos);
       idx = _mm_add_epi16(idx, add8);
-      _mm_storeu_si128(reinterpret_cast<__m128i *>(sel_vector), pos_vec);
-      sel_vector += BitUtil::CountPopulation(static_cast<uint32_t>(mask));
+      _mm_storeu_si128(reinterpret_cast<__m128i *>(sel_vector + k), pos_vec);
+      k += BitUtil::CountPopulation(static_cast<uint32_t>(mask));
     }
   }
-  return sel_vector - init_sel_vector;
+
+  return k;
 }
 
 #if __AVX512VBMI2__
