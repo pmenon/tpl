@@ -19,6 +19,59 @@ namespace tpl::util {
 class HashUtil : public AllStatic {
  public:
   /**
+   * Compute the hash value of an arithmetic input. The input is allowed to be either an integral
+   * numbers (8- to 64-bits) or floating pointer numbers.
+   * @tparam T The input arithmetic type.
+   * @param val The input value to hash.
+   * @param seed The seed hash value to mix in.
+   * @return The computed hash.
+   */
+  template <typename T>
+  static auto Hash(T val, hash_t seed) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+    return HashMurmur(val, seed);
+  }
+
+  /**
+   * Compute the hash value of an arithmetic input. The input is allowed to be either an integral
+   * numbers (8- to 64-bits) or floating pointer numbers.
+   * @tparam T The input arithmetic type.
+   * @param val The input value to hash.
+   * @return The computed hash.
+   */
+  template <typename T>
+  static auto Hash(T val) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+    return HashMurmur(val);
+  }
+
+  /**
+   * Compute the hash value of the input buffer with the provided length.
+   * @param buf The input buffer.
+   * @param len The length of the input buffer to hash.
+   * @return The computed hash value based on the contents of the input buffer.
+   */
+  static auto Hash(const uint8_t *buf, std::size_t len) -> hash_t { return HashXXH3(buf, len); }
+
+  /**
+   * Compute the hash value of the input buffer with the provided length and using a seed hash.
+   * @param buf The input buffer.
+   * @param len The length of the input buffer to hash.
+   * @param seed The seed hash value to mix in.
+   * @return The computed hash value based on the contents of the input buffer.
+   */
+  static auto Hash(const uint8_t *buf, std::size_t len, hash_t seed) -> hash_t {
+    return HashXXH3(buf, len, seed);
+  }
+
+  /**
+   * Compute the hash value of an input string view @em s.
+   * @param s The input string.
+   * @return The computed hash value based on the contents of the input string.
+   */
+  static auto Hash(const std::string_view s) -> hash_t {
+    return HashXXH3(reinterpret_cast<const uint8_t *>(s.data()), s.length());
+  }
+
+  /**
    * Combine and mix two hash values into a new hash value
    * @param first_hash The first hash value
    * @param second_hash The second hash value
