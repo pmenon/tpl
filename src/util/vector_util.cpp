@@ -204,9 +204,9 @@ uint32_t VectorUtil::BitVectorToSelectionVector_Sparse(const uint64_t *RESTRICT 
   for (uint32_t i = 0, base = 0; i < num_words; i++, base += 64) {
     uint64_t word = bit_vector[i];
     while (word != 0) {
-      const uint64_t t = word & -word;
-      sel_vector[k++] = base + BitUtil::CountTrailingZeros(word);
-      word ^= t;
+      sel_vector[k] = base + BitUtil::CountTrailingZeros(word);
+      word &= (word - 1);  // Should compile into a `blsr`.
+      k++;
     }
   }
   return k;

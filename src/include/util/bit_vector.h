@@ -544,10 +544,8 @@ class BitVector {
     for (WordType i = 0, num_words = GetNumWords(); i < num_words; i++) {
       WordType word = words_[i];
       while (word != 0) {
-        const auto t = word & -word;
-        const auto r = BitUtil::CountTrailingZeros(word);
-        f(i * kWordSizeBits + r);
-        word ^= t;
+        f(i * kWordSizeBits + BitUtil::CountTrailingZeros(word));
+        word &= (word - 1);  // Should compile into a `blsr`.
       }
     }
   }
