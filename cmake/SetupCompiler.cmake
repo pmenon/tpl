@@ -1,5 +1,5 @@
-# ---- Force C++17
-set(CMAKE_CXX_STANDARD 17)
+# ---- Force C++20
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---- Require Clang or GCC
@@ -10,7 +10,7 @@ if (NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
 endif ()
 
 # ---- Setup initial CXX flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Werror -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a -Wall -Werror -march=native")
 
 ############################################################
 #
@@ -51,19 +51,35 @@ endif ()
 
 ############################################################
 #
-# Gold linker setup
+# Color-ize output, if enabled.
 #
 ############################################################
 
-if (TPL_USE_GOLD)
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
-    if ("${LD_VERSION}" MATCHES "GNU gold")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--disable-new-dtags")
-        message(STATUS "GNU gold enabled")
+if (${TPL_COLORIZE_OUTPUT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
     else ()
-        message(STATUS "GNU gold not found - disabled")
-        set(TPL_USE_GOLD OFF)
+        message(WARNING "Unable to colorize output of unknown compiler: ${CMAKE_CXX_COMPILER_ID}")
+    endif ()
+endif ()
+
+############################################################
+#
+# LLD linker setup
+#
+############################################################
+
+if (TPL_USE_LLD)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=lld -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
+    if ("${LD_VERSION}" MATCHES "LLD")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+        message(STATUS "LLD enabled")
+    else ()
+        message(STATUS "LLD not found - disabled")
+        set(TPL_USE_LLD OFF)
     endif ()
 endif ()
 

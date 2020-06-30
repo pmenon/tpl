@@ -41,22 +41,14 @@ class SelectionVector {
    * Unconditionally append the index to the end of the selection vector.
    * @param index The index to append to the end of the list.
    */
-  void Append(sel_t index) noexcept {
-    TPL_ASSERT(size_ < kDefaultVectorSize, "Too many elements in vector");
-    sel_vector_[size_++] = index;
-    CheckIntegrity();
-  }
+  void Append(sel_t index) noexcept;
 
   /**
    * Conditionally append the index to the end of the list.
    * @param index The index to append to the end of the list.
    * @param cond The condition used to control if the index is added.
    */
-  void AppendConditional(const sel_t index, const bool cond) noexcept {
-    TPL_ASSERT(size_ < kDefaultVectorSize, "Too many elements in vector");
-    if (cond) sel_vector_[size_++] = index;
-    CheckIntegrity();
-  }
+  void AppendConditional(const sel_t index, const bool cond) noexcept;
 
   /**
    * Iterate over all indexes in the selection vector.
@@ -64,11 +56,7 @@ class SelectionVector {
    * @param f The callback functor
    */
   template <typename F>
-  void ForEach(F f) const {
-    for (uint32_t i = 0; i < size_; i++) {
-      f(i);
-    }
-  }
+  void ForEach(F f) const;
 
   /**
    * Filter the TIDs in this selection vector based on the given unary filtering function.
@@ -77,17 +65,7 @@ class SelectionVector {
    * @param p The filtering function.
    */
   template <typename P>
-  void Filter(P p) {
-    uint32_t k = 0;
-    for (uint32_t i = 0; i < size_; i++) {
-      const sel_t tid = sel_vector_[i];
-      if (p(tid)) {
-        sel_vector_[k++] = tid;
-      }
-    }
-    size_ = k;
-    CheckIntegrity();
-  }
+  void Filter(P p);
 
   /**
    * Filter the TIDs in this list based on the given unary predicate. If the predicate returns true,
@@ -98,19 +76,7 @@ class SelectionVector {
    * @param p The filtering function.
    */
   template <typename P>
-  void SplitFilter(SelectionVector *failures, P p) {
-    uint32_t k = 0;
-    for (uint32_t i = 0; i < size_; i++) {
-      const sel_t tid = sel_vector_[i];
-      if (p(tid)) {
-        sel_vector_[k++] = tid;
-      } else {
-        failures->Append(tid);
-      }
-    }
-    size_ = k;
-    CheckIntegrity();
-  }
+  void SplitFilter(SelectionVector *failures, P p);
 
   /**
    * Build a selection vector using the indexes of set bits from the input bit vector.
@@ -143,19 +109,18 @@ class SelectionVector {
   }
 
   // -------------------------------------------------------
-  //
   // Operator Overloads
-  //
   // -------------------------------------------------------
 
   /**
-   * Access an element in the list by it's index in the total order.
-   * @param i The index of the element to select.
+   * Access the TID at the provided index in this list.
+   * @warning No bounds checking is performed.
+   * @param idx The index of the element to select.
    * @return The value of the element at the given index.
    */
-  std::size_t operator[](const uint32_t i) const {
-    TPL_ASSERT(i < GetSize(), "Out-of-bounds list access");
-    return sel_vector_[i];
+  std::size_t operator[](const uint32_t idx) const {
+    TPL_ASSERT(idx < GetSize(), "Out-of-bounds list access");
+    return sel_vector_[idx];
   }
 
   /**
@@ -180,9 +145,7 @@ class SelectionVector {
   }
 
   // -------------------------------------------------------
-  //
   // STL Iterators
-  //
   // -------------------------------------------------------
 
   /**
@@ -211,5 +174,61 @@ class SelectionVector {
   // The number of elements in the vector.
   sel_t size_;
 };
+
+// ---------------------------------------------------------
+//
+// Implementation below
+//
+// ---------------------------------------------------------
+
+// The below methods are inlined in the header on purpose for performance.
+// Please do not move them unless you know what you're doing.
+
+inline void SelectionVector::Append(const sel_t index) noexcept {
+  TPL_ASSERT(size_ < kDefaultVectorSize, "Too many elements in vector");
+  sel_vector_[size_++] = index;
+  CheckIntegrity();
+}
+
+inline void SelectionVector::AppendConditional(sel_t index, const bool cond) noexcept {
+  TPL_ASSERT(size_ < kDefaultVectorSize, "Too many elements in vector");
+  if (cond) sel_vector_[size_++] = index;
+  CheckIntegrity();
+}
+
+template <typename F>
+inline void SelectionVector::ForEach(F f) const {
+  for (uint32_t i = 0; i < size_; i++) {
+    f(sel_vector_[i]);
+  }
+}
+
+template <typename P>
+inline void SelectionVector::Filter(P p) {
+  uint32_t k = 0;
+  for (uint32_t i = 0; i < size_; i++) {
+    const sel_t tid = sel_vector_[i];
+    if (p(tid)) {
+      sel_vector_[k++] = tid;
+    }
+  }
+  size_ = k;
+  CheckIntegrity();
+}
+
+template <typename P>
+inline void SelectionVector::SplitFilter(SelectionVector *failures, P p) {
+  uint32_t k = 0;
+  for (uint32_t i = 0; i < size_; i++) {
+    const sel_t tid = sel_vector_[i];
+    if (p(tid)) {
+      sel_vector_[k++] = tid;
+    } else {
+      failures->Append(tid);
+    }
+  }
+  size_ = k;
+  CheckIntegrity();
+}
 
 }  // namespace tpl::sql

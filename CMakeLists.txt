@@ -4,7 +4,7 @@ project(tpl)
 
 # The version number.
 set(TPL_VERSION_MAJOR 0)
-set(TPL_VERSION_MINOR 1)
+set(TPL_VERSION_MINOR 5)
 
 # For external projects
 include(CMakeParseArguments)
@@ -34,7 +34,8 @@ configure_file (
 
 option(TPL_USE_ASAN "Build TPL with AddressSanitizer enabled" OFF)
 option(TPL_USE_TSAN "Build TPL with ThreadSanitizer enabled" OFF)
-option(TPL_USE_GOLD "Use the GNU Gold linker if available" OFF)
+option(TPL_USE_LLD "Use LLVM's LLD linker if available" OFF)
+option(TPL_COLORIZE_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." ON)
 option(TPL_GENERATE_COVERAGE "Build TPL with code coverage enabled" OFF)
 option(TPL_BUILD_DOC "Build Doxygen documentation" OFF)
 option(TPL_VERBOSE_THIRDPARTY_BUILD "Verbose output when building third-party librares" OFF)
