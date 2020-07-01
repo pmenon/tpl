@@ -343,7 +343,7 @@ class BinaryOperationExecutor : public AllStatic {
     auto *RESTRICT right_data = reinterpret_cast<const RightType *>(right.GetData());
 
     // Safe full-compute. Refer to comment at start of file for explanation.
-    if (traits::ShouldPerformFullCompute<Op>()(left.GetFilteredTupleIdList())) {
+    if (traits::ShouldPerformFullCompute<Op>()(tid_list)) {
       TupleIdList::BitVectorType *bit_vector = tid_list->GetMutableBits();
       bit_vector->UpdateFull([&](uint64_t i) { return op(left_data[i], right_data[i]); });
       bit_vector->Difference(left.GetNullMask()).Difference(right.GetNullMask());
