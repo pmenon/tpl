@@ -21,18 +21,23 @@ struct IsNumeric {
 };
 
 template <template <typename> typename Op, typename T>
-constexpr bool IsHashV = std::is_same_v<Op<T>, tpl::sql::Hash<T>>;
+struct IsHashOp {
+  static constexpr bool value =
+      // Either a vanilla hashing operation.
+      std::is_same_v<Op<T>, tpl::sql::Hash<T>> ||
+      // Or, a hash-with-seed (i.e., hash combine) operation.
+      std::is_same_v<Op<T>, tpl::sql::HashCombine<T>>;
+};
 
 template <template <typename> typename Op, typename T>
-constexpr bool IsHashCombineV = std::is_same_v<Op<T>, tpl::sql::HashCombine<T>>;
+constexpr bool IsHashOpV = IsHashOp<Op, T>::value;
 
 template <typename T>
 constexpr bool IsNumericV = IsNumeric<T>::value;
 
 // Specialize trait struct to enable full hash computation.
 template <template <typename> typename Op, typename T>
-struct ShouldPerformFullCompute<
-    Op<T>, std::enable_if_t<IsHashCombineV<Op, T> || (IsHashV<Op, T> && IsNumericV<T>)>> {
+struct ShouldPerformFullCompute<Op<T>, std::enable_if_t<IsHashOpV<Op, T> && IsNumericV<T>>> {
   bool operator()(const TupleIdList *tid_list) const {
     auto settings = Settings::Instance();
     const auto full_compute_threshold = settings->GetDouble(Settings::Name::FullHashOptThreshold);
