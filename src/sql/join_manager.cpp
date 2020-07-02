@@ -10,7 +10,7 @@
 namespace tpl::sql {
 
 JoinManager::JoinManager(void *opaque_context)
-    : filter_(true, opaque_context),
+    : filter_(false, opaque_context),
       input_tid_list_(kDefaultVectorSize),
       curr_vpi_(nullptr),
       first_join_(true) {
@@ -28,6 +28,11 @@ void JoinManager::InsertJoinStep(const JoinHashTable &table, const std::vector<u
 
   // Make a filtering step.
   filter_.InsertClauseTerm(match_fn);
+}
+
+void JoinManager::InsertJoinStep(const JoinHashTable &table, const uint32_t key_col_idxs[],
+                                 uint32_t num_keys_cols, FilterManager::MatchFn match_fn) {
+  InsertJoinStep(table, {key_col_idxs, key_col_idxs + num_keys_cols}, match_fn);
 }
 
 // Called during a single filter-join step.

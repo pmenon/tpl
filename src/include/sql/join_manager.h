@@ -22,7 +22,7 @@ class VectorProjectionIterator;
  * (2) the indexes of the join keys within the input batch (as they arrive) and (3) the matching
  * function used to evaluation the join.
  *
- * Once configured, the manage is "effectively" immutable and can be used to issue multi-step
+ * Once configured, the manager is effectively immutable and can be used to issue multi-step
  * joins. The process begins with an invocation to SetInputBatch() to prepare the join for a new
  * input batch of tuples. Then, all result tuples can be retrieved by looping while Next() returns
  * true:
@@ -61,11 +61,23 @@ class JoinManager {
    * Insert a join-probe step into the manager. The step will probe the provided join hash table
    * @em probe_table and use the columns indexes in @em key_cols as join keys.
    * @param table The table to probe in this step.
-   * @param key_cols The indexes of the columns in the
+   * @param key_cols The indexes of the columns to use as join keys, in order.
    * @param match_fn The join function.
    */
   void InsertJoinStep(const JoinHashTable &table, const std::vector<uint32_t> &key_cols,
                       FilterManager::MatchFn match_fn);
+
+  /**
+   * Insert a join-probe step into the manager. The step will probe the provided join hash table
+   * @em probe_table and use the columns indexes in @em key_cols as join keys. Used from the
+   * execution engine's VM.
+   * @param table The table to probe in this step.
+   * @param key_col_idxs An array containing the indexes of the columns to use as join keys.
+   * @param num_keys_cols The number of key columns.
+   * @param match_fn The join function.
+   */
+  void InsertJoinStep(const JoinHashTable &table, const uint32_t key_col_idxs[],
+                      uint32_t num_keys_cols, FilterManager::MatchFn match_fn);
 
   /**
    * Set the next set of input into the join.
