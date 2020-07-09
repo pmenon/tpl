@@ -10,7 +10,7 @@
 namespace tpl::sql {
 
 JoinManager::JoinManager(void *opaque_context)
-    : filter_(false, opaque_context),
+    : filter_(true, opaque_context),
       input_tid_list_(kDefaultVectorSize),
       curr_vpi_(nullptr),
       first_join_(true) {
