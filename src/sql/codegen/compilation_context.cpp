@@ -248,7 +248,8 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
     case planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
     case planner::ExpressionType::COMPARE_NOT_EQUAL:
     case planner::ExpressionType::COMPARE_LIKE:
-    case planner::ExpressionType::COMPARE_NOT_LIKE: {
+    case planner::ExpressionType::COMPARE_NOT_LIKE:
+    case planner::ExpressionType::COMPARE_BETWEEN: {
       const auto &comparison = static_cast<const planner::ComparisonExpression &>(expression);
       translator = std::make_unique<ComparisonTranslator>(comparison, this);
       break;

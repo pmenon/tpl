@@ -52,6 +52,8 @@ std::string ExpressionTypeToString(ExpressionType type, bool short_str) {
       return short_str ? "IN" : "COMPARE_IN";
     case ExpressionType::COMPARE_IS_DISTINCT_FROM:
       return short_str ? "IS_DISTINCT_FROM" : "COMPARE_IS_DISTINCT_FROM";
+    case ExpressionType::COMPARE_BETWEEN:
+      return "BETWEEN";
     case ExpressionType::CONJUNCTION_AND:
       return short_str ? "AND" : "CONJUNCTION_AND";
     case ExpressionType::CONJUNCTION_OR:

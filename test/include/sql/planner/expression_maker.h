@@ -134,6 +134,14 @@ class ExpressionMaker {
   }
 
   /**
+   * Create a BETWEEN expression: low <= input <= high
+   */
+  Expression CompareBetween(Expression input, Expression low, Expression high) {
+    return Alloc(std::make_unique<planner::ComparisonExpression>(
+        planner::ExpressionType::COMPARE_BETWEEN, std::vector<Expression>({input, low, high})));
+  }
+
+  /**
    * Create a unary operation expression
    */
   Expression Operator(planner::ExpressionType op_type, sql::TypeId ret_type, Expression child) {

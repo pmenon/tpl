@@ -12,9 +12,10 @@ namespace tpl::sql::codegen {
 ComparisonTranslator::ComparisonTranslator(const planner::ComparisonExpression &expr,
                                            CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {
-  // Prepare the left and right expression subtrees for translation.
-  compilation_context->Prepare(*expr.GetChild(0));
-  compilation_context->Prepare(*expr.GetChild(1));
+  // Prepare the children.
+  for (uint32_t i = 0; i < expr.GetChildrenSize(); i++) {
+    compilation_context->Prepare(*expr.GetChild(i));
+  }
 }
 
 ast::Expr *ComparisonTranslator::DeriveValue(WorkContext *ctx,
@@ -40,6 +41,12 @@ ast::Expr *ComparisonTranslator::DeriveValue(WorkContext *ctx,
       return codegen->Like(left_val, right_val);
     case planner::ExpressionType::COMPARE_NOT_LIKE:
       return codegen->NotLike(left_val, right_val);
+    case planner::ExpressionType::COMPARE_BETWEEN: {
+      auto lo = right_val, hi = ctx->DeriveValue(*GetExpression().GetChild(2), provider);
+      return codegen->BinaryOp(parsing::Token::Type::AND,
+                               codegen->Compare(parsing::Token::Type::GREATER_EQUAL, left_val, lo),
+                               codegen->Compare(parsing::Token::Type::LESS_EQUAL, left_val, hi));
+    }
     default: {
       throw NotImplementedException(fmt::format("Translation of comparison type {}",
                                                 planner::ExpressionTypeToString(expr_type, true)));
