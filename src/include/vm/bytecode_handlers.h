@@ -285,23 +285,10 @@ VM_OP_HOT void OpVPIHasNext(bool *has_more, const tpl::sql::VectorProjectionIter
   *has_more = vpi->HasNext();
 }
 
-VM_OP_HOT void OpVPIHasNextFiltered(bool *has_more, const tpl::sql::VectorProjectionIterator *vpi) {
-  *has_more = vpi->HasNextFiltered();
-}
-
 VM_OP_HOT void OpVPIAdvance(tpl::sql::VectorProjectionIterator *vpi) { vpi->Advance(); }
 
-VM_OP_HOT void OpVPIAdvanceFiltered(tpl::sql::VectorProjectionIterator *vpi) {
-  vpi->AdvanceFiltered();
-}
-
 VM_OP_HOT void OpVPISetPosition(tpl::sql::VectorProjectionIterator *vpi, const uint32_t index) {
-  vpi->SetPosition<false>(index);
-}
-
-VM_OP_HOT void OpVPISetPositionFiltered(tpl::sql::VectorProjectionIterator *const vpi,
-                                        const uint32_t index) {
-  vpi->SetPosition<true>(index);
+  vpi->SetPosition(index);
 }
 
 VM_OP_HOT void OpVPIMatch(tpl::sql::VectorProjectionIterator *vpi, const bool match) {
@@ -309,8 +296,6 @@ VM_OP_HOT void OpVPIMatch(tpl::sql::VectorProjectionIterator *vpi, const bool ma
 }
 
 VM_OP_HOT void OpVPIReset(tpl::sql::VectorProjectionIterator *vpi) { vpi->Reset(); }
-
-VM_OP_HOT void OpVPIResetFiltered(tpl::sql::VectorProjectionIterator *vpi) { vpi->ResetFiltered(); }
 
 // ---------------------------------------------------------
 // VPI Get

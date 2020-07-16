@@ -45,12 +45,12 @@ fun pipeline1(execCtx: *ExecutionContext, state: *State) -> nil {
         @filterManagerRunFilters(&filter, vpi)
 
         // Insert into sorter
-        for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
+        for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
             var row = @ptrCast(*Row, @sorterInsert(sorter))
             row.a = @vpiGetInt(vpi, 0)
             row.b = @vpiGetInt(vpi, 1)
         }
-        @vpiResetFiltered(vpi)
+        @vpiReset(vpi)
     }
     @tableIterClose(&tvi)
 

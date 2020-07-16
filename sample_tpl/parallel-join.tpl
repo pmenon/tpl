@@ -56,13 +56,13 @@ fun pipeline1_worker(queryState: *State, state: *ThreadState_1, tvi: *TableVecto
         @filterManagerRunFilters(filter, vec)
 
         // Insert into JHT using colA as key
-        for (; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
+        for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
             var key = @vpiGetInt(vec, 0)
             var elem = @ptrCast(*BuildRow, @joinHTInsert(jht, @hash(key)))
             elem.key = key
         }
 
-        @vpiResetFiltered(vec)
+        @vpiReset(vec)
     }
 }
 

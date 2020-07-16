@@ -682,12 +682,9 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       GetExecutionResult()->SetDestination(vector_projection.ValueOf());
       break;
     }
-    case ast::Builtin::VPIHasNext:
-    case ast::Builtin::VPIHasNextFiltered: {
-      const Bytecode bytecode =
-          builtin == ast::Builtin::VPIHasNext ? Bytecode::VPIHasNext : Bytecode::VPIHasNextFiltered;
+    case ast::Builtin::VPIHasNext: {
       LocalVar cond = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-      GetEmitter()->Emit(bytecode, cond, vpi);
+      GetEmitter()->Emit(Bytecode::VPIHasNext, cond, vpi);
       GetExecutionResult()->SetDestination(cond.ValueOf());
       break;
     }
@@ -695,18 +692,9 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       GetEmitter()->Emit(Bytecode::VPIAdvance, vpi);
       break;
     }
-    case ast::Builtin::VPIAdvanceFiltered: {
-      GetEmitter()->Emit(Bytecode::VPIAdvanceFiltered, vpi);
-      break;
-    }
     case ast::Builtin::VPISetPosition: {
       LocalVar index = VisitExpressionForRValue(call->Arguments()[1]);
       GetEmitter()->Emit(Bytecode::VPISetPosition, vpi, index);
-      break;
-    }
-    case ast::Builtin::VPISetPositionFiltered: {
-      LocalVar index = VisitExpressionForRValue(call->Arguments()[1]);
-      GetEmitter()->Emit(Bytecode::VPISetPositionFiltered, vpi, index);
       break;
     }
     case ast::Builtin::VPIMatch: {
@@ -716,10 +704,6 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
     }
     case ast::Builtin::VPIReset: {
       GetEmitter()->Emit(Bytecode::VPIReset, vpi);
-      break;
-    }
-    case ast::Builtin::VPIResetFiltered: {
-      GetEmitter()->Emit(Bytecode::VPIResetFiltered, vpi);
       break;
     }
 
@@ -1666,14 +1650,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPIGetSelectedRowCount:
     case ast::Builtin::VPIGetVectorProjection:
     case ast::Builtin::VPIHasNext:
-    case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
-    case ast::Builtin::VPIAdvanceFiltered:
     case ast::Builtin::VPISetPosition:
-    case ast::Builtin::VPISetPositionFiltered:
     case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
-    case ast::Builtin::VPIResetFiltered:
     case ast::Builtin::VPIGetBool:
     case ast::Builtin::VPIGetTinyInt:
     case ast::Builtin::VPIGetSmallInt:

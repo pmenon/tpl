@@ -408,16 +408,20 @@ ast::Expr *CodeGen::VPIIsFiltered(ast::Expr *vpi) {
   return call;
 }
 
-ast::Expr *CodeGen::VPIHasNext(ast::Expr *vpi, bool filtered) {
-  ast::Builtin builtin = filtered ? ast::Builtin::VPIHasNextFiltered : ast::Builtin::VPIHasNext;
-  ast::Expr *call = CallBuiltin(builtin, {vpi});
+ast::Expr *CodeGen::VPIHasNext(ast::Expr *vpi) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::VPIHasNext, {vpi});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::VPIAdvance(ast::Expr *vpi, bool filtered) {
-  ast::Builtin builtin = filtered ? ast::Builtin ::VPIAdvanceFiltered : ast::Builtin ::VPIAdvance;
-  ast::Expr *call = CallBuiltin(builtin, {vpi});
+ast::Expr *CodeGen::VPIAdvance(ast::Expr *vpi) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::VPIAdvance, {vpi});
+  call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
+  return call;
+}
+
+ast::Expr *CodeGen::VPIReset(ast::Expr *vpi) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::VPIReset, {vpi});
   call->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
   return call;
 }

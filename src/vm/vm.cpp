@@ -601,22 +601,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(VPIHasNextFiltered) : {
-    auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
-    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVPIHasNextFiltered(has_more, iter);
-    DISPATCH_NEXT();
-  }
-
   OP(VPIAdvance) : {
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     OpVPIAdvance(iter);
-    DISPATCH_NEXT();
-  }
-
-  OP(VPIAdvanceFiltered) : {
-    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVPIAdvanceFiltered(iter);
     DISPATCH_NEXT();
   }
 
@@ -624,13 +611,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     auto index = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
     OpVPISetPosition(iter, index);
-    DISPATCH_NEXT();
-  }
-
-  OP(VPISetPositionFiltered) : {
-    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    auto index = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
-    OpVPISetPositionFiltered(iter, index);
     DISPATCH_NEXT();
   }
 
@@ -644,12 +624,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(VPIReset) : {
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     OpVPIReset(iter);
-    DISPATCH_NEXT();
-  }
-
-  OP(VPIResetFiltered) : {
-    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVPIResetFiltered(iter);
     DISPATCH_NEXT();
   }
 

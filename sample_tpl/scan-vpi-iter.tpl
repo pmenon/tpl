@@ -4,16 +4,10 @@ fun filter_clause0term0(vector_proj: *VectorProjection, tids: *TupleIdList, ctx:
 
 fun count(vpi: *VectorProjectionIterator) -> int32 {
     var ret = 0
-    if (@vpiIsFiltered(vpi)) {
-        for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
-          ret = ret + 1
-        }
-    } else {
-        for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
-          ret = ret + 1
-        }
+    for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
+      ret = ret + 1
     }
-    @vpiResetFiltered(vpi)
+    @vpiReset(vpi)
     return ret
 }
 

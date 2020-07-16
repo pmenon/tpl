@@ -56,25 +56,15 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
   auto vpi = codegen->MakeExpr(vpi_var_);
   function->Append(codegen->VPIInit(vpi, vector_proj, tid_list));
 
-  auto gen_body = [&](const bool is_filtered) {
-    Loop vpi_loop(
-        function, nullptr,                                          // No init;
-        codegen->VPIHasNext(vpi, is_filtered),                      // @vpiHasNext[Filtered]();
-        codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));  // @vpiAdvance[Filtered]()
-    {
-      WorkContext context(GetCompilationContext(), *GetPipeline());
-      auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
-      auto match = cond_translator->DeriveValue(&context, this);
-      function->Append(codegen->VPIMatch(vpi, match));
-    }
-    vpi_loop.EndLoop();
-  };
-
-  If check_filtered(function, codegen->VPIIsFiltered(vpi));
-  gen_body(true);
-  check_filtered.Else();
-  gen_body(false);
-  check_filtered.EndIf();
+  Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi),
+                codegen->MakeStmt(codegen->VPIAdvance(vpi)));
+  {
+    WorkContext context(GetCompilationContext(), *GetPipeline());
+    auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
+    auto match = cond_translator->DeriveValue(&context, this);
+    function->Append(codegen->VPIMatch(vpi, match));
+  }
+  vpi_loop.EndLoop();
 }
 
 void SeqScanTranslator::GenerateFilterClauseFunctions(
@@ -148,17 +138,13 @@ void SeqScanTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDe
 void SeqScanTranslator::ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const {
   CodeGen *codegen = GetCodeGen();
 
-  auto gen_vpi_loop = [&](bool is_filtered) {
-    Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi, is_filtered),
-                  codegen->MakeStmt(codegen->VPIAdvance(vpi, is_filtered)));
-    {
-      // Push to parent.
-      ctx->Push(function);
-    }
-    vpi_loop.EndLoop();
-  };
-  // TODO(Amadou): What if the predicate doesn't filter out anything?
-  gen_vpi_loop(HasPredicate());
+  Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi),
+                codegen->MakeStmt(codegen->VPIAdvance(vpi)));
+  {
+    // Push to parent.
+    ctx->Push(function);
+  }
+  vpi_loop.EndLoop();
 }
 
 void SeqScanTranslator::ScanTable(WorkContext *ctx, FunctionBuilder *function) const {

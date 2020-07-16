@@ -41,7 +41,7 @@ fun pipeline1_worker(query_state: *State, state: *ThreadState_1, tvi: *TableVect
         @filterManagerRunFilters(filter, vpi)
 
         // Count
-        for (; @vpiHasNextFiltered(vpi); @vpiAdvanceFiltered(vpi)) {
+        for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
             state.count = state.count + 1
         }
     }

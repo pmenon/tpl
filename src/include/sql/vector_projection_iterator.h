@@ -49,29 +49,29 @@ namespace tpl::sql {
  *
  * <h3>Iteration API</h3>:
  *
- * A different iteration API exists depending on whether the underlying vector projection has been
- * filtered or not. Users must query filtration status before iteration through
- * VectorProjectionIterator::IsFiltered().
+ * Two iteration APIs are available. The first is a manual process relying on the
+ * HasNext(), Advance(), Reset() pattern as below:
  *
  * @code
- * VectorProjectionIterator iter = ...
- * if (iter.IsFiltered()) {
- *   for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
- *     // do work
- *   }
- * } else {
- *   for (; iter.HasNext(); iter.Advance()) {
- *     // do work
- *   }
+ * VectorProjectionIterator iter(vector_projection);
+ * for (; iter.HasNext(); iter.Advance()) {
+ *   // do work
  * }
+ * iter.Reset();
  * @endcode
  *
- * The above template exists only for TPL programs, since lambdas don't exist there. For you regular
- * C++ folks, use VectorProjectionIterator::ForEach().
+ * The second API is a functional VectorProjectionIterator::ForEach(). The manual version exists
+ * only for TPL programs, since lambdas don't exist there. Prefer the latter, otherwise!
  */
 class VectorProjectionIterator {
-  // Constant marking an invalid index in the selection vector
-  static constexpr sel_t kInvalidPos = std::numeric_limits<sel_t>::max();
+  using SelectionVector = std::array<sel_t, kDefaultVectorSize>;
+
+  // A full selection vector containing all indexes in [0,kDefaultVectorSize].
+  static constexpr SelectionVector kFullIncrementalSelectionVector = []() noexcept {
+    SelectionVector ret{};
+    for (sel_t i = 0; i < kDefaultVectorSize; i++) ret[i] = i;
+    return ret;
+  }();
 
  public:
   /**
@@ -80,13 +80,10 @@ class VectorProjectionIterator {
   VectorProjectionIterator()
       : vector_projection_(nullptr),
         tid_list_(nullptr),
-        curr_idx_(0),
         sel_vector_{0},
         size_(0),
         sel_vector_read_idx_(0),
-        sel_vector_write_idx_(0) {
-    sel_vector_[0] = kInvalidPos;
-  }
+        sel_vector_write_idx_(0) {}
 
   /**
    * Create an iterator over the given projection.
@@ -121,7 +118,7 @@ class VectorProjectionIterator {
   /**
    * @return True if the vector projection we're iterating over is filtered; false otherwise.
    */
-  bool IsFiltered() const { return sel_vector_[0] != kInvalidPos; }
+  bool IsFiltered() const { return !tid_list_->IsFull(); }
 
   /**
    * Reset this iterator to begin iteration over the given projection @em vector_projection.
@@ -173,25 +170,18 @@ class VectorProjectionIterator {
   /**
    * @return The current position in the vector projection.
    */
-  uint32_t GetPosition() const;
+  sel_t GetCurrentPosition() const;
 
   /**
    * Set the current iterator position.
-   * @tparam IsFiltered Is this VPI filtered?
    * @param idx The index the iteration should jump to
    */
-  template <bool IsFiltered>
   void SetPosition(uint32_t idx);
 
   /**
    * Advance the iterator by one tuple.
    */
   void Advance();
-
-  /**
-   * Advance the iterator by one to the next valid tuple in the filtered projection.
-   */
-  void AdvanceFiltered();
 
   /**
    * Mark the tuple this iterator is currently positioned at as valid or invalid.
@@ -206,20 +196,9 @@ class VectorProjectionIterator {
   bool HasNext() const;
 
   /**
-   * Does the iterator have another tuple after the filter has been applied?
-   * @return True if there is more input tuples; false otherwise
-   */
-  bool HasNextFiltered() const;
-
-  /**
    * Reset iteration to the beginning of the vector projection.
    */
   void Reset();
-
-  /**
-   * Reset iteration to the beginning of the filtered vector projection.
-   */
-  void ResetFiltered();
 
   /**
    * Run a functor over all active tuples in the vector projection.
@@ -267,19 +246,17 @@ class VectorProjectionIterator {
     tid_list_ = tid_list;
 
     if (!tid_list_->IsFull()) {
-      size_ = tid_list_->ToSelectionVector(sel_vector_);
-      curr_idx_ = sel_vector_[0];
+      size_ = tid_list_->ToSelectionVector(sel_vector_.data());
     } else {
-      sel_vector_[0] = kInvalidPos;
+      sel_vector_ = kFullIncrementalSelectionVector;
       size_ = tid_list_->GetCapacity();
-      curr_idx_ = 0;
     }
 
     sel_vector_read_idx_ = 0;
     sel_vector_write_idx_ = 0;
   }
 
- private:
+ public:
   // The vector projection we're iterating over.
   VectorProjection *vector_projection_;
 
@@ -287,12 +264,10 @@ class VectorProjectionIterator {
   // updated when iteration is filtered.
   TupleIdList *tid_list_;
 
-  // The current raw position in the vector projection we're pointing to.
-  sel_t curr_idx_;
-
-  // The selection vector used to filter the vector projection. This is a cached
-  // materialized copy of the vector projection's tuple ID list.
-  sel_t sel_vector_[kDefaultVectorSize];
+  // The selection vector used to filter the vector projection. This is a
+  // materialized copy of the vector projection's tuple ID list! Because it's a
+  // cached copy, VPI ensures the two are kept in sync.
+  SelectionVector sel_vector_;
 
   // The number of elements in the projection. If filtered, size is the number
   // of elements in the selection vector. Otherwise, it is the total number of
@@ -325,19 +300,24 @@ template <typename T, bool Nullable>
 inline const T *VectorProjectionIterator::GetValue(uint32_t col_idx, bool *null) const {
   // The vector we'll read from
   const Vector *col_vector = vector_projection_->GetColumn(col_idx);
+  // The current position in the projection.
+  const sel_t curr_idx = GetCurrentPosition();
 
   if constexpr (Nullable) {
     TPL_ASSERT(null != nullptr, "Missing output variable for NULL indicator");
-    *null = col_vector->null_mask_[curr_idx_];
+    *null = col_vector->null_mask_[curr_idx];
   }
 
-  return reinterpret_cast<const T *>(col_vector->data_) + curr_idx_;
+  const T *RESTRICT data = reinterpret_cast<const T *>(col_vector->data_);
+  return &data[curr_idx];
 }
 
 template <typename T, bool Nullable>
 inline void VectorProjectionIterator::SetValue(uint32_t col_idx, const T val, bool null) {
   // The vector we'll write into
   Vector *col_vector = vector_projection_->GetColumn(col_idx);
+  // The current position in the projection.
+  const sel_t curr_idx = GetCurrentPosition();
 
   // If the column is NULL-able, we check the NULL indication flag before
   // writing into the columns's underlying data array. If the column isn't
@@ -345,64 +325,44 @@ inline void VectorProjectionIterator::SetValue(uint32_t col_idx, const T val, bo
   // data array.
 
   if constexpr (Nullable) {
-    col_vector->null_mask_[curr_idx_] = null;
+    col_vector->null_mask_[curr_idx] = null;
     if (!null) {
-      reinterpret_cast<T *>(col_vector->data_)[curr_idx_] = val;
+      reinterpret_cast<T *>(col_vector->data_)[curr_idx] = val;
     }
   } else {
-    reinterpret_cast<T *>(col_vector->data_)[curr_idx_] = val;
+    reinterpret_cast<T *>(col_vector->data_)[curr_idx] = val;
   }
 }
 
-inline uint32_t VectorProjectionIterator::GetPosition() const { return curr_idx_; }
+inline sel_t VectorProjectionIterator::GetCurrentPosition() const {
+  return sel_vector_[sel_vector_read_idx_];
+}
 
-template <bool Filtered>
 inline void VectorProjectionIterator::SetPosition(uint32_t idx) {
   TPL_ASSERT(idx < GetSelectedTupleCount(), "Out of bounds access");
-  if constexpr (Filtered) {
-    TPL_ASSERT(IsFiltered(), "Attempting to set position in unfiltered VPI");
-    sel_vector_read_idx_ = idx;
-    curr_idx_ = sel_vector_[sel_vector_read_idx_];
-  } else {
-    TPL_ASSERT(!IsFiltered(), "Attempting to set position in filtered VPI");
-    curr_idx_ = idx;
-  }
+  sel_vector_read_idx_ = idx;
 }
 
-inline void VectorProjectionIterator::Advance() { curr_idx_++; }
-
-inline void VectorProjectionIterator::AdvanceFiltered() {
-  curr_idx_ = sel_vector_[++sel_vector_read_idx_];
-}
+inline void VectorProjectionIterator::Advance() { sel_vector_read_idx_++; }
 
 inline void VectorProjectionIterator::Match(bool matched) {
   // Update the cached selection vector
-  sel_vector_[sel_vector_write_idx_] = curr_idx_;
+  const sel_t curr_idx = GetCurrentPosition();
+  sel_vector_[sel_vector_write_idx_] = curr_idx;
   sel_vector_write_idx_ += static_cast<uint32_t>(matched);
 
   // Update the TID list
-  tid_list_->Enable(curr_idx_, matched);
+  tid_list_->Enable(curr_idx, matched);
 }
 
-inline bool VectorProjectionIterator::HasNext() const { return curr_idx_ < size_; }
-
-inline bool VectorProjectionIterator::HasNextFiltered() const {
-  return sel_vector_read_idx_ < size_;
-}
+inline bool VectorProjectionIterator::HasNext() const { return sel_vector_read_idx_ < size_; }
 
 inline void VectorProjectionIterator::Reset() {
-  curr_idx_ = IsFiltered() ? sel_vector_[0] : 0;
-  sel_vector_read_idx_ = 0;
-  sel_vector_write_idx_ = 0;
-}
-
-inline void VectorProjectionIterator::ResetFiltered() {
   // Update the projection counts
   vector_projection_->RefreshFilteredTupleIdList();
 
   // Reset index positions
-  curr_idx_ = sel_vector_[0];
-  size_ = sel_vector_write_idx_;
+  size_ = tid_list_->GetTupleCount();
   sel_vector_read_idx_ = 0;
   sel_vector_write_idx_ = 0;
 }
@@ -412,14 +372,8 @@ inline void VectorProjectionIterator::ForEach(F f) {
   // Ensure callback conforms to expectation
   static_assert(std::is_invocable_r_v<void, F>, "Callback must be a no-arg void-return function");
 
-  if (IsFiltered()) {
-    for (; HasNextFiltered(); AdvanceFiltered()) {
-      f();
-    }
-  } else {
-    for (; HasNext(); Advance()) {
-      f();
-    }
+  for (; HasNext(); Advance()) {
+    f();
   }
 
   Reset();
@@ -438,23 +392,16 @@ inline void VectorProjectionIterator::SynchronizedForEach(
           std::none_of(iters.begin(), iters.end(), [](auto vpi) { return vpi->IsFiltered(); }),
       "All iterators must have the same filtration status");
 
-  // No-op if list is empty.
   if (iters.size() == 0) {
     return;
   }
 
-  // Fire.
-  if ((*iters.begin())->IsFiltered()) {
-    for (; std::all_of(iters.begin(), iters.end(), [](auto vpi) { return vpi->HasNextFiltered(); });
-         std::for_each(iters.begin(), iters.end(), [](auto vpi) { vpi->AdvanceFiltered(); })) {
-      f();
-    }
-  } else {
-    for (; std::all_of(iters.begin(), iters.end(), [](auto vpi) { return vpi->HasNext(); });
-         std::for_each(iters.begin(), iters.end(), [](auto vpi) { vpi->Advance(); })) {
-      f();
-    }
+  for (; std::all_of(iters.begin(), iters.end(), [](auto vpi) { return vpi->HasNext(); });
+       std::for_each(iters.begin(), iters.end(), [](auto vpi) { vpi->Advance(); })) {
+    f();
   }
+
+  std::for_each(iters.begin(), iters.end(), [](auto vpi) { vpi->Reset(); });
 }
 
 template <typename P>
@@ -462,17 +409,11 @@ inline void VectorProjectionIterator::RunFilter(P p) {
   // Ensure filter function conforms to expected form
   static_assert(std::is_invocable_r_v<bool, P>, "Predicate must take no arguments and return bool");
 
-  if (IsFiltered()) {
-    for (; HasNextFiltered(); AdvanceFiltered()) {
-      Match(p());
-    }
-  } else {
-    for (; HasNext(); Advance()) {
-      Match(p());
-    }
+  for (; HasNext(); Advance()) {
+    Match(p());
   }
 
-  ResetFiltered();
+  Reset();
 }
 
 }  // namespace tpl::sql

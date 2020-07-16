@@ -553,22 +553,25 @@ class CodeGen {
   [[nodiscard]] ast::Expr *VPIIsFiltered(ast::Expr *vpi);
 
   /**
-   * Call @vpiHasNext() or @vpiHasNextFiltered(). Check if the provided unfiltered (or filtered) VPI
-   * has more tuple data to iterate over.
+   * Call @vpiHasNext(). Check if the provided VPI has more tuple data to iterate over.
    * @param vpi The vector projection iterator.
-   * @param filtered Flag indicating if the VPI is filtered.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *VPIHasNext(ast::Expr *vpi, bool filtered);
+  [[nodiscard]] ast::Expr *VPIHasNext(ast::Expr *vpi);
 
   /**
-   * Call @vpiAdvance() or @vpiAdvanceFiltered(). Advance the provided unfiltered (or filtered) VPI
-   * to the next valid tuple.
+   * Call @vpiAdvance(). Advance the provided VPI to the next valid tuple.
    * @param vpi The vector projection iterator.
-   * @param filtered Flag indicating if the VPI is filtered.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *VPIAdvance(ast::Expr *vpi, bool filtered);
+  [[nodiscard]] ast::Expr *VPIAdvance(ast::Expr *vpi);
+
+  /**
+   * Call @vpiReset(). Reset the iterator.
+   * @param vpi The vector projection iterator.
+   * @return The call expression.
+   */
+  [[nodiscard]] ast::Expr *VPIReset(ast::Expr *vpi);
 
   /**
    * Call @vpiInit(). Initialize a new VPI using the provided vector projection. The last TID list

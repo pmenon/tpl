@@ -26,28 +26,6 @@ fun hashFn(vpi: *VectorProjectionIterator) -> uint64 {
     return @hash(@vpiGetInt(vpi, 1))
 }
 
-fun vecHashFnFiltered(hashes: [*]uint64, vec: *VectorProjectionIterator) -> nil {
-    for (var idx = 0; @vpiHasNextFiltered(vec); @vpiAdvanceFiltered(vec)) {
-        hashes[idx] = @hash(@vpiGetInt(vec, 1))
-        idx = idx + 1
-    }
-}
-
-fun vecHashFnUnfiltered(hashes: [*]uint64, vec: *VectorProjectionIterator) -> nil {
-    for (var idx = 0; @vpiHasNext(vec); @vpiAdvance(vec)) {
-        hashes[idx] = @hash(@vpiGetInt(vec, 1))
-        idx = idx + 1
-    }
-}
-
-fun vecHashFn(hashes: [*]uint64, vec: *VectorProjectionIterator) -> nil {
-    if (@vpiIsFiltered(vec)) {
-        vecHashFnFiltered(hashes, vec)
-    } else {
-        vecHashFnUnfiltered(hashes, vec)
-    }
-}
-
 fun constructAgg(agg: *Agg, vpi: *VectorProjectionIterator) -> nil {
     // Set key
     agg.key = @vpiGetInt(vpi, 1)

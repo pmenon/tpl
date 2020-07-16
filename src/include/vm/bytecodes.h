@@ -125,14 +125,10 @@ namespace tpl::vm {
   F(VPIGetSelectedRowCount, OperandType::Local, OperandType::Local)                                                    \
   F(VPIGetVectorProjection, OperandType::Local, OperandType::Local)                                                    \
   F(VPIHasNext, OperandType::Local, OperandType::Local)                                                                \
-  F(VPIHasNextFiltered, OperandType::Local, OperandType::Local)                                                        \
   F(VPIAdvance, OperandType::Local)                                                                                    \
-  F(VPIAdvanceFiltered, OperandType::Local)                                                                            \
   F(VPISetPosition, OperandType::Local, OperandType::Local)                                                            \
-  F(VPISetPositionFiltered, OperandType::Local, OperandType::Local)                                                    \
   F(VPIMatch, OperandType::Local, OperandType::Local)                                                                  \
   F(VPIReset, OperandType::Local)                                                                                      \
-  F(VPIResetFiltered, OperandType::Local)                                                                              \
   F(VPIGetBool, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPIGetTinyInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \

@@ -51,14 +51,10 @@ namespace tpl::ast {
   F(VPIGetSelectedRowCount, vpiSelectedRowCount)                \
   F(VPIGetVectorProjection, vpiGetVectorProjection)             \
   F(VPIHasNext, vpiHasNext)                                     \
-  F(VPIHasNextFiltered, vpiHasNextFiltered)                     \
   F(VPIAdvance, vpiAdvance)                                     \
-  F(VPIAdvanceFiltered, vpiAdvanceFiltered)                     \
   F(VPISetPosition, vpiSetPosition)                             \
-  F(VPISetPositionFiltered, vpiSetPositionFiltered)             \
   F(VPIMatch, vpiMatch)                                         \
   F(VPIReset, vpiReset)                                         \
-  F(VPIResetFiltered, vpiResetFiltered)                         \
   F(VPIGetBool, vpiGetBool)                                     \
   F(VPIGetTinyInt, vpiGetTinyInt)                               \
   F(VPIGetSmallInt, vpiGetSmallInt)                             \

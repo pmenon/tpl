@@ -954,11 +954,8 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
     }
     case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIHasNext:
-    case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
-    case ast::Builtin::VPIAdvanceFiltered:
-    case ast::Builtin::VPIReset:
-    case ast::Builtin::VPIResetFiltered: {
+    case ast::Builtin::VPIReset: {
       call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
@@ -970,8 +967,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       call->SetType(GetBuiltinType(ast::BuiltinType::VectorProjection)->PointerTo());
       break;
     }
-    case ast::Builtin::VPISetPosition:
-    case ast::Builtin::VPISetPositionFiltered: {
+    case ast::Builtin::VPISetPosition: {
       if (!CheckArgCount(call, 2)) {
         return;
       }
@@ -1716,14 +1712,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIGetSelectedRowCount:
     case ast::Builtin::VPIGetVectorProjection:
     case ast::Builtin::VPIHasNext:
-    case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
-    case ast::Builtin::VPIAdvanceFiltered:
     case ast::Builtin::VPISetPosition:
-    case ast::Builtin::VPISetPositionFiltered:
     case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
-    case ast::Builtin::VPIResetFiltered:
     case ast::Builtin::VPIGetBool:
     case ast::Builtin::VPIGetTinyInt:
     case ast::Builtin::VPIGetSmallInt:
