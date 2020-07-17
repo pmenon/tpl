@@ -42,36 +42,46 @@ class SelectionBenchmark : public benchmark::Fixture {
 };
 
 BENCHMARK_DEFINE_F(SelectionBenchmark, TaaT_Conjunction)(benchmark::State &state) {
-  auto vec_projection = MakeInput(state.range(0));
+  auto vp = MakeInput(state.range(0));
+
+  // Copy list so we can restore the VP later.
+  auto tid_list = sql::TupleIdList(kDefaultVectorSize);
+  vp->CopySelectionsTo(&tid_list);
+
   for (auto _ : state) {
-    sql::VectorProjectionIterator vpi(vec_projection.get());
+    sql::VectorProjectionIterator vpi(vp.get());
     for (; vpi.HasNext(); vpi.Advance()) {
       if (*vpi.GetValue<int32_t, false>(0, nullptr) == 0 &&
           *vpi.GetValue<int32_t, false>(1, nullptr) == 0) {
         vpi.Match(true);
       }
     }
-    vpi.ResetFiltered();
+    vpi.Reset();
     uint64_t count = vpi.GetSelectedTupleCount();
     benchmark::DoNotOptimize(count);
-    vec_projection->Reset(kDefaultVectorSize);
+    vp->SetFilteredSelections(tid_list);
   }
 }
 
 BENCHMARK_DEFINE_F(SelectionBenchmark, TaaT_Disjunction)(benchmark::State &state) {
-  auto vec_projection = MakeInput(state.range(0));
+  auto vp = MakeInput(state.range(0));
+
+  // Copy list so we can restore the VP later.
+  auto tid_list = sql::TupleIdList(kDefaultVectorSize);
+  vp->CopySelectionsTo(&tid_list);
+
   for (auto _ : state) {
-    sql::VectorProjectionIterator vpi(vec_projection.get());
+    sql::VectorProjectionIterator vpi(vp.get());
     for (; vpi.HasNext(); vpi.Advance()) {
       if (*vpi.GetValue<int32_t, false>(0, nullptr) == 0 ||
           *vpi.GetValue<int32_t, false>(1, nullptr) == 0) {
         vpi.Match(true);
       }
     }
-    vpi.ResetFiltered();
+    vpi.Reset();
     uint64_t count = vpi.GetSelectedTupleCount();
     benchmark::DoNotOptimize(count);
-    vec_projection->Reset(kDefaultVectorSize);
+    vp->SetFilteredSelections(tid_list);
   }
 }
 
