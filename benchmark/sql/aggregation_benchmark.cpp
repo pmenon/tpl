@@ -15,6 +15,8 @@
 #include "util/fast_rand.h"
 #include "util/timer.h"
 
+#define PROFILE 1
+
 namespace tpl {
 
 namespace {
@@ -155,18 +157,10 @@ namespace {
 
 void InitAggs(sql::VectorProjectionIterator *RESTRICT a,
               sql::VectorProjectionIterator *RESTRICT input) {
-  if (a->IsFiltered()) {
-    for (; a->HasNextFiltered(); a->AdvanceFiltered(), input->AdvanceFiltered()) {
-      auto agg = (*a->GetValue<sql::HashTableEntry *, false>(1, nullptr))->PayloadAs<AggTuple>();
-      agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
-      agg->count1 = agg->count2 = agg->count3 = 0;
-    }
-  } else {
-    for (; a->HasNext(); a->Advance(), input->Advance()) {
-      auto agg = (*a->GetValue<sql::HashTableEntry *, false>(1, nullptr))->PayloadAs<AggTuple>();
-      agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
-      agg->count1 = agg->count2 = agg->count3 = 0;
-    }
+  for (; a->HasNext(); a->Advance(), input->Advance()) {
+    auto agg = (*a->GetValue<sql::HashTableEntry *, false>(1, nullptr))->PayloadAs<AggTuple>();
+    agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
+    agg->count1 = agg->count2 = agg->count3 = 0;
   }
 }
 
@@ -183,6 +177,12 @@ void UpdateAggs(sql::VectorProjectionIterator *RESTRICT a,
 }  // namespace
 
 BENCHMARK_DEFINE_F(AggregationBenchmark, Agg_VaaT)(benchmark::State &state) {
+#if PROFILE == 1
+  printf("Enter: ");
+  int x = getchar();
+  (void)x;
+#endif
+
   auto &table_meta = kAggConfigs[state.range(0)];
   auto table = sql::Catalog::Instance()->LookupTableByName(table_meta.name);
   auto table_id = table->GetId();
@@ -210,12 +210,10 @@ BENCHMARK_DEFINE_F(AggregationBenchmark, Agg_VaaT)(benchmark::State &state) {
 
 BENCHMARK_REGISTER_F(AggregationBenchmark, Agg_TaaT)
     ->DenseRange(0, kNumAggConfigs - 1)
-    ->Iterations(20)
     ->Unit(benchmark::kMillisecond);
 
 BENCHMARK_REGISTER_F(AggregationBenchmark, Agg_VaaT)
     ->DenseRange(0, kNumAggConfigs - 1)
-    ->Iterations(20)
     ->Unit(benchmark::kMillisecond);
 
 }  // namespace tpl
