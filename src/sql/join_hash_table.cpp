@@ -553,17 +553,17 @@ void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
 
 void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_container,
                                   const std::size_t jht_offset) {
-  // Collect thread-local hash tables
   std::vector<JoinHashTable *> tl_join_tables;
   thread_state_container->CollectThreadLocalStateElementsAs(&tl_join_tables, jht_offset);
 
-  // Combine HLL counts to get a global estimate
-  for (auto *jht : tl_join_tables) {
+  // Combine each thread-local HLL instance (in each hash table) into the global
+  // instance to estimate the number of unique keys. Use this estimate to create
+  // and resize an empty global hash table. Doing so removes the need to
+  // dynamically grow during a lazy build, which has significant overhead.
+  for (auto jht : tl_join_tables) {
     hll_estimator_->Merge(jht->hll_estimator_.get());
   }
-
-  // Size the global hash table
-  uint64_t num_elem_estimate = hll_estimator_->Estimate();
+  const uint64_t num_elem_estimate = hll_estimator_->Estimate();
   chaining_hash_table_.SetSize(num_elem_estimate);
 
   // Resize the owned entries vector now to avoid resizing concurrently during
@@ -592,6 +592,8 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   LOG_INFO("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
            use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
            chaining_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
+
+  built_ = true;
 }
 
 }  // namespace tpl::sql
