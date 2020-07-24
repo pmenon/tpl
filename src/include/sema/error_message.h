@@ -66,7 +66,10 @@ namespace sema {
     (ast::Identifier, ast::Type *))                                                                \
   F(InvalidIndexOperation, "invalid operation: type '%0' does not support indexing",               \
     (ast::Type *))                                                                                 \
-  F(InvalidArrayIndexValue, "non-integer array index", ())                                         \
+  F(NonIntegerArrayIndexValue, "non-integer array index", ())                                      \
+  F(NegativeArrayIndexValue, "invalid array index %0. index must be non-negative", (int32_t))      \
+  F(OutOfBoundsArrayIndexValue, "invalid array index %0. out of bounds for %1-element array",      \
+    (int32_t, int32_t))                                                                            \
   F(InvalidCastToSqlInt, "invalid cast of %0 to SQL integer", (ast::Type *))                       \
   F(InvalidCastToSqlDecimal, "invalid cast of %0 to SQL decimal", (ast::Type *))                   \
   F(InvalidCastToSqlDate,                                                                          \
@@ -77,10 +80,10 @@ namespace sema {
   F(MissingReturn, "missing return at end of function", ())                                        \
   F(InvalidDeclaration, "non-declaration outside function", ())                                    \
   F(BadComparisonFunctionForSorter,                                                                \
-    "sorterInit requires a comparison function of type (*,*)->int32. Received type '%0'",          \
+    "sorterInit requires a comparison function of type (*,*)->int32. received type '%0'",          \
     (ast::Type *))                                                                                 \
   F(BadArgToPtrCast,                                                                               \
-    "ptrCast() expects (compile-time *Type, Expr) arguments. Received type '%0' in position %1",   \
+    "ptrCast() expects (compile-time *Type, Expr) arguments. received type '%0' in position %1",   \
     (ast::Type *, uint32_t))                                                                       \
   F(BadHashArg, "cannot hash type '%0'", (ast::Type *))                                            \
   F(MissingArrayLength, "missing array length (either compile-time number or '*')", ())            \

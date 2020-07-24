@@ -412,9 +412,28 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
     case Token::Type::MINUS:
     case Token::Type::STAR: {
       Token::Type op = Next();
-      const SourcePosition &position = scanner_->current_position();
-      ast::Expr *expr = ParseUnaryOpExpr();
-      return node_factory_->NewUnaryOpExpr(position, op, expr);
+      SourcePosition pos = scanner_->current_position();
+      ast::Expr *expression = ParseUnaryOpExpr();
+
+      // Some quick rewrites here.
+      if (const auto literal = expression->SafeAs<ast::LitExpr>()) {
+        if (op == Token::Type::BANG && literal->IsBoolLitExpr()) {
+          // Negate the boolean value and return a new literal.
+          return node_factory_->NewBoolLiteral(pos, !literal->BoolVal());
+        } else if (literal->IsIntLitExpr()) {
+          // Simple rewrites involving numbers.
+          switch (op) {
+            case Token::Type::PLUS:
+              return expression;
+            case Token::Type::MINUS:
+              return node_factory_->NewIntLiteral(pos, -literal->Int32Val());
+            default:
+              break;
+          }
+        }
+      }
+
+      return node_factory_->NewUnaryOpExpr(pos, op, expression);
     }
     default: {
       break;

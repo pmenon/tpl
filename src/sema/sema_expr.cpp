@@ -209,7 +209,6 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   ast::Type *index_type = Resolve(node->Index());
 
   if (obj_type == nullptr || index_type == nullptr) {
-    // Error
     return;
   }
 
@@ -219,11 +218,26 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 
   if (!index_type->IsIntegerType()) {
-    error_reporter()->Report(node->Position(), ErrorMessages::kInvalidArrayIndexValue);
+    error_reporter()->Report(node->Position(), ErrorMessages::kNonIntegerArrayIndexValue);
     return;
   }
 
   if (auto *arr_type = obj_type->SafeAs<ast::ArrayType>()) {
+    if (auto *index = node->Index()->SafeAs<ast::LitExpr>()) {
+      const int32_t index_val = index->Int32Val();
+      // Check negative array indices.
+      if (index_val < 0) {
+        error_reporter()->Report(index->Position(), ErrorMessages::kNegativeArrayIndexValue,
+                                 index_val);
+        return;
+      }
+      // Check known out-of-bounds array access.
+      if (arr_type->HasKnownLength() && static_cast<uint64_t>(index_val) >= arr_type->GetLength()) {
+        error_reporter()->Report(index->Position(), ErrorMessages::kOutOfBoundsArrayIndexValue,
+                                 index_val, arr_type->GetLength());
+        return;
+      }
+    }
     node->SetType(arr_type->GetElementType());
   } else {
     node->SetType(obj_type->As<ast::MapType>()->GetValueType());
