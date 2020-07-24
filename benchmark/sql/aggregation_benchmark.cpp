@@ -15,7 +15,7 @@
 #include "util/fast_rand.h"
 #include "util/timer.h"
 
-#define PROFILE 1
+#define PAUSE_FOR_PROFILE 0
 
 namespace tpl {
 
@@ -109,6 +109,12 @@ class AggregationBenchmark : public benchmark::Fixture {
 };
 
 BENCHMARK_DEFINE_F(AggregationBenchmark, Agg_TaaT)(benchmark::State &state) {
+#if defined(PAUSE_FOR_PROFILE) && PAUSE_FOR_PROFILE == 1
+  int x;
+  std::cout << "Enter: ";
+  std::cin >> x;
+#endif
+
   auto &table_meta = kAggConfigs[state.range(0)];
   auto table_id = sql::Catalog::Instance()->LookupTableByName(table_meta.name)->GetId();
   for (auto _ : state) {
@@ -177,10 +183,10 @@ void UpdateAggs(sql::VectorProjectionIterator *RESTRICT a,
 }  // namespace
 
 BENCHMARK_DEFINE_F(AggregationBenchmark, Agg_VaaT)(benchmark::State &state) {
-#if PROFILE == 1
-  printf("Enter: ");
-  int x = getchar();
-  (void)x;
+#if defined(PAUSE_FOR_PROFILE) && PAUSE_FOR_PROFILE == 1
+  int x;
+  std::cout << "Enter: ";
+  std::cin >> x;
 #endif
 
   auto &table_meta = kAggConfigs[state.range(0)];
