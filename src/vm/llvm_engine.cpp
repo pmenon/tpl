@@ -75,8 +75,14 @@ class LLVMEngine::MCMemoryManager : public llvm::SectionMemoryManager {
     LOG_TRACE("Symbol '{}' not found in cache, checking process ...", name);
 
     llvm::JITSymbol symbol = llvm::SectionMemoryManager::findSymbol(name);
-    TPL_ASSERT(symbol.getAddress(), "Resolved symbol has no address!");
-    symbols_[name] = {symbol.getAddress().get(), symbol.getFlags()};
+    llvm::Expected<llvm::JITTargetAddress> address_or_error = symbol.getAddress();
+#ifndef NDEBUG
+    if (auto error = address_or_error.takeError()) {
+      LOG_ERROR("Unable to resolve address for target '{}'.", name);
+      return llvm::JITSymbol(std::move(error));
+    }
+#endif
+    symbols_[name] = llvm::JITEvaluatedSymbol(*address_or_error, symbol.getFlags());
     return symbol;
   }
 
@@ -849,10 +855,11 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
       }
 
       case Bytecode::Lea: {
-        TPL_ASSERT(args[1]->getType()->isPointerTy(), "First argument must be a pointer");
+        TPL_ASSERT(args[0]->getType()->isPointerTy(), "Target of LEA must be a pointer.");
+        TPL_ASSERT(args[1]->getType()->isPointerTy(), "Source of LEA must be a pointer.");
         const llvm::DataLayout &dl = llvm_module_->getDataLayout();
         llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
-        int64_t offset = llvm::cast<llvm::ConstantInt>(args[2])->getSExtValue();
+        const int64_t offset = llvm::cast<llvm::ConstantInt>(args[2])->getSExtValue();
         if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
           const uint32_t elem_index =
               dl.getStructLayout(struct_type)->getElementContainingOffset(offset);
