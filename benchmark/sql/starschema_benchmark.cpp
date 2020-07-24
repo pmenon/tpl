@@ -2635,7 +2635,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_2)(benchmark::State &state) {
   {
     auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
     auto p_mfgr = expr_maker.CVE(p_schema.GetColumnInfo("p_mfgr").oid, sql::TypeId::Varchar);
-    auto p_category = expr_maker.CVE(p_schema.GetColumnInfo("p_category").oid, sql::TypeId::Varchar);
+    auto p_category =
+        expr_maker.CVE(p_schema.GetColumnInfo("p_category").oid, sql::TypeId::Varchar);
     // Make the predicate: p_mfgr = 'MFGR#1' or p_mfgr = 'MFGR#2'
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(p_mfgr, expr_maker.Constant("MFGR#1")),
@@ -2921,10 +2922,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     d_seq_scan_out.AddOutput("d_year", d_year);
     // Build plan node.
     d_seq_scan = planner::SeqScanPlanNode::Builder{}
-        .SetOutputSchema(d_seq_scan_out.MakeSchema())
-        .SetScanPredicate(predicate)
-        .SetTableOid(d_table->GetId())
-        .Build();
+                     .SetOutputSchema(d_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(d_table->GetId())
+                     .Build();
   }
 
   // Scan customer
@@ -2939,10 +2940,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     c_seq_scan_out.AddOutput("c_custkey", c_custkey);
     // Build plan node.
     c_seq_scan = planner::SeqScanPlanNode::Builder{}
-        .SetOutputSchema(c_seq_scan_out.MakeSchema())
-        .SetScanPredicate(predicate)
-        .SetTableOid(c_table->GetId())
-        .Build();
+                     .SetOutputSchema(c_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(c_table->GetId())
+                     .Build();
   }
 
   // Scan supplier
@@ -2959,10 +2960,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     s_seq_scan_out.AddOutput("s_city", s_city);
     // Build plan node.
     s_seq_scan = planner::SeqScanPlanNode::Builder{}
-        .SetOutputSchema(s_seq_scan_out.MakeSchema())
-        .SetScanPredicate(predicate)
-        .SetTableOid(s_table->GetId())
-        .Build();
+                     .SetOutputSchema(s_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(s_table->GetId())
+                     .Build();
   }
 
   // Scan part
@@ -2971,7 +2972,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
   {
     auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
     auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1").oid, sql::TypeId::Varchar);
-    auto p_category = expr_maker.CVE(p_schema.GetColumnInfo("p_category").oid, sql::TypeId::Varchar);
+    auto p_category =
+        expr_maker.CVE(p_schema.GetColumnInfo("p_category").oid, sql::TypeId::Varchar);
     // Make the predicate: p_category = 'MFGR#14'
     auto predicate = expr_maker.CompareEq(p_category, expr_maker.Constant("MFGR#14"));
     // Make output schema.
@@ -2979,10 +2981,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     p_seq_scan_out.AddOutput("p_brand1", p_brand1);
     // Build plan node.
     p_seq_scan = planner::SeqScanPlanNode::Builder{}
-        .SetOutputSchema(p_seq_scan_out.MakeSchema())
-        .SetScanPredicate(predicate)
-        .SetTableOid(p_table->GetId())
-        .Build();
+                     .SetOutputSchema(p_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(p_table->GetId())
+                     .Build();
   }
 
   // Scan lineorder.
@@ -3011,9 +3013,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     // Build plan node.
     planner::SeqScanPlanNode::Builder builder;
     lo_seq_scan = builder.SetOutputSchema(lo_seq_scan_out.MakeSchema())
-        .SetScanPredicate(nullptr)
-        .SetTableOid(lo_table->GetId())
-        .Build();
+                      .SetScanPredicate(nullptr)
+                      .SetTableOid(lo_table->GetId())
+                      .Build();
   }
 
   // part <-> lineorder ==> HJ1
@@ -3040,13 +3042,13 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     // Build
     planner::HashJoinPlanNode::Builder builder;
     hash_join1 = builder.AddChild(std::move(p_seq_scan))
-        .AddChild(std::move(lo_seq_scan))
-        .SetOutputSchema(hash_join_out1.MakeSchema())
-        .AddLeftHashKey(p_partkey)
-        .AddRightHashKey(lo_partkey)
-        .SetJoinType(planner::LogicalJoinType::INNER)
-        .SetJoinPredicate(expr_maker.CompareEq(p_partkey, lo_partkey))
-        .Build();
+                     .AddChild(std::move(lo_seq_scan))
+                     .SetOutputSchema(hash_join_out1.MakeSchema())
+                     .AddLeftHashKey(p_partkey)
+                     .AddRightHashKey(lo_partkey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(expr_maker.CompareEq(p_partkey, lo_partkey))
+                     .Build();
   }
 
   // customer <-> HJ1   ==> HJ2
@@ -3071,13 +3073,13 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     // Build
     planner::HashJoinPlanNode::Builder builder;
     hash_join2 = builder.AddChild(std::move(c_seq_scan))
-        .AddChild(std::move(hash_join1))
-        .SetOutputSchema(hash_join_out2.MakeSchema())
-        .AddLeftHashKey(c_custkey)
-        .AddRightHashKey(lo_custkey)
-        .SetJoinType(planner::LogicalJoinType::INNER)
-        .SetJoinPredicate(expr_maker.CompareEq(c_custkey, lo_custkey))
-        .Build();
+                     .AddChild(std::move(hash_join1))
+                     .SetOutputSchema(hash_join_out2.MakeSchema())
+                     .AddLeftHashKey(c_custkey)
+                     .AddRightHashKey(lo_custkey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(expr_maker.CompareEq(c_custkey, lo_custkey))
+                     .Build();
   }
 
   // supplier <-> HJ2       ==> HJ3
@@ -3102,13 +3104,13 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     // Build.
     planner::HashJoinPlanNode::Builder builder;
     hash_join3 = builder.AddChild(std::move(s_seq_scan))
-        .AddChild(std::move(hash_join2))
-        .SetOutputSchema(hash_join_out3.MakeSchema())
-        .AddLeftHashKey(s_suppkey)
-        .AddRightHashKey(lo_suppkey)
-        .SetJoinType(planner::LogicalJoinType::INNER)
-        .SetJoinPredicate(expr_maker.CompareEq(s_suppkey, lo_suppkey))
-        .Build();
+                     .AddChild(std::move(hash_join2))
+                     .SetOutputSchema(hash_join_out3.MakeSchema())
+                     .AddLeftHashKey(s_suppkey)
+                     .AddRightHashKey(lo_suppkey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(expr_maker.CompareEq(s_suppkey, lo_suppkey))
+                     .Build();
   }
 
   // HJ3 <-> date       ==> HJ4
@@ -3133,13 +3135,13 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     // Build.
     planner::HashJoinPlanNode::Builder builder;
     hash_join4 = builder.AddChild(std::move(hash_join3))
-        .AddChild(std::move(d_seq_scan))
-        .SetOutputSchema(hash_join_out4.MakeSchema())
-        .AddLeftHashKey(lo_orderdate)
-        .AddRightHashKey(d_datekey)
-        .SetJoinType(planner::LogicalJoinType::INNER)
-        .SetJoinPredicate(expr_maker.CompareEq(lo_orderdate, d_datekey))
-        .Build();
+                     .AddChild(std::move(d_seq_scan))
+                     .SetOutputSchema(hash_join_out4.MakeSchema())
+                     .AddLeftHashKey(lo_orderdate)
+                     .AddRightHashKey(d_datekey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(expr_maker.CompareEq(lo_orderdate, d_datekey))
+                     .Build();
   }
 
   // Aggregate.
@@ -3166,14 +3168,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     // Build plan node.
     planner::AggregatePlanNode::Builder builder;
     agg = builder.SetOutputSchema(agg_out.MakeSchema())
-        .AddGroupByTerm(d_year)
-        .AddGroupByTerm(s_city)
-        .AddGroupByTerm(p_brand1)
-        .AddAggregateTerm(profit)
-        .AddChild(std::move(hash_join4))
-        .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
-        .SetHavingClausePredicate(nullptr)
-        .Build();
+              .AddGroupByTerm(d_year)
+              .AddGroupByTerm(s_city)
+              .AddGroupByTerm(p_brand1)
+              .AddAggregateTerm(profit)
+              .AddChild(std::move(hash_join4))
+              .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
+              .SetHavingClausePredicate(nullptr)
+              .Build();
   }
 
   // Sort.
@@ -3192,12 +3194,12 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
     sort_out.AddOutput("profit", profit);
     // Build.
     sort = planner::OrderByPlanNode::Builder{}
-        .SetOutputSchema(sort_out.MakeSchema())
-        .AddChild(std::move(agg))
-        .AddSortKey(d_year, planner::OrderByOrderingType::ASC)
-        .AddSortKey(s_city, planner::OrderByOrderingType::ASC)
-        .AddSortKey(p_brand1, planner::OrderByOrderingType::ASC)
-        .Build();
+               .SetOutputSchema(sort_out.MakeSchema())
+               .AddChild(std::move(agg))
+               .AddSortKey(d_year, planner::OrderByOrderingType::ASC)
+               .AddSortKey(s_city, planner::OrderByOrderingType::ASC)
+               .AddSortKey(p_brand1, planner::OrderByOrderingType::ASC)
+               .Build();
   }
 
   // Compile plan
