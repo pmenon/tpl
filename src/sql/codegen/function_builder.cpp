@@ -8,12 +8,18 @@ namespace tpl::sql::codegen {
 FunctionBuilder::FunctionBuilder(CodeGen *codegen, ast::Identifier name,
                                  util::RegionVector<ast::FieldDecl *> &&params, ast::Expr *ret_type)
     : codegen_(codegen),
+      prev_function_(nullptr),
       name_(name),
       params_(std::move(params)),
       ret_type_(ret_type),
       start_(codegen->GetPosition()),
       statements_(codegen->MakeEmptyBlock()),
-      decl_(nullptr) {}
+      decl_(nullptr) {
+  // Stash the previously active function so we can restore it upon completion.
+  prev_function_ = codegen_->function_;
+  // Swap in ourselves in as the current active function.
+  codegen_->function_ = this;
+}
 
 FunctionBuilder::~FunctionBuilder() { Finish(); }
 
@@ -63,6 +69,9 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
   // Create the declaration.
   auto func_lit = codegen_->GetFactory()->NewFunctionLitExpr(func_type, statements_);
   decl_ = codegen_->GetFactory()->NewFunctionDecl(start_, name_, func_lit);
+
+  // Restore the previous function in the codegen instance.
+  codegen_->function_ = prev_function_;
 
   // Done
   return decl_;

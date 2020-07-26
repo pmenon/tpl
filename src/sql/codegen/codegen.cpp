@@ -40,9 +40,14 @@ std::string CodeGen::Scope::GetFreshName(const std::string &name) {
 //===----------------------------------------------------------------------===//
 
 CodeGen::CodeGen(ast::Context *context)
-    : context_(context), position_{0, 0}, num_cached_scopes_(0), scope_(nullptr) {
-  for (auto &scope : scope_cache_) {
-    scope = std::make_unique<Scope>(nullptr);
+    : context_(context),
+      position_{0, 0},
+      num_cached_scopes_(0),
+      scope_(nullptr),
+      function_(nullptr) {
+  // Create the scopes.
+  for (uint32_t i = 0; i < scope_cache_.max_size(); i++) {
+    scope_cache_[i] = std::make_unique<Scope>(nullptr);
   }
   num_cached_scopes_ = kDefaultScopeCacheSize;
   EnterScope();

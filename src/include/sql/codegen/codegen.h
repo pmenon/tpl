@@ -22,6 +22,8 @@
 
 namespace tpl::sql::codegen {
 
+class FunctionBuilder;
+
 /**
  * Bundles convenience methods needed by other classes during code generation.
  */
@@ -34,7 +36,8 @@ class CodeGen {
   static constexpr uint32_t kDefaultScopeCacheSize = 4;
 
   /**
-   * Scope object.
+   * Scope object. Holds a set of names and a link to the outer/previous scope. Note: this IS NOT
+   * an RAII object.
    */
   class Scope {
    public:
@@ -54,9 +57,9 @@ class CodeGen {
     Scope *Previous() { return previous_; }
 
    private:
-    // The previous scope_;
+    // The outer scope.
     Scope *previous_;
-    // Map of name/identifier to next ID.
+    // Map of identifier to next ID. Used to generate unique names.
     llvm::StringMap<uint64_t> names_;
   };
 
@@ -1140,6 +1143,12 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *NotLike(ast::Expr *str, ast::Expr *pattern);
 
+  // ---------------------------------------------------------------------------
+  //
+  // CSV
+  //
+  // ---------------------------------------------------------------------------
+
   /**
    * Call @csvReaderInit(). Initialize a CSV reader for the given file name.
    * @param reader The reader.
@@ -1195,6 +1204,12 @@ class CodeGen {
    */
   ast::Identifier MakeIdentifier(std::string_view str) const;
 
+  // ---------------------------------------------------------------------------
+  //
+  // Generic
+  //
+  // ---------------------------------------------------------------------------
+
   /**
    * @return A new identifier expression representing the given identifier.
    */
@@ -1228,6 +1243,11 @@ class CodeGen {
    * @return The field declaration.
    */
   ast::FieldDecl *MakeField(ast::Identifier name, ast::Expr *type) const;
+
+  /**
+   * @return The current (potentially null) function being built.
+   */
+  FunctionBuilder *GetCurrentFunction() const { return function_; }
 
   /**
    * @return The current source code position.
@@ -1269,6 +1289,8 @@ class CodeGen {
   std::array<std::unique_ptr<Scope>, kDefaultScopeCacheSize> scope_cache_ = {nullptr};
   // Current scope.
   Scope *scope_;
+  // The current function being generated.
+  FunctionBuilder *function_;
 };
 
 }  // namespace tpl::sql::codegen

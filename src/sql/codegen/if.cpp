@@ -17,6 +17,8 @@ If::If(FunctionBuilder *function, ast::Expr *condition)
   prev_func_stmt_list_ = function_->statements_;
   // Swap in our 'then' statement list as the active statement list.
   function_->statements_ = then_stmts_;
+  // Indent.
+  function_->GetCodeGen()->Indent();
 }
 
 If::~If() { EndIf(); }
@@ -40,6 +42,9 @@ void If::EndIf() {
   auto codegen = function_->GetCodeGen();
   auto if_stmt = codegen->GetFactory()->NewIfStmt(position_, condition_, then_stmts_, else_stmts_);
   function_->Append(if_stmt);
+
+  // Un-indent.
+  function_->GetCodeGen()->UnIndent();
 
   // Done.
   completed_ = true;
