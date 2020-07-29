@@ -49,13 +49,6 @@ class CompilationContext {
       const planner::AbstractPlanNode &plan, CompilationMode mode = CompilationMode::Interleaved);
 
   /**
-   * Register a pipeline in this context.
-   * @param pipeline The pipeline.
-   * @return A unique ID for the pipeline in this context.
-   */
-  uint32_t RegisterPipeline(Pipeline *pipeline);
-
-  /**
    * Prepare compilation for the given relational plan node participating in the provided pipeline.
    * @param plan The plan node.
    * @param pipeline The pipeline the node belongs to.
@@ -126,6 +119,9 @@ class CompilationContext {
   // Prepare compilation for the output.
   void PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline);
 
+  // Declare and establish the pipeline dependencies.
+  void EstablishPipelineDependencies();
+
  private:
   // Unique ID used as a prefix for all generated functions to ensure uniqueness.
   uint64_t unique_id_;
@@ -148,12 +144,10 @@ class CompilationContext {
   StateDescriptor::Entry exec_ctx_;
 
   // The operator and expression translators.
-  std::unordered_map<const planner::AbstractPlanNode *, std::unique_ptr<OperatorTranslator>> ops_;
+  std::unordered_map<const planner::AbstractPlanNode *, std::unique_ptr<OperatorTranslator>>
+      operators_;
   std::unordered_map<const planner::AbstractExpression *, std::unique_ptr<ExpressionTranslator>>
       expressions_;
-
-  // The pipelines in this context in no specific order.
-  std::vector<Pipeline *> pipelines_;
 };
 
 }  // namespace tpl::sql::codegen

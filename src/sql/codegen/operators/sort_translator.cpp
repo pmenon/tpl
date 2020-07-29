@@ -24,15 +24,12 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
       rhs_row_(GetCodeGen()->MakeIdentifier("rhs")),
       compare_func_(
           GetCodeGen()->MakeFreshIdentifier(pipeline->CreatePipelineFunctionName("Compare"))),
-      build_pipeline_(this, Pipeline::Parallelism::Parallel),
+      build_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel),
       current_row_(CurrentRow::Child) {
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Sorts expected to have a single child.");
   // Register this as the source for the pipeline. It must be serial to maintain
   // sorted output order.
   pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
-
-  // The build pipeline must complete before the produce pipeline.
-  pipeline->LinkSourcePipeline(&build_pipeline_);
 
   // Prepare the child.
   compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
@@ -54,6 +51,10 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
   if (build_pipeline_.IsParallel()) {
     local_sorter_ = build_pipeline_.DeclarePipelineStateEntry("sorter", sorter_type);
   }
+}
+
+void SortTranslator::DeclarePipelineDependencies() const {
+  GetPipeline()->AddDependency(build_pipeline_);
 }
 
 void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {

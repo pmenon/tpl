@@ -29,6 +29,11 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
                             CompilationContext *compilation_context, Pipeline *pipeline);
 
   /**
+   * Link the build and produce pipelines.
+   */
+  void DeclarePipelineDependencies() const override;
+
+  /**
    * Define the aggregation row structure.
    * @param decls Where the defined structure will be registered.
    */

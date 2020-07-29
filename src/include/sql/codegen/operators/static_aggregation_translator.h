@@ -30,6 +30,11 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
                               CompilationContext *compilation_context, Pipeline *pipeline);
 
   /**
+   * Link the build and produce pipelines.
+   */
+  void DeclarePipelineDependencies() const override;
+
+  /**
    * Declare the aggregation structure.
    * @param decls Query-level declarations.
    */

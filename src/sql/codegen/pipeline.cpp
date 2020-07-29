@@ -13,23 +13,28 @@
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline_driver.h"
+#include "sql/codegen/pipeline_graph.h"
 #include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
 
 namespace tpl::sql::codegen {
 
-Pipeline::Pipeline(CompilationContext *ctx)
-    : id_(ctx->RegisterPipeline(this)),
-      compilation_context_(ctx),
+Pipeline::Pipeline(CompilationContext *compilation_context, PipelineGraph *pipeline_graph)
+    : id_(pipeline_graph->NextPipelineId()),
+      compilation_context_(compilation_context),
+      pipeline_graph_(pipeline_graph),
       codegen_(compilation_context_->GetCodeGen()),
       parallelism_(Parallelism::Parallel),
       check_parallelism_(true),
       state_var_(codegen_->MakeIdentifier("pipelineState")),
       state_(codegen_->MakeIdentifier(fmt::format("P{}_State", id_)),
-             [this](CodeGen *codegen) { return codegen_->MakeExpr(state_var_); }) {}
+             [this](CodeGen *codegen) { return codegen_->MakeExpr(state_var_); }) {
+  // Register this pipeline.
+  pipeline_graph_->RegisterPipeline(*this);
+}
 
-Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism)
-    : Pipeline(op->GetCompilationContext()) {
+Pipeline::Pipeline(OperatorTranslator *op, PipelineGraph *pipeline_graph, Parallelism parallelism)
+    : Pipeline(op->GetCompilationContext(), pipeline_graph) {
   RegisterStep(op);
 }
 
@@ -93,16 +98,8 @@ util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
   return query_params;
 }
 
-void Pipeline::LinkSourcePipeline(Pipeline *dependency) {
-  TPL_ASSERT(dependency != nullptr, "Source cannot be null");
-  dependencies_.push_back(dependency);
-}
-
-void Pipeline::CollectDependencies(std::vector<Pipeline *> *deps) {
-  for (auto *pipeline : dependencies_) {
-    pipeline->CollectDependencies(deps);
-  }
-  deps->push_back(this);
+void Pipeline::AddDependency(const Pipeline &dependency) {
+  pipeline_graph_->AddDependency(*this, dependency);
 }
 
 void Pipeline::Prepare() {

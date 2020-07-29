@@ -19,6 +19,7 @@ class ExecutableQueryFragmentBuilder;
 class ExpressionTranslator;
 class OperatorTranslator;
 class PipelineDriver;
+class PipelineGraph;
 
 /**
  * A pipeline represents an ordered sequence of relational operators that operate on tuple data
@@ -39,25 +40,37 @@ class Pipeline {
    * Flexible option should be used when both serial and parallel operation is supported, but no
    * preference is taken.
    */
-  enum class Parallelism : uint8_t { Serial = 0, Parallel = 2 };
+  enum class Parallelism : uint8_t { Serial, Parallel };
 
   /**
    * Enum class representing whether the pipeline is vectorized.
    */
-  enum class Vectorization : uint8_t { Disabled = 0, Enabled = 1 };
+  enum class Vectorization : uint8_t { Disabled, Enabled };
+
+  /**
+   * Enum class representing whether the pipeline is independent or composite.
+   */
+  enum class Type : uint8_t { Individual, Nested };
 
   /**
    * Create an empty pipeline in the given compilation context.
-   * @param ctx The compilation context the pipeline is in.
+   * @param compilation_context The compilation context the pipeline is in.
+   * @param pipeline_graph The pipeline graph to register in.
    */
-  explicit Pipeline(CompilationContext *ctx);
+  explicit Pipeline(CompilationContext *compilation_context, PipelineGraph *pipeline_graph);
 
   /**
    * Create a pipeline with the given operator as the root.
    * @param op The root operator of the pipeline.
+   * @param pipeline_graph The pipeline graph to register in.
    * @param parallelism The operator's requested parallelism.
    */
-  Pipeline(OperatorTranslator *op, Parallelism parallelism);
+  Pipeline(OperatorTranslator *op, PipelineGraph *pipeline_graph, Parallelism parallelism);
+
+  /**
+   * This class cannot be copied or moved.
+   */
+  DISALLOW_COPY_AND_MOVE(Pipeline);
 
   /**
    * Register an operator in this pipeline with a customized parallelism configuration.
@@ -100,19 +113,18 @@ class Pipeline {
   StateDescriptor::Entry DeclarePipelineStateEntry(const std::string &name, ast::Expr *type_repr);
 
   /**
-   * Register the provided pipeline as a dependency for this pipeline. In other words, this pipeline
-   * cannot begin until the provided pipeline completes.
+   * Add the provided pipeline as a dependency for this pipeline. In other words, this pipeline
+   * cannot begin until the provided pipeline completes. Dependencies define an execution order.
    * @param dependency Another pipeline this pipeline is dependent on.
    */
-  void LinkSourcePipeline(Pipeline *dependency);
+  void AddDependency(const Pipeline &dependency);
 
   /**
-   * Store in the provided output vector the set of all dependencies for this pipeline. In other
-   * words, store in the output vector all pipelines that must execute (in order) before this
-   * pipeline can begin.
-   * @param[out] deps The sorted list of pipelines to execute before this pipeline can begin.
+   * Add the provided pipeline as a nested pipeline. Nested pipelines are not dependencies, but
+   * are executed in conjunction with their parent/outer pipelines.
+   * @param nested_pipeline The nested pipeline.
    */
-  void CollectDependencies(std::vector<Pipeline *> *deps);
+  void AddNestedPipeline(const Pipeline &nested_pipeline);
 
   /**
    * Perform initialization logic before code generation.
@@ -124,6 +136,11 @@ class Pipeline {
    * @param codegen The code generator instance.
    */
   void GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const;
+
+  /**
+   * @return The pipeline graph.
+   */
+  PipelineGraph *GetPipelineGraph() const { return pipeline_graph_; }
 
   /**
    * @return True if the pipeline is parallel; false otherwise.
@@ -196,6 +213,8 @@ class Pipeline {
   uint32_t id_;
   // The compilation context this pipeline is part of.
   CompilationContext *compilation_context_;
+  // The pipeline graph.
+  PipelineGraph *pipeline_graph_;
   // The code generation instance.
   CodeGen *codegen_;
   // Operators making up the pipeline.
@@ -208,8 +227,8 @@ class Pipeline {
   Parallelism parallelism_;
   // Whether to check for parallelism in new pipeline elements.
   bool check_parallelism_;
-  // All pipelines this one depends on completion of.
-  std::vector<Pipeline *> dependencies_;
+  // The list of pipelines that are nested within this one.
+  std::vector<const Pipeline *> nested_pipelines_;
   // Cache of common identifiers.
   ast::Identifier state_var_;
   // The pipeline state.

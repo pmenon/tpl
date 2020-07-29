@@ -32,6 +32,11 @@ class HashJoinTranslator : public OperatorTranslator {
                      Pipeline *pipeline);
 
   /**
+   * Link the left (i.e., build) and right (i.e., probe) pipelines.
+   */
+  void DeclarePipelineDependencies() const override;
+
+  /**
    * Declare the build-row struct used to materialized tuples from the build side of the join.
    * @param decls The top-level declarations for the query. The build-row struct will be
    *                        registered here after it's been constructed.

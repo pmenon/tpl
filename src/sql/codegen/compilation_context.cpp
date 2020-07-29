@@ -34,6 +34,7 @@
 #include "sql/codegen/operators/sort_translator.h"
 #include "sql/codegen/operators/static_aggregation_translator.h"
 #include "sql/codegen/pipeline.h"
+#include "sql/codegen/pipeline_graph.h"
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
@@ -74,9 +75,8 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(&codegen_);
-    for (auto &[_, op] : ops_) {
-      (void)_;
-      op->InitializeQueryState(&builder);
+    for (const auto &kv : operators_) {
+      kv.second->InitializeQueryState(&builder);
     }
   }
   return builder.Finish();
@@ -88,36 +88,44 @@ ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(&codegen_);
-    for (auto &[_, op] : ops_) {
-      (void)_;
-      op->TearDownQueryState(&builder);
+    for (const auto &kv : operators_) {
+      kv.second->TearDownQueryState(&builder);
     }
   }
   return builder.Finish();
+}
+
+void CompilationContext::EstablishPipelineDependencies() {
+  for (const auto &kv : operators_) {
+    kv.second->DeclarePipelineDependencies();
+  }
 }
 
 void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   exec_ctx_ = query_state_.DeclareStateEntry(
       GetCodeGen(), "execCtx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
 
+  // The graph of all pipelines.
+  PipelineGraph pipeline_graph;
+
+  // The main pipeline.
+  Pipeline main_pipeline(this, &pipeline_graph);
+
   // Recursively prepare all translators for the query.
-  Pipeline main_pipeline(this);
-  if (plan.GetOutputSchema()->NumColumns() != 0) {
-    PrepareOut(plan, &main_pipeline);
-  } else {
-    Prepare(plan, &main_pipeline);
-  }
-  query_state_.ConstructFinalType(&codegen_);
+  PrepareOut(plan, &main_pipeline);
+
+  // Give all registered operators the opportunity to declare their pipeline
+  // dependencies now.
+  EstablishPipelineDependencies();
 
   // Collect top-level structures and declarations.
   util::RegionVector<ast::StructDecl *> top_level_structs(query_->GetContext()->GetRegion());
   util::RegionVector<ast::FunctionDecl *> top_level_funcs(query_->GetContext()->GetRegion());
-  for (auto &[_, op] : ops_) {
-    (void)_;
-    op->DefineHelperStructs(&top_level_structs);
-    op->DefineHelperFunctions(&top_level_funcs);
+  for (auto &kv : operators_) {
+    kv.second->DefineHelperStructs(&top_level_structs);
+    kv.second->DefineHelperFunctions(&top_level_funcs);
   }
-  top_level_structs.push_back(query_state_.GetType());
+  top_level_structs.push_back(query_state_.ConstructFinalType(&codegen_));
 
   // All fragments.
   std::vector<std::unique_ptr<ExecutableQuery::Fragment>> fragments;
@@ -130,10 +138,10 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   main_builder.RegisterStep(GenerateInitFunction());
 
   // Generate each pipeline.
-  std::vector<Pipeline *> execution_order;
-  main_pipeline.CollectDependencies(&execution_order);
-  for (auto *pipeline : execution_order) {
-    pipeline->Prepare();
+  std::vector<const Pipeline *> execution_order;
+  pipeline_graph.CollectTransitiveDependencies(main_pipeline, &execution_order);
+  for (auto pipeline : execution_order) {
+    const_cast<Pipeline *>(pipeline)->Prepare();  // HACK. Fix when pipeline state is fixed.
     pipeline->GeneratePipeline(&main_builder);
   }
 
@@ -159,16 +167,9 @@ std::unique_ptr<ExecutableQuery> CompilationContext::Compile(const planner::Abst
   return query;
 }
 
-uint32_t CompilationContext::RegisterPipeline(Pipeline *pipeline) {
-  TPL_ASSERT(std::find(pipelines_.begin(), pipelines_.end(), pipeline) == pipelines_.end(),
-             "Duplicate pipeline in context");
-  pipelines_.push_back(pipeline);
-  return pipelines_.size();
-}
-
 void CompilationContext::PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline) {
   auto translator = std::make_unique<OutputTranslator>(plan, this, pipeline);
-  ops_[nullptr] = std::move(translator);
+  operators_[nullptr] = std::move(translator);
 }
 
 void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline *pipeline) {
@@ -229,7 +230,7 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
     }
   }
 
-  ops_[&plan] = std::move(translator);
+  operators_[&plan] = std::move(translator);
 }
 
 void CompilationContext::Prepare(const planner::AbstractExpression &expression) {
@@ -309,7 +310,7 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
 
 OperatorTranslator *CompilationContext::LookupTranslator(
     const planner::AbstractPlanNode &node) const {
-  if (auto iter = ops_.find(&node); iter != ops_.end()) {
+  if (auto iter = operators_.find(&node); iter != operators_.end()) {
     return iter->second.get();
   }
   return nullptr;

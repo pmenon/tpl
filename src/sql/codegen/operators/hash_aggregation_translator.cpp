@@ -27,14 +27,11 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
           pipeline->CreatePipelineFunctionName("KeyCheckPartial"))),
       merge_partitions_fn_(GetCodeGen()->MakeFreshIdentifier(
           pipeline->CreatePipelineFunctionName("MergePartitions"))),
-      build_pipeline_(this, Pipeline::Parallelism::Parallel) {
+      build_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(!plan.GetGroupByTerms().empty(), "Hash aggregation should have grouping keys");
   TPL_ASSERT(plan.GetAggregateStrategyType() == planner::AggregateStrategyType::HASH,
              "Expected hash-based aggregation plan node");
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Hash aggregations should only have one child");
-  // The produce pipeline begins after the build.
-  pipeline->LinkSourcePipeline(&build_pipeline_);
-
   // Prepare the child.
   compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
 
@@ -65,6 +62,10 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
   if (build_pipeline_.IsParallel()) {
     local_agg_ht_ = build_pipeline_.DeclarePipelineStateEntry("aggHashTable", agg_ht_type);
   }
+}
+
+void HashAggregationTranslator::DeclarePipelineDependencies() const {
+  GetPipeline()->AddDependency(build_pipeline_);
 }
 
 ast::StructDecl *HashAggregationTranslator::GeneratePayloadStruct() {

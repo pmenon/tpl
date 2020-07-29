@@ -20,14 +20,11 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
       agg_payload_type_(GetCodeGen()->MakeFreshIdentifier("AggPayload")),
       agg_values_type_(GetCodeGen()->MakeFreshIdentifier("AggValues")),
       merge_func_(GetCodeGen()->MakeFreshIdentifier("MergeAggregates")),
-      build_pipeline_(this, Pipeline::Parallelism::Parallel) {
+      build_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(plan.GetGroupByTerms().empty(), "Global aggregations shouldn't have grouping keys");
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Global aggregations should only have one child");
   // The produce-side is serial since it only generates one output tuple.
   pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
-
-  // The produce-side begins after the build-side.
-  pipeline->LinkSourcePipeline(&build_pipeline_);
 
   // Prepare the child.
   compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
@@ -50,6 +47,10 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
   if (build_pipeline_.IsParallel()) {
     local_aggs_ = build_pipeline_.DeclarePipelineStateEntry("aggs", payload_type);
   }
+}
+
+void StaticAggregationTranslator::DeclarePipelineDependencies() const {
+  GetPipeline()->AddDependency(build_pipeline_);
 }
 
 ast::StructDecl *StaticAggregationTranslator::GeneratePayloadStruct() {

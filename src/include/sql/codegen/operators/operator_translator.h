@@ -96,6 +96,11 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual ~OperatorTranslator() = default;
 
   /**
+   * For any pipelines this translator has, declare all dependencies.
+   */
+  virtual void DeclarePipelineDependencies() const {}
+
+  /**
    * Define any helper structures required for processing. Ensure they're declared in the provided
    * declaration container.
    * @param decls Query-level declarations.

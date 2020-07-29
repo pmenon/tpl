@@ -30,6 +30,11 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
                  Pipeline *pipeline);
 
   /**
+   * Link the build and produce pipelines.
+   */
+  void DeclarePipelineDependencies() const override;
+
+  /**
    * Define the sort-row structure that's materialized in the sorter.
    * @param decls The top-level declarations.
    */

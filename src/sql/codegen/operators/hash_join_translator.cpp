@@ -20,12 +20,10 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
       build_row_var_(GetCodeGen()->MakeFreshIdentifier("buildRow")),
       build_row_type_(GetCodeGen()->MakeFreshIdentifier("BuildRow")),
       build_mark_(GetCodeGen()->MakeFreshIdentifier("buildMark")),
-      left_pipeline_(this, Pipeline::Parallelism::Parallel) {
+      left_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
   TPL_ASSERT(!plan.GetRightHashKeys().empty(), "Hash-join must have join keys from right input");
   TPL_ASSERT(plan.GetJoinPredicate() != nullptr, "Hash-join must have a join predicate!");
-  // Probe pipeline begins after build pipeline.
-  pipeline->LinkSourcePipeline(&left_pipeline_);
   // Register left and right child in their appropriate pipelines.
   compilation_context->Prepare(*plan.GetChild(0), &left_pipeline_);
   compilation_context->Prepare(*plan.GetChild(1), pipeline);
@@ -48,6 +46,10 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   if (left_pipeline_.IsParallel()) {
     local_join_ht_ = left_pipeline_.DeclarePipelineStateEntry("joinHashTable", join_ht_type);
   }
+}
+
+void HashJoinTranslator::DeclarePipelineDependencies() const {
+  GetPipeline()->AddDependency(left_pipeline_);
 }
 
 void HashJoinTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
