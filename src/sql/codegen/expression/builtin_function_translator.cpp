@@ -2,7 +2,7 @@
 
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/work_context.h"
+#include "sql/codegen/consumer_context.h"
 
 namespace tpl::sql::codegen {
 
@@ -14,7 +14,7 @@ BuiltinFunctionTranslator::BuiltinFunctionTranslator(const planner::BuiltinFunct
   }
 }
 
-ast::Expr *BuiltinFunctionTranslator::DeriveValue(WorkContext *ctx,
+ast::Expr *BuiltinFunctionTranslator::DeriveValue(ConsumerContext *ctx,
                                                   const ColumnValueProvider *provider) const {
   auto codegen = GetCodeGen();
   auto func_expr = GetExpressionAs<planner::BuiltinFunctionExpression>();

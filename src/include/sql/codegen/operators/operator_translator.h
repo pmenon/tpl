@@ -20,7 +20,7 @@ class CodeGen;
 class CompilationContext;
 class FunctionBuilder;
 class Pipeline;
-class WorkContext;
+class ConsumerContext;
 
 /**
  * The base class of all operator translators.
@@ -157,7 +157,7 @@ class OperatorTranslator : public ColumnValueProvider {
    * @param context The context of the work.
    * @param function The function being built.
    */
-  virtual void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const = 0;
+  virtual void Consume(ConsumerContext *context, FunctionBuilder *function) const = 0;
 
   /**
    * Perform any work required <b>after</b> the main pipeline work. This is executed by one thread.
@@ -176,13 +176,13 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * @return The value (vector) of the attribute at the given index in this operator's output.
    */
-  ast::Expr *GetOutput(WorkContext *context, uint32_t attr_idx) const;
+  ast::Expr *GetOutput(ConsumerContext *context, uint32_t attr_idx) const;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**

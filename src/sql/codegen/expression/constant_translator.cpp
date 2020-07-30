@@ -4,7 +4,7 @@
 
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
-#include "sql/codegen/work_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/generic_value.h"
 
 namespace tpl::sql::codegen {
@@ -13,7 +13,7 @@ ConstantTranslator::ConstantTranslator(const planner::ConstantValueExpression &e
                                        CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {}
 
-ast::Expr *ConstantTranslator::DeriveValue(WorkContext *ctx,
+ast::Expr *ConstantTranslator::DeriveValue(ConsumerContext *ctx,
                                            const ColumnValueProvider *provider) const {
   auto codegen = GetCodeGen();
   const auto &val = GetExpressionAs<const planner::ConstantValueExpression>().GetValue();

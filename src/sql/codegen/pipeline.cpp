@@ -9,12 +9,12 @@
 #include "logging/logger.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/executable_query_builder.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline_driver.h"
 #include "sql/codegen/pipeline_graph.h"
-#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -196,8 +196,8 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen_);
     // Create the working context and push it through the pipeline.
-    WorkContext context(compilation_context_, *this);
-    (*Begin())->PerformPipelineWork(&context, &builder);
+    ConsumerContext context(compilation_context_, *this);
+    (*Begin())->Consume(&context, &builder);
   }
   return builder.Finish();
 }

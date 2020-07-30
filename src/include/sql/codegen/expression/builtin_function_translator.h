@@ -24,7 +24,7 @@ class BuiltinFunctionTranslator : public ExpressionTranslator {
    * @param provider A provider for specific column values.
    * @return The value of the expression.
    */
-  ast::Expr *DeriveValue(WorkContext *ctx, const ColumnValueProvider *provider) const override;
+  ast::Expr *DeriveValue(ConsumerContext *ctx, const ColumnValueProvider *provider) const override;
 };
 
 }  // namespace tpl::sql::codegen

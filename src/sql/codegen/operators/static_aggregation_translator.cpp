@@ -1,9 +1,9 @@
 #include "sql/codegen/operators/static_aggregation_translator.h"
 
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
-#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -141,7 +141,7 @@ void StaticAggregationTranslator::BeginPipelineWork(const Pipeline &pipeline,
   }
 }
 
-void StaticAggregationTranslator::UpdateGlobalAggregate(WorkContext *ctx,
+void StaticAggregationTranslator::UpdateGlobalAggregate(ConsumerContext *ctx,
                                                         FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
 
@@ -167,7 +167,7 @@ void StaticAggregationTranslator::UpdateGlobalAggregate(WorkContext *ctx,
   }
 }
 
-void StaticAggregationTranslator::PerformPipelineWork(WorkContext *context,
+void StaticAggregationTranslator::Consume(ConsumerContext *context,
                                                       FunctionBuilder *function) const {
   if (IsProducePipeline(context->GetPipeline())) {
     // var agg_row = &state.aggs
@@ -176,10 +176,10 @@ void StaticAggregationTranslator::PerformPipelineWork(WorkContext *context,
 
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
       If check_having(function, context->DeriveValue(*having, this));
-      context->Push(function);
+      context->Consume(function);
       check_having.EndIf();
     } else {
-      context->Push(function);
+      context->Consume(function);
     }
   } else {
     UpdateGlobalAggregate(context, function);
@@ -197,7 +197,7 @@ void StaticAggregationTranslator::FinishPipelineWork(const Pipeline &pipeline,
   }
 }
 
-ast::Expr *StaticAggregationTranslator::GetChildOutput(WorkContext *context,
+ast::Expr *StaticAggregationTranslator::GetChildOutput(ConsumerContext *context,
                                                        UNUSED uint32_t child_idx,
                                                        uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");

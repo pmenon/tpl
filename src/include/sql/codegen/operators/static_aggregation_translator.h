@@ -65,7 +65,7 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    * @param context The context of the work.
    * @param function The function being built.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * Finish the provided pipeline.
@@ -86,7 +86,7 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {
@@ -111,7 +111,7 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
 
   void InitializeAggregates(FunctionBuilder *function, bool local) const;
 
-  void UpdateGlobalAggregate(WorkContext *ctx, FunctionBuilder *function) const;
+  void UpdateGlobalAggregate(ConsumerContext *ctx, FunctionBuilder *function) const;
 
  private:
   ast::Identifier agg_row_var_;

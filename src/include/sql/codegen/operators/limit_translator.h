@@ -42,7 +42,7 @@ class LimitTranslator : public OperatorTranslator {
    * @param context The context of work.
    * @param function The pipeline function generator.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * Limits never touch raw table data.

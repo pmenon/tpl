@@ -33,7 +33,7 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
    * @param context The context of work.
    * @param function The function being built.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * CSV Scans are always serial, so should never launch work.

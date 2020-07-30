@@ -20,18 +20,18 @@ class FunctionBuilder;
 class Pipeline;
 
 /**
- * A work context carries information necessary for a pipeline along all operators within that
- * pipeline. It provides access to thread-local state and a mechanism to evaluation expressions in
- * the pipeline.
+ * This class carries information during the "consumption" phase of code-generation. It is passed
+ * along all operators that constitute the pipeline, from leaves to roots. It provides access to
+ * thread-local state and a mechanism to evaluation expressions in the pipeline.
  */
-class WorkContext {
+class ConsumerContext {
  public:
   /**
    * Create a new context whose data flows along the provided pipeline.
    * @param compilation_context The compilation context.
    * @param pipeline The pipeline.
    */
-  WorkContext(CompilationContext *compilation_context, const Pipeline &pipeline);
+  ConsumerContext(CompilationContext *compilation_context, const Pipeline &pipeline);
 
   /**
    * Derive the value of the given expression.
@@ -42,10 +42,10 @@ class WorkContext {
                          const ColumnValueProvider *provider);
 
   /**
-   * Push this context through to the next step in the pipeline.
+   * Push this context to the next operator in the pipeline.
    * @param function The function that's being built.
    */
-  void Push(FunctionBuilder *function);
+  void Consume(FunctionBuilder *function);
 
   /**
    * Clear any cached expression result values.

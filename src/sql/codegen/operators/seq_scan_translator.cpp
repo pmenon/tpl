@@ -4,11 +4,11 @@
 #include "sql/catalog.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/work_context.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/expression_util.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
@@ -59,7 +59,7 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
   Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi),
                 codegen->MakeStmt(codegen->VPIAdvance(vpi)));
   {
-    WorkContext context(GetCompilationContext(), *GetPipeline());
+    ConsumerContext context(GetCompilationContext(), *GetPipeline());
     auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
     auto match = cond_translator->DeriveValue(&context, this);
     function->Append(codegen->VPIMatch(vpi, match));
@@ -135,19 +135,19 @@ void SeqScanTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDe
   }
 }
 
-void SeqScanTranslator::ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const {
+void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const {
   CodeGen *codegen = GetCodeGen();
 
   Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi),
                 codegen->MakeStmt(codegen->VPIAdvance(vpi)));
   {
     // Push to parent.
-    ctx->Push(function);
+    ctx->Consume(function);
   }
   vpi_loop.EndLoop();
 }
 
-void SeqScanTranslator::ScanTable(WorkContext *ctx, FunctionBuilder *function) const {
+void SeqScanTranslator::ScanTable(ConsumerContext *ctx, FunctionBuilder *function) const {
   CodeGen *codegen = GetCodeGen();
   Loop tvi_loop(function, codegen->TableIterAdvance(codegen->MakeExpr(tvi_var_)));
   {
@@ -187,7 +187,7 @@ void SeqScanTranslator::TearDownPipelineState(const Pipeline &pipeline,
   }
 }
 
-void SeqScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
+void SeqScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   CodeGen *codegen = GetCodeGen();
 
   const bool declare_local_tvi = !GetPipeline()->IsParallel() || !GetPipeline()->IsDriver(this);

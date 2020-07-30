@@ -5,10 +5,10 @@
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/loop.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/csv_scan_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -55,7 +55,7 @@ ast::Expr *CSVScanTranslator::GetFieldPtr(uint32_t field_index) const {
   return GetCodeGen()->AddressOf(GetField(field_index));
 }
 
-void CSVScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
+void CSVScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
   auto reader_var_base = codegen->MakeFreshIdentifier("csvReaderBase");
   auto reader_var = codegen->MakeFreshIdentifier("csvReader");
@@ -73,7 +73,7 @@ void CSVScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilde
       function->Append(codegen->CSVReaderGetField(codegen->MakeExpr(reader_var), i, field_ptr));
     }
     // Done.
-    context->Push(function);
+    context->Consume(function);
   }
   scan_loop.EndLoop();
   function->Append(codegen->CSVReaderClose(codegen->MakeExpr(reader_var)));

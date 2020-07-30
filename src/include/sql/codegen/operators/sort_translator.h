@@ -75,7 +75,7 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
    * contains.
    * @param ctx The context of the work.
    */
-  void PerformPipelineWork(WorkContext *ctx, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *ctx, FunctionBuilder *function) const override;
 
   /**
    * If the given pipeline is for the build-side, we'll need to issue a sort. If the pipeline is
@@ -103,7 +103,7 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**
@@ -126,13 +126,13 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   ast::Expr *GetSortRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const;
 
   // Called to scan the global sorter instance.
-  void ScanSorter(WorkContext *ctx, FunctionBuilder *function) const;
+  void ScanSorter(ConsumerContext *ctx, FunctionBuilder *function) const;
 
   // Insert tuple data into the provided sort row.
-  void FillSortRow(WorkContext *ctx, FunctionBuilder *function) const;
+  void FillSortRow(ConsumerContext *ctx, FunctionBuilder *function) const;
 
   // Called to insert the tuple in the context into the sorter instance.
-  void InsertIntoSorter(WorkContext *ctx, FunctionBuilder *function) const;
+  void InsertIntoSorter(ConsumerContext *ctx, FunctionBuilder *function) const;
 
   // Generate comparison function.
   void GenerateComparisonFunction(FunctionBuilder *function);

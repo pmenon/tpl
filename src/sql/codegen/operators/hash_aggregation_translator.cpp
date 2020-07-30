@@ -298,7 +298,7 @@ ast::Expr *HashAggregationTranslator::GetAggregateTermPtr(ast::Identifier agg_ro
 }
 
 ast::Identifier HashAggregationTranslator::FillInputValues(FunctionBuilder *function,
-                                                           WorkContext *ctx) const {
+                                                           ConsumerContext *ctx) const {
   auto codegen = GetCodeGen();
 
   // var aggValues : AggValues
@@ -391,7 +391,7 @@ void HashAggregationTranslator::AdvanceAggregate(FunctionBuilder *function,
   }
 }
 
-void HashAggregationTranslator::UpdateAggregates(WorkContext *context, FunctionBuilder *function,
+void HashAggregationTranslator::UpdateAggregates(ConsumerContext *context, FunctionBuilder *function,
                                                  ast::Expr *agg_ht) const {
   auto codegen = GetCodeGen();
 
@@ -407,7 +407,7 @@ void HashAggregationTranslator::UpdateAggregates(WorkContext *context, FunctionB
   AdvanceAggregate(function, agg_payload, agg_values);
 }
 
-void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *context,
+void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *context,
                                                          FunctionBuilder *function,
                                                          ast::Expr *agg_ht) const {
   CodeGen *codegen = GetCodeGen();
@@ -436,9 +436,9 @@ void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *context,
     // Check having clause.
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
       If check_having(function, context->DeriveValue(*having, this));
-      context->Push(function);
+      context->Consume(function);
     } else {
-      context->Push(function);
+      context->Consume(function);
     }
   }
   loop.EndLoop();
@@ -447,7 +447,7 @@ void HashAggregationTranslator::ScanAggregationHashTable(WorkContext *context,
   function->Append(codegen->AggHashTableIteratorClose(codegen->MakeExpr(aht_iter)));
 }
 
-void HashAggregationTranslator::PerformPipelineWork(WorkContext *context,
+void HashAggregationTranslator::Consume(ConsumerContext *context,
                                                     FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
   if (IsBuildPipeline(context->GetPipeline())) {
@@ -482,7 +482,7 @@ void HashAggregationTranslator::FinishPipelineWork(const Pipeline &pipeline,
   }
 }
 
-ast::Expr *HashAggregationTranslator::GetChildOutput(WorkContext *context, uint32_t child_idx,
+ast::Expr *HashAggregationTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                                                      uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");
   if (IsProducePipeline(context->GetPipeline())) {

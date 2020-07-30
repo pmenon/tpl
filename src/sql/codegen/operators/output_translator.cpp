@@ -22,7 +22,7 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan,
   compilation_context->Prepare(plan, pipeline);
 }
 
-void OutputTranslator::PerformPipelineWork(tpl::sql::codegen::WorkContext *context,
+void OutputTranslator::Consume(tpl::sql::codegen::ConsumerContext *context,
                                            tpl::sql::codegen::FunctionBuilder *function) const {
   // First generate the call @resultBufferAllocRow(execCtx)
   auto exec_ctx = GetExecutionContext();

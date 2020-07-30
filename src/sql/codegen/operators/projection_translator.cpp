@@ -1,7 +1,7 @@
 #include "sql/codegen/operators/projection_translator.h"
 
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/work_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -19,9 +19,9 @@ ProjectionTranslator::ProjectionTranslator(const planner::ProjectionPlanNode &pl
   compilation_context->Prepare(*plan.GetChild(0), pipeline);
 }
 
-void ProjectionTranslator::PerformPipelineWork(WorkContext *context,
+void ProjectionTranslator::Consume(ConsumerContext *context,
                                                FunctionBuilder *function) const {
-  context->Push(function);
+  context->Consume(function);
 }
 
 }  // namespace tpl::sql::codegen

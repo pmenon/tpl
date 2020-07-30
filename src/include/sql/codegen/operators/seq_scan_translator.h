@@ -52,7 +52,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
    * Generate the scan.
    * @param context The context of the work.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * Tear-down the FilterManager if required.
@@ -94,10 +94,10 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
                                      bool seen_conjunction);
 
   // Perform a table scan using the provided table vector iterator pointer.
-  void ScanTable(WorkContext *ctx, FunctionBuilder *function) const;
+  void ScanTable(ConsumerContext *ctx, FunctionBuilder *function) const;
 
   // Generate a scan over the VPI.
-  void ScanVPI(WorkContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const;
+  void ScanVPI(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const;
 
  private:
   // The name of the declared TVI and VPI.

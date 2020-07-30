@@ -1,10 +1,10 @@
 #pragma once
 
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_driver.h"
 #include "sql/codegen/state_descriptor.h"
-#include "sql/codegen/work_context.h"
 
 namespace tpl::sql::planner {
 class AggregatePlanNode;
@@ -73,7 +73,7 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * hash table.
    * @param context The context.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * If the provided context is for the build pipeline and we're performing a parallel aggregation,
@@ -101,7 +101,7 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**
@@ -148,7 +148,7 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   //   2b. Performing lookup.
   // 3. Initializing new aggregates.
   // 4. Advancing existing aggregates.
-  ast::Identifier FillInputValues(FunctionBuilder *function, WorkContext *ctx) const;
+  ast::Identifier FillInputValues(FunctionBuilder *function, ConsumerContext *ctx) const;
   ast::Identifier HashInputKeys(FunctionBuilder *function, ast::Identifier agg_values) const;
   ast::Identifier PerformLookup(FunctionBuilder *function, ast::Expr *agg_ht,
                                 ast::Identifier hash_val, ast::Identifier agg_values) const;
@@ -159,10 +159,10 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
                         ast::Identifier agg_values) const;
 
   // Merge the input row into the aggregation hash table.
-  void UpdateAggregates(WorkContext *context, FunctionBuilder *function, ast::Expr *agg_ht) const;
+  void UpdateAggregates(ConsumerContext *context, FunctionBuilder *function, ast::Expr *agg_ht) const;
 
   // Scan the final aggregation hash table.
-  void ScanAggregationHashTable(WorkContext *context, FunctionBuilder *function,
+  void ScanAggregationHashTable(ConsumerContext *context, FunctionBuilder *function,
                                 ast::Expr *agg_ht) const;
 
  private:
