@@ -168,7 +168,7 @@ void StaticAggregationTranslator::UpdateGlobalAggregate(ConsumerContext *ctx,
 }
 
 void StaticAggregationTranslator::Consume(ConsumerContext *context,
-                                                      FunctionBuilder *function) const {
+                                          FunctionBuilder *function) const {
   if (IsProducePipeline(context->GetPipeline())) {
     // var agg_row = &state.aggs
     CodeGen *codegen = GetCodeGen();

@@ -159,7 +159,8 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
                         ast::Identifier agg_values) const;
 
   // Merge the input row into the aggregation hash table.
-  void UpdateAggregates(ConsumerContext *context, FunctionBuilder *function, ast::Expr *agg_ht) const;
+  void UpdateAggregates(ConsumerContext *context, FunctionBuilder *function,
+                        ast::Expr *agg_ht) const;
 
   // Scan the final aggregation hash table.
   void ScanAggregationHashTable(ConsumerContext *context, FunctionBuilder *function,

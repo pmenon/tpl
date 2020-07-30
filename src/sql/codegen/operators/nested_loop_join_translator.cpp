@@ -29,8 +29,7 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
   }
 }
 
-void NestedLoopJoinTranslator::Consume(ConsumerContext *context,
-                                                   FunctionBuilder *function) const {
+void NestedLoopJoinTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   if (const auto join_predicate = GetNLJPlan().GetJoinPredicate(); join_predicate != nullptr) {
     If cond(function, context->DeriveValue(*join_predicate, this));
     {

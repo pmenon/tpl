@@ -135,7 +135,8 @@ void SeqScanTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDe
   }
 }
 
-void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const {
+void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, FunctionBuilder *function,
+                                ast::Expr *vpi) const {
   CodeGen *codegen = GetCodeGen();
 
   Loop vpi_loop(function, nullptr, codegen->VPIHasNext(vpi),

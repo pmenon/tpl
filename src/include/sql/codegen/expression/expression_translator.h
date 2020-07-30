@@ -47,7 +47,8 @@ class ExpressionTranslator {
    * @param provider A provider for specific column values.
    * @return The TPL value of the expression.
    */
-  virtual ast::Expr *DeriveValue(ConsumerContext *ctx, const ColumnValueProvider *provider) const = 0;
+  virtual ast::Expr *DeriveValue(ConsumerContext *ctx,
+                                 const ColumnValueProvider *provider) const = 0;
 
   /**
    * @return The expression being translated.

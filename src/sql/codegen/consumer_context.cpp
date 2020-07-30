@@ -13,7 +13,7 @@ ConsumerContext::ConsumerContext(CompilationContext *compilation_context, const 
       cache_enabled_(true) {}
 
 ast::Expr *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr,
-                                    const ColumnValueProvider *provider) {
+                                        const ColumnValueProvider *provider) {
   if (cache_enabled_) {
     if (auto iter = cache_.find(&expr); iter != cache_.end()) {
       return iter->second;

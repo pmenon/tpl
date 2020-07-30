@@ -19,8 +19,7 @@ ProjectionTranslator::ProjectionTranslator(const planner::ProjectionPlanNode &pl
   compilation_context->Prepare(*plan.GetChild(0), pipeline);
 }
 
-void ProjectionTranslator::Consume(ConsumerContext *context,
-                                               FunctionBuilder *function) const {
+void ProjectionTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   context->Consume(function);
 }
 

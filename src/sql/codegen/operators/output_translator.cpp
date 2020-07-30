@@ -23,7 +23,7 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan,
 }
 
 void OutputTranslator::Consume(tpl::sql::codegen::ConsumerContext *context,
-                                           tpl::sql::codegen::FunctionBuilder *function) const {
+                               tpl::sql::codegen::FunctionBuilder *function) const {
   // First generate the call @resultBufferAllocRow(execCtx)
   auto exec_ctx = GetExecutionContext();
   ast::Expr *alloc_call =

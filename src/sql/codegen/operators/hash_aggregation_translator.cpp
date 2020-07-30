@@ -391,7 +391,8 @@ void HashAggregationTranslator::AdvanceAggregate(FunctionBuilder *function,
   }
 }
 
-void HashAggregationTranslator::UpdateAggregates(ConsumerContext *context, FunctionBuilder *function,
+void HashAggregationTranslator::UpdateAggregates(ConsumerContext *context,
+                                                 FunctionBuilder *function,
                                                  ast::Expr *agg_ht) const {
   auto codegen = GetCodeGen();
 
@@ -447,8 +448,7 @@ void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *contex
   function->Append(codegen->AggHashTableIteratorClose(codegen->MakeExpr(aht_iter)));
 }
 
-void HashAggregationTranslator::Consume(ConsumerContext *context,
-                                                    FunctionBuilder *function) const {
+void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
   if (IsBuildPipeline(context->GetPipeline())) {
     const auto &agg_ht = build_pipeline_.IsParallel() ? local_agg_ht_ : global_agg_ht_;
