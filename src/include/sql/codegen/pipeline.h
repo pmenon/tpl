@@ -155,17 +155,17 @@ class Pipeline {
   /**
    * Typedef used to specify an iterator over the steps in a pipeline.
    */
-  using StepIterator = std::vector<OperatorTranslator *>::const_reverse_iterator;
+  using Iterator = std::vector<OperatorTranslator *>::const_reverse_iterator;
 
   /**
    * @return An iterator over the operators in the pipeline.
    */
-  StepIterator Begin() const { return steps_.rbegin(); }
+  Iterator Begin() const { return operators_.rbegin(); }
 
   /**
    * @return An iterator positioned at the end of the operators steps in the pipeline.
    */
-  StepIterator End() const { return steps_.rend(); }
+  Iterator End() const { return operators_.rend(); }
 
   /**
    * @return True if the given operator is the driver for this pipeline; false otherwise.
@@ -218,8 +218,8 @@ class Pipeline {
   // The code generation instance.
   CodeGen *codegen_;
   // Operators making up the pipeline.
-  std::vector<OperatorTranslator *> steps_;
-  // The driver.
+  std::vector<OperatorTranslator *> operators_;
+  // The driver of the pipeline.
   PipelineDriver *driver_;
   // Expressions participating in the pipeline.
   std::vector<ExpressionTranslator *> expressions_;

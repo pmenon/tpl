@@ -39,9 +39,9 @@ Pipeline::Pipeline(OperatorTranslator *op, PipelineGraph *pipeline_graph, Parall
 }
 
 void Pipeline::RegisterStep(OperatorTranslator *op) {
-  TPL_ASSERT(std::count(steps_.begin(), steps_.end(), op) == 0,
+  TPL_ASSERT(std::count(operators_.begin(), operators_.end(), op) == 0,
              "Duplicate registration of operator in pipeline.");
-  steps_.push_back(op);
+  operators_.push_back(op);
 }
 
 void Pipeline::RegisterSource(PipelineDriver *driver, Pipeline::Parallelism parallelism) {
@@ -144,7 +144,7 @@ ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction() const {
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen_);
-    for (auto *op : steps_) {
+    for (auto *op : operators_) {
       op->InitializePipelineState(*this, &builder);
     }
   }
@@ -157,7 +157,7 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction() const {
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(codegen_);
-    for (auto *op : steps_) {
+    for (auto *op : operators_) {
       op->TearDownPipelineState(*this, &builder);
     }
   }
@@ -210,7 +210,7 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
     CodeGen::CodeScope code_scope(codegen_);
 
     // Let the operators perform some initialization work in this pipeline.
-    for (auto op : steps_) {
+    for (auto op : operators_) {
       op->BeginPipelineWork(*this, &builder);
     }
 
@@ -229,7 +229,7 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
     }
 
     // Let the operators perform some completion work in this pipeline.
-    for (auto op : steps_) {
+    for (auto op : operators_) {
       op->FinishPipelineWork(*this, &builder);
     }
   }

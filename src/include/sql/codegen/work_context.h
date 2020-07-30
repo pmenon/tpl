@@ -81,7 +81,7 @@ class WorkContext {
   // Cache of expression results.
   std::unordered_map<const planner::AbstractExpression *, ast::Expr *> cache_;
   // The current pipeline step and last pipeline step.
-  Pipeline::StepIterator pipeline_iter_, pipeline_end_;
+  Pipeline::Iterator pipeline_iter_, pipeline_end_;
   // Whether to cache translated expressions
   bool cache_enabled_;
 };
