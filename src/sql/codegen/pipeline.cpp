@@ -26,6 +26,7 @@ Pipeline::Pipeline(CompilationContext *compilation_context, PipelineGraph *pipel
       codegen_(compilation_context_->GetCodeGen()),
       parallelism_(Parallelism::Parallel),
       check_parallelism_(true),
+      type_(Type::Regular),
       state_var_(codegen_->MakeIdentifier("pipelineState")),
       state_(codegen_->MakeIdentifier(fmt::format("P{}_State", id_)),
              [this](CodeGen *codegen) { return codegen_->MakeExpr(state_var_); }) {
@@ -102,6 +103,35 @@ void Pipeline::AddDependency(const Pipeline &dependency) {
   pipeline_graph_->AddDependency(*this, dependency);
 }
 
+bool Pipeline::IsLastOperator(const OperatorTranslator &op) const { return operators_[0] == &op; }
+
+void Pipeline::MarkNestedPipeline(Pipeline *parent) {
+  type_ = Type::Nested;
+  parent->child_pipelines_.push_back(this);
+  parent_pipelines_.push_back(parent);
+}
+
+std::string Pipeline::BuildPipelineName() const {
+  std::string result;
+
+  bool first = true;
+  for (auto iter = Begin(), end = End(); iter != end; ++iter) {
+    if (!first) result += " --> ";
+    first = false;
+    std::string plan_type = planner::PlanNodeTypeToString((*iter)->GetPlan().GetPlanNodeType());
+    std::transform(plan_type.begin(), plan_type.end(), plan_type.begin(), ::tolower);
+    result.append(plan_type);
+  }
+
+  if (!child_pipelines_.empty()) {
+    for (auto inner : child_pipelines_) {
+      result += " --> { " + inner->BuildPipelineName() + " (nested) } ";
+    }
+  }
+
+  return result;
+}
+
 void Pipeline::Prepare() {
   // Finalize the pipeline state.
   state_.ConstructFinalType(codegen_);
@@ -122,20 +152,8 @@ void Pipeline::Prepare() {
     parallelism_ = Pipeline::Parallelism::Parallel;
   }
 
-  // Pretty print.
-  {
-    std::string result;
-    bool first = true;
-    for (auto iter = Begin(), end = End(); iter != end; ++iter) {
-      if (!first) result += " --> ";
-      first = false;
-      std::string plan_type = planner::PlanNodeTypeToString((*iter)->GetPlan().GetPlanNodeType());
-      std::transform(plan_type.begin(), plan_type.end(), plan_type.begin(), ::tolower);
-      result.append(plan_type);
-    }
-    LOG_INFO("Pipeline-{}: parallel={}, vectorized={}, steps=[{}]", id_, IsParallel(),
-             IsVectorized(), result);
-  }
+  LOG_INFO("Pipeline-{}: parallel={}, vectorized={}, operators=[{}]", id_, IsParallel(),
+           IsVectorized(), BuildPipelineName());
 }
 
 ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction() const {

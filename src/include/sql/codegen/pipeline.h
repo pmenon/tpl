@@ -50,7 +50,7 @@ class Pipeline {
   /**
    * Enum class representing whether the pipeline is independent or composite.
    */
-  enum class Type : uint8_t { Individual, Nested };
+  enum class Type : uint8_t { Regular, Nested };
 
   /**
    * Create an empty pipeline in the given compilation context.
@@ -120,11 +120,10 @@ class Pipeline {
   void AddDependency(const Pipeline &dependency);
 
   /**
-   * Add the provided pipeline as a nested pipeline. Nested pipelines are not dependencies, but
-   * are executed in conjunction with their parent/outer pipelines.
-   * @param nested_pipeline The nested pipeline.
+   * Mark this pipeline as being nested within the provided outer/parent pipeline.
+   * @param parent The pipeline that is nesting this pipeline.
    */
-  void AddNestedPipeline(const Pipeline &nested_pipeline);
+  void MarkNestedPipeline(Pipeline *parent);
 
   /**
    * Perform initialization logic before code generation.
@@ -153,6 +152,11 @@ class Pipeline {
   bool IsVectorized() const { return false; }
 
   /**
+   * @return Is the given operator the last in this pipeline?
+   */
+  bool IsLastOperator(const OperatorTranslator &op) const;
+
+  /**
    * Typedef used to specify an iterator over the steps in a pipeline.
    */
   using Iterator = std::vector<OperatorTranslator *>::const_reverse_iterator;
@@ -173,6 +177,16 @@ class Pipeline {
   bool IsDriver(const PipelineDriver *driver) const { return driver == driver_; }
 
   /**
+   * @return The list of pipelines that nest this pipeline.
+   */
+  const std::vector<const Pipeline *> &GetParentPipelines() const { return parent_pipelines_; }
+
+  /**
+   * @return The list of pipelines nested within this pipeline.
+   */
+  const std::vector<const Pipeline *> &GetNestedPipelines() const { return child_pipelines_; }
+
+  /**
    * @return Arguments common to all pipeline functions.
    */
   util::RegionVector<ast::FieldDecl *> PipelineParams() const;
@@ -181,6 +195,12 @@ class Pipeline {
    * @return A unique name for a function local to this pipeline.
    */
   std::string CreatePipelineFunctionName(const std::string &func_name) const;
+
+  /**
+   * @return The name of this pipeline. This a pretty-printed version of the operators that
+   *         constitute the pipeline.
+   */
+  std::string BuildPipelineName() const;
 
  private:
   // Return the thread-local state initialization and tear-down function names.
@@ -227,8 +247,12 @@ class Pipeline {
   Parallelism parallelism_;
   // Whether to check for parallelism in new pipeline elements.
   bool check_parallelism_;
-  // The list of pipelines that are nested within this one.
-  std::vector<const Pipeline *> nested_pipelines_;
+  // The list of pipelines that nest this pipeline.
+  std::vector<const Pipeline *> parent_pipelines_;
+  // The list of pipelines nested inside this pipeline.
+  std::vector<const Pipeline *> child_pipelines_;
+  // This pipeline's type.
+  Type type_;
   // Cache of common identifiers.
   ast::Identifier state_var_;
   // The pipeline state.
