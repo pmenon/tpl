@@ -16,7 +16,7 @@ constexpr char kOutputColPrefix[] = "out";
 OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan,
                                    CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      output_var_(GetCodeGen()->MakeFreshIdentifier("outRow")),
+      output_var_(GetCodeGen()->MakeFreshIdentifier("out_row")),
       output_struct_(GetCodeGen()->MakeFreshIdentifier("OutputStruct")) {
   // Prepare the child.
   compilation_context->Prepare(plan, pipeline);

@@ -16,7 +16,7 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
                                                          CompilationContext *compilation_context,
                                                          Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      agg_row_var_(GetCodeGen()->MakeFreshIdentifier("aggRow")),
+      agg_row_var_(GetCodeGen()->MakeFreshIdentifier("agg_row")),
       agg_payload_type_(GetCodeGen()->MakeFreshIdentifier("AggPayload")),
       agg_values_type_(GetCodeGen()->MakeFreshIdentifier("AggValues")),
       merge_func_(GetCodeGen()->MakeFreshIdentifier("MergeAggregates")),
@@ -148,7 +148,7 @@ void StaticAggregationTranslator::UpdateGlobalAggregate(ConsumerContext *ctx,
   const auto agg_payload = build_pipeline_.IsParallel() ? local_aggs_ : global_aggs_;
 
   // var aggValues: AggValues
-  auto agg_values = codegen->MakeFreshIdentifier("aggValues");
+  auto agg_values = codegen->MakeFreshIdentifier("agg_values");
   function->Append(codegen->DeclareVarNoInit(agg_values, codegen->MakeExpr(agg_values_type_)));
 
   // Fill values.

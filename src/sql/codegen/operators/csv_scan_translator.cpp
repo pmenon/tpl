@@ -25,7 +25,7 @@ CSVScanTranslator::CSVScanTranslator(const planner::CSVScanPlanNode &plan,
   pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
   // Declare state.
   base_row_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      GetCodeGen(), "csvRow", GetCodeGen()->MakeExpr(base_row_type_));
+      GetCodeGen(), "csv_row", GetCodeGen()->MakeExpr(base_row_type_));
 }
 
 void CSVScanTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {

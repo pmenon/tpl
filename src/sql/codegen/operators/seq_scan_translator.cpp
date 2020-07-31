@@ -27,7 +27,7 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
     compilation_context->Prepare(*plan.GetScanPredicate());
 
     ast::Expr *fm_type = GetCodeGen()->BuiltinType(ast::BuiltinType::FilterManager);
-    local_filter_manager_ = pipeline->DeclarePipelineStateEntry("filterManager", fm_type);
+    local_filter_manager_ = pipeline->DeclarePipelineStateEntry("filter_manager", fm_type);
   }
 }
 
@@ -47,7 +47,7 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
 
   // var vpiBase: VectorProjectionIterator
   // var vpi = &vpiBase
-  auto vpi_base = codegen->MakeFreshIdentifier("vpiBase");
+  auto vpi_base = codegen->MakeFreshIdentifier("vpi_base");
   function->Append(codegen->DeclareVarNoInit(vpi_base, ast::BuiltinType::VectorProjectionIterator));
   function->Append(
       codegen->DeclareVarWithInit(vpi_var_, codegen->AddressOf(codegen->MakeExpr(vpi_base))));
@@ -195,7 +195,7 @@ void SeqScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *funct
   if (declare_local_tvi) {
     // var tviBase: TableVectorIterator
     // var tvi = &tviBase
-    auto tvi_base = codegen->MakeFreshIdentifier("tviBase");
+    auto tvi_base = codegen->MakeFreshIdentifier("tvi_base");
     function->Append(codegen->DeclareVarNoInit(tvi_base, ast::BuiltinType::TableVectorIterator));
     function->Append(codegen->DeclareVarWithInit(tvi_var_, codegen->AddressOf(tvi_base)));
     function->Append(codegen->TableIterInit(codegen->MakeExpr(tvi_var_), GetTableName()));

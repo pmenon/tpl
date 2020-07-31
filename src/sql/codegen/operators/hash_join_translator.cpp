@@ -17,9 +17,9 @@ const char *kBuildRowAttrPrefix = "attr";
 HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
                                        CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      build_row_var_(GetCodeGen()->MakeFreshIdentifier("buildRow")),
+      build_row_var_(GetCodeGen()->MakeFreshIdentifier("build_row")),
       build_row_type_(GetCodeGen()->MakeFreshIdentifier("BuildRow")),
-      build_mark_(GetCodeGen()->MakeFreshIdentifier("buildMark")),
+      build_mark_(GetCodeGen()->MakeFreshIdentifier("mark")),
       left_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
   TPL_ASSERT(!plan.GetRightHashKeys().empty(), "Hash-join must have join keys from right input");
@@ -41,10 +41,10 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   CodeGen *codegen = GetCodeGen();
   ast::Expr *join_ht_type = codegen->BuiltinType(ast::BuiltinType::JoinHashTable);
   global_join_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      codegen, "joinHashTable", join_ht_type);
+      codegen, "join_hash_table", join_ht_type);
 
   if (left_pipeline_.IsParallel()) {
-    local_join_ht_ = left_pipeline_.DeclarePipelineStateEntry("joinHashTable", join_ht_type);
+    local_join_ht_ = left_pipeline_.DeclarePipelineStateEntry("join_hash_table", join_ht_type);
   }
 }
 
@@ -105,7 +105,7 @@ ast::Expr *HashJoinTranslator::HashKeys(
     key_values.push_back(ctx->DeriveValue(*hash_key, this));
   }
 
-  ast::Identifier hash_val_name = codegen->MakeFreshIdentifier("hashVal");
+  ast::Identifier hash_val_name = codegen->MakeFreshIdentifier("hash_val");
   function->Append(codegen->DeclareVarWithInit(hash_val_name, codegen->Hash(key_values)));
 
   return codegen->MakeExpr(hash_val_name);
@@ -156,12 +156,12 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
   auto codegen = GetCodeGen();
 
   // var entryIterBase: HashTableEntryIterator
-  auto iter_name_base = codegen->MakeFreshIdentifier("entryIterBase");
+  auto iter_name_base = codegen->MakeFreshIdentifier("entry_iter_base");
   function->Append(
       codegen->DeclareVarNoInit(iter_name_base, ast::BuiltinType::HashTableEntryIterator));
 
   // var entryIter = &entryIterBase
-  auto iter_name = codegen->MakeFreshIdentifier("entryIter");
+  auto iter_name = codegen->MakeFreshIdentifier("entry_iter");
   function->Append(codegen->DeclareVarWithInit(
       iter_name, codegen->AddressOf(codegen->MakeExpr(iter_name_base))));
 
@@ -178,7 +178,7 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
   // The probe depends on the join type
   if (join_plan.RequiresRightMark()) {
     // First declare the right mark.
-    ast::Identifier right_mark_var = codegen->MakeFreshIdentifier("rightMark");
+    ast::Identifier right_mark_var = codegen->MakeFreshIdentifier("right_mark");
     ast::Expr *right_mark = codegen->MakeExpr(right_mark_var);
     function->Append(codegen->DeclareVarWithInit(right_mark_var, codegen->ConstBool(true)));
 

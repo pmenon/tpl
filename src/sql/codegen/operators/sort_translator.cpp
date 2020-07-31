@@ -18,7 +18,7 @@ constexpr const char kSortRowAttrPrefix[] = "attr";
 SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
                                CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      sort_row_var_(GetCodeGen()->MakeFreshIdentifier("sortRow")),
+      sort_row_var_(GetCodeGen()->MakeFreshIdentifier("sort_row")),
       sort_row_type_(GetCodeGen()->MakeFreshIdentifier("SortRow")),
       lhs_row_(GetCodeGen()->MakeIdentifier("lhs")),
       rhs_row_(GetCodeGen()->MakeIdentifier("rhs")),
@@ -182,7 +182,7 @@ void SortTranslator::ScanSorter(ConsumerContext *ctx, FunctionBuilder *function)
   auto codegen = GetCodeGen();
 
   // var sorter_base: Sorter
-  auto base_iter_name = codegen->MakeFreshIdentifier("iterBase");
+  auto base_iter_name = codegen->MakeFreshIdentifier("iter_base");
   function->Append(codegen->DeclareVarNoInit(base_iter_name, ast::BuiltinType::SorterIterator));
 
   // var sorter = &sorter_base
