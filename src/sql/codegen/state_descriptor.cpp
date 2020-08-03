@@ -50,6 +50,7 @@ ast::StructDecl *StateDescriptor::ConstructFinalType(CodeGen *codegen) {
 
   // Collect fields and build the structure type.
   util::RegionVector<ast::FieldDecl *> fields = codegen->MakeEmptyFieldList();
+  fields.reserve(slots_.size());
   for (auto &slot : slots_) {
     fields.push_back(codegen->MakeField(slot.name, slot.type_repr));
   }
