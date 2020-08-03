@@ -558,9 +558,9 @@ class ChunkedVectorT {
   }
 
   /**
-   * Iterator over a typed chunked vector
+   * Base iterator.
    */
-  class Iterator {
+  class IteratorBase {
    public:
     using difference_type = typename BaseChunkedVectorIterator::difference_type;
     using value_type = T;
@@ -568,75 +568,105 @@ class ChunkedVectorT {
     using pointer = T *;
     using reference = T &;
 
-    explicit Iterator(BaseChunkedVectorIterator iter) : iter_(iter) {}
+    explicit IteratorBase(BaseChunkedVectorIterator iter) : iter_(iter) {}
 
-    Iterator() : iter_() {}
+    IteratorBase() : iter_() {}
 
-    T &operator*() const noexcept { return *reinterpret_cast<T *>(*iter_); }
-
-    Iterator &operator+=(const int64_t &offset) noexcept {
+    IteratorBase &operator+=(const int64_t &offset) noexcept {
       iter_ += offset;
       return *this;
     }
 
-    Iterator &operator-=(const int64_t &offset) noexcept {
+    IteratorBase &operator-=(const int64_t &offset) noexcept {
       iter_ -= offset;
       return *this;
     }
 
-    const Iterator operator+(const int64_t &offset) const noexcept {
-      return Iterator(iter_ + offset);
+    const IteratorBase operator+(const int64_t &offset) const noexcept {
+      return IteratorBase(iter_ + offset);
     }
 
-    const Iterator operator-(const int64_t &offset) const noexcept {
-      return Iterator(iter_ - offset);
+    const IteratorBase operator-(const int64_t &offset) const noexcept {
+      return IteratorBase(iter_ - offset);
     }
 
-    Iterator &operator++() noexcept {
+    IteratorBase &operator++() noexcept {
       ++iter_;
       return *this;
     }
 
-    const Iterator operator++(int) noexcept { return Iterator(iter_++); }
+    const IteratorBase operator++(int) noexcept { return Iterator(iter_++); }
 
-    Iterator &operator--() noexcept {
+    IteratorBase &operator--() noexcept {
       --iter_;
       return *this;
     }
 
-    const Iterator operator--(int) noexcept { return Iterator(iter_--); }
+    const IteratorBase operator--(int) noexcept { return Iterator(iter_--); }
 
     T &operator[](const int64_t &idx) const noexcept { return *reinterpret_cast<T *>(iter_[idx]); }
 
-    bool operator==(const Iterator &that) const { return iter_ == that.iter_; }
+    bool operator==(const IteratorBase &that) const { return iter_ == that.iter_; }
 
-    bool operator!=(const Iterator &that) const { return iter_ != that.iter_; }
+    bool operator!=(const IteratorBase &that) const { return iter_ != that.iter_; }
 
-    bool operator<(const Iterator &that) const { return iter_ < that.iter_; }
+    bool operator<(const IteratorBase &that) const { return iter_ < that.iter_; }
 
-    bool operator<=(const Iterator &that) const { return iter_ <= that.iter_; }
+    bool operator<=(const IteratorBase &that) const { return iter_ <= that.iter_; }
 
-    bool operator>(const Iterator &that) const { return iter_ > that.iter_; }
+    bool operator>(const IteratorBase &that) const { return iter_ > that.iter_; }
 
-    bool operator>=(const Iterator &that) const { return iter_ >= that.iter_; }
+    bool operator>=(const IteratorBase &that) const { return iter_ >= that.iter_; }
 
-    difference_type operator-(const Iterator &that) const { return iter_ - that.iter_; }
+    difference_type operator-(const IteratorBase &that) const { return iter_ - that.iter_; }
 
-   private:
+   protected:
     BaseChunkedVectorIterator iter_;
   };
 
   /**
-   * Construct a read-write random access iterator that points to the first
-   * element in the vector.
+   * A read-write iterator over a typed chunked vector.
+   */
+  class Iterator : public IteratorBase {
+   public:
+    explicit Iterator(BaseChunkedVectorIterator iter) : IteratorBase(iter) {}
+
+    Iterator() : IteratorBase() {}
+
+    T &operator*() const noexcept { return *reinterpret_cast<T *>(*IteratorBase::iter_); }
+  };
+
+  /**
+   * A read-only iterator over a typed chunked vector.
+   */
+  class ConstIterator : public IteratorBase {
+   public:
+    explicit ConstIterator(BaseChunkedVectorIterator iter) : IteratorBase(iter) {}
+
+    const T &operator*() const noexcept { return *reinterpret_cast<T *>(*IteratorBase::iter_); }
+  };
+
+  /**
+   * @return A read-write random access iterator that points to the first element in the vector.
    */
   Iterator begin() { return Iterator(vec_.begin()); }
 
   /**
-   * Construct a read-write random access iterator that points to the element
-   * after the last in the vector.
+   * @return A read-only random access iterator that points to the first element in the vector.
+   */
+  ConstIterator begin() const { return ConstIterator(vec_.begin()); }
+
+  /**
+   * @return A read-write random access iterator that points to the element after the last in the
+   * vector.
    */
   Iterator end() { return Iterator(vec_.end()); }
+
+  /**
+   * @return A read-only random access iterator that points to the element after the last in the
+   * vector.
+   */
+  ConstIterator end() const { return ConstIterator(vec_.end()); }
 
   // -------------------------------------------------------
   // Element access
