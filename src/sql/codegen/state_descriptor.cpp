@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#include "ast/ast.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/function_builder.h"
 
