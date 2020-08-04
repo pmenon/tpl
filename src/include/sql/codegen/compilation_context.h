@@ -147,7 +147,7 @@ class CompilationContext {
   // The compilation mode.
   CompilationMode mode_;
   // All allocated containers.
-  util::ChunkedVectorT<CodeContainer> containers_;
+  std::vector<std::unique_ptr<CodeContainer>> containers_;
   // The code generator instance.
   CodeGen codegen_;
   // Cached identifiers.

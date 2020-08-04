@@ -125,8 +125,8 @@ void CompilationContext::GeneratePipelineCode_OneShot(
   steps->reserve(execution_order.size() * 3);
 
   for (const Pipeline *pipeline : execution_order) {
-    // All pipelines go into the same container.
-    mapping->emplace(pipeline->GetId(), 0);
+    // All pipelines go into the main container (0).
+    (*mapping)[pipeline->GetId()] = 0;
 
     // Prepare and generate the pipeline steps.
     const_cast<Pipeline *>(pipeline)->Prepare();  // HACK
@@ -194,7 +194,7 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   std::vector<std::unique_ptr<vm::Module>> modules;
   modules.reserve(containers_.size());
   for (auto &container : containers_) {
-    modules.emplace_back(container.Compile());
+    modules.emplace_back(container->Compile());
   }
 
   // Resolve.
@@ -400,9 +400,9 @@ ast::Expr *CompilationContext::GetExecutionContextPtrFromQueryState() {
 }
 
 CodeContainer *CompilationContext::MakeContainer() {
-  const std::size_t id = containers_.size();
-  containers_.emplace_back(query_->GetContext(), "CC" + std::to_string(id));
-  return &containers_[id];
+  const auto container_id = fmt::format("CC{}", containers_.size());
+  containers_.emplace_back(std::make_unique<CodeContainer>(query_->GetContext(), container_id));
+  return containers_.back().get();
 }
 
 }  // namespace tpl::sql::codegen
