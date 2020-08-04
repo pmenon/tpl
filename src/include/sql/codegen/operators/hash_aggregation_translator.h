@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sql/codegen/code_container.h"
 #include "sql/codegen/consumer_context.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
@@ -34,16 +35,10 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   void DeclarePipelineDependencies() const override;
 
   /**
-   * Define the aggregation row structure.
-   * @param decls Where the defined structure will be registered.
+   * Define the aggregation row structure, and all key-check functions.
+   * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
-
-  /**
-   * If the build-pipeline is parallel, we'll need to define the partition-merging function.
-   * @param decls Where the defined functions will be registered.
-   */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override;
+  void DefineHelperStructsAndFunctions() override;
 
   /**
    * Initialize the global aggregation hash table.

@@ -28,7 +28,7 @@ CSVScanTranslator::CSVScanTranslator(const planner::CSVScanPlanNode &plan,
       GetCodeGen(), "csv_row", GetCodeGen()->MakeExpr(base_row_type_));
 }
 
-void CSVScanTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
+void CSVScanTranslator::DefineHelperStructsAndFunctions() {
   CodeGen *codegen = GetCodeGen();
 
   // Reserve now to reduce allocations.
@@ -41,8 +41,7 @@ void CSVScanTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *
     auto field_name = codegen->MakeIdentifier(kFieldPrefix + std::to_string(idx));
     fields.emplace_back(codegen->MakeField(field_name, codegen->TplType(TypeId::Varchar)));
   }
-
-  decls->push_back(codegen->DeclareStruct(base_row_type_, std::move(fields)));
+  codegen->DeclareStruct(base_row_type_, std::move(fields));
 }
 
 ast::Expr *CSVScanTranslator::GetField(uint32_t field_index) const {

@@ -1,4 +1,5 @@
 #include "sql/codegen/operators/output_translator.h"
+#include <sql/codegen/code_container.h>
 
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
@@ -50,7 +51,7 @@ void OutputTranslator::FinishPipelineWork(const Pipeline &pipeline,
   function->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx}));
 }
 
-void OutputTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
+void OutputTranslator::DefineHelperStructsAndFunctions() {
   CodeGen *codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
 
@@ -65,7 +66,7 @@ void OutputTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *>
     fields.emplace_back(codegen->MakeField(field_name, type));
   }
 
-  decls->push_back(codegen->DeclareStruct(output_struct_, std::move(fields)));
+  codegen->DeclareStruct(output_struct_, std::move(fields));
 }
 
 }  // namespace tpl::sql::codegen

@@ -52,14 +52,14 @@ void HashJoinTranslator::DeclarePipelineDependencies() const {
   GetPipeline()->AddDependency(left_pipeline_);
 }
 
-void HashJoinTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
+void HashJoinTranslator::DefineHelperStructsAndFunctions() {
   auto codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kBuildRowAttrPrefix, &fields);
   if (GetPlanAs<planner::HashJoinPlanNode>().RequiresLeftMark()) {
     fields.push_back(codegen->MakeField(build_mark_, codegen->BoolType()));
   }
-  decls->push_back(codegen->DeclareStruct(build_row_type_, std::move(fields)));
+  codegen->DeclareStruct(build_row_type_, std::move(fields));
 }
 
 void HashJoinTranslator::InitializeJoinHashTable(FunctionBuilder *function,

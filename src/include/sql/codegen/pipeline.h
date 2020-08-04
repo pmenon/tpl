@@ -8,14 +8,16 @@
 #include "ast/identifier.h"
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/codegen_defs.h"
+#include "sql/codegen/function_builder.h"
 #include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"
 
 namespace tpl::sql::codegen {
 
+class CodeContainer;
 class CodeGen;
 class CompilationContext;
-class ExecutableQueryFragmentBuilder;
 class ExpressionTranslator;
 class OperatorTranslator;
 class PipelineDriver;
@@ -132,9 +134,14 @@ class Pipeline {
 
   /**
    * Generate all functions to execute this pipeline in the provided container.
-   * @param codegen The code generator instance.
+   * @param container The code container.
    */
-  void GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const;
+  std::vector<ast::FunctionDecl *> GeneratePipelineLogic() const;
+
+  /**
+   * @return The unique ID of this pipeline.
+   */
+  PipelineId GetId() const { return id_; }
 
   /**
    * @return The pipeline graph.
@@ -230,7 +237,7 @@ class Pipeline {
 
  private:
   // A unique pipeline ID.
-  uint32_t id_;
+  PipelineId id_;
   // The compilation context this pipeline is part of.
   CompilationContext *compilation_context_;
   // The pipeline graph.

@@ -35,16 +35,10 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   void DeclarePipelineDependencies() const override;
 
   /**
-   * Define the sort-row structure that's materialized in the sorter.
-   * @param decls The top-level declarations.
+   * Define the structure of the rows that are materialized in the sorter, and the sort function.
+   * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
-
-  /**
-   * Define the sorting function.
-   * @param decls The top-level declarations.
-   */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override;
+  void DefineHelperStructsAndFunctions() override;
 
   /**
    * Initialize the sorter instance.
@@ -134,8 +128,12 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   // Called to insert the tuple in the context into the sorter instance.
   void InsertIntoSorter(ConsumerContext *ctx, FunctionBuilder *function) const;
 
-  // Generate comparison function.
-  void GenerateComparisonFunction(FunctionBuilder *function);
+  // Generate the struct used to represent the sorting row.
+  ast::StructDecl *GenerateSortRowStructType() const;
+
+  // Generate the sorting function.
+  ast::FunctionDecl * GenerateComparisonFunction();
+  void GenerateComparisonLogic(FunctionBuilder *function);
 
  private:
   // The name of the materialized sort row when inserting into sorter or pulling

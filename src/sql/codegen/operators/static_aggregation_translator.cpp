@@ -82,14 +82,12 @@ ast::StructDecl *StaticAggregationTranslator::GenerateValuesStruct() {
   return codegen->DeclareStruct(agg_values_type_, std::move(fields));
 }
 
-void StaticAggregationTranslator::DefineHelperStructs(
-    util::RegionVector<ast::StructDecl *> *decls) {
-  decls->push_back(GeneratePayloadStruct());
-  decls->push_back(GenerateValuesStruct());
-}
+void StaticAggregationTranslator::DefineHelperStructsAndFunctions() {
+  // The payload and input structures.
+  GeneratePayloadStruct();
+  GenerateValuesStruct();
 
-void StaticAggregationTranslator::DefineHelperFunctions(
-    util::RegionVector<ast::FunctionDecl *> *decls) {
+  // The merging function, if parallel.
   if (build_pipeline_.IsParallel()) {
     CodeGen *codegen = GetCodeGen();
     util::RegionVector<ast::FieldDecl *> params = build_pipeline_.PipelineParams();
@@ -101,7 +99,7 @@ void StaticAggregationTranslator::DefineHelperFunctions(
         function.Append(codegen->AggregatorMerge(lhs, rhs));
       }
     }
-    decls->push_back(function.Finish());
+    function.Finish();
   }
 }
 

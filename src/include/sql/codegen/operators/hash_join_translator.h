@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sql/codegen/code_container.h>
 #include <vector>
 
 #include "sql/codegen/ast_fwd.h"
@@ -38,10 +39,9 @@ class HashJoinTranslator : public OperatorTranslator {
 
   /**
    * Declare the build-row struct used to materialized tuples from the build side of the join.
-   * @param decls The top-level declarations for the query. The build-row struct will be
-   *                        registered here after it's been constructed.
+   * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
+  void DefineHelperStructsAndFunctions() override;
 
   /**
    * Initialize the global hash table.

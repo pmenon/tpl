@@ -1,5 +1,6 @@
 #include "sql/codegen/loop.h"
 
+#include "ast/ast_node_factory.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/function_builder.h"
 
@@ -40,7 +41,7 @@ void Loop::EndLoop() {
 
   // Create and append the if statement.
   auto codegen = function_->GetCodeGen();
-  auto loop = codegen->GetFactory()->NewForStmt(position_, init_, condition_, next_, loop_body_);
+  auto loop = codegen->NodeFactory()->NewForStmt(position_, init_, condition_, next_, loop_body_);
   function_->Append(loop);
 
   // Done.

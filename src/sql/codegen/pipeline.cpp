@@ -7,10 +7,10 @@
 #include "common/macros.h"
 #include "common/settings.h"
 #include "logging/logger.h"
+#include "sql/codegen/code_container.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
-#include "sql/codegen/executable_query_builder.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline_driver.h"
@@ -267,21 +267,14 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
   return builder.Finish();
 }
 
-void Pipeline::GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const {
-  // Declare the pipeline state.
-  builder->DeclareStruct(state_.GetType());
-
-  // Generate pipeline state initialization and tear-down functions.
-  builder->DeclareFunction(GenerateSetupPipelineStateFunction());
-  builder->DeclareFunction(GenerateTearDownPipelineStateFunction());
-
-  // Generate main pipeline logic.
-  builder->DeclareFunction(GeneratePipelineWorkFunction());
-
-  // Register the main init, run, tear-down functions as steps, in that order.
-  builder->RegisterStep(GenerateInitPipelineFunction());
-  builder->RegisterStep(GenerateRunPipelineFunction());
-  builder->RegisterStep(GenerateTearDownPipelineFunction());
+std::vector<ast::FunctionDecl *> Pipeline::GeneratePipelineLogic() const {
+  GenerateSetupPipelineStateFunction();
+  GenerateTearDownPipelineStateFunction();
+  GeneratePipelineWorkFunction();
+  auto init_fn = GenerateInitPipelineFunction();
+  auto run_fn = GenerateRunPipelineFunction();
+  auto tear_down_fn = GenerateTearDownPipelineFunction();
+  return {init_fn, run_fn, tear_down_fn};
 }
 
 }  // namespace tpl::sql::codegen

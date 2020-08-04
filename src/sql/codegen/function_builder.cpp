@@ -38,11 +38,11 @@ void FunctionBuilder::Append(ast::Stmt *stmt) {
 }
 
 void FunctionBuilder::Append(ast::Expr *expr) {
-  Append(codegen_->GetFactory()->NewExpressionStmt(expr));
+  Append(codegen_->NodeFactory()->NewExpressionStmt(expr));
 }
 
 void FunctionBuilder::Append(ast::VariableDecl *decl) {
-  Append(codegen_->GetFactory()->NewDeclStmt(decl));
+  Append(codegen_->NodeFactory()->NewDeclStmt(decl));
 }
 
 ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
@@ -57,18 +57,21 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
 
   // Add the return.
   if (!statements_->IsEmpty() && !statements_->GetLast()->IsReturnStmt()) {
-    Append(codegen_->GetFactory()->NewReturnStmt(codegen_->GetPosition(), ret));
+    Append(codegen_->NodeFactory()->NewReturnStmt(codegen_->GetPosition(), ret));
   }
 
   // Finalize everything.
   statements_->SetRightBracePosition(codegen_->GetPosition());
 
   // Build the function's type.
-  auto func_type = codegen_->GetFactory()->NewFunctionType(start_, std::move(params_), ret_type_);
+  auto func_type = codegen_->NodeFactory()->NewFunctionType(start_, std::move(params_), ret_type_);
 
   // Create the declaration.
-  auto func_lit = codegen_->GetFactory()->NewFunctionLitExpr(func_type, statements_);
-  decl_ = codegen_->GetFactory()->NewFunctionDecl(start_, name_, func_lit);
+  auto func_lit = codegen_->NodeFactory()->NewFunctionLitExpr(func_type, statements_);
+  decl_ = codegen_->NodeFactory()->NewFunctionDecl(start_, name_, func_lit);
+
+  // Register the function in the container.
+  codegen_->container_->RegisterFunction(decl_);
 
   // Restore the previous function in the codegen instance.
   codegen_->function_ = prev_function_;

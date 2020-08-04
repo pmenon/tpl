@@ -23,10 +23,10 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
                     Pipeline *pipeline);
 
   /**
-   * Define the base row type this scan produces.
-   * @param decls The top-level declaration list.
+   * Define the structure representing the rows produced by this CSV scan.
+   * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
+  void DefineHelperStructsAndFunctions() override;
 
   /**
    * Generate the CSV scan logic.

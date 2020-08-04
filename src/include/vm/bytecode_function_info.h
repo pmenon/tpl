@@ -9,6 +9,7 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "util/bitfield.h"
+#include "vm/vm_defs.h"
 
 namespace tpl {
 
@@ -18,11 +19,6 @@ class Type;
 }  // namespace ast
 
 namespace vm {
-
-/**
- * Function IDs are 16-bit numbers. These are used in encoded bytecode.
- */
-using FunctionId = uint16_t;
 
 /**
  * LocalInfo captures information about any local variable allocated in a function, including
@@ -184,8 +180,6 @@ class LocalVar {
  */
 class FunctionInfo {
  public:
-  static constexpr FunctionId kInvalidFuncId = std::numeric_limits<uint16_t>::max();
-
   /**
    * Construct a function with the given ID and name @em name.
    * @param id The ID of the function.

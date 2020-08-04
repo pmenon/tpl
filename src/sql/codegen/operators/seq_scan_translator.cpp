@@ -67,23 +67,23 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
   vpi_loop.EndLoop();
 }
 
-void SeqScanTranslator::GenerateFilterClauseFunctions(
-    util::RegionVector<ast::FunctionDecl *> *decls, const planner::AbstractExpression *predicate,
-    std::vector<ast::Identifier> *curr_clause, bool seen_conjunction) {
+void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExpression *predicate,
+                                                      std::vector<ast::Identifier> *curr_clause,
+                                                      bool seen_conjunction) {
   // The top-most disjunctions in the tree form separate clauses in the filter manager.
   if (!seen_conjunction &&
       predicate->GetExpressionType() == planner::ExpressionType::CONJUNCTION_OR) {
     std::vector<ast::Identifier> next_clause;
-    GenerateFilterClauseFunctions(decls, predicate->GetChild(0), &next_clause, false);
+    GenerateFilterClauseFunctions(predicate->GetChild(0), &next_clause, false);
     filters_.emplace_back(std::move(next_clause));
-    GenerateFilterClauseFunctions(decls, predicate->GetChild(1), curr_clause, false);
+    GenerateFilterClauseFunctions(predicate->GetChild(1), curr_clause, false);
     return;
   }
 
   // Consecutive conjunctions are part of the same clause.
   if (predicate->GetExpressionType() == planner::ExpressionType::CONJUNCTION_AND) {
-    GenerateFilterClauseFunctions(decls, predicate->GetChild(0), curr_clause, true);
-    GenerateFilterClauseFunctions(decls, predicate->GetChild(1), curr_clause, true);
+    GenerateFilterClauseFunctions(predicate->GetChild(0), curr_clause, true);
+    GenerateFilterClauseFunctions(predicate->GetChild(1), curr_clause, true);
     return;
   }
 
@@ -122,15 +122,15 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(
       GenerateGenericTerm(&builder, predicate, vector_proj, tid_list);
     }
   }
+  builder.Finish();
   curr_clause->push_back(fn_name);
-  decls->push_back(builder.Finish());
 }
 
-void SeqScanTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
+void SeqScanTranslator::DefineHelperStructsAndFunctions() {
   if (HasPredicate()) {
     std::vector<ast::Identifier> curr_clause;
     auto root_expr = GetPlanAs<planner::SeqScanPlanNode>().GetScanPredicate();
-    GenerateFilterClauseFunctions(decls, root_expr, &curr_clause, false);
+    GenerateFilterClauseFunctions(root_expr, &curr_clause, false);
     filters_.emplace_back(std::move(curr_clause));
   }
 }

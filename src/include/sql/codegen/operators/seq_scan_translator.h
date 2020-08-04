@@ -38,10 +38,10 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
   DISALLOW_COPY_AND_MOVE(SeqScanTranslator);
 
   /**
-   * If the scan has a predicate, this function will define all clause functions.
-   * @param decls The top-level declarations.
+   * Define all predicate functions if the scan has a predicate.
+   * @param container The container for query-level types and functions.
    */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override;
+  void DefineHelperStructsAndFunctions() override;
 
   /**
    * Initialize the FilterManager if required.
@@ -88,8 +88,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
                            ast::Expr *vector_proj, ast::Expr *tid_list);
 
   // Generate all filter clauses.
-  void GenerateFilterClauseFunctions(util::RegionVector<ast::FunctionDecl *> *decls,
-                                     const planner::AbstractExpression *predicate,
+  void GenerateFilterClauseFunctions(const planner::AbstractExpression *predicate,
                                      std::vector<ast::Identifier> *curr_clause,
                                      bool seen_conjunction);
 

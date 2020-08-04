@@ -35,16 +35,10 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   void DeclarePipelineDependencies() const override;
 
   /**
-   * Declare the aggregation structure.
-   * @param decls Query-level declarations.
+   * Define the structure of the aggregates. When parallel, generate the partial merging function.
+   * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
-
-  /**
-   * When parallel, generate the partial aggregate merging function.
-   * @param decls Query-level declarations.
-   */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override;
+  void DefineHelperStructsAndFunctions() override;
 
   /**
    * If the provided pipeline is the build-side, initialize the declare partial aggregate.

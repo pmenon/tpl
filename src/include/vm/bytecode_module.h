@@ -49,7 +49,7 @@ class BytecodeModule {
    * @return A pointer to the metadata of the TPL function with the provided name in this module. If
    *         no such function exists, a NULL pointer is returned.
    */
-  const FunctionInfo *LookupFuncInfoByName(const std::string &name) const {
+  const FunctionInfo *LookupFuncInfoByName(std::string_view name) const {
     for (const FunctionInfo &info : functions_) {
       if (info.GetName() == name) {
         return &info;

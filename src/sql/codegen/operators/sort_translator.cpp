@@ -57,14 +57,7 @@ void SortTranslator::DeclarePipelineDependencies() const {
   GetPipeline()->AddDependency(build_pipeline_);
 }
 
-void SortTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
-  auto codegen = GetCodeGen();
-  auto fields = codegen->MakeEmptyFieldList();
-  GetAllChildOutputFields(0, kSortRowAttrPrefix, &fields);
-  decls->push_back(codegen->DeclareStruct(sort_row_type_, std::move(fields)));
-}
-
-void SortTranslator::GenerateComparisonFunction(FunctionBuilder *function) {
+void SortTranslator::GenerateComparisonLogic(FunctionBuilder *function) {
   CodeGen *codegen = GetCodeGen();
 
   ConsumerContext context(GetCompilationContext(), build_pipeline_);
@@ -96,18 +89,28 @@ void SortTranslator::GenerateComparisonFunction(FunctionBuilder *function) {
   current_row_ = CurrentRow::Child;
 }
 
-void SortTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
+ast::StructDecl *SortTranslator::GenerateSortRowStructType() const {
+  auto fields = GetCodeGen()->MakeEmptyFieldList();
+  GetAllChildOutputFields(0, kSortRowAttrPrefix, &fields);
+  return GetCodeGen()->DeclareStruct(sort_row_type_, std::move(fields));
+}
+
+ast::FunctionDecl *SortTranslator::GenerateComparisonFunction() {
   auto codegen = GetCodeGen();
   auto params = codegen->MakeFieldList({
       codegen->MakeField(lhs_row_, codegen->PointerType(sort_row_type_)),
       codegen->MakeField(rhs_row_, codegen->PointerType(sort_row_type_)),
   });
   FunctionBuilder builder(codegen, compare_func_, std::move(params), codegen->Int32Type());
-  {
-    // Generate body.
-    GenerateComparisonFunction(&builder);
+  {  //
+    GenerateComparisonLogic(&builder);
   }
-  decls->push_back(builder.Finish(codegen->Const32(0)));
+  return builder.Finish(codegen->Const32(0));
+}
+
+void SortTranslator::DefineHelperStructsAndFunctions() {
+  GenerateSortRowStructType();
+  GenerateComparisonFunction();
 }
 
 void SortTranslator::InitializeSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const {

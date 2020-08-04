@@ -6,6 +6,7 @@
 #include "ast/identifier.h"
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/code_container.h"
 #include "sql/codegen/expression/column_value_provider.h"
 #include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"
@@ -101,18 +102,10 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void DeclarePipelineDependencies() const {}
 
   /**
-   * Define any helper structures required for processing. Ensure they're declared in the provided
-   * declaration container.
-   * @param decls Query-level declarations.
+   * Define any helper structures or functions required for processing.
+   * @param container Query-level declarations.
    */
-  virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {}
-
-  /**
-   * Define any helper functions required for processing. Ensure they're declared in the provided
-   * declaration container.
-   * @param decls Query-level declarations.
-   */
-  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {}
+  virtual void DefineHelperStructsAndFunctions() {}
 
   /**
    * Initialize all query state.
@@ -124,6 +117,13 @@ class OperatorTranslator : public ColumnValueProvider {
    * Tear down all query state.
    */
   virtual void TearDownQueryState(FunctionBuilder *function) const {}
+
+  /**
+   *
+   * @param pipeline
+   * @param container
+   */
+  virtual void DefinePipelineFunctions(const Pipeline &pipeline, CodeContainer *container) {}
 
   /**
    * Initialize any declared pipeline-local state.

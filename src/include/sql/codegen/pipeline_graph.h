@@ -6,6 +6,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "common/macros.h"
+#include "sql/codegen/codegen_defs.h"
 
 namespace tpl::sql::codegen {
 
@@ -30,7 +31,7 @@ class PipelineGraph {
   /**
    * @return The next available pipeline ID.
    */
-  uint32_t NextPipelineId();
+  PipelineId NextPipelineId();
 
   /**
    * @return True if provided pipeline is registered in this graph.
@@ -59,7 +60,7 @@ class PipelineGraph {
 
  private:
   // The next available pipeline ID.
-  uint32_t next_id_{0};
+  PipelineId next_id_{0};
 
   // Type-def used to represent the set of dependents. We expect pipelines to
   // typically require only one dependency, so we use a small vector.

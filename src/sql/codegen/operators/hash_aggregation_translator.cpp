@@ -120,11 +120,6 @@ ast::StructDecl *HashAggregationTranslator::GenerateInputValuesStruct() {
   return codegen->DeclareStruct(agg_values_type_, std::move(fields));
 }
 
-void HashAggregationTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
-  decls->push_back(GeneratePayloadStruct());
-  decls->push_back(GenerateInputValuesStruct());
-}
-
 void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *function,
                                                         ast::Expr *agg_ht, ast::Expr *iter) {
   auto codegen = GetCodeGen();
@@ -237,13 +232,21 @@ ast::FunctionDecl *HashAggregationTranslator::GenerateKeyCheckFunction() {
   return builder.Finish();
 }
 
-void HashAggregationTranslator::DefineHelperFunctions(
-    util::RegionVector<ast::FunctionDecl *> *decls) {
+void HashAggregationTranslator::DefineHelperStructsAndFunctions() {
+  // Declare the structure stored in the aggregation hash table.
+  GeneratePayloadStruct();
+  // Declare the structure of the input to the aggregation.
+  GenerateInputValuesStruct();
+
   if (build_pipeline_.IsParallel()) {
-    decls->push_back(GeneratePartialKeyCheckFunction());
-    decls->push_back(GenerateMergeOverflowPartitionsFunction());
+    // In parallel aggregations, we also need to declare the partial key-check
+    // and merging functions.
+    GeneratePartialKeyCheckFunction();
+    GenerateMergeOverflowPartitionsFunction();
   }
-  decls->push_back(GenerateKeyCheckFunction());
+
+  // Finally, the main key-check function.
+  GenerateKeyCheckFunction();
 }
 
 void HashAggregationTranslator::InitializeAggregationHashTable(FunctionBuilder *function,
