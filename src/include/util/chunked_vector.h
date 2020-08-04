@@ -113,9 +113,11 @@ class ChunkedVector {
   }
 
   /**
-   * Random access iterator.
+   * Read-only iterator over the elements in the vector.
    */
-  class Iterator {
+  class ConstIterator {
+    friend class ChunkedVector;
+
    public:
     // Iterator typedefs
     using difference_type = int64_t;
@@ -124,22 +126,16 @@ class ChunkedVector {
     using pointer = byte **;
     using reference = byte *&;
 
-    Iterator() noexcept : chunks_iter_(), element_size_(0), curr_(nullptr) {}
-
-    Iterator(std::vector<byte *>::const_iterator chunks_iter, byte *position,
-             std::size_t element_size) noexcept
-        : chunks_iter_(chunks_iter), element_size_(element_size), curr_(position) {
-      if (*chunks_iter + ChunkAllocSize(element_size) == position) {
-        ++chunks_iter_;
-        curr_ = *chunks_iter_;
-      }
-    }
+    ConstIterator() noexcept : chunks_iter_(), element_size_(0), curr_(nullptr) {}
 
     // Dereference
-    byte *operator*() const noexcept { return curr_; }
+    value_type operator*() noexcept { return curr_; }
+
+    // Dereference
+    value_type operator*() const noexcept { return curr_; }
 
     // In place addition
-    Iterator &operator+=(const int64_t offset) {
+    ConstIterator &operator+=(int64_t offset) {
       // The size (in bytes) of one chunk
       const int64_t chunk_size = ChunkAllocSize(element_size_);
 
@@ -175,39 +171,178 @@ class ChunkedVector {
     }
 
     // In place subtraction
-    Iterator &operator-=(const int64_t offset) {
+    ConstIterator &operator-=(int64_t offset) {
       *this += (-offset);
       return *this;
     }
 
     // Addition
-    const Iterator operator+(const int64_t offset) const {
-      Iterator copy(*this);
+    const ConstIterator operator+(int64_t offset) const {
+      ConstIterator copy(*this);
       copy += offset;
       return copy;
     }
 
     // Subtraction
-    const Iterator operator-(const int64_t offset) const {
-      Iterator copy(*this);
+    const ConstIterator operator-(int64_t offset) const {
+      ConstIterator copy(*this);
       copy -= offset;
       return copy;
     }
 
     // Pre-increment
-    // NOTE: This is not implemented in terms of operator+=() to optimize for the cases when the
-    //       offset is known.
-    Iterator &operator++() noexcept {
+    ConstIterator &operator++() noexcept {
+      // This is not implemented in terms of operator+=() to optimize for the
+      // cases when the offset is known.
+
       const int64_t chunk_size = ChunkAllocSize(element_size_);
       const int64_t byte_offset = static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
-      // NOTE: an explicit if statement is a bit faster despite the possibility of branch
-      //       misprediction.
+      // NOTE: an explicit if statement is a bit faster despite the possibility
+      //       of branch misprediction.
       if (byte_offset >= chunk_size) {
         ++chunks_iter_;
         curr_ = *chunks_iter_ + (byte_offset - chunk_size);
       } else {
         curr_ += element_size_;
       }
+      return *this;
+    }
+
+    // Post-increment
+    const ConstIterator operator++(int) noexcept {
+      ConstIterator copy(*this);
+      ++(*this);
+      return copy;
+    }
+
+    // Pre-decrement
+    ConstIterator &operator--() noexcept {
+      // This is not implemented in terms of operator-=() to optimize for the
+      // cases when the offset is known.
+      const int64_t chunk_size = ChunkAllocSize(element_size_);
+      const int64_t byte_offset = -static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
+      // NOTE: an explicit if statement is a bit faster despite the possibility
+      //       of branch misprediction.
+      if (byte_offset < 0) {
+        --chunks_iter_;
+        curr_ = *chunks_iter_ + byte_offset + chunk_size;
+      } else {
+        curr_ -= element_size_;
+      }
+      return *this;
+    }
+
+    // Post-decrement
+    const ConstIterator operator--(int) noexcept {
+      Iterator copy(*this);
+      ++(*this);
+      return copy;
+    }
+
+    // Indexing
+    value_type operator[](int64_t idx) const noexcept { return *(this->operator+(idx)); }
+
+    // Equality
+    bool operator==(const ConstIterator &that) const noexcept { return curr_ == that.curr_; }
+
+    // Difference
+    bool operator!=(const ConstIterator &that) const noexcept { return !(this->operator==(that)); }
+
+    // Less than
+    bool operator<(const ConstIterator &that) const noexcept {
+      if (chunks_iter_ != that.chunks_iter_) {
+        return chunks_iter_ < that.chunks_iter_;
+      }
+      return curr_ < that.curr_;
+    }
+
+    // Greater than
+    bool operator>(const ConstIterator &that) const noexcept {
+      return this->operator!=(that) && !(this->operator<(that));
+    }
+
+    // Less than or equal to
+    bool operator<=(const ConstIterator &that) const noexcept { return !(this->operator>(that)); }
+
+    // Greater than or equal to
+    bool operator>=(const ConstIterator &that) const noexcept { return !(this->operator<(that)); }
+
+    difference_type operator-(const ConstIterator &that) const noexcept {
+      const int64_t chunk_size = ChunkAllocSize(element_size_);
+      const int64_t elem_size = static_cast<int64_t>(element_size_);
+
+      return ((chunks_iter_ - that.chunks_iter_) * chunk_size +
+              ((curr_ - *chunks_iter_) - (that.curr_ - *that.chunks_iter_))) /
+             elem_size;
+    }
+
+   private:
+    ConstIterator(std::vector<byte *>::const_iterator chunks_iter, byte *position,
+                  std::size_t element_size) noexcept
+        : chunks_iter_(chunks_iter), element_size_(element_size), curr_(position) {
+      if (*chunks_iter + ChunkAllocSize(element_size) == position) {
+        ++chunks_iter_;
+        curr_ = *chunks_iter_;
+      }
+    }
+
+   protected:
+    std::vector<byte *>::const_iterator chunks_iter_;
+    std::size_t element_size_;
+    byte *curr_;
+  };
+
+  /**
+   * Read-write iterator over the elements in the vector.
+   */
+  class Iterator : public ConstIterator {
+    friend class ChunkedVector;
+
+   public:
+    // Iterator typedefs
+    using difference_type = int64_t;
+    using value_type = byte *;
+    using iterator_category = std::random_access_iterator_tag;
+    using pointer = byte **;
+    using reference = byte *&;
+
+    Iterator() noexcept : ConstIterator() {}
+
+    // Dereference
+    value_type operator*() noexcept { return ConstIterator::curr_; }
+
+    // Dereference
+    value_type operator*() const noexcept { return ConstIterator::curr_; }
+
+    // In place addition
+    Iterator &operator+=(int64_t offset) {
+      ConstIterator::operator+=(offset);
+      return *this;
+    }
+
+    // In place subtraction
+    Iterator &operator-=(int64_t offset) {
+      ConstIterator::operator+=(-offset);
+      return *this;
+    }
+
+    // Addition
+    const Iterator operator+(int64_t offset) const {
+      Iterator copy(*this);
+      copy += offset;
+      return copy;
+    }
+
+    // Subtraction
+    const Iterator operator-(int64_t offset) const {
+      Iterator copy(*this);
+      copy -= offset;
+      return copy;
+    }
+
+    // Pre-increment
+    Iterator &operator++() noexcept {
+      ConstIterator::operator++();
       return *this;
     }
 
@@ -219,19 +354,8 @@ class ChunkedVector {
     }
 
     // Pre-decrement
-    // NOTE: This is not implemented in terms of operator-=() to optimize for the cases when the
-    //       offset is known.
     Iterator &operator--() noexcept {
-      const int64_t chunk_size = ChunkAllocSize(element_size_);
-      const int64_t byte_offset = -static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
-      // NOTE: an explicit if statement is a bit faster despite the possibility of branch
-      //       misprediction.
-      if (byte_offset < 0) {
-        --chunks_iter_;
-        curr_ = *chunks_iter_ + byte_offset + chunk_size;
-      } else {
-        curr_ -= element_size_;
-      }
+      ConstIterator::operator--();
       return *this;
     }
 
@@ -243,46 +367,36 @@ class ChunkedVector {
     }
 
     // Indexing
-    byte *operator[](const int64_t &idx) const noexcept { return *(*this + idx); }
+    value_type operator[](int64_t idx) const noexcept {
+      return const_cast<value_type>(ConstIterator::operator[](idx));
+    }
 
     // Equality
-    bool operator==(const Iterator &that) const noexcept { return curr_ == that.curr_; }
+    bool operator==(const Iterator &that) const noexcept { return ConstIterator::operator==(that); }
 
     // Difference
-    bool operator!=(const Iterator &that) const noexcept { return !(this->operator==(that)); }
+    bool operator!=(const Iterator &that) const noexcept { return ConstIterator::operator!=(that); }
 
     // Less than
-    bool operator<(const Iterator &that) const noexcept {
-      if (chunks_iter_ != that.chunks_iter_) {
-        return chunks_iter_ < that.chunks_iter_;
-      }
-      return curr_ < that.curr_;
-    }
+    bool operator<(const Iterator &that) const noexcept { return ConstIterator::operator<(that); }
 
     // Greater than
-    bool operator>(const Iterator &that) const noexcept {
-      return this->operator!=(that) && !(this->operator<(that));
-    }
+    bool operator>(const Iterator &that) const noexcept { return ConstIterator::operator>(that); }
 
     // Less than or equal to
-    bool operator<=(const Iterator &that) const noexcept { return !(this->operator>(that)); }
+    bool operator<=(const Iterator &that) const noexcept { return ConstIterator::operator<=(that); }
 
     // Greater than or equal to
-    bool operator>=(const Iterator &that) const noexcept { return !(this->operator<(that)); }
+    bool operator>=(const Iterator &that) const noexcept { return ConstIterator::operator>=(that); }
 
     difference_type operator-(const Iterator &that) const noexcept {
-      const int64_t chunk_size = ChunkAllocSize(element_size_);
-      const int64_t elem_size = static_cast<int64_t>(element_size_);
-
-      return ((chunks_iter_ - that.chunks_iter_) * chunk_size +
-              ((curr_ - *chunks_iter_) - (that.curr_ - *that.chunks_iter_))) /
-             elem_size;
+      return ConstIterator::operator-(that);
     }
 
    private:
-    std::vector<byte *>::const_iterator chunks_iter_;
-    std::size_t element_size_;
-    byte *curr_;
+    Iterator(std::vector<byte *>::const_iterator chunks_iter, byte *position,
+             std::size_t element_size) noexcept
+        : ConstIterator(chunks_iter, position, element_size) {}
   };
 
   /**
@@ -298,11 +412,11 @@ class ChunkedVector {
   /**
    * @return An iterator pointing to the first element in this vector.
    */
-  Iterator begin() const noexcept {
+  ConstIterator begin() const noexcept {
     if (empty()) {
-      return Iterator();
+      return ConstIterator();
     }
-    return Iterator(chunks_.begin(), chunks_[0], element_size());
+    return ConstIterator(chunks_.begin(), chunks_[0], element_size());
   }
 
   /**
@@ -318,11 +432,11 @@ class ChunkedVector {
   /**
    * @return An iterator pointing to the element following the last in this vector.
    */
-  Iterator end() const noexcept {
+  ConstIterator end() const noexcept {
     if (empty()) {
-      return Iterator();
+      return ConstIterator();
     }
-    return Iterator(chunks_.end() - 1, position_, element_size());
+    return ConstIterator(chunks_.end() - 1, position_, element_size());
   }
 
   /**
