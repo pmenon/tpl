@@ -4,8 +4,6 @@
 #include <atomic>
 #include <sstream>
 
-#include "llvm/ADT/SmallVector.h"
-
 #include "spdlog/fmt/fmt.h"
 
 #include "ast/ast.h"
