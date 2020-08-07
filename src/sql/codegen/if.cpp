@@ -1,5 +1,6 @@
 #include "sql/codegen/if.h"
 
+#include "ast/ast_node_factory.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/function_builder.h"
 
@@ -17,6 +18,8 @@ If::If(FunctionBuilder *function, ast::Expr *condition)
   prev_func_stmt_list_ = function_->statements_;
   // Swap in our 'then' statement list as the active statement list.
   function_->statements_ = then_stmts_;
+  // Indent.
+  function_->GetCodeGen()->Indent();
 }
 
 If::~If() { EndIf(); }
@@ -38,8 +41,11 @@ void If::EndIf() {
 
   // Create and append the if statement.
   auto codegen = function_->GetCodeGen();
-  auto if_stmt = codegen->GetFactory()->NewIfStmt(position_, condition_, then_stmts_, else_stmts_);
+  auto if_stmt = codegen->NodeFactory()->NewIfStmt(position_, condition_, then_stmts_, else_stmts_);
   function_->Append(if_stmt);
+
+  // Un-indent.
+  function_->GetCodeGen()->UnIndent();
 
   // Done.
   completed_ = true;

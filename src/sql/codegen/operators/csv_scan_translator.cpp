@@ -5,10 +5,10 @@
 #include "common/exception.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/loop.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/csv_scan_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -25,10 +25,10 @@ CSVScanTranslator::CSVScanTranslator(const planner::CSVScanPlanNode &plan,
   pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
   // Declare state.
   base_row_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      GetCodeGen(), "csvRow", GetCodeGen()->MakeExpr(base_row_type_));
+      GetCodeGen(), "csv_row", GetCodeGen()->MakeExpr(base_row_type_));
 }
 
-void CSVScanTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
+void CSVScanTranslator::DefineStructsAndFunctions() {
   CodeGen *codegen = GetCodeGen();
 
   // Reserve now to reduce allocations.
@@ -41,8 +41,7 @@ void CSVScanTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *
     auto field_name = codegen->MakeIdentifier(kFieldPrefix + std::to_string(idx));
     fields.emplace_back(codegen->MakeField(field_name, codegen->TplType(TypeId::Varchar)));
   }
-
-  decls->push_back(codegen->DeclareStruct(base_row_type_, std::move(fields)));
+  codegen->DeclareStruct(base_row_type_, std::move(fields));
 }
 
 ast::Expr *CSVScanTranslator::GetField(uint32_t field_index) const {
@@ -55,7 +54,7 @@ ast::Expr *CSVScanTranslator::GetFieldPtr(uint32_t field_index) const {
   return GetCodeGen()->AddressOf(GetField(field_index));
 }
 
-void CSVScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
+void CSVScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
   auto reader_var_base = codegen->MakeFreshIdentifier("csvReaderBase");
   auto reader_var = codegen->MakeFreshIdentifier("csvReader");
@@ -73,7 +72,7 @@ void CSVScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilde
       function->Append(codegen->CSVReaderGetField(codegen->MakeExpr(reader_var), i, field_ptr));
     }
     // Done.
-    context->Push(function);
+    context->Consume(function);
   }
   scan_loop.EndLoop();
   function->Append(codegen->CSVReaderClose(codegen->MakeExpr(reader_var)));

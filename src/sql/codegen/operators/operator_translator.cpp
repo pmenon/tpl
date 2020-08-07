@@ -4,7 +4,7 @@
 
 #include "common/exception.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/codegen/work_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -21,7 +21,7 @@ OperatorTranslator::OperatorTranslator(const planner::AbstractPlanNode &plan,
   }
 }
 
-ast::Expr *OperatorTranslator::GetOutput(WorkContext *context, uint32_t attr_idx) const {
+ast::Expr *OperatorTranslator::GetOutput(ConsumerContext *context, uint32_t attr_idx) const {
   // Check valid output column.
   const auto output_schema = plan_.GetOutputSchema();
   if (attr_idx >= output_schema->NumColumns()) {
@@ -35,7 +35,7 @@ ast::Expr *OperatorTranslator::GetOutput(WorkContext *context, uint32_t attr_idx
   return context->DeriveValue(*output_expression, this);
 }
 
-ast::Expr *OperatorTranslator::GetChildOutput(WorkContext *context, uint32_t child_idx,
+ast::Expr *OperatorTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                                               uint32_t attr_idx) const {
   // Check valid child.
   if (child_idx >= plan_.GetChildrenSize()) {

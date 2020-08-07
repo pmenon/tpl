@@ -1,9 +1,9 @@
 #include "sql/codegen/operators/nested_loop_join_translator.h"
 
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -29,18 +29,17 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
   }
 }
 
-void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *context,
-                                                   FunctionBuilder *function) const {
+void NestedLoopJoinTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   if (const auto join_predicate = GetNLJPlan().GetJoinPredicate(); join_predicate != nullptr) {
     If cond(function, context->DeriveValue(*join_predicate, this));
     {
       // Valid tuple. Push to next operator in pipeline.
-      context->Push(function);
+      context->Consume(function);
     }
     cond.EndIf();
   } else {
     // No join predicate. Push to next operator in pipeline.
-    context->Push(function);
+    context->Consume(function);
   }
 }
 

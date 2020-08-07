@@ -27,7 +27,7 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
    * Generate the join condition from the two child inputs.
    * @param context The context of the work.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Nested-loop joins do not produce columns from base tables.");

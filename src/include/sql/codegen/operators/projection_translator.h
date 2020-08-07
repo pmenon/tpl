@@ -26,7 +26,7 @@ class ProjectionTranslator : public OperatorTranslator {
    * Push the context through this operator to the next in the pipeline.
    * @param context The context.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * Projections do not produce columns from base tables.

@@ -30,16 +30,21 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
                               CompilationContext *compilation_context, Pipeline *pipeline);
 
   /**
-   * Declare the aggregation structure.
-   * @param decls Query-level declarations.
+   * Link the build and produce pipelines.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
+  void DeclarePipelineDependencies() const override;
 
   /**
-   * When parallel, generate the partial aggregate merging function.
-   * @param decls Query-level declarations.
+   * Define the structure of the aggregates. When parallel, generate the partial merging function.
+   * @param container The container for query-level types and functions.
    */
-  void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *top_level_funcs) override;
+  void DefineStructsAndFunctions() override;
+
+  /**
+   * Define the aggregate merging logic, if the aggregation is parallel.
+   * @param pipeline The pipeline.
+   */
+  void DefinePipelineFunctions(const Pipeline &pipeline) override;
 
   /**
    * If the provided pipeline is the build-side, initialize the declare partial aggregate.
@@ -60,7 +65,7 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    * @param context The context of the work.
    * @param function The function being built.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * Finish the provided pipeline.
@@ -81,7 +86,7 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {
@@ -106,7 +111,9 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
 
   void InitializeAggregates(FunctionBuilder *function, bool local) const;
 
-  void UpdateGlobalAggregate(WorkContext *ctx, FunctionBuilder *function) const;
+  void UpdateGlobalAggregate(ConsumerContext *ctx, FunctionBuilder *function) const;
+
+  void GenerateAggregateMergeFunction() const;
 
  private:
   ast::Identifier agg_row_var_;

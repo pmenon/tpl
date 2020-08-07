@@ -9,18 +9,25 @@
 
 #include "llvm/ADT/StringMap.h"
 
-#include "ast/ast.h"
-#include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/identifier.h"
 #include "ast/type.h"
 #include "common/common.h"
+#include "parsing/token.h"
+#include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/compilation_unit.h"
 #include "sql/planner/expressions/expression_defs.h"
 #include "sql/runtime_types.h"
 #include "sql/sql.h"
 #include "util/region_containers.h"
 
+namespace tpl::ast {
+class AstNodeFactory;
+}  // namespace tpl::ast
+
 namespace tpl::sql::codegen {
+
+class FunctionBuilder;
 
 /**
  * Bundles convenience methods needed by other classes during code generation.
@@ -33,16 +40,15 @@ class CodeGen {
   // The default number of cached scopes to keep around.
   static constexpr uint32_t kDefaultScopeCacheSize = 4;
 
-  /**
-   * Scope object.
-   */
-  class Scope {
+  // Represents a lexical scope in TPL code. Holds a set of names (i.e., identifiers) and a link to
+  // the outer scope. Note: this IS NOT an RAII object.
+  class LexicalScope {
    public:
     // Create scope.
-    explicit Scope(Scope *previous) : previous_(nullptr) { Init(previous); }
+    explicit LexicalScope(LexicalScope *previous) : previous_(nullptr) { Init(previous); }
 
     // Initialize this scope.
-    void Init(Scope *previous) {
+    void Init(LexicalScope *previous) {
       previous_ = previous;
       names_.clear();
     }
@@ -51,12 +57,12 @@ class CodeGen {
     std::string GetFreshName(const std::string &name);
 
     // Return the previous scope.
-    Scope *Previous() { return previous_; }
+    LexicalScope *Previous() { return previous_; }
 
    private:
-    // The previous scope_;
-    Scope *previous_;
-    // Map of name/identifier to next ID.
+    // The outer scope.
+    LexicalScope *previous_;
+    // Map of identifier to next ID. Used to generate unique names.
     llvm::StringMap<uint64_t> names_;
   };
 
@@ -82,10 +88,29 @@ class CodeGen {
   };
 
   /**
-   * Create a code generator that generates code for the provided container.
-   * @param context The context used create all expressions.
+   * RAII container class.
    */
-  explicit CodeGen(ast::Context *context);
+  class CodeContainerScope {
+   public:
+    CodeContainerScope(CodeGen *codegen, CompilationUnit *container)
+        : codegen_(codegen), prev_container_(codegen_->container_) {
+      codegen_->container_ = container;
+    }
+
+    ~CodeContainerScope() { codegen_->container_ = prev_container_; }
+
+   private:
+    // Code generation instance.
+    CodeGen *codegen_;
+    // The previous container.
+    CompilationUnit *prev_container_;
+  };
+
+  /**
+   * Create a code generator that generates code for the provided container.
+   * @param container Where all code is generated into.
+   */
+  explicit CodeGen(CompilationUnit *container);
 
   /**
    * Destructor.
@@ -310,8 +335,8 @@ class CodeGen {
    * @param fields The fields constituting the struct.
    * @return The structure declaration.
    */
-  [[nodiscard]] ast::StructDecl *DeclareStruct(ast::Identifier name,
-                                               util::RegionVector<ast::FieldDecl *> &&fields) const;
+  ast::StructDecl *DeclareStruct(ast::Identifier name,
+                                 util::RegionVector<ast::FieldDecl *> &&fields) const;
 
   // ---------------------------------------------------------------------------
   //
@@ -1140,6 +1165,12 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *NotLike(ast::Expr *str, ast::Expr *pattern);
 
+  // ---------------------------------------------------------------------------
+  //
+  // CSV
+  //
+  // ---------------------------------------------------------------------------
+
   /**
    * Call @csvReaderInit(). Initialize a CSV reader for the given file name.
    * @param reader The reader.
@@ -1195,10 +1226,16 @@ class CodeGen {
    */
   ast::Identifier MakeIdentifier(std::string_view str) const;
 
+  // ---------------------------------------------------------------------------
+  //
+  // Generic
+  //
+  // ---------------------------------------------------------------------------
+
   /**
    * @return A new identifier expression representing the given identifier.
    */
-  ast::IdentifierExpr *MakeExpr(ast::Identifier ident) const;
+  ast::Expr *MakeExpr(ast::Identifier ident) const;
 
   /**
    * @return The expression as a standalone statement.
@@ -1230,6 +1267,11 @@ class CodeGen {
   ast::FieldDecl *MakeField(ast::Identifier name, ast::Expr *type) const;
 
   /**
+   * @return The current (potentially null) function being built.
+   */
+  FunctionBuilder *GetCurrentFunction() const { return function_; }
+
+  /**
    * @return The current source code position.
    */
   const SourcePosition &GetPosition() const { return position_; }
@@ -1256,19 +1298,24 @@ class CodeGen {
   // Exit the current lexical scope.
   void ExitScope();
 
+  // Return the context.
+  ast::Context *Context() const { return container_->Context(); }
+
   // Return the AST node factory.
-  ast::AstNodeFactory *GetFactory();
+  ast::AstNodeFactory *NodeFactory() const;
 
  private:
-  // The context used to create AST nodes.
-  ast::Context *context_;
+  // The container for the current compilation.
+  CompilationUnit *container_;
   // The current position in the source.
   SourcePosition position_;
   // Cache of code scopes.
   uint32_t num_cached_scopes_;
-  std::array<std::unique_ptr<Scope>, kDefaultScopeCacheSize> scope_cache_ = {nullptr};
+  std::array<std::unique_ptr<LexicalScope>, kDefaultScopeCacheSize> scope_cache_ = {nullptr};
   // Current scope.
-  Scope *scope_;
+  LexicalScope *scope_;
+  // The current function being generated.
+  FunctionBuilder *function_;
 };
 
 }  // namespace tpl::sql::codegen

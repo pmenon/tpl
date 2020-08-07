@@ -48,34 +48,33 @@ class Module {
   DISALLOW_COPY_AND_MOVE(Module);
 
   /**
-   * Look up a TPL function in this module by its ID
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Look up the metadata for a TPL function in this module by its ID.
+   * @return A pointer to the function's info if it exists; null otherwise.
    */
   const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
     return bytecode_module_->GetFuncInfoById(func_id);
   }
 
   /**
-   * Look up a TPL function in this module by its name
-   * @param name The name of the function to lookup
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Look up metadata for a TPL function in this module by its name.
+   * @param name The name of the function to lookup.
+   * @return A pointer to the function's info if it exists; null otherwise.
    */
-  const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
+  const FunctionInfo *GetFuncInfoByName(std::string_view name) const {
     return bytecode_module_->LookupFuncInfoByName(name);
   }
 
   /**
-   * Retrieve and wrap a TPL function inside a C++ function object, thus making the TPL function
-   * callable as a C++ function. Callers can request different versions of the TPL code including
-   * an interpreted version and a compiled version.
-   * @tparam Ret Ret The C/C++ return type of the function
-   * @tparam ArgTypes ArgTypes The C/C++ argument types to the function
-   * @param name The name of the function the caller wants
-   * @param[out] func The function wrapper we use to wrap the TPL function
-   * @return True if the function was found and the output parameter was set
+   * Retrieve the TPL function in this module with the name @em name as an invokable STL function.
+   * Callers can request different implementations of function by specifying an execution mode.
+   * @tparam Ret Ret The C/C++ return type of the function.
+   * @tparam ArgTypes ArgTypes The C/C++ argument types to the function.
+   * @param name The name of the function to retrieve.
+   * @param[out] func The function wrapper we use to wrap the TPL function.
+   * @return True if the function was found and the output parameter was set.
    */
   template <typename Ret, typename... ArgTypes>
-  bool GetFunction(const std::string &name, ExecutionMode exec_mode,
+  bool GetFunction(std::string_view name, ExecutionMode exec_mode,
                    std::function<Ret(ArgTypes...)> &func);
 
   /**
@@ -189,7 +188,7 @@ inline void CopyAll(uint8_t *buffer, const HeadT &head, const RestT &... rest) {
 }  // namespace detail
 
 template <typename Ret, typename... ArgTypes>
-inline bool Module::GetFunction(const std::string &name, const ExecutionMode exec_mode,
+inline bool Module::GetFunction(std::string_view name, const ExecutionMode exec_mode,
                                 std::function<Ret(ArgTypes...)> &func) {
   // Lookup function
   const FunctionInfo *func_info = bytecode_module_->LookupFuncInfoByName(name);

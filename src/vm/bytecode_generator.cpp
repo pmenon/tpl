@@ -2385,11 +2385,10 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name,
 }
 
 FunctionId BytecodeGenerator::LookupFuncIdByName(const std::string &name) const {
-  auto iter = func_map_.find(name);
-  if (iter == func_map_.end()) {
-    return FunctionInfo::kInvalidFuncId;
+  if (const auto iter = func_map_.find(name); iter != func_map_.end()) {
+    return iter->second;
   }
-  return iter->second;
+  return kInvalidFuncId;
 }
 
 LocalVar BytecodeGenerator::NewStatic(const std::string &name, ast::Type *type,

@@ -2,9 +2,9 @@
 
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
-#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/limit_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -19,7 +19,7 @@ LimitTranslator::LimitTranslator(const planner::LimitPlanNode &plan,
   compilation_context->Prepare(*plan.GetChild(0), pipeline);
   // Register state.
   CodeGen *codegen = GetCodeGen();
-  tuple_count_ = pipeline->DeclarePipelineStateEntry("numTuples", codegen->Int32Type());
+  tuple_count_ = pipeline->DeclarePipelineStateEntry("num_tuples", codegen->Int32Type());
 }
 
 void LimitTranslator::InitializePipelineState(const Pipeline &pipeline,
@@ -28,7 +28,7 @@ void LimitTranslator::InitializePipelineState(const Pipeline &pipeline,
   function->Append(codegen->Assign(tuple_count_.Get(codegen), codegen->Const64(0)));
 }
 
-void LimitTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
+void LimitTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   const auto &plan = GetPlanAs<planner::LimitPlanNode>();
   CodeGen *codegen = GetCodeGen();
 
@@ -47,7 +47,7 @@ void LimitTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder 
   }
 
   If check_limit(function, cond);
-  context->Push(function);
+  context->Consume(function);
   check_limit.EndIf();
 
   // Update running count: numTuples += 1

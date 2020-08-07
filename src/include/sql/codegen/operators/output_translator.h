@@ -37,13 +37,14 @@ class OutputTranslator : public OperatorTranslator {
 
   /**
    * Define the output struct.
+   * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
+  void DefineStructsAndFunctions() override;
 
   /**
    * Perform the main work of the translator.
    */
-  void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * Output translator needs to finalize the output.

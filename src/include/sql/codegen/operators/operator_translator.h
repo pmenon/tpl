@@ -6,6 +6,7 @@
 #include "ast/identifier.h"
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/expression/column_value_provider.h"
 #include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"
@@ -20,7 +21,7 @@ class CodeGen;
 class CompilationContext;
 class FunctionBuilder;
 class Pipeline;
-class WorkContext;
+class ConsumerContext;
 
 /**
  * The base class of all operator translators.
@@ -96,18 +97,15 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual ~OperatorTranslator() = default;
 
   /**
-   * Define any helper structures required for processing. Ensure they're declared in the provided
-   * declaration container.
-   * @param decls Query-level declarations.
+   * For any pipelines this translator has, declare all dependencies.
    */
-  virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {}
+  virtual void DeclarePipelineDependencies() const {}
 
   /**
-   * Define any helper functions required for processing. Ensure they're declared in the provided
-   * declaration container.
-   * @param decls Query-level declarations.
+   * Define any helper structures or functions required for processing. These are available for the
+   * whole query.
    */
-  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {}
+  virtual void DefineStructsAndFunctions() {}
 
   /**
    * Initialize all query state.
@@ -121,11 +119,24 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void TearDownQueryState(FunctionBuilder *function) const {}
 
   /**
+   * Define any pipeline-local helper functions.
+   * @param pipeline The pipeline we're generating functions in.
+   */
+  virtual void DefinePipelineFunctions(const Pipeline &pipeline) {}
+
+  /**
    * Initialize any declared pipeline-local state.
    * @param pipeline The pipeline whose state is being initialized.
    * @param function The function being built.
    */
   virtual void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
+
+  /**
+   * Tear down and destroy any pipeline-local state.
+   * @param pipeline The pipeline whose state is being destroyed.
+   * @param function The function being built.
+   */
+  virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
    * Perform any work required before beginning main pipeline work. This is executed by one thread.
@@ -152,7 +163,7 @@ class OperatorTranslator : public ColumnValueProvider {
    * @param context The context of the work.
    * @param function The function being built.
    */
-  virtual void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const = 0;
+  virtual void Consume(ConsumerContext *context, FunctionBuilder *function) const = 0;
 
   /**
    * Perform any work required <b>after</b> the main pipeline work. This is executed by one thread.
@@ -162,22 +173,15 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
-   * Tear down and destroy any pipeline-local state.
-   * @param pipeline The pipeline whose state is being destroyed.
-   * @param function The function being built.
-   */
-  virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
-
-  /**
    * @return The value (vector) of the attribute at the given index in this operator's output.
    */
-  ast::Expr *GetOutput(WorkContext *context, uint32_t attr_idx) const;
+  ast::Expr *GetOutput(ConsumerContext *context, uint32_t attr_idx) const;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**

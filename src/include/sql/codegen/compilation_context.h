@@ -6,7 +6,10 @@
 #include <vector>
 
 #include "sql/codegen/codegen.h"
+#include "sql/codegen/codegen_defs.h"
+#include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/executable_query.h"
+#include "sql/codegen/execution_plan.h"
 #include "sql/codegen/expression/expression_translator.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
@@ -17,19 +20,6 @@ class AbstractPlanNode;
 }  // namespace tpl::sql::planner
 
 namespace tpl::sql::codegen {
-
-/**
- * An enumeration capturing the mode of code generation when compiling SQL queries to TPL.
- */
-enum class CompilationMode : uint8_t {
-  // One-shot compilation is when all TPL code for the whole query plan is
-  // generated up-front at once before execution.
-  OneShot,
-
-  // Interleaved compilation is a mode that mixes code generation and execution.
-  // Query fragments are generated and executed in lock step.
-  Interleaved,
-};
 
 /**
  * Context of all code-generation related structures. A temporary container that lives only during
@@ -45,15 +35,8 @@ class CompilationContext {
    * @param plan The plan to compile.
    * @param mode The compilation mode.
    */
-  static std::unique_ptr<ExecutableQuery> Compile(
-      const planner::AbstractPlanNode &plan, CompilationMode mode = CompilationMode::Interleaved);
-
-  /**
-   * Register a pipeline in this context.
-   * @param pipeline The pipeline.
-   * @return A unique ID for the pipeline in this context.
-   */
-  uint32_t RegisterPipeline(Pipeline *pipeline);
+  static std::unique_ptr<ExecutableQuery> Compile(const planner::AbstractPlanNode &plan,
+                                                  CompilationMode mode = CompilationMode::OneShot);
 
   /**
    * Prepare compilation for the given relational plan node participating in the provided pipeline.
@@ -126,34 +109,58 @@ class CompilationContext {
   // Prepare compilation for the output.
   void PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline);
 
+  // Declare and establish the pipeline dependencies.
+  void EstablishPipelineDependencies();
+
+  // Declare all query-level structure and functions.
+  void DeclareStructsAndFunctions();
+
+  // Create a new container.
+  CompilationUnit *MakeContainer();
+
+  using ContainerIndex = std::size_t;
+
+  // Generate all pipeline code. The output vector 'steps' is populated with
+  // list of execution steps to be evaluated in order. The output parameter
+  // 'mapping' contains a mapping of the container that holds each pipeline's
+  // generated code.
+  void GeneratePipelineCode(const PipelineGraph &graph, const Pipeline &target,
+                            std::vector<ExecutionStep> *steps,
+                            std::unordered_map<PipelineId, ContainerIndex> *mapping);
+
+  // Generate pipeline code in one-shot.
+  void GeneratePipelineCode_OneShot(const PipelineGraph &graph, const Pipeline &target,
+                                    std::vector<ExecutionStep> *steps,
+                                    std::unordered_map<PipelineId, ContainerIndex> *mapping);
+
+  // Generate pipeline code incremental. This approach interleaves
+  // code-generation and execution.
+  void GeneratePipelineCode_Incremental(const PipelineGraph &graph, const Pipeline &target,
+                                        std::vector<ExecutionStep> *steps,
+                                        std::unordered_map<PipelineId, ContainerIndex> *mapping);
+
  private:
   // Unique ID used as a prefix for all generated functions to ensure uniqueness.
   uint64_t unique_id_;
-
   // The compiled query object we'll update.
   ExecutableQuery *query_;
-
   // The compilation mode.
   CompilationMode mode_;
-
+  // All allocated containers.
+  std::vector<std::unique_ptr<CompilationUnit>> containers_;
   // The code generator instance.
   CodeGen codegen_;
-
   // Cached identifiers.
   ast::Identifier query_state_var_;
   ast::Identifier query_state_type_;
-
   // The query state and the slot in the state where the execution context is.
   StateDescriptor query_state_;
   StateDescriptor::Entry exec_ctx_;
-
   // The operator and expression translators.
-  std::unordered_map<const planner::AbstractPlanNode *, std::unique_ptr<OperatorTranslator>> ops_;
+  std::unordered_map<const planner::AbstractPlanNode *, std::unique_ptr<OperatorTranslator>>
+      operators_;
   std::unordered_map<const planner::AbstractExpression *, std::unique_ptr<ExpressionTranslator>>
       expressions_;
-
-  // The pipelines in this context in no specific order.
-  std::vector<Pipeline *> pipelines_;
 };
 
 }  // namespace tpl::sql::codegen

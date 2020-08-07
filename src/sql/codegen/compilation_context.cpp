@@ -6,12 +6,13 @@
 
 #include "spdlog/fmt/fmt.h"
 
+#include "ast/ast.h"
 #include "ast/context.h"
 #include "common/exception.h"
 #include "common/macros.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/executable_query.h"
-#include "sql/codegen/executable_query_builder.h"
+#include "sql/codegen/execution_plan.h"
 #include "sql/codegen/expression//derived_value_translator.h"
 #include "sql/codegen/expression/arithmetic_translator.h"
 #include "sql/codegen/expression/builtin_function_translator.h"
@@ -34,6 +35,7 @@
 #include "sql/codegen/operators/sort_translator.h"
 #include "sql/codegen/operators/static_aggregation_translator.h"
 #include "sql/codegen/pipeline.h"
+#include "sql/codegen/pipeline_graph.h"
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
@@ -50,6 +52,7 @@
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/planner/plannodes/set_op_plan_node.h"
+#include "vm/module.h"
 
 namespace tpl::sql::codegen {
 
@@ -62,7 +65,7 @@ CompilationContext::CompilationContext(ExecutableQuery *query, const Compilation
     : unique_id_(kUniqueIds++),
       query_(query),
       mode_(mode),
-      codegen_(query_->GetContext()),
+      codegen_(MakeContainer()),
       query_state_var_(codegen_.MakeIdentifier("queryState")),
       query_state_type_(codegen_.MakeIdentifier("QueryState")),
       query_state_(query_state_type_,
@@ -74,9 +77,8 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(&codegen_);
-    for (auto &[_, op] : ops_) {
-      (void)_;
-      op->InitializeQueryState(&builder);
+    for (const auto &kv : operators_) {
+      kv.second->InitializeQueryState(&builder);
     }
   }
   return builder.Finish();
@@ -88,61 +90,126 @@ ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
   {
     // Request new scope for the function.
     CodeGen::CodeScope code_scope(&codegen_);
-    for (auto &[_, op] : ops_) {
-      (void)_;
-      op->TearDownQueryState(&builder);
+    for (const auto &kv : operators_) {
+      kv.second->TearDownQueryState(&builder);
     }
   }
   return builder.Finish();
 }
 
+void CompilationContext::EstablishPipelineDependencies() {
+  for (const auto &kv : operators_) {
+    kv.second->DeclarePipelineDependencies();
+  }
+}
+
+void CompilationContext::DeclareStructsAndFunctions() {
+  // Let each operator declare helper elements.
+  for (const auto &kv : operators_) {
+    kv.second->DefineStructsAndFunctions();
+  }
+  // Finally, declare the query state.
+  query_state_.ConstructFinalType(&codegen_);
+}
+
+void CompilationContext::GeneratePipelineCode_OneShot(
+    const PipelineGraph &graph, const Pipeline &target, std::vector<ExecutionStep> *steps,
+    std::unordered_map<PipelineId, ContainerIndex> *mapping) {
+  // Determine order.
+  std::vector<const Pipeline *> execution_order;
+  graph.CollectTransitiveDependencies(target, &execution_order);
+
+  // Optimize (prematurely?) by reserving now.
+  steps->reserve(execution_order.size() * 3);
+
+  for (const Pipeline *pipeline : execution_order) {
+    // All pipelines go into the main container (0).
+    (*mapping)[pipeline->GetId()] = 0;
+
+    // Prepare and generate the pipeline steps.
+    const_cast<Pipeline *>(pipeline)->Prepare();  // HACK
+    auto exec_funcs = pipeline->GeneratePipelineLogic();
+
+    // Set up each function as an execution step.
+    for (auto func : exec_funcs) {
+      const auto func_name = func->Name().GetString();
+      steps->emplace_back(pipeline->GetId(), func_name);
+    }
+  }
+}
+
+void CompilationContext::GeneratePipelineCode_Incremental(
+    const PipelineGraph &graph, const Pipeline &target, std::vector<ExecutionStep> *steps,
+    std::unordered_map<PipelineId, ContainerIndex> *mapping) {
+  throw NotImplementedException("Incremental code-generation");
+}
+
+void CompilationContext::GeneratePipelineCode(
+    const PipelineGraph &graph, const Pipeline &target, std::vector<ExecutionStep> *steps,
+    std::unordered_map<PipelineId, ContainerIndex> *mapping) {
+  switch (mode_) {
+    case CompilationMode::OneShot:
+      GeneratePipelineCode_OneShot(graph, target, steps, mapping);
+      break;
+    case CompilationMode::Interleaved:
+      GeneratePipelineCode_Incremental(graph, target, steps, mapping);
+      break;
+  }
+}
+
 void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   exec_ctx_ = query_state_.DeclareStateEntry(
-      GetCodeGen(), "execCtx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
+      GetCodeGen(), "exec_ctx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
+
+  // The graph of all pipelines.
+  PipelineGraph pipeline_graph;
+
+  // The main pipeline.
+  Pipeline main_pipeline(this, &pipeline_graph);
 
   // Recursively prepare all translators for the query.
-  Pipeline main_pipeline(this);
-  if (plan.GetOutputSchema()->NumColumns() != 0) {
-    PrepareOut(plan, &main_pipeline);
-  } else {
-    Prepare(plan, &main_pipeline);
-  }
-  query_state_.ConstructFinalType(&codegen_);
+  PrepareOut(plan, &main_pipeline);
 
-  // Collect top-level structures and declarations.
-  util::RegionVector<ast::StructDecl *> top_level_structs(query_->GetContext()->GetRegion());
-  util::RegionVector<ast::FunctionDecl *> top_level_funcs(query_->GetContext()->GetRegion());
-  for (auto &[_, op] : ops_) {
-    (void)_;
-    op->DefineHelperStructs(&top_level_structs);
-    op->DefineHelperFunctions(&top_level_funcs);
-  }
-  top_level_structs.push_back(query_state_.GetType());
+  // Give all registered operators the opportunity to declare their pipeline
+  // dependencies now.
+  EstablishPipelineDependencies();
 
-  // All fragments.
-  std::vector<std::unique_ptr<ExecutableQuery::Fragment>> fragments;
+  // Declare helper elements. These are query-level and are available to all
+  // pipeline functions.
+  DeclareStructsAndFunctions();
 
-  // The main builder. The initialization and tear-down code go here. In
-  // one-shot compilation, all query code goes here, too.
-  ExecutableQueryFragmentBuilder main_builder(query_->GetContext());
-  main_builder.DeclareAll(top_level_structs);
-  main_builder.DeclareAll(top_level_funcs);
-  main_builder.RegisterStep(GenerateInitFunction());
+  // Now we're ready to generate some code.
+  // First, generate the query state initialization and tear-down logic.
+  auto init_fn = GenerateInitFunction();
+  auto tear_down_fn = GenerateTearDownFunction();
 
-  // Generate each pipeline.
-  std::vector<Pipeline *> execution_order;
-  main_pipeline.CollectDependencies(&execution_order);
-  for (auto *pipeline : execution_order) {
-    pipeline->Prepare();
-    pipeline->GeneratePipeline(&main_builder);
+  // Next, generate all pipeline code.
+  std::vector<ExecutionStep> steps;
+  std::unordered_map<PipelineId, ContainerIndex> mapping;
+  GeneratePipelineCode(pipeline_graph, main_pipeline, &steps, &mapping);
+
+  // Compile everything.
+  std::vector<std::unique_ptr<vm::Module>> modules;
+  modules.reserve(containers_.size());
+  for (auto &container : containers_) {
+    modules.emplace_back(container->Compile());
   }
 
-  // Register the tear-down function.
-  main_builder.RegisterStep(GenerateTearDownFunction());
+  // Resolve.
+  for (auto &step : steps) {
+    TPL_ASSERT(mapping.find(step.GetPipelineId()) != mapping.end(),
+               "Container for pipeline does not exist!");
+    const auto container_idx = mapping[step.GetPipelineId()];
+    step.Resolve(modules[container_idx].get());
+  }
 
-  // Compile and finish.
-  fragments.emplace_back(main_builder.Compile());
-  query_->Setup(std::move(fragments), query_state_.GetSize());
+  // Setup query and finish.
+  auto execution_plan = std::make_unique<ExecutionPlan>(std::move(steps));
+  auto main_modules = modules[0].get();
+  auto init_fn_name = init_fn->Name().GetString();
+  auto tear_down_fn_name = tear_down_fn->Name().GetString();
+  query_->Setup(std::move(modules), main_modules, init_fn_name, tear_down_fn_name,
+                std::move(execution_plan), query_state_.GetSize());
 }
 
 // static
@@ -159,16 +226,9 @@ std::unique_ptr<ExecutableQuery> CompilationContext::Compile(const planner::Abst
   return query;
 }
 
-uint32_t CompilationContext::RegisterPipeline(Pipeline *pipeline) {
-  TPL_ASSERT(std::find(pipelines_.begin(), pipelines_.end(), pipeline) == pipelines_.end(),
-             "Duplicate pipeline in context");
-  pipelines_.push_back(pipeline);
-  return pipelines_.size();
-}
-
 void CompilationContext::PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline) {
   auto translator = std::make_unique<OutputTranslator>(plan, this, pipeline);
-  ops_[nullptr] = std::move(translator);
+  operators_[nullptr] = std::move(translator);
 }
 
 void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline *pipeline) {
@@ -229,7 +289,7 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
     }
   }
 
-  ops_[&plan] = std::move(translator);
+  operators_[&plan] = std::move(translator);
 }
 
 void CompilationContext::Prepare(const planner::AbstractExpression &expression) {
@@ -309,7 +369,7 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
 
 OperatorTranslator *CompilationContext::LookupTranslator(
     const planner::AbstractPlanNode &node) const {
-  if (auto iter = ops_.find(&node); iter != ops_.end()) {
+  if (auto iter = operators_.find(&node); iter != operators_.end()) {
     return iter->second.get();
   }
   return nullptr;
@@ -335,6 +395,12 @@ util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {
 
 ast::Expr *CompilationContext::GetExecutionContextPtrFromQueryState() {
   return exec_ctx_.Get(&codegen_);
+}
+
+CompilationUnit *CompilationContext::MakeContainer() {
+  const auto container_id = fmt::format("CU{}", containers_.size());
+  containers_.emplace_back(std::make_unique<CompilationUnit>(query_->GetContext(), container_id));
+  return containers_.back().get();
 }
 
 }  // namespace tpl::sql::codegen

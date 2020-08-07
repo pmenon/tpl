@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sql/codegen/compilation_unit.h>
 #include <vector>
 
 #include "sql/codegen/ast_fwd.h"
@@ -32,11 +33,15 @@ class HashJoinTranslator : public OperatorTranslator {
                      Pipeline *pipeline);
 
   /**
-   * Declare the build-row struct used to materialized tuples from the build side of the join.
-   * @param decls The top-level declarations for the query. The build-row struct will be
-   *                        registered here after it's been constructed.
+   * Link the left (i.e., build) and right (i.e., probe) pipelines.
    */
-  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
+  void DeclarePipelineDependencies() const override;
+
+  /**
+   * Declare the build-row struct used to materialized tuples from the build side of the join.
+   * @param container The container for query-level types and functions.
+   */
+  void DefineStructsAndFunctions() override;
 
   /**
    * Initialize the global hash table.
@@ -68,7 +73,7 @@ class HashJoinTranslator : public OperatorTranslator {
    * the input tuples are probed in the join hash table.
    * @param ctx The context of the work.
    */
-  void PerformPipelineWork(WorkContext *ctx, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *ctx, FunctionBuilder *function) const override;
 
   /**
    * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
@@ -81,7 +86,7 @@ class HashJoinTranslator : public OperatorTranslator {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(WorkContext *context, uint32_t child_idx,
+  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
   /**
@@ -109,24 +114,24 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // Evaluate the provided hash keys in the provided context and return the
   // results in the provided results output vector.
-  ast::Expr *HashKeys(WorkContext *ctx, FunctionBuilder *function,
+  ast::Expr *HashKeys(ConsumerContext *ctx, FunctionBuilder *function,
                       const std::vector<const planner::AbstractExpression *> &hash_keys) const;
 
   // Fill the build row with the columns from the given context.
-  void FillBuildRow(WorkContext *ctx, FunctionBuilder *function, ast::Expr *build_row) const;
+  void FillBuildRow(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *build_row) const;
 
   // Input the tuple(s) in the provided context into the join hash table.
-  void InsertIntoJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const;
+  void InsertIntoJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const;
 
   // Probe the join hash table with the input tuple(s).
-  void ProbeJoinHashTable(WorkContext *ctx, FunctionBuilder *function) const;
+  void ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const;
 
   // Check the right mark.
-  void CheckRightMark(WorkContext *ctx, FunctionBuilder *function,
+  void CheckRightMark(ConsumerContext *ctx, FunctionBuilder *function,
                       ast::Identifier right_mark) const;
 
   // Check the join predicate.
-  void CheckJoinPredicate(WorkContext *ctx, FunctionBuilder *function) const;
+  void CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilder *function) const;
 
  private:
   // The name of the materialized row when inserting or probing into join hash

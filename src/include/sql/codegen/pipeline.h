@@ -8,17 +8,19 @@
 #include "ast/identifier.h"
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/codegen_defs.h"
 #include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"
 
 namespace tpl::sql::codegen {
 
+class CompilationUnit;
 class CodeGen;
 class CompilationContext;
-class ExecutableQueryFragmentBuilder;
 class ExpressionTranslator;
 class OperatorTranslator;
 class PipelineDriver;
+class PipelineGraph;
 
 /**
  * A pipeline represents an ordered sequence of relational operators that operate on tuple data
@@ -39,25 +41,37 @@ class Pipeline {
    * Flexible option should be used when both serial and parallel operation is supported, but no
    * preference is taken.
    */
-  enum class Parallelism : uint8_t { Serial = 0, Parallel = 2 };
+  enum class Parallelism : uint8_t { Serial, Parallel };
 
   /**
    * Enum class representing whether the pipeline is vectorized.
    */
-  enum class Vectorization : uint8_t { Disabled = 0, Enabled = 1 };
+  enum class Vectorization : uint8_t { Disabled, Enabled };
+
+  /**
+   * Enum class representing whether the pipeline is independent or composite.
+   */
+  enum class Type : uint8_t { Regular, Nested };
 
   /**
    * Create an empty pipeline in the given compilation context.
-   * @param ctx The compilation context the pipeline is in.
+   * @param compilation_context The compilation context the pipeline is in.
+   * @param pipeline_graph The pipeline graph to register in.
    */
-  explicit Pipeline(CompilationContext *ctx);
+  explicit Pipeline(CompilationContext *compilation_context, PipelineGraph *pipeline_graph);
 
   /**
    * Create a pipeline with the given operator as the root.
    * @param op The root operator of the pipeline.
+   * @param pipeline_graph The pipeline graph to register in.
    * @param parallelism The operator's requested parallelism.
    */
-  Pipeline(OperatorTranslator *op, Parallelism parallelism);
+  explicit Pipeline(OperatorTranslator *op, PipelineGraph *pipeline_graph, Parallelism parallelism);
+
+  /**
+   * This class cannot be copied or moved.
+   */
+  DISALLOW_COPY_AND_MOVE(Pipeline);
 
   /**
    * Register an operator in this pipeline with a customized parallelism configuration.
@@ -100,19 +114,17 @@ class Pipeline {
   StateDescriptor::Entry DeclarePipelineStateEntry(const std::string &name, ast::Expr *type_repr);
 
   /**
-   * Register the provided pipeline as a dependency for this pipeline. In other words, this pipeline
-   * cannot begin until the provided pipeline completes.
+   * Add the provided pipeline as a dependency for this pipeline. In other words, this pipeline
+   * cannot begin until the provided pipeline completes. Dependencies define an execution order.
    * @param dependency Another pipeline this pipeline is dependent on.
    */
-  void LinkSourcePipeline(Pipeline *dependency);
+  void AddDependency(const Pipeline &dependency);
 
   /**
-   * Store in the provided output vector the set of all dependencies for this pipeline. In other
-   * words, store in the output vector all pipelines that must execute (in order) before this
-   * pipeline can begin.
-   * @param[out] deps The sorted list of pipelines to execute before this pipeline can begin.
+   * Mark this pipeline as being nested within the provided outer/parent pipeline.
+   * @param parent The pipeline that is nesting this pipeline.
    */
-  void CollectDependencies(std::vector<Pipeline *> *deps);
+  void MarkNestedPipeline(Pipeline *parent);
 
   /**
    * Perform initialization logic before code generation.
@@ -121,9 +133,19 @@ class Pipeline {
 
   /**
    * Generate all functions to execute this pipeline in the provided container.
-   * @param codegen The code generator instance.
+   * @param container The code container.
    */
-  void GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const;
+  std::vector<ast::FunctionDecl *> GeneratePipelineLogic() const;
+
+  /**
+   * @return The unique ID of this pipeline.
+   */
+  PipelineId GetId() const { return id_; }
+
+  /**
+   * @return The pipeline graph.
+   */
+  PipelineGraph *GetPipelineGraph() const { return pipeline_graph_; }
 
   /**
    * @return True if the pipeline is parallel; false otherwise.
@@ -136,24 +158,39 @@ class Pipeline {
   bool IsVectorized() const { return false; }
 
   /**
+   * @return Is the given operator the last in this pipeline?
+   */
+  bool IsLastOperator(const OperatorTranslator &op) const;
+
+  /**
    * Typedef used to specify an iterator over the steps in a pipeline.
    */
-  using StepIterator = std::vector<OperatorTranslator *>::const_reverse_iterator;
+  using Iterator = std::vector<OperatorTranslator *>::const_reverse_iterator;
 
   /**
    * @return An iterator over the operators in the pipeline.
    */
-  StepIterator Begin() const { return steps_.rbegin(); }
+  Iterator Begin() const { return operators_.rbegin(); }
 
   /**
    * @return An iterator positioned at the end of the operators steps in the pipeline.
    */
-  StepIterator End() const { return steps_.rend(); }
+  Iterator End() const { return operators_.rend(); }
 
   /**
    * @return True if the given operator is the driver for this pipeline; false otherwise.
    */
   bool IsDriver(const PipelineDriver *driver) const { return driver == driver_; }
+
+  /**
+   * @return The list of pipelines that nest this pipeline.
+   */
+  const std::vector<const Pipeline *> &GetParentPipelines() const { return parent_pipelines_; }
+
+  /**
+   * @return The list of pipelines nested within this pipeline.
+   */
+  const std::vector<const Pipeline *> &GetNestedPipelines() const { return child_pipelines_; }
 
   /**
    * @return Arguments common to all pipeline functions.
@@ -165,14 +202,13 @@ class Pipeline {
    */
   std::string CreatePipelineFunctionName(const std::string &func_name) const;
 
- private:
-  // Return the thread-local state initialization and tear-down function names.
-  // This is needed when we invoke @tlsReset() from the pipeline initialization
-  // function to setup the thread-local state.
-  ast::Identifier GetSetupPipelineStateFunctionName() const;
-  ast::Identifier GetTearDownPipelineStateFunctionName() const;
-  ast::Identifier GetWorkFunctionName() const;
+  /**
+   * @return The name of this pipeline. This a pretty-printed version of the operators that
+   *         constitute the pipeline.
+   */
+  std::string BuildPipelineName() const;
 
+ private:
   // Generate the pipeline state initialization logic.
   ast::FunctionDecl *GenerateSetupPipelineStateFunction() const;
 
@@ -193,14 +229,16 @@ class Pipeline {
 
  private:
   // A unique pipeline ID.
-  uint32_t id_;
+  PipelineId id_;
   // The compilation context this pipeline is part of.
-  CompilationContext *compilation_context_;
+  CompilationContext *compilation_ctx_;
+  // The pipeline graph.
+  PipelineGraph *pipeline_graph_;
   // The code generation instance.
   CodeGen *codegen_;
   // Operators making up the pipeline.
-  std::vector<OperatorTranslator *> steps_;
-  // The driver.
+  std::vector<OperatorTranslator *> operators_;
+  // The driver of the pipeline.
   PipelineDriver *driver_;
   // Expressions participating in the pipeline.
   std::vector<ExpressionTranslator *> expressions_;
@@ -208,8 +246,12 @@ class Pipeline {
   Parallelism parallelism_;
   // Whether to check for parallelism in new pipeline elements.
   bool check_parallelism_;
-  // All pipelines this one depends on completion of.
-  std::vector<Pipeline *> dependencies_;
+  // The list of pipelines that nest this pipeline.
+  std::vector<const Pipeline *> parent_pipelines_;
+  // The list of pipelines nested inside this pipeline.
+  std::vector<const Pipeline *> child_pipelines_;
+  // This pipeline's type.
+  Type type_;
   // Cache of common identifiers.
   ast::Identifier state_var_;
   // The pipeline state.

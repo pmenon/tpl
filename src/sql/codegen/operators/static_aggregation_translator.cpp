@@ -1,33 +1,30 @@
 #include "sql/codegen/operators/static_aggregation_translator.h"
 
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
-#include "sql/codegen/work_context.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 
 namespace tpl::sql::codegen {
 
 namespace {
-constexpr char kAggAttrPrefix[] = "agg_term_attr";
+constexpr char kAggAttrPrefix[] = "agg";
 }  // namespace
 
 StaticAggregationTranslator::StaticAggregationTranslator(const planner::AggregatePlanNode &plan,
                                                          CompilationContext *compilation_context,
                                                          Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      agg_row_var_(GetCodeGen()->MakeFreshIdentifier("aggRow")),
+      agg_row_var_(GetCodeGen()->MakeFreshIdentifier("agg_row")),
       agg_payload_type_(GetCodeGen()->MakeFreshIdentifier("AggPayload")),
       agg_values_type_(GetCodeGen()->MakeFreshIdentifier("AggValues")),
       merge_func_(GetCodeGen()->MakeFreshIdentifier("MergeAggregates")),
-      build_pipeline_(this, Pipeline::Parallelism::Parallel) {
+      build_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(plan.GetGroupByTerms().empty(), "Global aggregations shouldn't have grouping keys");
   TPL_ASSERT(plan.GetChildrenSize() == 1, "Global aggregations should only have one child");
   // The produce-side is serial since it only generates one output tuple.
   pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
-
-  // The produce-side begins after the build-side.
-  pipeline->LinkSourcePipeline(&build_pipeline_);
 
   // Prepare the child.
   compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
@@ -50,6 +47,10 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
   if (build_pipeline_.IsParallel()) {
     local_aggs_ = build_pipeline_.DeclarePipelineStateEntry("aggs", payload_type);
   }
+}
+
+void StaticAggregationTranslator::DeclarePipelineDependencies() const {
+  GetPipeline()->AddDependency(build_pipeline_);
 }
 
 ast::StructDecl *StaticAggregationTranslator::GeneratePayloadStruct() {
@@ -81,27 +82,34 @@ ast::StructDecl *StaticAggregationTranslator::GenerateValuesStruct() {
   return codegen->DeclareStruct(agg_values_type_, std::move(fields));
 }
 
-void StaticAggregationTranslator::DefineHelperStructs(
-    util::RegionVector<ast::StructDecl *> *decls) {
-  decls->push_back(GeneratePayloadStruct());
-  decls->push_back(GenerateValuesStruct());
+void StaticAggregationTranslator::DefineStructsAndFunctions() {
+  // The payload and input structures.
+  GeneratePayloadStruct();
+  GenerateValuesStruct();
+
+  // The merging function, if parallel.
+  if (build_pipeline_.IsParallel()) {
+  }
 }
 
-void StaticAggregationTranslator::DefineHelperFunctions(
-    util::RegionVector<ast::FunctionDecl *> *decls) {
-  if (build_pipeline_.IsParallel()) {
-    CodeGen *codegen = GetCodeGen();
-    util::RegionVector<ast::FieldDecl *> params = build_pipeline_.PipelineParams();
-    FunctionBuilder function(codegen, merge_func_, std::move(params), codegen->Nil());
-    {
-      for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-        auto lhs = GetAggregateTermPtr(global_aggs_.Get(codegen), term_idx);
-        auto rhs = GetAggregateTermPtr(local_aggs_.Get(codegen), term_idx);
-        function.Append(codegen->AggregatorMerge(lhs, rhs));
-      }
-    }
-    decls->push_back(function.Finish());
+void StaticAggregationTranslator::DefinePipelineFunctions(const Pipeline &pipeline) {
+  if (IsBuildPipeline(pipeline) && pipeline.IsParallel()) {
+    GenerateAggregateMergeFunction();
   }
+}
+
+void StaticAggregationTranslator::GenerateAggregateMergeFunction() const {
+  CodeGen *codegen = GetCodeGen();
+  util::RegionVector<ast::FieldDecl *> params = build_pipeline_.PipelineParams();
+  FunctionBuilder function(codegen, merge_func_, std::move(params), codegen->Nil());
+  {
+    for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
+      auto lhs = GetAggregateTermPtr(global_aggs_.Get(codegen), term_idx);
+      auto rhs = GetAggregateTermPtr(local_aggs_.Get(codegen), term_idx);
+      function.Append(codegen->AggregatorMerge(lhs, rhs));
+    }
+  }
+  function.Finish();
 }
 
 ast::Expr *StaticAggregationTranslator::GetAggregateTerm(ast::Expr *agg_row,
@@ -140,14 +148,14 @@ void StaticAggregationTranslator::BeginPipelineWork(const Pipeline &pipeline,
   }
 }
 
-void StaticAggregationTranslator::UpdateGlobalAggregate(WorkContext *ctx,
+void StaticAggregationTranslator::UpdateGlobalAggregate(ConsumerContext *ctx,
                                                         FunctionBuilder *function) const {
   auto codegen = GetCodeGen();
 
   const auto agg_payload = build_pipeline_.IsParallel() ? local_aggs_ : global_aggs_;
 
   // var aggValues: AggValues
-  auto agg_values = codegen->MakeFreshIdentifier("aggValues");
+  auto agg_values = codegen->MakeFreshIdentifier("agg_values");
   function->Append(codegen->DeclareVarNoInit(agg_values, codegen->MakeExpr(agg_values_type_)));
 
   // Fill values.
@@ -166,8 +174,8 @@ void StaticAggregationTranslator::UpdateGlobalAggregate(WorkContext *ctx,
   }
 }
 
-void StaticAggregationTranslator::PerformPipelineWork(WorkContext *context,
-                                                      FunctionBuilder *function) const {
+void StaticAggregationTranslator::Consume(ConsumerContext *context,
+                                          FunctionBuilder *function) const {
   if (IsProducePipeline(context->GetPipeline())) {
     // var agg_row = &state.aggs
     CodeGen *codegen = GetCodeGen();
@@ -175,10 +183,10 @@ void StaticAggregationTranslator::PerformPipelineWork(WorkContext *context,
 
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
       If check_having(function, context->DeriveValue(*having, this));
-      context->Push(function);
+      context->Consume(function);
       check_having.EndIf();
     } else {
-      context->Push(function);
+      context->Consume(function);
     }
   } else {
     UpdateGlobalAggregate(context, function);
@@ -196,7 +204,7 @@ void StaticAggregationTranslator::FinishPipelineWork(const Pipeline &pipeline,
   }
 }
 
-ast::Expr *StaticAggregationTranslator::GetChildOutput(WorkContext *context,
+ast::Expr *StaticAggregationTranslator::GetChildOutput(ConsumerContext *context,
                                                        UNUSED uint32_t child_idx,
                                                        uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");

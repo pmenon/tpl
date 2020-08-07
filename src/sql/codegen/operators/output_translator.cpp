@@ -16,14 +16,14 @@ constexpr char kOutputColPrefix[] = "out";
 OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan,
                                    CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      output_var_(GetCodeGen()->MakeFreshIdentifier("outRow")),
+      output_var_(GetCodeGen()->MakeFreshIdentifier("out_row")),
       output_struct_(GetCodeGen()->MakeFreshIdentifier("OutputStruct")) {
   // Prepare the child.
   compilation_context->Prepare(plan, pipeline);
 }
 
-void OutputTranslator::PerformPipelineWork(tpl::sql::codegen::WorkContext *context,
-                                           tpl::sql::codegen::FunctionBuilder *function) const {
+void OutputTranslator::Consume(tpl::sql::codegen::ConsumerContext *context,
+                               tpl::sql::codegen::FunctionBuilder *function) const {
   // First generate the call @resultBufferAllocRow(execCtx)
   auto exec_ctx = GetExecutionContext();
   ast::Expr *alloc_call =
@@ -50,7 +50,7 @@ void OutputTranslator::FinishPipelineWork(const Pipeline &pipeline,
   function->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx}));
 }
 
-void OutputTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
+void OutputTranslator::DefineStructsAndFunctions() {
   CodeGen *codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
 
@@ -65,7 +65,7 @@ void OutputTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *>
     fields.emplace_back(codegen->MakeField(field_name, type));
   }
 
-  decls->push_back(codegen->DeclareStruct(output_struct_, std::move(fields)));
+  codegen->DeclareStruct(output_struct_, std::move(fields));
 }
 
 }  // namespace tpl::sql::codegen

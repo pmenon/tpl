@@ -12,6 +12,7 @@ class Decl;
 class FieldDecl;
 class File;
 class FunctionDecl;
+class IdentifierExpr;
 class Stmt;
 class StructDecl;
 class VariableDecl;
