@@ -11,7 +11,10 @@ namespace tpl::sql::codegen {
 
 OperatorTranslator::OperatorTranslator(const planner::AbstractPlanNode &plan,
                                        CompilationContext *compilation_context, Pipeline *pipeline)
-    : plan_(plan), compilation_context_(compilation_context), pipeline_(pipeline) {
+    : plan_(plan),
+      compilation_ctx_(compilation_context),
+      pipeline_(pipeline),
+      codegen_(compilation_context->GetCodeGen()) {
   TPL_ASSERT(plan.GetOutputSchema() != nullptr, "Output schema shouldn't be null");
   // Register this operator.
   pipeline->RegisterStep(this);
@@ -45,34 +48,30 @@ ast::Expr *OperatorTranslator::GetChildOutput(ConsumerContext *context, uint32_t
   }
 
   // Check valid output column from child.
-  auto child_translator = compilation_context_->LookupTranslator(*plan_.GetChild(child_idx));
+  auto child_translator = compilation_ctx_->LookupTranslator(*plan_.GetChild(child_idx));
   TPL_ASSERT(child_translator != nullptr, "Missing translator for child!");
   return child_translator->GetOutput(context, attr_idx);
 }
 
-CodeGen *OperatorTranslator::GetCodeGen() const { return compilation_context_->GetCodeGen(); }
-
 ast::Expr *OperatorTranslator::GetQueryStatePtr() const {
-  return compilation_context_->GetQueryState()->GetStatePointer(GetCodeGen());
+  return compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
 }
 
 ast::Expr *OperatorTranslator::GetExecutionContext() const {
-  return compilation_context_->GetExecutionContextPtrFromQueryState();
+  return compilation_ctx_->GetExecutionContextPtrFromQueryState();
 }
 
 ast::Expr *OperatorTranslator::GetThreadStateContainer() const {
-  return GetCodeGen()->ExecCtxGetTLS(GetExecutionContext());
+  return codegen_->ExecCtxGetTLS(GetExecutionContext());
 }
 
 ast::Expr *OperatorTranslator::GetMemoryPool() const {
-  return GetCodeGen()->ExecCtxGetMemoryPool(GetExecutionContext());
+  return codegen_->ExecCtxGetMemoryPool(GetExecutionContext());
 }
 
 void OperatorTranslator::GetAllChildOutputFields(
     const uint32_t child_index, const std::string &field_name_prefix,
     util::RegionVector<ast::FieldDecl *> *fields) const {
-  CodeGen *codegen = GetCodeGen();
-
   // Reserve now to reduce allocations.
   const auto child_output_schema = plan_.GetChild(child_index)->GetOutputSchema();
   fields->reserve(child_output_schema->NumColumns());
@@ -80,9 +79,9 @@ void OperatorTranslator::GetAllChildOutputFields(
   // Add columns to output.
   uint32_t attr_idx = 0;
   for (const auto &col : plan_.GetChild(child_index)->GetOutputSchema()->GetColumns()) {
-    auto field_name = codegen->MakeIdentifier(field_name_prefix + std::to_string(attr_idx++));
-    auto type = codegen->TplType(col.GetExpr()->GetReturnValueType());
-    fields->emplace_back(codegen->MakeField(field_name, type));
+    auto field_name = codegen_->MakeIdentifier(field_name_prefix + std::to_string(attr_idx++));
+    auto type = codegen_->TplType(col.GetExpr()->GetReturnValueType());
+    fields->emplace_back(codegen_->MakeField(field_name, type));
   }
 }
 

@@ -192,12 +192,9 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * @return The compilation context the translator is owned by.
    */
-  CompilationContext *GetCompilationContext() const { return compilation_context_; }
+  CompilationContext *GetCompilationContext() const { return compilation_ctx_; }
 
  protected:
-  // Get the code generator instance.
-  CodeGen *GetCodeGen() const;
-
   // Get a pointer to the query state.
   ast::Expr *GetQueryStatePtr() const;
 
@@ -232,9 +229,12 @@ class OperatorTranslator : public ColumnValueProvider {
   // The plan node.
   const planner::AbstractPlanNode &plan_;
   // The compilation context.
-  CompilationContext *compilation_context_;
+  CompilationContext *compilation_ctx_;
   // The pipeline the operator belongs to.
   Pipeline *pipeline_;
+
+ protected:
+  CodeGen *codegen_;
 };
 
 }  // namespace tpl::sql::codegen

@@ -283,7 +283,7 @@ void JoinHashTable::ReorderOverflowEntries() {
     EntryAt(idx)->overflow_count = 0;
   }
 
-  // If there arne't any overflow entries, we can early exit. We just NULLed
+  // If there aren't any overflow entries, we can early exit. We just NULLed
   // overflow pointers in all main arena entries in the loop above.
 
   if (num_overflow_entries == 0) {
@@ -452,9 +452,9 @@ void JoinHashTable::BuildConciseHashTableInternal() {
   concise_hash_table_.InsertBatch(&entries_);
   concise_hash_table_.Build();
 
-  LOG_INFO("Concise Table Stats: {} entries, {} overflow ({} % overflow)", entries_.size(),
-           concise_hash_table_.GetOverflowEntryCount(),
-           100.0 * (concise_hash_table_.GetOverflowEntryCount() * 1.0 / entries_.size()));
+  LOG_DEBUG("Concise Table Stats: {} entries, {} overflow ({} % overflow)", entries_.size(),
+            concise_hash_table_.GetOverflowEntryCount(),
+            100.0 * (concise_hash_table_.GetOverflowEntryCount() * 1.0 / entries_.size()));
 
   // Reorder all the main entries in place according to CHT order
   ReorderMainEntries<PrefetchCHT, PrefetchEntries>();
@@ -577,21 +577,21 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   const bool use_serial_build = num_elem_estimate < kDefaultMinSizeForParallelMerge;
   if (use_serial_build) {
     // TODO(pmenon): Switch to parallel-mode if estimate is wrong.
-    LOG_INFO("JHT: Estimated {} elements < {} element parallel threshold. Using serial merge.",
-             num_elem_estimate, kDefaultMinSizeForParallelMerge);
+    LOG_DEBUG("JHT: Estimated {} elements < {} element parallel threshold. Using serial merge.",
+              num_elem_estimate, kDefaultMinSizeForParallelMerge);
     llvm::for_each(tl_join_tables, [this](auto *source) { MergeIncomplete<false>(source); });
   } else {
-    LOG_INFO("JHT: Estimated {} elements >= {} element parallel threshold. Using parallel merge.",
-             num_elem_estimate, kDefaultMinSizeForParallelMerge);
+    LOG_DEBUG("JHT: Estimated {} elements >= {} element parallel threshold. Using parallel merge.",
+              num_elem_estimate, kDefaultMinSizeForParallelMerge);
     tbb::parallel_for_each(tl_join_tables, [this](auto source) { MergeIncomplete<true>(source); });
   }
 
   timer.Stop();
 
   const double tps = (chaining_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
-  LOG_INFO("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
-           use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
-           chaining_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
+  LOG_DEBUG("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
+            use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
+            chaining_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
 
   built_ = true;
 }

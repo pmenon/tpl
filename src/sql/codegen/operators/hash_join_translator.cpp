@@ -17,9 +17,9 @@ const char *kBuildRowAttrPrefix = "attr";
 HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
                                        CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      build_row_var_(GetCodeGen()->MakeFreshIdentifier("build_row")),
-      build_row_type_(GetCodeGen()->MakeFreshIdentifier("BuildRow")),
-      build_mark_(GetCodeGen()->MakeFreshIdentifier("mark")),
+      build_row_var_(codegen_->MakeFreshIdentifier("build_row")),
+      build_row_type_(codegen_->MakeFreshIdentifier("BuildRow")),
+      build_mark_(codegen_->MakeFreshIdentifier("mark")),
       left_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
   TPL_ASSERT(!plan.GetRightHashKeys().empty(), "Hash-join must have join keys from right input");
@@ -38,10 +38,9 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   }
 
   // Declare global state.
-  CodeGen *codegen = GetCodeGen();
-  ast::Expr *join_ht_type = codegen->BuiltinType(ast::BuiltinType::JoinHashTable);
+  ast::Expr *join_ht_type = codegen_->BuiltinType(ast::BuiltinType::JoinHashTable);
   global_join_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      codegen, "join_hash_table", join_ht_type);
+      codegen_, "join_hash_table", join_ht_type);
 
   if (left_pipeline_.IsParallel()) {
     local_join_ht_ = left_pipeline_.DeclarePipelineStateEntry("join_hash_table", join_ht_type);
@@ -53,143 +52,134 @@ void HashJoinTranslator::DeclarePipelineDependencies() const {
 }
 
 void HashJoinTranslator::DefineStructsAndFunctions() {
-  CodeGen *codegen = GetCodeGen();
-  auto fields = codegen->MakeEmptyFieldList();
+  auto fields = codegen_->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kBuildRowAttrPrefix, &fields);
   if (GetPlanAs<planner::HashJoinPlanNode>().RequiresLeftMark()) {
-    fields.push_back(codegen->MakeField(build_mark_, codegen->BoolType()));
+    fields.push_back(codegen_->MakeField(build_mark_, codegen_->BoolType()));
   }
-  codegen->DeclareStruct(build_row_type_, std::move(fields));
+  codegen_->DeclareStruct(build_row_type_, std::move(fields));
 }
 
 void HashJoinTranslator::InitializeJoinHashTable(FunctionBuilder *function,
                                                  ast::Expr *jht_ptr) const {
-  function->Append(GetCodeGen()->JoinHashTableInit(jht_ptr, GetMemoryPool(), build_row_type_));
+  function->Append(codegen_->JoinHashTableInit(jht_ptr, GetMemoryPool(), build_row_type_));
 }
 
 void HashJoinTranslator::TearDownJoinHashTable(FunctionBuilder *function,
                                                ast::Expr *jht_ptr) const {
-  function->Append(GetCodeGen()->JoinHashTableFree(jht_ptr));
+  function->Append(codegen_->JoinHashTableFree(jht_ptr));
 }
 
 void HashJoinTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  InitializeJoinHashTable(function, global_join_ht_.GetPtr(GetCodeGen()));
+  InitializeJoinHashTable(function, global_join_ht_.GetPtr(codegen_));
 }
 
 void HashJoinTranslator::TearDownQueryState(FunctionBuilder *function) const {
-  TearDownJoinHashTable(function, global_join_ht_.GetPtr(GetCodeGen()));
+  TearDownJoinHashTable(function, global_join_ht_.GetPtr(codegen_));
 }
 
 void HashJoinTranslator::InitializePipelineState(const Pipeline &pipeline,
                                                  FunctionBuilder *function) const {
   if (IsLeftPipeline(pipeline) && left_pipeline_.IsParallel()) {
-    InitializeJoinHashTable(function, local_join_ht_.GetPtr(GetCodeGen()));
+    InitializeJoinHashTable(function, local_join_ht_.GetPtr(codegen_));
   }
 }
 
 void HashJoinTranslator::TearDownPipelineState(const Pipeline &pipeline,
                                                FunctionBuilder *function) const {
   if (IsLeftPipeline(pipeline) && left_pipeline_.IsParallel()) {
-    TearDownJoinHashTable(function, local_join_ht_.GetPtr(GetCodeGen()));
+    TearDownJoinHashTable(function, local_join_ht_.GetPtr(codegen_));
   }
 }
 
 ast::Expr *HashJoinTranslator::HashKeys(
     ConsumerContext *ctx, FunctionBuilder *function,
     const std::vector<const planner::AbstractExpression *> &hash_keys) const {
-  auto codegen = GetCodeGen();
-
   std::vector<ast::Expr *> key_values;
   key_values.reserve(hash_keys.size());
   for (const auto hash_key : hash_keys) {
     key_values.push_back(ctx->DeriveValue(*hash_key, this));
   }
 
-  ast::Identifier hash_val_name = codegen->MakeFreshIdentifier("hash_val");
-  function->Append(codegen->DeclareVarWithInit(hash_val_name, codegen->Hash(key_values)));
+  ast::Identifier hash_val_name = codegen_->MakeFreshIdentifier("hash_val");
+  function->Append(codegen_->DeclareVarWithInit(hash_val_name, codegen_->Hash(key_values)));
 
-  return codegen->MakeExpr(hash_val_name);
+  return codegen_->MakeExpr(hash_val_name);
 }
 
 ast::Expr *HashJoinTranslator::GetBuildRowAttribute(ast::Expr *build_row, uint32_t attr_idx) const {
-  auto codegen = GetCodeGen();
-  auto attr_name = codegen->MakeIdentifier(kBuildRowAttrPrefix + std::to_string(attr_idx));
-  return codegen->AccessStructMember(build_row, attr_name);
+  auto attr_name = codegen_->MakeIdentifier(kBuildRowAttrPrefix + std::to_string(attr_idx));
+  return codegen_->AccessStructMember(build_row, attr_name);
 }
 
 void HashJoinTranslator::FillBuildRow(ConsumerContext *ctx, FunctionBuilder *function,
                                       ast::Expr *build_row) const {
-  CodeGen *codegen = GetCodeGen();
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
     ast::Expr *lhs = GetBuildRowAttribute(build_row, attr_idx);
     ast::Expr *rhs = GetChildOutput(ctx, 0, attr_idx);
-    function->Append(codegen->Assign(lhs, rhs));
+    function->Append(codegen_->Assign(lhs, rhs));
   }
   const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
   if (join_plan.RequiresLeftMark()) {
-    ast::Expr *lhs = codegen->AccessStructMember(build_row, build_mark_);
-    ast::Expr *rhs = codegen->ConstBool(true);
-    function->Append(codegen->Assign(lhs, rhs));
+    ast::Expr *lhs = codegen_->AccessStructMember(build_row, build_mark_);
+    ast::Expr *rhs = codegen_->ConstBool(true);
+    function->Append(codegen_->Assign(lhs, rhs));
   }
 }
 
 void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *ctx,
                                                  FunctionBuilder *function) const {
-  CodeGen *codegen = GetCodeGen();
-
   const auto join_ht = ctx->GetPipeline().IsParallel() ? local_join_ht_ : global_join_ht_;
 
   // var hashVal = @hash(...)
   auto hash_val = HashKeys(ctx, function, GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys());
 
   // var buildRow = @joinHTInsert(...)
-  function->Append(codegen->DeclareVarWithInit(
+  function->Append(codegen_->DeclareVarWithInit(
       build_row_var_,
-      codegen->JoinHashTableInsert(join_ht.GetPtr(codegen), hash_val, build_row_type_)));
+      codegen_->JoinHashTableInsert(join_ht.GetPtr(codegen_), hash_val, build_row_type_)));
 
   // Fill row.
-  FillBuildRow(ctx, function, codegen->MakeExpr(build_row_var_));
+  FillBuildRow(ctx, function, codegen_->MakeExpr(build_row_var_));
 }
 
 void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const {
-  auto codegen = GetCodeGen();
-
   // var entryIterBase: HashTableEntryIterator
-  auto iter_name_base = codegen->MakeFreshIdentifier("entry_iter_base");
+  auto iter_name_base = codegen_->MakeFreshIdentifier("entry_iter_base");
   function->Append(
-      codegen->DeclareVarNoInit(iter_name_base, ast::BuiltinType::HashTableEntryIterator));
+      codegen_->DeclareVarNoInit(iter_name_base, ast::BuiltinType::HashTableEntryIterator));
 
   // var entryIter = &entryIterBase
-  auto iter_name = codegen->MakeFreshIdentifier("entry_iter");
-  function->Append(codegen->DeclareVarWithInit(
-      iter_name, codegen->AddressOf(codegen->MakeExpr(iter_name_base))));
+  auto iter_name = codegen_->MakeFreshIdentifier("entry_iter");
+  function->Append(codegen_->DeclareVarWithInit(
+      iter_name, codegen_->AddressOf(codegen_->MakeExpr(iter_name_base))));
 
-  auto entry_iter = codegen->MakeExpr(iter_name);
+  auto entry_iter = codegen_->MakeExpr(iter_name);
   auto hash_val =
       HashKeys(ctx, function, GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys());
 
   // Probe matches.
   const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
-  auto lookup_call = codegen->MakeStmt(
-      codegen->JoinHashTableLookup(global_join_ht_.GetPtr(codegen), entry_iter, hash_val));
-  auto has_next_call = codegen->HTEntryIterHasNext(entry_iter);
+  auto lookup_call = codegen_->MakeStmt(
+      codegen_->JoinHashTableLookup(global_join_ht_.GetPtr(codegen_), entry_iter, hash_val));
+  auto has_next_call = codegen_->HTEntryIterHasNext(entry_iter);
 
   // The probe depends on the join type
   if (join_plan.RequiresRightMark()) {
     // First declare the right mark.
-    ast::Identifier right_mark_var = codegen->MakeFreshIdentifier("right_mark");
-    ast::Expr *right_mark = codegen->MakeExpr(right_mark_var);
-    function->Append(codegen->DeclareVarWithInit(right_mark_var, codegen->ConstBool(true)));
+    ast::Identifier right_mark_var = codegen_->MakeFreshIdentifier("right_mark");
+    ast::Expr *right_mark = codegen_->MakeExpr(right_mark_var);
+    function->Append(codegen_->DeclareVarWithInit(right_mark_var, codegen_->ConstBool(true)));
 
     // Probe hash table and check for a match. Loop condition becomes false as
     // soon as a match is found.
-    auto loop_cond = codegen->BinaryOp(parsing::Token::Type::AND, right_mark, has_next_call);
+    auto loop_cond = codegen_->BinaryOp(parsing::Token::Type::AND, right_mark, has_next_call);
     Loop entry_loop(function, lookup_call, loop_cond, nullptr);
     {
       // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-      function->Append(codegen->DeclareVarWithInit(
-          build_row_var_, codegen->HTEntryIterGetRow(entry_iter, build_row_type_)));
+      function->Append(codegen_->DeclareVarWithInit(
+          build_row_var_, codegen_->HTEntryIterGetRow(entry_iter, build_row_type_)));
       CheckRightMark(ctx, function, right_mark_var);
     }
     entry_loop.EndLoop();
@@ -198,13 +188,13 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
     if (join_plan.GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_ANTI) {
       // If the right mark is true, then we can perform the anti join.
       // if (right_mark)
-      If right_anti_check(function, codegen->MakeExpr(right_mark_var));
+      If right_anti_check(function, codegen_->MakeExpr(right_mark_var));
       ctx->Consume(function);
       right_anti_check.EndIf();
     } else if (join_plan.GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_SEMI) {
       // If the right mark is unset, then there is at least one match.
       // if (!right_mark)
-      auto cond = codegen->UnaryOp(parsing::Token::Type::BANG, codegen->MakeExpr(right_mark_var));
+      auto cond = codegen_->UnaryOp(parsing::Token::Type::BANG, codegen_->MakeExpr(right_mark_var));
       If right_semi_check(function, cond);
       ctx->Consume(function);
       right_semi_check.EndIf();
@@ -214,8 +204,8 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
     Loop entry_loop(function, lookup_call, has_next_call, nullptr);
     {
       // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-      function->Append(codegen->DeclareVarWithInit(
-          build_row_var_, codegen->HTEntryIterGetRow(entry_iter, build_row_type_)));
+      function->Append(codegen_->DeclareVarWithInit(
+          build_row_var_, codegen_->HTEntryIterGetRow(entry_iter, build_row_type_)));
       CheckJoinPredicate(ctx, function);
     }
     entry_loop.EndLoop();
@@ -224,23 +214,23 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
 
 void HashJoinTranslator::CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilder *function) const {
   const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
-  auto codegen = GetCodeGen();
 
   auto cond = ctx->DeriveValue(*join_plan.GetJoinPredicate(), this);
   if (join_plan.RequiresLeftMark()) {
     // For left-semi joins, we also need to make sure the build-side tuple
     // has not already found an earlier join partner. We enforce the check
     // by modifying the join predicate.
-    auto left_mark = codegen->AccessStructMember(codegen->MakeExpr(build_row_var_), build_mark_);
-    cond = codegen->BinaryOp(parsing::Token::Type::AND, left_mark, cond);
+    auto left_mark = codegen_->AccessStructMember(codegen_->MakeExpr(build_row_var_), build_mark_);
+    cond = codegen_->BinaryOp(parsing::Token::Type::AND, left_mark, cond);
   }
 
   If check_condition(function, cond);
   {
     if (join_plan.RequiresLeftMark()) {
       // Mark this tuple as accessed.
-      auto left_mark = codegen->AccessStructMember(codegen->MakeExpr(build_row_var_), build_mark_);
-      function->Append(codegen->Assign(left_mark, codegen->ConstBool(false)));
+      auto left_mark =
+          codegen_->AccessStructMember(codegen_->MakeExpr(build_row_var_), build_mark_);
+      function->Append(codegen_->Assign(left_mark, codegen_->ConstBool(false)));
     }
     // Move along.
     ctx->Consume(function);
@@ -250,8 +240,6 @@ void HashJoinTranslator::CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilde
 
 void HashJoinTranslator::CheckRightMark(ConsumerContext *ctx, FunctionBuilder *function,
                                         ast::Identifier right_mark) const {
-  auto codegen = GetCodeGen();
-
   // Generate the join condition.
   const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate();
   auto cond = ctx->DeriveValue(*join_predicate, this);
@@ -259,7 +247,7 @@ void HashJoinTranslator::CheckRightMark(ConsumerContext *ctx, FunctionBuilder *f
   If check_condition(function, cond);
   {
     // If there is a match, unset the right mark now.
-    function->Append(codegen->Assign(codegen->MakeExpr(right_mark), codegen->ConstBool(false)));
+    function->Append(codegen_->Assign(codegen_->MakeExpr(right_mark), codegen_->ConstBool(false)));
   }
   check_condition.EndIf();
 }
@@ -276,14 +264,13 @@ void HashJoinTranslator::Consume(ConsumerContext *ctx, FunctionBuilder *function
 void HashJoinTranslator::FinishPipelineWork(const Pipeline &pipeline,
                                             FunctionBuilder *function) const {
   if (IsLeftPipeline(pipeline)) {
-    auto codegen = GetCodeGen();
-    auto jht = global_join_ht_.GetPtr(codegen);
+    auto jht = global_join_ht_.GetPtr(codegen_);
     if (left_pipeline_.IsParallel()) {
       auto tls = GetThreadStateContainer();
-      auto offset = local_join_ht_.OffsetFromState(codegen);
-      function->Append(codegen->JoinHashTableBuildParallel(jht, tls, offset));
+      auto offset = local_join_ht_.OffsetFromState(codegen_);
+      function->Append(codegen_->JoinHashTableBuildParallel(jht, tls, offset));
     } else {
-      function->Append(codegen->JoinHashTableBuild(jht));
+      function->Append(codegen_->JoinHashTableBuild(jht));
     }
   }
 }
@@ -294,7 +281,7 @@ ast::Expr *HashJoinTranslator::GetChildOutput(ConsumerContext *context, uint32_t
   // child, we read it from the probe/materialized build row. Otherwise, we
   // propagate to the appropriate child.
   if (IsRightPipeline(context->GetPipeline()) && child_idx == 0) {
-    return GetBuildRowAttribute(GetCodeGen()->MakeExpr(build_row_var_), attr_idx);
+    return GetBuildRowAttribute(codegen_->MakeExpr(build_row_var_), attr_idx);
   }
   return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
 }
