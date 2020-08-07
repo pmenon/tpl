@@ -161,7 +161,7 @@ void CompilationContext::GeneratePipelineCode(
 
 void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   exec_ctx_ = query_state_.DeclareStateEntry(
-      GetCodeGen(), "execCtx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
+      GetCodeGen(), "exec_ctx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
 
   // The graph of all pipelines.
   PipelineGraph pipeline_graph;
