@@ -399,9 +399,9 @@ ast::Expr *CompilationContext::GetExecutionContextPtrFromQueryState() {
   return exec_ctx_.Get(&codegen_);
 }
 
-CodeContainer *CompilationContext::MakeContainer() {
-  const auto container_id = fmt::format("CC{}", containers_.size());
-  containers_.emplace_back(std::make_unique<CodeContainer>(query_->GetContext(), container_id));
+CompilationUnit *CompilationContext::MakeContainer() {
+  const auto container_id = fmt::format("CU{}", containers_.size());
+  containers_.emplace_back(std::make_unique<CompilationUnit>(query_->GetContext(), container_id));
   return containers_.back().get();
 }
 

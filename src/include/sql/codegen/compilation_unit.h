@@ -17,7 +17,7 @@ namespace tpl::sql::codegen {
 /**
  * A container for code in a single TPL file.
  */
-class CodeContainer {
+class CompilationUnit {
   friend class CodeGen;
 
  public:
@@ -26,12 +26,12 @@ class CodeContainer {
    * @param ctx The AST context to use.
    * @param name The name of the container.
    */
-  explicit CodeContainer(ast::Context *ctx, std::string name);
+  explicit CompilationUnit(ast::Context *ctx, std::string name);
 
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY(CodeContainer);
+  DISALLOW_COPY(CompilationUnit);
 
   /**
    * Register the given struct in this container.
@@ -51,7 +51,7 @@ class CodeContainer {
    * @pre Both contains must use the same AST context.
    * @param other The contains to copy declarations from.
    */
-  void CopyDeclarations(const CodeContainer &other);
+  void CopyDeclarations(const CompilationUnit &other);
 
   /**
    * Compile the code in the container.

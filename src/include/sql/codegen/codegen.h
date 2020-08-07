@@ -15,7 +15,7 @@
 #include "common/common.h"
 #include "parsing/token.h"
 #include "sql/codegen/ast_fwd.h"
-#include "sql/codegen/code_container.h"
+#include "sql/codegen/compilation_unit.h"
 #include "sql/planner/expressions/expression_defs.h"
 #include "sql/runtime_types.h"
 #include "sql/sql.h"
@@ -92,7 +92,7 @@ class CodeGen {
    */
   class CodeContainerScope {
    public:
-    CodeContainerScope(CodeGen *codegen, CodeContainer *container)
+    CodeContainerScope(CodeGen *codegen, CompilationUnit *container)
         : codegen_(codegen), prev_container_(codegen_->container_) {
       codegen_->container_ = container;
     }
@@ -103,14 +103,14 @@ class CodeGen {
     // Code generation instance.
     CodeGen *codegen_;
     // The previous container.
-    CodeContainer *prev_container_;
+    CompilationUnit *prev_container_;
   };
 
   /**
    * Create a code generator that generates code for the provided container.
    * @param container Where all code is generated into.
    */
-  explicit CodeGen(CodeContainer *container);
+  explicit CodeGen(CompilationUnit *container);
 
   /**
    * Destructor.
@@ -1306,7 +1306,7 @@ class CodeGen {
 
  private:
   // The container for the current compilation.
-  CodeContainer *container_;
+  CompilationUnit *container_;
   // The current position in the source.
   SourcePosition position_;
   // Cache of code scopes.

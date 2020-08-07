@@ -38,7 +38,7 @@ std::string CodeGen::LexicalScope::GetFreshName(const std::string &name) {
 //
 //===----------------------------------------------------------------------===//
 
-CodeGen::CodeGen(CodeContainer *container)
+CodeGen::CodeGen(CompilationUnit *container)
     : container_(container),
       position_{0, 0},
       num_cached_scopes_(0),

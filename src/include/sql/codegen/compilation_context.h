@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "sql/codegen/code_container.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/codegen_defs.h"
+#include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/executable_query.h"
 #include "sql/codegen/execution_plan.h"
 #include "sql/codegen/expression/expression_translator.h"
@@ -116,7 +116,7 @@ class CompilationContext {
   void DeclareStructsAndFunctions();
 
   // Create a new container.
-  CodeContainer *MakeContainer();
+  CompilationUnit *MakeContainer();
 
   using ContainerIndex = std::size_t;
 
@@ -147,7 +147,7 @@ class CompilationContext {
   // The compilation mode.
   CompilationMode mode_;
   // All allocated containers.
-  std::vector<std::unique_ptr<CodeContainer>> containers_;
+  std::vector<std::unique_ptr<CompilationUnit>> containers_;
   // The code generator instance.
   CodeGen codegen_;
   // Cached identifiers.

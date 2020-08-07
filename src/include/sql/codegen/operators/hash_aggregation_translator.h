@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sql/codegen/code_container.h"
+#include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/consumer_context.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"

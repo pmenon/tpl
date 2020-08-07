@@ -89,7 +89,6 @@ void StaticAggregationTranslator::DefineStructsAndFunctions() {
 
   // The merging function, if parallel.
   if (build_pipeline_.IsParallel()) {
-
   }
 }
 

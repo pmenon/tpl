@@ -6,7 +6,7 @@
 #include "ast/identifier.h"
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
-#include "sql/codegen/code_container.h"
+#include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/expression/column_value_provider.h"
 #include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"

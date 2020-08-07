@@ -1,4 +1,4 @@
-#include "sql/codegen/code_container.h"
+#include "sql/codegen/compilation_unit.h"
 
 #include <iostream>
 
@@ -10,9 +10,9 @@
 
 namespace tpl::sql::codegen {
 
-CodeContainer::CodeContainer(ast::Context *ctx, std::string name) : ctx_(ctx), name_(name) {}
+CompilationUnit::CompilationUnit(ast::Context *ctx, std::string name) : ctx_(ctx), name_(name) {}
 
-void CodeContainer::CopyDeclarations(const CodeContainer &other) {
+void CompilationUnit::CopyDeclarations(const CompilationUnit &other) {
   TPL_ASSERT(ctx_ == other.ctx_,
              "Mismatched AST context objects. When adding all declarations from one container into "
              "the other, they must both be using the same AST context.");
@@ -44,7 +44,7 @@ class Callbacks : public compiler::Compiler::Callbacks {
 
 }  // namespace
 
-std::unique_ptr<vm::Module> CodeContainer::Compile() {
+std::unique_ptr<vm::Module> CompilationUnit::Compile() {
   // Build up the declaration list for the file. This is just the concatenation
   // of all the structure and function definitions, in that order.
   util::RegionVector<ast::Decl *> declarations(ctx_->GetRegion());

@@ -14,7 +14,7 @@
 
 namespace tpl::sql::codegen {
 
-class CodeContainer;
+class CompilationUnit;
 class CodeGen;
 class CompilationContext;
 class ExpressionTranslator;

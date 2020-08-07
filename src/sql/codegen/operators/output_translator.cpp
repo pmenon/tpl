@@ -1,5 +1,4 @@
 #include "sql/codegen/operators/output_translator.h"
-#include <sql/codegen/code_container.h>
 
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
