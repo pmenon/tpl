@@ -10,8 +10,8 @@
 namespace tpl::sql::codegen {
 
 namespace {
-constexpr char kGroupByTermAttrPrefix[] = "gb_term_attr";
-constexpr char kAggregateTermAttrPrefix[] = "agg_term_attr";
+constexpr char kGroupByTermAttrPrefix[] = "gb_key";
+constexpr char kAggregateTermAttrPrefix[] = "agg";
 }  // namespace
 
 HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePlanNode &plan,
@@ -232,21 +232,19 @@ ast::FunctionDecl *HashAggregationTranslator::GenerateKeyCheckFunction() {
   return builder.Finish();
 }
 
-void HashAggregationTranslator::DefineHelperStructsAndFunctions() {
-  // Declare the structure stored in the aggregation hash table.
-  GeneratePayloadStruct();
-  // Declare the structure of the input to the aggregation.
-  GenerateInputValuesStruct();
+void HashAggregationTranslator::DefineStructsAndFunctions() {
+  GeneratePayloadStruct();      // The structure stored in the hash table.
+  GenerateInputValuesStruct();  // The temp input structure.
+}
 
-  if (build_pipeline_.IsParallel()) {
-    // In parallel aggregations, we also need to declare the partial key-check
-    // and merging functions.
-    GeneratePartialKeyCheckFunction();
-    GenerateMergeOverflowPartitionsFunction();
+void HashAggregationTranslator::DefinePipelineFunctions(const Pipeline &pipeline) {
+  if (IsBuildPipeline(pipeline)) {
+    GenerateKeyCheckFunction();
+    if (pipeline.IsParallel()) {
+      GeneratePartialKeyCheckFunction();
+      GenerateMergeOverflowPartitionsFunction();
+    }
   }
-
-  // Finally, the main key-check function.
-  GenerateKeyCheckFunction();
 }
 
 void HashAggregationTranslator::InitializeAggregationHashTable(FunctionBuilder *function,

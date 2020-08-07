@@ -26,7 +26,7 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
    * Define the structure representing the rows produced by this CSV scan.
    * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructsAndFunctions() override;
+  void DefineStructsAndFunctions() override;
 
   /**
    * Generate the CSV scan logic.

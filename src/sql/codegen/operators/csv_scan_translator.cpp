@@ -28,7 +28,7 @@ CSVScanTranslator::CSVScanTranslator(const planner::CSVScanPlanNode &plan,
       GetCodeGen(), "csv_row", GetCodeGen()->MakeExpr(base_row_type_));
 }
 
-void CSVScanTranslator::DefineHelperStructsAndFunctions() {
+void CSVScanTranslator::DefineStructsAndFunctions() {
   CodeGen *codegen = GetCodeGen();
 
   // Reserve now to reduce allocations.

@@ -51,7 +51,7 @@ void OutputTranslator::FinishPipelineWork(const Pipeline &pipeline,
   function->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx}));
 }
 
-void OutputTranslator::DefineHelperStructsAndFunctions() {
+void OutputTranslator::DefineStructsAndFunctions() {
   CodeGen *codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
 

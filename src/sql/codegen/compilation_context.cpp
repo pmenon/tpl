@@ -108,7 +108,7 @@ void CompilationContext::EstablishPipelineDependencies() {
 void CompilationContext::DeclareStructsAndFunctions() {
   // Let each operator declare helper elements.
   for (const auto &kv : operators_) {
-    kv.second->DefineHelperStructsAndFunctions();
+    kv.second->DefineStructsAndFunctions();
   }
   // Finally, declare the query state.
   query_state_.ConstructFinalType(&codegen_);

@@ -38,7 +38,7 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
    * Define the structure of the rows that are materialized in the sorter, and the sort function.
    * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructsAndFunctions() override;
+  void DefineStructsAndFunctions() override;
 
   /**
    * Initialize the sorter instance.
@@ -132,7 +132,7 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   ast::StructDecl *GenerateSortRowStructType() const;
 
   // Generate the sorting function.
-  ast::FunctionDecl * GenerateComparisonFunction();
+  ast::FunctionDecl *GenerateComparisonFunction();
   void GenerateComparisonLogic(FunctionBuilder *function);
 
  private:

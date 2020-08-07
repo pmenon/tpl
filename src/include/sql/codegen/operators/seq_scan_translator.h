@@ -39,9 +39,9 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
 
   /**
    * Define all predicate functions if the scan has a predicate.
-   * @param container The container for query-level types and functions.
+   * @param pipeline The pipeline the functions are being generated for.
    */
-  void DefineHelperStructsAndFunctions() override;
+  void DefinePipelineFunctions(const Pipeline &pipeline) override;
 
   /**
    * Initialize the FilterManager if required.

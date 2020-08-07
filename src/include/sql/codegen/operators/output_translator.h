@@ -39,7 +39,7 @@ class OutputTranslator : public OperatorTranslator {
    * Define the output struct.
    * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructsAndFunctions() override;
+  void DefineStructsAndFunctions() override;
 
   /**
    * Perform the main work of the translator.

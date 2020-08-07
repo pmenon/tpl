@@ -126,7 +126,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
   curr_clause->push_back(fn_name);
 }
 
-void SeqScanTranslator::DefineHelperStructsAndFunctions() {
+void SeqScanTranslator::DefinePipelineFunctions(const Pipeline &pipeline) {
   if (HasPredicate()) {
     std::vector<ast::Identifier> curr_clause;
     auto root_expr = GetPlanAs<planner::SeqScanPlanNode>().GetScanPredicate();

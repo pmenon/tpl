@@ -9,7 +9,6 @@
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/codegen_defs.h"
-#include "sql/codegen/function_builder.h"
 #include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"
 
@@ -67,7 +66,7 @@ class Pipeline {
    * @param pipeline_graph The pipeline graph to register in.
    * @param parallelism The operator's requested parallelism.
    */
-  Pipeline(OperatorTranslator *op, PipelineGraph *pipeline_graph, Parallelism parallelism);
+  explicit Pipeline(OperatorTranslator *op, PipelineGraph *pipeline_graph, Parallelism parallelism);
 
   /**
    * This class cannot be copied or moved.
@@ -210,13 +209,6 @@ class Pipeline {
   std::string BuildPipelineName() const;
 
  private:
-  // Return the thread-local state initialization and tear-down function names.
-  // This is needed when we invoke @tlsReset() from the pipeline initialization
-  // function to setup the thread-local state.
-  ast::Identifier GetSetupPipelineStateFunctionName() const;
-  ast::Identifier GetTearDownPipelineStateFunctionName() const;
-  ast::Identifier GetWorkFunctionName() const;
-
   // Generate the pipeline state initialization logic.
   ast::FunctionDecl *GenerateSetupPipelineStateFunction() const;
 
@@ -239,7 +231,7 @@ class Pipeline {
   // A unique pipeline ID.
   PipelineId id_;
   // The compilation context this pipeline is part of.
-  CompilationContext *compilation_context_;
+  CompilationContext *compilation_ctx_;
   // The pipeline graph.
   PipelineGraph *pipeline_graph_;
   // The code generation instance.

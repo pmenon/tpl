@@ -9,7 +9,7 @@
 namespace tpl::sql::codegen {
 
 namespace {
-constexpr char kAggAttrPrefix[] = "agg_term_attr";
+constexpr char kAggAttrPrefix[] = "agg";
 }  // namespace
 
 StaticAggregationTranslator::StaticAggregationTranslator(const planner::AggregatePlanNode &plan,
@@ -82,25 +82,35 @@ ast::StructDecl *StaticAggregationTranslator::GenerateValuesStruct() {
   return codegen->DeclareStruct(agg_values_type_, std::move(fields));
 }
 
-void StaticAggregationTranslator::DefineHelperStructsAndFunctions() {
+void StaticAggregationTranslator::DefineStructsAndFunctions() {
   // The payload and input structures.
   GeneratePayloadStruct();
   GenerateValuesStruct();
 
   // The merging function, if parallel.
   if (build_pipeline_.IsParallel()) {
-    CodeGen *codegen = GetCodeGen();
-    util::RegionVector<ast::FieldDecl *> params = build_pipeline_.PipelineParams();
-    FunctionBuilder function(codegen, merge_func_, std::move(params), codegen->Nil());
-    {
-      for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-        auto lhs = GetAggregateTermPtr(global_aggs_.Get(codegen), term_idx);
-        auto rhs = GetAggregateTermPtr(local_aggs_.Get(codegen), term_idx);
-        function.Append(codegen->AggregatorMerge(lhs, rhs));
-      }
-    }
-    function.Finish();
+
   }
+}
+
+void StaticAggregationTranslator::DefinePipelineFunctions(const Pipeline &pipeline) {
+  if (IsBuildPipeline(pipeline) && pipeline.IsParallel()) {
+    GenerateAggregateMergeFunction();
+  }
+}
+
+void StaticAggregationTranslator::GenerateAggregateMergeFunction() const {
+  CodeGen *codegen = GetCodeGen();
+  util::RegionVector<ast::FieldDecl *> params = build_pipeline_.PipelineParams();
+  FunctionBuilder function(codegen, merge_func_, std::move(params), codegen->Nil());
+  {
+    for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
+      auto lhs = GetAggregateTermPtr(global_aggs_.Get(codegen), term_idx);
+      auto rhs = GetAggregateTermPtr(local_aggs_.Get(codegen), term_idx);
+      function.Append(codegen->AggregatorMerge(lhs, rhs));
+    }
+  }
+  function.Finish();
 }
 
 ast::Expr *StaticAggregationTranslator::GetAggregateTerm(ast::Expr *agg_row,

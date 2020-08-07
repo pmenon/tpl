@@ -38,7 +38,13 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    * Define the structure of the aggregates. When parallel, generate the partial merging function.
    * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructsAndFunctions() override;
+  void DefineStructsAndFunctions() override;
+
+  /**
+   * Define the aggregate merging logic, if the aggregation is parallel.
+   * @param pipeline The pipeline.
+   */
+  void DefinePipelineFunctions(const Pipeline &pipeline) override;
 
   /**
    * If the provided pipeline is the build-side, initialize the declare partial aggregate.
@@ -106,6 +112,8 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   void InitializeAggregates(FunctionBuilder *function, bool local) const;
 
   void UpdateGlobalAggregate(ConsumerContext *ctx, FunctionBuilder *function) const;
+
+  void GenerateAggregateMergeFunction() const;
 
  private:
   ast::Identifier agg_row_var_;

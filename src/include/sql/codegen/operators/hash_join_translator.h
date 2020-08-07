@@ -41,7 +41,7 @@ class HashJoinTranslator : public OperatorTranslator {
    * Declare the build-row struct used to materialized tuples from the build side of the join.
    * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructsAndFunctions() override;
+  void DefineStructsAndFunctions() override;
 
   /**
    * Initialize the global hash table.

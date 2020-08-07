@@ -108,7 +108,7 @@ ast::FunctionDecl *SortTranslator::GenerateComparisonFunction() {
   return builder.Finish(codegen->Const32(0));
 }
 
-void SortTranslator::DefineHelperStructsAndFunctions() {
+void SortTranslator::DefineStructsAndFunctions() {
   GenerateSortRowStructType();
   GenerateComparisonFunction();
 }

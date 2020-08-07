@@ -52,8 +52,8 @@ void HashJoinTranslator::DeclarePipelineDependencies() const {
   GetPipeline()->AddDependency(left_pipeline_);
 }
 
-void HashJoinTranslator::DefineHelperStructsAndFunctions() {
-  auto codegen = GetCodeGen();
+void HashJoinTranslator::DefineStructsAndFunctions() {
+  CodeGen *codegen = GetCodeGen();
   auto fields = codegen->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kBuildRowAttrPrefix, &fields);
   if (GetPlanAs<planner::HashJoinPlanNode>().RequiresLeftMark()) {

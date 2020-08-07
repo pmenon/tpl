@@ -102,10 +102,10 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void DeclarePipelineDependencies() const {}
 
   /**
-   * Define any helper structures or functions required for processing.
-   * @param container Query-level declarations.
+   * Define any helper structures or functions required for processing. These are available for the
+   * whole query.
    */
-  virtual void DefineHelperStructsAndFunctions() {}
+  virtual void DefineStructsAndFunctions() {}
 
   /**
    * Initialize all query state.
@@ -119,11 +119,10 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void TearDownQueryState(FunctionBuilder *function) const {}
 
   /**
-   *
-   * @param pipeline
-   * @param container
+   * Define any pipeline-local helper functions.
+   * @param pipeline The pipeline we're generating functions in.
    */
-  virtual void DefinePipelineFunctions(const Pipeline &pipeline, CodeContainer *container) {}
+  virtual void DefinePipelineFunctions(const Pipeline &pipeline) {}
 
   /**
    * Initialize any declared pipeline-local state.
@@ -131,6 +130,13 @@ class OperatorTranslator : public ColumnValueProvider {
    * @param function The function being built.
    */
   virtual void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
+
+  /**
+   * Tear down and destroy any pipeline-local state.
+   * @param pipeline The pipeline whose state is being destroyed.
+   * @param function The function being built.
+   */
+  virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
    * Perform any work required before beginning main pipeline work. This is executed by one thread.
@@ -165,13 +171,6 @@ class OperatorTranslator : public ColumnValueProvider {
    * @param function The function being built.
    */
   virtual void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {}
-
-  /**
-   * Tear down and destroy any pipeline-local state.
-   * @param pipeline The pipeline whose state is being destroyed.
-   * @param function The function being built.
-   */
-  virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
 
   /**
    * @return The value (vector) of the attribute at the given index in this operator's output.

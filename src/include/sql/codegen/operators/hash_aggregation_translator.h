@@ -38,7 +38,7 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * Define the aggregation row structure, and all key-check functions.
    * @param container The container for query-level types and functions.
    */
-  void DefineHelperStructsAndFunctions() override;
+  void DefineStructsAndFunctions() override;
 
   /**
    * Initialize the global aggregation hash table.
@@ -49,6 +49,12 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * Destroy the global aggregation hash table.
    */
   void TearDownQueryState(FunctionBuilder *function) const override;
+
+  /**
+   * Define the key equality functions and merging functions, if the aggregation is parallel.
+   * @param pipeline The pipeline.
+   */
+  void DefinePipelineFunctions(const Pipeline &pipeline) override;
 
   /**
    * Initialize the thread-local aggregation hash table, if needed.
