@@ -6,7 +6,10 @@
 namespace tpl::sql::codegen {
 
 ExecutionStep::ExecutionStep(PipelineId pipeline_id, std::string func_name)
-    : pipeline_id_(pipeline_id), func_name_(std::move(func_name)), func_id_(vm::kInvalidFuncId) {}
+    : pipeline_id_(pipeline_id),
+      func_name_(std::move(func_name)),
+      func_id_(vm::kInvalidFuncId),
+      module_(nullptr) {}
 
 void ExecutionStep::Resolve(vm::Module *module) {
   TPL_ASSERT(module != nullptr, "Input module cannot be NULL");
