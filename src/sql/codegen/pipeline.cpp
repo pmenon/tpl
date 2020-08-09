@@ -86,7 +86,7 @@ util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
   return query_params;
 }
 
-void Pipeline::AddDependency(const Pipeline &dependency) {
+void Pipeline::AddDependency(const Pipeline &dependency) const {
   pipeline_graph_->AddDependency(*this, dependency);
 }
 

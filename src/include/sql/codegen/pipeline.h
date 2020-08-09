@@ -118,7 +118,7 @@ class Pipeline {
    * cannot begin until the provided pipeline completes. Dependencies define an execution order.
    * @param dependency Another pipeline this pipeline is dependent on.
    */
-  void AddDependency(const Pipeline &dependency);
+  void AddDependency(const Pipeline &dependency) const;
 
   /**
    * Mark this pipeline as being nested within the provided outer/parent pipeline.
