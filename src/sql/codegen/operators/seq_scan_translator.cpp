@@ -203,9 +203,9 @@ void SeqScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *funct
   }
 }
 
-util::RegionVector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const {
-  auto tvi_type = codegen_->PointerType(ast::BuiltinType::TableVectorIterator);
-  return codegen_->MakeFieldList({codegen_->MakeField(tvi_var_, tvi_type)});
+std::vector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const {
+  ast::Expr *tvi_type = codegen_->PointerType(ast::BuiltinType::TableVectorIterator);
+  return {codegen_->MakeField(tvi_var_, tvi_type)};
 }
 
 void SeqScanTranslator::LaunchWork(FunctionBuilder *function, ast::Identifier work_func) const {

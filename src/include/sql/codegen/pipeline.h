@@ -69,11 +69,6 @@ class Pipeline {
   explicit Pipeline(OperatorTranslator *op, PipelineGraph *pipeline_graph, Parallelism parallelism);
 
   /**
-   * This class cannot be copied or moved.
-   */
-  DISALLOW_COPY_AND_MOVE(Pipeline);
-
-  /**
    * Register an operator in this pipeline with a customized parallelism configuration.
    * @param op The operator to add to the pipeline.
    * @param parallelism The operator's requested parallelism.

@@ -80,11 +80,6 @@ class StateDescriptor {
   StateDescriptor(ast::Identifier type_name, InstanceProvider access);
 
   /**
-   * This class cannot be copied or moved.
-   */
-  DISALLOW_COPY_AND_MOVE(StateDescriptor);
-
-  /**
    * Declare a state entry with the provided name and type in the execution runtime query state.
    * @param name The name of the element.
    * @param type_repr The TPL type representation of the element.

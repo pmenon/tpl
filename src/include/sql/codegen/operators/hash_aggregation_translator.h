@@ -89,7 +89,7 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * last argument to the worker function will be the aggregation hash table we're scanning.
    * @return The set of additional worker parameters.
    */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override;
+  std::vector<ast::FieldDecl *> GetWorkerParams() const override;
 
   /**
    * If the aggregation is parallelized, we'll launch ara parallel partitioned scan over the

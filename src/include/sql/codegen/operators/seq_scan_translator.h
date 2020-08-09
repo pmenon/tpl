@@ -62,7 +62,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
   /**
    * @return The pipeline work function parameters. Just the *TVI.
    */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override;
+  std::vector<ast::FieldDecl *> GetWorkerParams() const override;
 
   /**
    * Launch a parallel table scan.

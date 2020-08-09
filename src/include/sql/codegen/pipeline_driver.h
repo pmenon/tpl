@@ -1,8 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include "ast/identifier.h"
 #include "sql/codegen/ast_fwd.h"
-#include "util/region_containers.h"
 
 namespace tpl::sql::codegen {
 
@@ -24,7 +25,7 @@ class PipelineDriver {
    * @return The list of extra fields added to the "work" function. By default, the first two
    *         arguments are the query state and the pipeline state.
    */
-  virtual util::RegionVector<ast::FieldDecl *> GetWorkerParams() const = 0;
+  virtual std::vector<ast::FieldDecl *> GetWorkerParams() const = 0;
 
   /**
    * This is called to launch the provided worker function in parallel across a set of threads.

@@ -74,10 +74,16 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    */
   void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
+  /**
+   * Static aggregations are always serial.
+   */
+  std::vector<ast::FieldDecl *> GetWorkerParams() const override {
     UNREACHABLE("Static aggregations are never launched in parallel");
   }
 
+  /**
+   * Static aggregations are always serial.
+   */
   void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override {
     UNREACHABLE("Static aggregations are never launched in parallel");
   }
@@ -89,6 +95,9 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
                             uint32_t attr_idx) const override;
 
+  /**
+   * Static aggregations do not touch base table columns.
+   */
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Static aggregations do not produce columns from base tables.");
   }

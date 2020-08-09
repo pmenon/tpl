@@ -82,7 +82,7 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   /**
    * Sorters are never launched in parallel, so this should never occur..
    */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
+  std::vector<ast::FieldDecl *> GetWorkerParams() const override {
     UNREACHABLE("Impossible");
   }
 

@@ -38,7 +38,7 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
   /**
    * CSV Scans are always serial, so should never launch work.
    */
-  util::RegionVector<ast::FieldDecl *> GetWorkerParams() const override {
+  std::vector<ast::FieldDecl *> GetWorkerParams() const override {
     UNREACHABLE("CSV scans are always serial ... for now.");
   }
 

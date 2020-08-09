@@ -194,7 +194,7 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
   util::RegionVector<ast::FieldDecl *> params = PipelineParams();
 
   if (IsParallel()) {
-    util::RegionVector<ast::FieldDecl *> additional_params = driver_->GetWorkerParams();
+    std::vector<ast::FieldDecl *> additional_params = driver_->GetWorkerParams();
     params.insert(params.end(), additional_params.begin(), additional_params.end());
   }
 

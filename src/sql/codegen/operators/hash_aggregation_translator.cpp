@@ -474,12 +474,12 @@ ast::Expr *HashAggregationTranslator::GetChildOutput(ConsumerContext *context, u
   return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
 }
 
-util::RegionVector<ast::FieldDecl *> HashAggregationTranslator::GetWorkerParams() const {
+std::vector<ast::FieldDecl *> HashAggregationTranslator::GetWorkerParams() const {
   TPL_ASSERT(build_pipeline_.IsParallel(),
              "Should not issue parallel scan if pipeline isn't parallelized.");
-  return codegen_->MakeFieldList(
-      {codegen_->MakeField(codegen_->MakeIdentifier("aggHashTable"),
-                           codegen_->PointerType(ast::BuiltinType::AggregationHashTable))});
+  ast::Identifier agg_ht_name = codegen_->MakeIdentifier("agg_hash_table");
+  ast::Expr *agg_ht_type = codegen_->PointerType(ast::BuiltinType::AggregationHashTable);
+  return {codegen_->MakeField(agg_ht_name, agg_ht_type)};
 }
 
 void HashAggregationTranslator::LaunchWork(FunctionBuilder *function,
