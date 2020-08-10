@@ -89,16 +89,10 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
                           FunctionBuilder *function) const override;
 
   /**
-   * Sorters are never launched in parallel, so this should never occur..
+   * Produce sorted results.
+   * @param pipeline_ctx The pipeline context.
    */
-  std::vector<ast::FieldDecl *> GetWorkerParams() const override { UNREACHABLE("Impossible"); }
-
-  /**
-   * Sorters are never launched in parallel, so this should never occur.
-   */
-  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override {
-    UNREACHABLE("Impossible");
-  }
+  void DrivePipeline(const PipelineContext &pipeline_ctx) const override;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the

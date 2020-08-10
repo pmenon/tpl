@@ -213,4 +213,9 @@ ast::Expr *StaticAggregationTranslator::GetChildOutput(ConsumerContext *context,
   return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
 }
 
+void StaticAggregationTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const {
+  TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "Driving unknown pipeline!");
+  GetPipeline()->LaunchSerial(pipeline_ctx);
+}
+
 }  // namespace tpl::sql::codegen

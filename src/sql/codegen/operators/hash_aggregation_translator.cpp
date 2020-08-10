@@ -491,21 +491,23 @@ ast::Expr *HashAggregationTranslator::GetChildOutput(ConsumerContext *context, u
   return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
 }
 
-std::vector<ast::FieldDecl *> HashAggregationTranslator::GetWorkerParams() const {
-  TPL_ASSERT(build_pipeline_.IsParallel(),
-             "Should not issue parallel scan if pipeline isn't parallelized.");
-  ast::Identifier agg_ht_name = codegen_->MakeIdentifier("agg_hash_table");
-  ast::Expr *agg_ht_type = codegen_->PointerType(ast::BuiltinType::AggregationHashTable);
-  return {codegen_->MakeField(agg_ht_name, agg_ht_type)};
-}
-
-void HashAggregationTranslator::LaunchWork(FunctionBuilder *function,
-                                           ast::Identifier work_func_name) const {
-  TPL_ASSERT(build_pipeline_.IsParallel(),
-             "Should not issue parallel scan if pipeline isn't parallelized.");
-  function->Append(codegen_->AggHashTableParallelScan(GetQueryStateEntryPtr(global_agg_ht_),
-                                                      GetQueryStatePtr(), GetThreadStateContainer(),
-                                                      work_func_name));
+void HashAggregationTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const {
+  TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "Aggregation driving unknown pipeline!");
+  if (pipeline_ctx.IsParallel()) {
+    const auto dispatch = [&](FunctionBuilder *function, ast::Identifier work_func) {
+      ast::Expr *global_hash_table = GetQueryStateEntryPtr(global_agg_ht_);
+      ast::Expr *q_state = GetQueryStatePtr();
+      ast::Expr *thread_state_container = GetThreadStateContainer();
+      function->Append(codegen_->AggHashTableParallelScan(global_hash_table, q_state,
+                                                          thread_state_container, work_func));
+    };
+    std::vector<ast::FieldDecl *> params = {
+        codegen_->MakeField(codegen_->MakeIdentifier("agg_hash_table"),
+                            codegen_->PointerType(ast::BuiltinType::AggregationHashTable))};
+    GetPipeline()->LaunchParallel(pipeline_ctx, dispatch, std::move(params));
+  } else {
+    GetPipeline()->LaunchSerial(pipeline_ctx);
+  }
 }
 
 }  // namespace tpl::sql::codegen

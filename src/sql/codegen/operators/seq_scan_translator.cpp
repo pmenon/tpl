@@ -208,22 +208,27 @@ void SeqScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *funct
   }
 }
 
-std::vector<ast::FieldDecl *> SeqScanTranslator::GetWorkerParams() const {
-  ast::Expr *tvi_type = codegen_->PointerType(ast::BuiltinType::TableVectorIterator);
-  return {codegen_->MakeField(tvi_var_, tvi_type)};
-}
-
-void SeqScanTranslator::LaunchWork(FunctionBuilder *function, ast::Identifier work_func) const {
-  function->Append(codegen_->IterateTableParallel(GetTableName(), GetQueryStatePtr(),
-                                                  GetThreadStateContainer(), work_func));
-}
-
 ast::Expr *SeqScanTranslator::GetTableColumn(uint16_t col_oid) const {
   const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
   const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
   auto type = schema->GetColumnInfo(col_oid)->sql_type.GetPrimitiveTypeId();
   auto nullable = schema->GetColumnInfo(col_oid)->sql_type.IsNullable();
   return codegen_->VPIGet(codegen_->MakeExpr(vpi_var_), type, nullable, col_oid);
+}
+
+void SeqScanTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const {
+  TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "Table scan driving unknown pipeline!");
+  if (pipeline_ctx.IsParallel()) {
+    const auto dispatch = [&](FunctionBuilder *function, ast::Identifier work_func) {
+      function->Append(codegen_->IterateTableParallel(GetTableName(), GetQueryStatePtr(),
+                                                      GetThreadStateContainer(), work_func));
+    };
+    std::vector<ast::FieldDecl *> params = {codegen_->MakeField(
+        tvi_var_, codegen_->PointerType(ast::BuiltinType::TableVectorIterator))};
+    GetPipeline()->LaunchParallel(pipeline_ctx, dispatch, std::move(params));
+  } else {
+    GetPipeline()->LaunchSerial(pipeline_ctx);
+  }
 }
 
 }  // namespace tpl::sql::codegen

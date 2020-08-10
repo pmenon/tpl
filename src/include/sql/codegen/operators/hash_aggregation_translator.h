@@ -94,18 +94,10 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
                           FunctionBuilder *function) const override;
 
   /**
-   * We'll issue a parallel partitioned scan over the aggregation hash table. In this case, the
-   * last argument to the worker function will be the aggregation hash table we're scanning.
-   * @return The set of additional worker parameters.
+   * Launch the pipeline to produce the aggregates.
+   * @param pipeline_ctx The pipeline context.
    */
-  std::vector<ast::FieldDecl *> GetWorkerParams() const override;
-
-  /**
-   * If the aggregation is parallelized, we'll launch ara parallel partitioned scan over the
-   * aggregation hash table.
-   * @param work_func_name The name of the worker function to invoke.
-   */
-  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override;
+  void DrivePipeline(const PipelineContext &pipeline_ctx) const override;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the

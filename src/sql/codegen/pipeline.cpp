@@ -234,51 +234,24 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipel
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(PipelineContext *pipeline_ctx) const {
-  util::RegionVector<ast::FieldDecl *> params = pipeline_ctx->PipelineParams();
-
-  if (IsParallel()) {
-    std::vector<ast::FieldDecl *> additional_params = driver_->GetWorkerParams();
-    params.insert(params.end(), additional_params.begin(), additional_params.end());
-  }
-
-  auto name = codegen_->MakeIdentifier(
-      CreatePipelineFunctionName(IsParallel() ? "ParallelWork" : "SerialWork"));
-  FunctionBuilder builder(codegen_, name, std::move(params), codegen_->Nil());
-  {
-    // Begin a new code scope for fresh variables.
-    CodeGen::CodeScope code_scope(codegen_);
-    // Create the working context and push it through the pipeline.
-    ConsumerContext context(compilation_ctx_, *pipeline_ctx);
-    (*Begin())->Consume(&context, &builder);
-  }
-  return builder.Finish();
-}
-
 ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeline_ctx) const {
-  // Generate the work function first.
-  ast::FunctionDecl *work_function = GeneratePipelineWorkFunction(pipeline_ctx);
-
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
   FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(), codegen_->Nil());
   {
+    // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen_);
 
+    // Let all operators perform some pre-pipeline work.
+    // This is before we invoke the core pipeline logic in single-threaded code.
     for (auto op : operators_) {
       op->BeginPipelineWork(*pipeline_ctx, &builder);
     }
 
-    if (IsParallel()) {
-      driver_->LaunchWork(&builder, work_function->Name());
-    } else {
-      ast::Expr *q_state = builder.GetParameterByPosition(0);
-      ast::Expr *p_state = pipeline_ctx->AccessCurrentThreadState();
-      ast::Identifier p_state_name = codegen_->MakeFreshIdentifier("p_state");
-      builder.Append(codegen_->DeclareVarWithInit(p_state_name, p_state));
-      builder.Append(
-          codegen_->Call(work_function->Name(), {q_state, codegen_->MakeExpr(p_state_name)}));
-    }
+    // Drive!
+    driver_->DrivePipeline(*pipeline_ctx);
 
+    // Let all operators perform some post-pipeline work.
+    // This is after we invoke the core pipeline logic.
     for (auto op : operators_) {
       op->FinishPipelineWork(*pipeline_ctx, &builder);
     }
@@ -326,6 +299,54 @@ std::vector<ast::FunctionDecl *> Pipeline::GeneratePipelineLogic() const {
   ast::FunctionDecl *tear_down_fn = GenerateTearDownPipelineFunction();
 
   return {init_fn, run_fn, tear_down_fn};
+}
+
+void Pipeline::LaunchSerial(const PipelineContext &pipeline_ctx) const {
+  LaunchInternal(pipeline_ctx, nullptr, {});
+}
+
+void Pipeline::LaunchParallel(const PipelineContext &pipeline_ctx,
+                              std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
+                              std::vector<ast::FieldDecl *> &&additional_params) const {
+  LaunchInternal(pipeline_ctx, dispatch, std::move(additional_params));
+}
+
+void Pipeline::LaunchInternal(const PipelineContext &pipeline_ctx,
+                              std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
+                              std::vector<ast::FieldDecl *> &&additional_params) const {
+  // First, make the work function.
+  util::RegionVector<ast::FieldDecl *> pipeline_params = pipeline_ctx.PipelineParams();
+  pipeline_params.reserve(pipeline_params.size() + additional_params.size());
+  pipeline_params.insert(pipeline_params.end(), additional_params.begin(), additional_params.end());
+
+  auto worker_name = codegen_->MakeIdentifier(
+      CreatePipelineFunctionName(IsParallel() ? "ParallelWork" : "SerialWork"));
+  {
+    FunctionBuilder builder(codegen_, worker_name, std::move(pipeline_params), codegen_->Nil());
+    {
+      // Begin a new code scope for fresh variables.
+      CodeGen::CodeScope code_scope(codegen_);
+      ConsumerContext context(compilation_ctx_, pipeline_ctx);
+      // Main pipeline logic.
+      (*Begin())->Consume(&context, &builder);
+    }
+    builder.Finish();
+  }
+
+  // Now, generate the dispatch code in the main function.
+  FunctionBuilder *run_function = codegen_->GetCurrentFunction();
+  if (dispatch) {
+    dispatch(run_function, worker_name);
+  } else {
+    // var p_state = @tlsGetCurrentThreadState(...)
+    ast::Expr *q_state = compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
+    ast::Expr *p_state = pipeline_ctx.AccessCurrentThreadState();
+    ast::Identifier p_state_name = codegen_->MakeFreshIdentifier("p_state");
+    run_function->Append(codegen_->DeclareVarWithInit(p_state_name, p_state));
+    // Call the work function directly.
+    // SerialWork(q_state, p_state)
+    run_function->Append(codegen_->Call(worker_name, {q_state, codegen_->MakeExpr(p_state_name)}));
+  }
 }
 
 }  // namespace tpl::sql::codegen

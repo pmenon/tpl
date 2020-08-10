@@ -18,6 +18,7 @@ class CompilationUnit;
 class CodeGen;
 class CompilationContext;
 class ExpressionTranslator;
+class FunctionBuilder;
 class OperatorTranslator;
 class Pipeline;
 class PipelineDriver;
@@ -287,6 +288,22 @@ class Pipeline {
     return std::addressof(a) == std::addressof(b);
   }
 
+  /**
+   * Launch the pipeline directly with a single thread.
+   * @param pipeline_ctx The pipeline context.
+   */
+  void LaunchSerial(const PipelineContext &pipeline_ctx) const;
+
+  /**
+   *
+   * @param pipeline_ctx
+   * @param dispatch
+   * @param additional_params
+   */
+  void LaunchParallel(const PipelineContext &pipeline_ctx,
+                      std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
+                      std::vector<ast::FieldDecl *> &&additional_params) const;
+
  private:
   // Declare all pipeline state.
   void DeclarePipelineState(PipelineContext *pipeline_ctx) const;
@@ -303,14 +320,16 @@ class Pipeline {
   // Generate pipeline initialization logic.
   ast::FunctionDecl *GenerateInitPipelineFunction(PipelineContext *pipeline_ctx) const;
 
-  // Generate the main pipeline work function.
-  ast::FunctionDecl *GeneratePipelineWorkFunction(PipelineContext *pipeline_ctx) const;
-
   // Generate the main pipeline logic.
   ast::FunctionDecl *GenerateRunPipelineFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate pipeline tear-down logic.
   ast::FunctionDecl *GenerateTearDownPipelineFunction() const;
+
+  // Common launch logic.
+  void LaunchInternal(const PipelineContext &pipeline_ctx,
+                      std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
+                      std::vector<ast::FieldDecl *> &&additional_params) const;
 
  private:
   // A unique pipeline ID.

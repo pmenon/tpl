@@ -82,18 +82,10 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
                           FunctionBuilder *function) const override;
 
   /**
-   * Static aggregations are always serial.
+   * Produce static global aggregates.
+   * @param pipeline_ctx The pipeline context.
    */
-  std::vector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("Static aggregations are never launched in parallel");
-  }
-
-  /**
-   * Static aggregations are always serial.
-   */
-  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override {
-    UNREACHABLE("Static aggregations are never launched in parallel");
-  }
+  void DrivePipeline(const PipelineContext &pipeline_ctx) const override;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the

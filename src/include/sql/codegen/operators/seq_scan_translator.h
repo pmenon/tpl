@@ -68,15 +68,10 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
                              FunctionBuilder *func) const override;
 
   /**
-   * @return The pipeline work function parameters. Just the *TVI.
+   * Launch the table scan.
+   * @param pipeline_ctx The pipeline context.
    */
-  std::vector<ast::FieldDecl *> GetWorkerParams() const override;
-
-  /**
-   * Launch a parallel table scan.
-   * @param work_func The worker function that'll be called during the parallel scan.
-   */
-  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func) const override;
+  void DrivePipeline(const PipelineContext &pipeline_ctx) const override;
 
   /**
    * @return The value (or value vector) of the column with the provided column OID in the table

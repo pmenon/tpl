@@ -36,18 +36,10 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
   void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
-   * CSV Scans are always serial, so should never launch work.
+   * Launch the pipeline to scan the CSV.
+   * @param pipeline_ctx The pipeline context.
    */
-  std::vector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("CSV scans are always serial ... for now.");
-  }
-
-  /**
-   * CSV Scans are always serial, so should never launch work.
-   */
-  void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override {
-    UNREACHABLE("CSV scans are always serial ... for now.");
-  }
+  void DrivePipeline(const PipelineContext &pipeline_ctx) const override;
 
   /**
    * Access a column from the base CSV.

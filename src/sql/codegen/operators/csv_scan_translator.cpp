@@ -107,4 +107,9 @@ ast::Expr *CSVScanTranslator::GetTableColumn(uint16_t col_oid) const {
   }
 }
 
+void CSVScanTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const {
+  TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "CSV scan driving unknown pipeline!");
+  GetPipeline()->LaunchSerial(pipeline_ctx);
+}
+
 }  // namespace tpl::sql::codegen

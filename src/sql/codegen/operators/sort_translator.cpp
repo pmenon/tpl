@@ -268,4 +268,9 @@ ast::Expr *SortTranslator::GetChildOutput(ConsumerContext *context, UNUSED uint3
   UNREACHABLE("Impossible output row option");
 }
 
+void SortTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const {
+  TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "Driving unknown pipeline!");
+  GetPipeline()->LaunchSerial(pipeline_ctx);
+}
+
 }  // namespace tpl::sql::codegen
