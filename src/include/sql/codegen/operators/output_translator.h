@@ -49,7 +49,8 @@ class OutputTranslator : public OperatorTranslator {
   /**
    * Output translator needs to finalize the output.
    */
-  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void FinishPipelineWork(const PipelineContext &pipeline_ctx,
+                          FunctionBuilder *function) const override;
 
   /**
    * Does not interact with tables.

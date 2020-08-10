@@ -21,6 +21,7 @@ class CodeGen;
 class CompilationContext;
 class FunctionBuilder;
 class Pipeline;
+class PipelineContext;
 class ConsumerContext;
 
 /**
@@ -78,7 +79,7 @@ class ConsumerContext;
 class OperatorTranslator : public ColumnValueProvider {
  public:
   /**
-   * Create a translator.
+   * Create a translator.1
    * @param plan The plan node this translator will generate code for.
    * @param compilation_context The context this compilation is occurring in.
    * @param pipeline The pipeline this translator is a part of.
@@ -119,31 +120,40 @@ class OperatorTranslator : public ColumnValueProvider {
   virtual void TearDownQueryState(FunctionBuilder *function) const {}
 
   /**
-   * Define any pipeline-local helper functions.
-   * @param pipeline The pipeline we're generating functions in.
+   * Declare any pipeline local state.
+   * @param pipeline_ctx The pipeline context.
    */
-  virtual void DefinePipelineFunctions(const Pipeline &pipeline) {}
+  virtual void DeclarePipelineState(PipelineContext *pipeline_ctx) {}
+
+  /**
+   * Define any pipeline-local helper functions.
+   * @param pipeline)ctx The pipeline we're generating functions in.
+   */
+  virtual void DefinePipelineFunctions(const PipelineContext &pipeline_ctx) {}
 
   /**
    * Initialize any declared pipeline-local state.
    * @param pipeline The pipeline whose state is being initialized.
    * @param function The function being built.
    */
-  virtual void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
+  virtual void InitializePipelineState(const PipelineContext &pipeline_ctx,
+                                       FunctionBuilder *function) const {}
 
   /**
    * Tear down and destroy any pipeline-local state.
    * @param pipeline The pipeline whose state is being destroyed.
    * @param function The function being built.
    */
-  virtual void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {}
+  virtual void TearDownPipelineState(const PipelineContext &pipeline_ctx,
+                                     FunctionBuilder *function) const {}
 
   /**
    * Perform any work required before beginning main pipeline work. This is executed by one thread.
    * @param pipeline The pipeline whose pre-work logic is being generated.
    * @param function The function being built.
    */
-  virtual void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {}
+  virtual void BeginPipelineWork(const PipelineContext &pipeline_ctx,
+                                 FunctionBuilder *function) const {}
 
   /**
    * Perform the primary logic of a pipeline. This is where the operator's logic should be
@@ -170,7 +180,8 @@ class OperatorTranslator : public ColumnValueProvider {
    * @param pipeline The pipeline whose post-work logic is being generated.
    * @param function The function being built.
    */
-  virtual void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {}
+  virtual void FinishPipelineWork(const PipelineContext &pipeline_ctx,
+                                  FunctionBuilder *function) const {}
 
   /**
    * @return The value (vector) of the attribute at the given index in this operator's output.
@@ -197,6 +208,12 @@ class OperatorTranslator : public ColumnValueProvider {
  protected:
   // Get a pointer to the query state.
   ast::Expr *GetQueryStatePtr() const;
+
+  // Get the value of a entry in the query state at the given slot.
+  ast::Expr *GetQueryStateEntry(StateDescriptor::Slot slot) const;
+
+  // Get a pointer to the entry in the query state at the given slot.
+  ast::Expr *GetQueryStateEntryPtr(StateDescriptor::Slot slot) const;
 
   // Get the execution context pointer in the current function.
   ast::Expr *GetExecutionContext() const;

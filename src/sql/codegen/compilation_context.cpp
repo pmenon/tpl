@@ -394,7 +394,7 @@ util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {
 }
 
 ast::Expr *CompilationContext::GetExecutionContextPtrFromQueryState() {
-  return exec_ctx_.Get(&codegen_);
+  return query_state_.GetStateEntry(&codegen_, exec_ctx_);
 }
 
 CompilationUnit *CompilationContext::MakeContainer() {

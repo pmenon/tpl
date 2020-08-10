@@ -54,33 +54,42 @@ class HashJoinTranslator : public OperatorTranslator {
   void TearDownQueryState(FunctionBuilder *function) const override;
 
   /**
+   * Declare a pipeline-local join hash table, if the join is parallel.
+   * @param pipeline_ctx The pipeline context.
+   */
+  void DeclarePipelineState(PipelineContext *pipeline_ctx) override;
+
+  /**
    * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
    * need to initialize the thread-local join hash table we've declared.
    * @param pipeline_context The pipeline context.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void InitializePipelineState(const PipelineContext &pipeline_ctx,
+                               FunctionBuilder *function) const override;
 
   /**
    * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
    * need to clean up and destroy the thread-local join hash table we've declared.
    * @param pipeline_context The pipeline context.
    */
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void TearDownPipelineState(const PipelineContext &pipeline_ctx,
+                             FunctionBuilder *function) const override;
 
   /**
    * Implement main join logic. If the context is coming from the left pipeline, the input tuples
    * are materialized into the join hash table. If the context is coming from the right pipeline,
    * the input tuples are probed in the join hash table.
-   * @param ctx The context of the work.
+   * @param context The context of the work.
    */
-  void Consume(ConsumerContext *ctx, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * If the pipeline context represents the left pipeline and the left pipeline is parallel, we'll
    * issue a parallel join hash table construction at this point.
    * @param pipeline_context The pipeline context.
    */
-  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void FinishPipelineWork(const PipelineContext &pipeline_ctx,
+                          FunctionBuilder *function) const override;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
@@ -97,12 +106,6 @@ class HashJoinTranslator : public OperatorTranslator {
   }
 
  private:
-  // Is the given pipeline this join's left pipeline?
-  bool IsLeftPipeline(const Pipeline &pipeline) const { return &left_pipeline_ == &pipeline; }
-
-  // Is the given pipeline this join's right pipeline?
-  bool IsRightPipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
-
   // Initialize the given join hash table instance, provided as a *JHT.
   void InitializeJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;
 
@@ -121,7 +124,7 @@ class HashJoinTranslator : public OperatorTranslator {
   void FillBuildRow(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *build_row) const;
 
   // Input the tuple(s) in the provided context into the join hash table.
-  void InsertIntoJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const;
+  void InsertIntoJoinHashTable(ConsumerContext *context, FunctionBuilder *function) const;
 
   // Probe the join hash table with the input tuple(s).
   void ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const;
@@ -146,8 +149,8 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // The slots in the global and thread-local state where this join's join hash
   // table is stored.
-  StateDescriptor::Entry global_join_ht_;
-  StateDescriptor::Entry local_join_ht_;
+  StateDescriptor::Slot global_join_ht_;
+  StateDescriptor::Slot local_join_ht_;
 };
 
 }  // namespace tpl::sql::codegen

@@ -30,12 +30,14 @@ class LimitTranslator : public OperatorTranslator {
   LimitTranslator(const planner::LimitPlanNode &plan, CompilationContext *compilation_context,
                   Pipeline *pipeline);
 
+  void DeclarePipelineState(PipelineContext *pipeline_ctx) override;
   /**
    * Initialize the tuple counter in the pipeline local state.
    * @param pipeline The pipeline that's being generated.
    * @param function The pipeline function generator.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void InitializePipelineState(const PipelineContext &pipeline_ctx,
+                               FunctionBuilder *function) const override;
 
   /**
    * Implement the limit's logic.
@@ -48,12 +50,12 @@ class LimitTranslator : public OperatorTranslator {
    * Limits never touch raw table data.
    */
   ast::Expr *GetTableColumn(uint16_t col_oid) const override {
-    UNREACHABLE("NLJ are never the root of a plan and, thus, cannot be launched in parallel.");
+    UNREACHABLE("LIMITs do not touch base table columns.");
   }
 
  private:
   // The tuple counter.
-  StateDescriptor::Entry tuple_count_;
+  StateDescriptor::Slot tuple_count_;
 };
 
 }  // namespace tpl::sql::codegen

@@ -57,6 +57,14 @@ ast::Expr *OperatorTranslator::GetQueryStatePtr() const {
   return compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
 }
 
+ast::Expr *OperatorTranslator::GetQueryStateEntry(StateDescriptor::Slot slot) const {
+  return compilation_ctx_->GetQueryState()->GetStateEntry(codegen_, slot);
+}
+
+ast::Expr *OperatorTranslator::GetQueryStateEntryPtr(StateDescriptor::Slot slot) const {
+  return compilation_ctx_->GetQueryState()->GetStateEntryPtr(codegen_, slot);
+}
+
 ast::Expr *OperatorTranslator::GetExecutionContext() const {
   return compilation_ctx_->GetExecutionContextPtrFromQueryState();
 }

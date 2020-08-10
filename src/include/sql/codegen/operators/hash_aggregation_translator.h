@@ -54,19 +54,27 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * Define the key equality functions and merging functions, if the aggregation is parallel.
    * @param pipeline The pipeline.
    */
-  void DefinePipelineFunctions(const Pipeline &pipeline) override;
+  void DefinePipelineFunctions(const PipelineContext &pipeline_ctx) override;
+
+  /**
+   * Declare the pipeline-local aggregation hash table, if the pipeline is parallel.
+   * @param pipeline_ctx The pipeline context.
+   */
+  void DeclarePipelineState(PipelineContext *pipeline_ctx) override;
 
   /**
    * Initialize the thread-local aggregation hash table, if needed.
    * @param pipeline_context The pipeline context.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void InitializePipelineState(const PipelineContext &pipeline_ctx,
+                               FunctionBuilder *function) const override;
 
   /**
    * Tear-down and destroy the thread-local aggregation hash table, if needed.
    * @param pipeline_context The pipeline context.
    */
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void TearDownPipelineState(const PipelineContext &pipeline_ctx,
+                             FunctionBuilder *function) const override;
 
   /**
    * If the context pipeline is for the build-side, we'll aggregate the input into the aggregation
@@ -82,7 +90,8 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * aggregation hash table.
    * @param pipeline_context The pipeline context.
    */
-  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void FinishPipelineWork(const PipelineContext &pipeline_ctx,
+                          FunctionBuilder *function) const override;
 
   /**
    * We'll issue a parallel partitioned scan over the aggregation hash table. In this case, the
@@ -118,10 +127,6 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
     return GetPlanAs<planner::AggregatePlanNode>();
   }
 
-  // Check if the input pipeline is either the build-side or producer-side.
-  bool IsBuildPipeline(const Pipeline &pipeline) const { return &build_pipeline_ == &pipeline; }
-  bool IsProducePipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
-
   // Declare the payload and input structures. Called from DefineHelperStructs().
   ast::StructDecl *GeneratePayloadStruct();
   ast::StructDecl *GenerateInputValuesStruct();
@@ -130,7 +135,8 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   ast::FunctionDecl *GenerateKeyCheckFunction();
   ast::FunctionDecl *GeneratePartialKeyCheckFunction();
   ast::FunctionDecl *GenerateMergeOverflowPartitionsFunction();
-  void MergeOverflowPartitions(FunctionBuilder *function, ast::Expr *agg_ht, ast::Expr *iter);
+  template <typename F1, typename F2>
+  void MergeOverflowPartitions(FunctionBuilder *function, F1 hash_table_provider, F2 iter_provider);
 
   // Initialize and destroy the input aggregation hash table. These are called
   // from InitializeQueryState() and InitializePipelineState().
@@ -149,23 +155,27 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   //   2b. Performing lookup.
   // 3. Initializing new aggregates.
   // 4. Advancing existing aggregates.
-  ast::Identifier FillInputValues(FunctionBuilder *function, ConsumerContext *ctx) const;
+  ast::Identifier FillInputValues(FunctionBuilder *function, ConsumerContext *context) const;
   ast::Identifier HashInputKeys(FunctionBuilder *function, ast::Identifier agg_values) const;
-  ast::Identifier PerformLookup(FunctionBuilder *function, ast::Expr *agg_ht,
+  template <typename F>
+  ast::Identifier PerformLookup(FunctionBuilder *function, F agg_ht_provider,
                                 ast::Identifier hash_val, ast::Identifier agg_values) const;
-  void ConstructNewAggregate(FunctionBuilder *function, ast::Expr *agg_ht,
+  template <typename F>
+  void ConstructNewAggregate(FunctionBuilder *function, F agg_ht_provider,
                              ast::Identifier agg_payload, ast::Identifier agg_values,
                              ast::Identifier hash_val) const;
   void AdvanceAggregate(FunctionBuilder *function, ast::Identifier agg_payload,
                         ast::Identifier agg_values) const;
 
   // Merge the input row into the aggregation hash table.
+  template <typename F>
   void UpdateAggregates(ConsumerContext *context, FunctionBuilder *function,
-                        ast::Expr *agg_ht) const;
+                        F agg_ht_provider) const;
 
   // Scan the final aggregation hash table.
+  template <typename F>
   void ScanAggregationHashTable(ConsumerContext *context, FunctionBuilder *function,
-                                ast::Expr *agg_ht) const;
+                                F agg_ht_provider) const;
 
  private:
   // The name of the variable used to:
@@ -185,8 +195,8 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   Pipeline build_pipeline_;
 
   // The global and thread-local aggregation hash tables.
-  StateDescriptor::Entry global_agg_ht_;
-  StateDescriptor::Entry local_agg_ht_;
+  StateDescriptor::Slot global_agg_ht_;
+  StateDescriptor::Slot local_agg_ht_;
 };
 
 }  // namespace tpl::sql::codegen

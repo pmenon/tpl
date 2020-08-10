@@ -42,10 +42,6 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
   ast::Expr *payload_type = codegen_->MakeExpr(agg_payload_type_);
   global_aggs_ =
       compilation_context->GetQueryState()->DeclareStateEntry(codegen_, "aggs", payload_type);
-
-  if (build_pipeline_.IsParallel()) {
-    local_aggs_ = build_pipeline_.DeclarePipelineStateEntry("aggs", payload_type);
-  }
 }
 
 void StaticAggregationTranslator::DeclarePipelineDependencies() const {
@@ -80,32 +76,35 @@ ast::StructDecl *StaticAggregationTranslator::GenerateValuesStruct() {
 }
 
 void StaticAggregationTranslator::DefineStructsAndFunctions() {
-  // The payload and input structures.
   GeneratePayloadStruct();
   GenerateValuesStruct();
+}
 
-  // The merging function, if parallel.
-  if (build_pipeline_.IsParallel()) {
+void StaticAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
+  if (pipeline_ctx->IsForPipeline(build_pipeline_) && pipeline_ctx->IsParallel()) {
+    ast::Expr *payload_type = codegen_->MakeExpr(agg_payload_type_);
+    local_aggs_ = pipeline_ctx->DeclarePipelineStateEntry("aggs", payload_type);
   }
 }
 
-void StaticAggregationTranslator::DefinePipelineFunctions(const Pipeline &pipeline) {
-  if (IsBuildPipeline(pipeline) && pipeline.IsParallel()) {
-    GenerateAggregateMergeFunction();
-  }
-}
-
-void StaticAggregationTranslator::GenerateAggregateMergeFunction() const {
-  util::RegionVector<ast::FieldDecl *> params = build_pipeline_.PipelineParams();
+void StaticAggregationTranslator::GenerateAggregateMergeFunction(
+    const PipelineContext &pipeline_ctx) const {
+  util::RegionVector<ast::FieldDecl *> params = pipeline_ctx.PipelineParams();
   FunctionBuilder function(codegen_, merge_func_, std::move(params), codegen_->Nil());
   {
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-      auto lhs = GetAggregateTermPtr(global_aggs_.Get(codegen_), term_idx);
-      auto rhs = GetAggregateTermPtr(local_aggs_.Get(codegen_), term_idx);
+      auto lhs = GetAggregateTermPtr(GetQueryStateEntry(global_aggs_), term_idx);
+      auto rhs = GetAggregateTermPtr(pipeline_ctx.GetStateEntry(local_aggs_), term_idx);
       function.Append(codegen_->AggregatorMerge(lhs, rhs));
     }
   }
   function.Finish();
+}
+
+void StaticAggregationTranslator::DefinePipelineFunctions(const PipelineContext &pipeline_ctx) {
+  if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
+    GenerateAggregateMergeFunction(pipeline_ctx);
+  }
 }
 
 ast::Expr *StaticAggregationTranslator::GetAggregateTerm(ast::Expr *agg_row,
@@ -119,34 +118,43 @@ ast::Expr *StaticAggregationTranslator::GetAggregateTermPtr(ast::Expr *agg_row,
   return codegen_->AddressOf(GetAggregateTerm(agg_row, attr_idx));
 }
 
+template <typename F>
 void StaticAggregationTranslator::InitializeAggregates(FunctionBuilder *function,
-                                                       bool local) const {
-  CodeGen *codegen = codegen_;
-  const auto aggs = local ? local_aggs_ : global_aggs_;
+                                                       F agg_provider) const {
   for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-    ast::Expr *agg_term = GetAggregateTermPtr(aggs.Get(codegen), term_idx);
+    ast::Expr *agg_term = GetAggregateTermPtr(agg_provider(), term_idx);
     function->Append(codegen_->AggregatorInit(agg_term));
   }
 }
 
-void StaticAggregationTranslator::InitializePipelineState(const Pipeline &pipeline,
+void StaticAggregationTranslator::InitializeQueryState(FunctionBuilder *function) const {
+  InitializeAggregates(function, [&]() { return GetQueryStateEntry(global_aggs_); });
+}
+
+void StaticAggregationTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                                           FunctionBuilder *function) const {
-  if (IsBuildPipeline(pipeline) && build_pipeline_.IsParallel()) {
-    InitializeAggregates(function, true);
+  if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
+    InitializeAggregates(function, [&]() { return pipeline_ctx.GetStateEntry(local_aggs_); });
   }
 }
 
-void StaticAggregationTranslator::BeginPipelineWork(const Pipeline &pipeline,
+void StaticAggregationTranslator::ProduceAggregates(ConsumerContext *context,
                                                     FunctionBuilder *function) const {
-  if (IsBuildPipeline(pipeline)) {
-    InitializeAggregates(function, false);
+  // var agg_row = &state.aggs
+  function->Append(codegen_->DeclareVarWithInit(agg_row_var_, GetQueryStateEntryPtr(global_aggs_)));
+
+  if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
+    If check_having(function, context->DeriveValue(*having, this));
+    context->Consume(function);
+    check_having.EndIf();
+  } else {
+    context->Consume(function);
   }
 }
 
-void StaticAggregationTranslator::UpdateGlobalAggregate(ConsumerContext *ctx,
-                                                        FunctionBuilder *function) const {
-  const auto agg_payload = build_pipeline_.IsParallel() ? local_aggs_ : global_aggs_;
-
+template <typename F>
+void StaticAggregationTranslator::UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *function,
+                                                  F agg_provider) const {
   // var aggValues: AggValues
   auto agg_values = codegen_->MakeFreshIdentifier("agg_values");
   function->Append(codegen_->DeclareVarNoInit(agg_values, codegen_->MakeExpr(agg_values_type_)));
@@ -154,40 +162,37 @@ void StaticAggregationTranslator::UpdateGlobalAggregate(ConsumerContext *ctx,
   // Fill values.
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto lhs = GetAggregateTerm(codegen_->MakeExpr(agg_values), term_idx++);
-    auto rhs = ctx->DeriveValue(*term->GetChild(0), this);
+    ast::Expr *lhs = GetAggregateTerm(codegen_->MakeExpr(agg_values), term_idx++);
+    ast::Expr *rhs = ctx->DeriveValue(*term->GetChild(0), this);
     function->Append(codegen_->Assign(lhs, rhs));
   }
 
   // Update aggregate.
   for (term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-    auto agg = GetAggregateTermPtr(agg_payload.Get(codegen_), term_idx);
-    auto val = GetAggregateTermPtr(codegen_->MakeExpr(agg_values), term_idx);
-    function->Append(codegen_->AggregatorAdvance(agg, val));
+    ast::Expr *aggregate = GetAggregateTermPtr(agg_provider(), term_idx);
+    ast::Expr *advance_val = GetAggregateTermPtr(codegen_->MakeExpr(agg_values), term_idx);
+    function->Append(codegen_->AggregatorAdvance(aggregate, advance_val));
   }
 }
 
 void StaticAggregationTranslator::Consume(ConsumerContext *context,
                                           FunctionBuilder *function) const {
-  if (IsProducePipeline(context->GetPipeline())) {
-    // var agg_row = &state.aggs
-    function->Append(codegen_->DeclareVarWithInit(agg_row_var_, global_aggs_.GetPtr(codegen_)));
-
-    if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
-      If check_having(function, context->DeriveValue(*having, this));
-      context->Consume(function);
-      check_having.EndIf();
-    } else {
-      context->Consume(function);
-    }
+  if (context->IsForPipeline(*GetPipeline())) {
+    ProduceAggregates(context, function);
   } else {
-    UpdateGlobalAggregate(context, function);
+    if (context->IsParallel()) {
+      const auto agg_provider = [&]() { return context->GetStateEntry(local_aggs_); };
+      UpdateAggregate(context, function, agg_provider);
+    } else {
+      const auto agg_provider = [&]() { return GetQueryStateEntry(global_aggs_); };
+      UpdateAggregate(context, function, agg_provider);
+    }
   }
 }
 
-void StaticAggregationTranslator::FinishPipelineWork(const Pipeline &pipeline,
+void StaticAggregationTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                                      FunctionBuilder *function) const {
-  if (IsBuildPipeline(pipeline) && build_pipeline_.IsParallel()) {
+  if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
     // Merge thread-local aggregates into one.
     ast::Expr *thread_state_container = GetThreadStateContainer();
     ast::Expr *query_state = GetQueryStatePtr();
@@ -199,7 +204,7 @@ ast::Expr *StaticAggregationTranslator::GetChildOutput(ConsumerContext *context,
                                                        UNUSED uint32_t child_idx,
                                                        uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");
-  if (IsProducePipeline(context->GetPipeline())) {
+  if (context->IsForPipeline(*GetPipeline())) {
     return codegen_->AggregatorResult(
         GetAggregateTermPtr(codegen_->MakeExpr(agg_row_var_), attr_idx));
   }

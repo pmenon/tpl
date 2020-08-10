@@ -22,13 +22,7 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
       tvi_var_(codegen_->MakeFreshIdentifier("tvi")),
       vpi_var_(codegen_->MakeFreshIdentifier("vpi")) {
   pipeline->RegisterSource(this, Pipeline::Parallelism::Parallel);
-  // If there's a predicate, prepare the expression and register a filter manager.
-  if (HasPredicate()) {
-    compilation_context->Prepare(*plan.GetScanPredicate());
-
-    ast::Expr *fm_type = codegen_->BuiltinType(ast::BuiltinType::FilterManager);
-    local_filter_manager_ = pipeline->DeclarePipelineStateEntry("filter_manager", fm_type);
-  }
+  if (HasPredicate()) compilation_context->Prepare(*plan.GetScanPredicate());
 }
 
 bool SeqScanTranslator::HasPredicate() const {
@@ -58,7 +52,8 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
   Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(vpi),
                 codegen_->MakeStmt(codegen_->VPIAdvance(vpi)));
   {
-    ConsumerContext context(GetCompilationContext(), *GetPipeline());
+    PipelineContext pipeline_context(*GetPipeline());
+    ConsumerContext context(GetCompilationContext(), pipeline_context);
     auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
     auto match = cond_translator->DeriveValue(&context, this);
     function->Append(codegen_->VPIMatch(vpi, match));
@@ -124,7 +119,14 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
   curr_clause->push_back(fn_name);
 }
 
-void SeqScanTranslator::DefinePipelineFunctions(const Pipeline &pipeline) {
+void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
+  if (HasPredicate()) {
+    ast::Expr *fm_type = codegen_->BuiltinType(ast::BuiltinType::FilterManager);
+    local_filter_ = pipeline_ctx->DeclarePipelineStateEntry("filter_manager", fm_type);
+  }
+}
+
+void SeqScanTranslator::DefinePipelineFunctions(UNUSED const PipelineContext &pipeline_ctx) {
   if (HasPredicate()) {
     std::vector<ast::Identifier> curr_clause;
     auto root_expr = GetPlanAs<planner::SeqScanPlanNode>().GetScanPredicate();
@@ -137,14 +139,13 @@ void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, FunctionBuilder *function,
                                 ast::Expr *vpi) const {
   Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(vpi),
                 codegen_->MakeStmt(codegen_->VPIAdvance(vpi)));
-  {
-    // Push to parent.
+  {  //
     ctx->Consume(function);
   }
   vpi_loop.EndLoop();
 }
 
-void SeqScanTranslator::ScanTable(ConsumerContext *ctx, FunctionBuilder *function) const {
+void SeqScanTranslator::ScanTable(ConsumerContext *context, FunctionBuilder *function) const {
   Loop tvi_loop(function, codegen_->TableIterAdvance(codegen_->MakeExpr(tvi_var_)));
   {
     // var vpi = @tableIterGetVPI()
@@ -153,33 +154,37 @@ void SeqScanTranslator::ScanTable(ConsumerContext *ctx, FunctionBuilder *functio
         vpi_var_, codegen_->TableIterGetVPI(codegen_->MakeExpr(tvi_var_))));
 
     if (HasPredicate()) {
-      auto filter_manager = local_filter_manager_.GetPtr(codegen_);
+      ast::Expr *filter_manager = context->GetStateEntryPtr(local_filter_);
       function->Append(codegen_->FilterManagerRunFilters(filter_manager, vpi));
     }
 
-    if (!ctx->GetPipeline().IsVectorized()) {
-      ScanVPI(ctx, function, vpi);
+    if (context->IsVectorized()) {
+      context->Consume(function);
+    } else {
+      ScanVPI(context, function, vpi);
     }
   }
   tvi_loop.EndLoop();
 }
 
-void SeqScanTranslator::InitializePipelineState(const Pipeline &pipeline,
+void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                                 FunctionBuilder *function) const {
   if (HasPredicate()) {
-    function->Append(codegen_->FilterManagerInit(local_filter_manager_.GetPtr(codegen_)));
+    // @filterManagerInit()
+    function->Append(codegen_->FilterManagerInit(pipeline_ctx.GetStateEntryPtr(local_filter_)));
+    // @filterManagerInsert() for each clause.
     for (const auto &clause : filters_) {
-      function->Append(
-          codegen_->FilterManagerInsert(local_filter_manager_.GetPtr(codegen_), clause));
+      ast::Expr *filter = pipeline_ctx.GetStateEntryPtr(local_filter_);
+      function->Append(codegen_->FilterManagerInsert(filter, clause));
     }
   }
 }
 
-void SeqScanTranslator::TearDownPipelineState(const Pipeline &pipeline,
+void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
   if (HasPredicate()) {
-    auto filter_manager = local_filter_manager_.GetPtr(codegen_);
-    function->Append(codegen_->FilterManagerFree(filter_manager));
+    ast::Expr *filter = pipeline_ctx.GetStateEntryPtr(local_filter_);
+    function->Append(codegen_->FilterManagerFree(filter));
   }
 }
 

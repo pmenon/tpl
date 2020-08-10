@@ -22,8 +22,7 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan,
   compilation_context->Prepare(plan, pipeline);
 }
 
-void OutputTranslator::Consume(tpl::sql::codegen::ConsumerContext *context,
-                               tpl::sql::codegen::FunctionBuilder *function) const {
+void OutputTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   // First generate the call @resultBufferAllocRow(execCtx)
   auto exec_ctx = GetExecutionContext();
   ast::Expr *alloc_call = codegen_->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {exec_ctx});
@@ -42,10 +41,11 @@ void OutputTranslator::Consume(tpl::sql::codegen::ConsumerContext *context,
   }
 }
 
-void OutputTranslator::FinishPipelineWork(const Pipeline &pipeline,
+void OutputTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                           FunctionBuilder *function) const {
-  auto exec_ctx = GetExecutionContext();
-  function->Append(codegen_->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx}));
+  ast::Expr *exec_ctx = GetExecutionContext();
+  ast::Expr *finalize_call = codegen_->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx});
+  function->Append(finalize_call);
 }
 
 void OutputTranslator::DefineStructsAndFunctions() {

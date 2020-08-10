@@ -19,8 +19,85 @@ class CodeGen;
 class CompilationContext;
 class ExpressionTranslator;
 class OperatorTranslator;
+class Pipeline;
 class PipelineDriver;
 class PipelineGraph;
+
+/**
+ * Context of a pipeline. Maintains access to pipeline-local state.
+ */
+class PipelineContext {
+  friend class ConsumerContext;
+  friend class Pipeline;
+
+ public:
+  /**
+   * Construct a new context for the provided pipeline.
+   * @param pipeline The pipeline.
+   */
+  explicit PipelineContext(const Pipeline &pipeline);
+
+  /**
+   * Declare an entry in this pipeline's state.
+   * @param name The name of the element.
+   * @param type_repr The TPL type representation of the element.
+   * @return The slot where the inserted state exists.
+   */
+  StateDescriptor::Slot DeclarePipelineStateEntry(const std::string &name, ast::Expr *type_repr);
+
+  /**
+   * @return The finalized and constructed state type.
+   */
+  ast::StructDecl *ConstructPipelineStateType();
+
+  /**
+   * @return The value of the element at the given slot within this pipeline's state.
+   */
+  ast::Expr *GetStateEntry(StateDescriptor::Slot slot) const;
+
+  /**
+   * @return A pointer to the element at the given slot within this pipeline's state.
+   */
+  ast::Expr *GetStateEntryPtr(StateDescriptor::Slot slot) const;
+
+  /**
+   * @return The byte offset of the element at the given slot in the pipeline state.
+   */
+  ast::Expr *GetStateEntryByteOffset(StateDescriptor::Slot slot) const;
+
+  /**
+   * @return True if this context is for the provided input pipeline; false otherwise.
+   */
+  bool IsForPipeline(const Pipeline &that) const;
+
+  /**
+   * @return True if the pipeline for this context is parallel; false otherwise.
+   */
+  bool IsParallel() const;
+
+  /**
+   * @return True if the pipeline for this context is vectorized; false otherwise.
+   */
+  bool IsVectorized() const;
+
+  // TODO(pmenon): Make private and use PipelineFunctionBuilder.
+  // Pipeline function arguments.
+  util::RegionVector<ast::FieldDecl *> PipelineParams() const;
+
+ private:
+  // Access the current thread's pipeline state.
+  ast::Expr *AccessCurrentThreadState() const;
+
+ private:
+  // The pipeline.
+  const Pipeline &pipeline_;
+  // The code generator instance.
+  CodeGen *codegen_;
+  // Cache of common identifiers.
+  ast::Identifier state_var_;
+  // The pipeline state.
+  StateDescriptor state_;
+};
 
 /**
  * A pipeline represents an ordered sequence of relational operators that operate on tuple data
@@ -101,14 +178,6 @@ class Pipeline {
   void RegisterExpression(ExpressionTranslator *expression);
 
   /**
-   * Declare an entry in this pipeline's state.
-   * @param name The name of the element.
-   * @param type_repr The TPL type representation of the element.
-   * @return The slot where the inserted state exists.
-   */
-  StateDescriptor::Entry DeclarePipelineStateEntry(const std::string &name, ast::Expr *type_repr);
-
-  /**
    * Add the provided pipeline as a dependency for this pipeline. In other words, this pipeline
    * cannot begin until the provided pipeline completes. Dependencies define an execution order.
    * @param dependency Another pipeline this pipeline is dependent on.
@@ -136,6 +205,11 @@ class Pipeline {
    * @return The unique ID of this pipeline.
    */
   PipelineId GetId() const { return id_; }
+
+  /**
+   * @return The compilation context.
+   */
+  CompilationContext *GetCompilationContext() const { return compilation_ctx_; }
 
   /**
    * @return The pipeline graph.
@@ -188,11 +262,6 @@ class Pipeline {
   const std::vector<const Pipeline *> &GetNestedPipelines() const { return child_pipelines_; }
 
   /**
-   * @return Arguments common to all pipeline functions.
-   */
-  util::RegionVector<ast::FieldDecl *> PipelineParams() const;
-
-  /**
    * @return A unique name for a function local to this pipeline.
    */
   std::string CreatePipelineFunctionName(const std::string &func_name) const;
@@ -203,21 +272,42 @@ class Pipeline {
    */
   std::string BuildPipelineName() const;
 
+  /**
+   * @return True if this pipeline is the same as the provided pipeline.
+   */
+  bool IsSameAs(const Pipeline &that) const noexcept { return AreSamePipeline(*this, that); }
+
+  /**
+   * Are the two given pipelines actually the same pipeline? Performs an IDENTITY equality check.
+   * @param a The first pipeline.
+   * @param b The second pipeline.
+   * @return True if the left and right pipelines have the same identity.
+   */
+  static bool AreSamePipeline(const Pipeline &a, const Pipeline &b) noexcept {
+    return std::addressof(a) == std::addressof(b);
+  }
+
  private:
+  // Declare all pipeline state.
+  void DeclarePipelineState(PipelineContext *pipeline_ctx) const;
+
+  // Declare all pipeline-local helper functions.
+  void DefinePipelineFunctions(PipelineContext *pipeline_ctx) const;
+
   // Generate the pipeline state initialization logic.
-  ast::FunctionDecl *GenerateSetupPipelineStateFunction() const;
+  ast::FunctionDecl *GenerateSetupPipelineStateFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate the pipeline state cleanup logic.
-  ast::FunctionDecl *GenerateTearDownPipelineStateFunction() const;
+  ast::FunctionDecl *GenerateTearDownPipelineStateFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate pipeline initialization logic.
-  ast::FunctionDecl *GenerateInitPipelineFunction() const;
+  ast::FunctionDecl *GenerateInitPipelineFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate the main pipeline work function.
-  ast::FunctionDecl *GeneratePipelineWorkFunction() const;
+  ast::FunctionDecl *GeneratePipelineWorkFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate the main pipeline logic.
-  ast::FunctionDecl *GenerateRunPipelineFunction() const;
+  ast::FunctionDecl *GenerateRunPipelineFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate pipeline tear-down logic.
   ast::FunctionDecl *GenerateTearDownPipelineFunction() const;
@@ -247,10 +337,6 @@ class Pipeline {
   std::vector<const Pipeline *> child_pipelines_;
   // This pipeline's type.
   Type type_;
-  // Cache of common identifiers.
-  ast::Identifier state_var_;
-  // The pipeline state.
-  StateDescriptor state_;
 };
 
 }  // namespace tpl::sql::codegen

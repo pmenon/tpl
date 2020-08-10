@@ -41,24 +41,30 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   void DefineStructsAndFunctions() override;
 
   /**
+   * Initialize the aggregates.
+   * @param function The function being built.
+   */
+  void InitializeQueryState(FunctionBuilder *function) const override;
+
+  /**
+   * Declare local static aggregate, if parallel.
+   * @param pipeline_ctx The pipeline context.
+   */
+  void DeclarePipelineState(PipelineContext *pipeline_ctx) override;
+
+  /**
    * Define the aggregate merging logic, if the aggregation is parallel.
    * @param pipeline The pipeline.
    */
-  void DefinePipelineFunctions(const Pipeline &pipeline) override;
+  void DefinePipelineFunctions(const PipelineContext &pipeline_ctx) override;
 
   /**
    * If the provided pipeline is the build-side, initialize the declare partial aggregate.
    * @param pipeline The pipeline whose state is being initialized.
    * @param function The function being built.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
-
-  /**
-   * Before the pipeline begins, initial the partial aggregates.
-   * @param pipeline The pipeline whose pre-work logic is being generated.
-   * @param function The function being built.
-   */
-  void BeginPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void InitializePipelineState(const PipelineContext &pipeline_ctx,
+                               FunctionBuilder *function) const override;
 
   /**
    * Main aggregation logic.
@@ -72,7 +78,8 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    * @param pipeline The pipeline whose post-work logic is being generated.
    * @param function The function being built.
    */
-  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void FinishPipelineWork(const PipelineContext &pipeline_ctx,
+                          FunctionBuilder *function) const override;
 
   /**
    * Static aggregations are always serial.
@@ -108,21 +115,19 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
     return GetPlanAs<planner::AggregatePlanNode>();
   }
 
-  // Check if the input pipeline is either the build-side or producer-side.
-  bool IsBuildPipeline(const Pipeline &pipeline) const { return &build_pipeline_ == &pipeline; }
-  bool IsProducePipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
-
   ast::Expr *GetAggregateTerm(ast::Expr *agg_row, uint32_t attr_idx) const;
   ast::Expr *GetAggregateTermPtr(ast::Expr *agg_row, uint32_t attr_idx) const;
 
   ast::StructDecl *GeneratePayloadStruct();
   ast::StructDecl *GenerateValuesStruct();
 
-  void InitializeAggregates(FunctionBuilder *function, bool local) const;
+  template <typename F>
+  void InitializeAggregates(FunctionBuilder *function, F agg_provider) const;
 
-  void UpdateGlobalAggregate(ConsumerContext *ctx, FunctionBuilder *function) const;
+  template <typename F>
+  void UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *function, F agg_provider) const;
 
-  void GenerateAggregateMergeFunction() const;
+  void GenerateAggregateMergeFunction(const PipelineContext &pipeline_ctx) const;
 
  private:
   ast::Identifier agg_row_var_;
@@ -136,8 +141,9 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   Pipeline build_pipeline_;
 
   // States.
-  StateDescriptor::Entry global_aggs_;
-  StateDescriptor::Entry local_aggs_;
+  StateDescriptor::Slot global_aggs_;
+  StateDescriptor::Slot local_aggs_;
+  void ProduceAggregates(ConsumerContext *context, FunctionBuilder *function) const;
 };
 
 }  // namespace tpl::sql::codegen

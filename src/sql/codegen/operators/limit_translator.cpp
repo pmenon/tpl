@@ -17,28 +17,33 @@ LimitTranslator::LimitTranslator(const planner::LimitPlanNode &plan,
   pipeline->UpdateParallelism(Pipeline::Parallelism::Serial);
   // Prepare child.
   compilation_context->Prepare(*plan.GetChild(0), pipeline);
-  // Register state.
-  tuple_count_ = pipeline->DeclarePipelineStateEntry("num_tuples", codegen_->Int32Type());
 }
 
-void LimitTranslator::InitializePipelineState(const Pipeline &pipeline,
+void LimitTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
+  tuple_count_ = pipeline_ctx->DeclarePipelineStateEntry("num_tuples", codegen_->Int32Type());
+}
+
+void LimitTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
-  function->Append(codegen_->Assign(tuple_count_.Get(codegen_), codegen_->Const64(0)));
+  ast::Expr *count = pipeline_ctx.GetStateEntry(tuple_count_);
+  function->Append(codegen_->Assign(count, codegen_->Const64(0)));
 }
 
 void LimitTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   const auto &plan = GetPlanAs<planner::LimitPlanNode>();
 
+  const auto count = [&]() { return context->GetStateEntry(tuple_count_); };
+
   // Build the limit/offset condition check:
   // if (numTuples >= plan.offset and numTuples < plan.limit)
   ast::Expr *cond = nullptr;
   if (plan.GetOffset() != 0) {
-    cond = codegen_->Compare(parsing::Token::Type::GREATER_EQUAL, tuple_count_.Get(codegen_),
-                             codegen_->Const32(plan.GetOffset()));
+    ast::Expr *lower = codegen_->Const32(plan.GetOffset());
+    cond = codegen_->Compare(parsing::Token::Type::GREATER_EQUAL, count(), lower);
   }
   if (plan.GetLimit() != 0) {
-    auto limit_check = codegen_->Compare(parsing::Token::Type::LESS, tuple_count_.Get(codegen_),
-                                         codegen_->Const32(plan.GetOffset() + plan.GetLimit()));
+    ast::Expr *upper = codegen_->Const32(plan.GetOffset() + plan.GetLimit());
+    ast::Expr *limit_check = codegen_->Compare(parsing::Token::Type::LESS, count(), upper);
     cond = cond == nullptr ? limit_check
                            : codegen_->BinaryOp(parsing::Token::Type::AND, cond, limit_check);
   }
@@ -48,9 +53,8 @@ void LimitTranslator::Consume(ConsumerContext *context, FunctionBuilder *functio
   check_limit.EndIf();
 
   // Update running count: numTuples += 1
-  auto increment = codegen_->BinaryOp(parsing::Token::Type::PLUS, tuple_count_.Get(codegen_),
-                                      codegen_->Const32(1));
-  function->Append(codegen_->Assign(tuple_count_.Get(codegen_), increment));
+  auto increment = codegen_->BinaryOp(parsing::Token::Type::PLUS, count(), codegen_->Const32(1));
+  function->Append(codegen_->Assign(count(), increment));
 }
 
 }  // namespace tpl::sql::codegen

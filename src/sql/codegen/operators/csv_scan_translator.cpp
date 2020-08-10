@@ -44,7 +44,7 @@ void CSVScanTranslator::DefineStructsAndFunctions() {
 
 ast::Expr *CSVScanTranslator::GetField(uint32_t field_index) const {
   ast::Identifier field_name = codegen_->MakeIdentifier(kFieldPrefix + std::to_string(field_index));
-  return codegen_->AccessStructMember(base_row_.Get(codegen_), field_name);
+  return codegen_->AccessStructMember(GetQueryStateEntry(base_row_), field_name);
 }
 
 ast::Expr *CSVScanTranslator::GetFieldPtr(uint32_t field_index) const {

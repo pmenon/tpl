@@ -51,25 +51,33 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   void TearDownQueryState(FunctionBuilder *function) const override;
 
   /**
+   * Declare local sorter, if sorting is parallel.
+   * @param pipeline_ctx The pipeline context.
+   */
+  void DeclarePipelineState(PipelineContext *pipeline_ctx) override;
+
+  /**
    * If the given pipeline is for the build-size and is parallel, initialize the thread-local sorter
    * instance we declared inside.
    * @param pipeline_context The pipeline context.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void InitializePipelineState(const PipelineContext &pipeline_ctx,
+                               FunctionBuilder *function) const override;
 
   /**
    * If the given pipeline is for the build-size and is parallel, destroy the thread-local sorter
    * instance we declared inside.
    * @param pipeline_context The pipeline context.
    */
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void TearDownPipelineState(const PipelineContext &pipeline_ctx,
+                             FunctionBuilder *function) const override;
 
   /**
    * Implement either the build-side or scan-side of the sort depending on the pipeline this context
    * contains.
-   * @param ctx The context of the work.
+   * @param context The context of the work.
    */
-  void Consume(ConsumerContext *ctx, FunctionBuilder *function) const override;
+  void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
   /**
    * If the given pipeline is for the build-side, we'll need to issue a sort. If the pipeline is
@@ -77,14 +85,13 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
    * a top-k sort.
    * @param pipeline_context The pipeline context.
    */
-  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void FinishPipelineWork(const PipelineContext &pipeline_ctx,
+                          FunctionBuilder *function) const override;
 
   /**
    * Sorters are never launched in parallel, so this should never occur..
    */
-  std::vector<ast::FieldDecl *> GetWorkerParams() const override {
-    UNREACHABLE("Impossible");
-  }
+  std::vector<ast::FieldDecl *> GetWorkerParams() const override { UNREACHABLE("Impossible"); }
 
   /**
    * Sorters are never launched in parallel, so this should never occur.
@@ -108,10 +115,6 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   }
 
  private:
-  // Check if the given pipelines are t
-  bool IsBuildPipeline(const Pipeline &pipeline) const { return &build_pipeline_ == &pipeline; }
-  bool IsScanPipeline(const Pipeline &pipeline) const { return GetPipeline() == &pipeline; }
-
   // Initialize and destroy the given sorter.
   void InitializeSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const;
   void TearDownSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const;
@@ -120,13 +123,15 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   ast::Expr *GetSortRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const;
 
   // Called to scan the global sorter instance.
-  void ScanSorter(ConsumerContext *ctx, FunctionBuilder *function) const;
+  void ScanSorter(ConsumerContext *context, FunctionBuilder *function) const;
 
   // Insert tuple data into the provided sort row.
   void FillSortRow(ConsumerContext *ctx, FunctionBuilder *function) const;
 
   // Called to insert the tuple in the context into the sorter instance.
-  void InsertIntoSorter(ConsumerContext *ctx, FunctionBuilder *function) const;
+  template <typename F>
+  void InsertIntoSorter(ConsumerContext *context, FunctionBuilder *function,
+                        F sorter_provider) const;
 
   // Generate the struct used to represent the sorting row.
   ast::StructDecl *GenerateSortRowStructType() const;
@@ -147,8 +152,8 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   Pipeline build_pipeline_;
 
   // Where the global and thread-local sorter instances are.
-  StateDescriptor::Entry global_sorter_;
-  StateDescriptor::Entry local_sorter_;
+  StateDescriptor::Slot global_sorter_;
+  StateDescriptor::Slot local_sorter_;
 
   enum class CurrentRow { Child, Lhs, Rhs };
   CurrentRow current_row_;

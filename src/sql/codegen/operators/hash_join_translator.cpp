@@ -41,10 +41,6 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   ast::Expr *join_ht_type = codegen_->BuiltinType(ast::BuiltinType::JoinHashTable);
   global_join_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
       codegen_, "join_hash_table", join_ht_type);
-
-  if (left_pipeline_.IsParallel()) {
-    local_join_ht_ = left_pipeline_.DeclarePipelineStateEntry("join_hash_table", join_ht_type);
-  }
 }
 
 void HashJoinTranslator::DeclarePipelineDependencies() const {
@@ -71,24 +67,35 @@ void HashJoinTranslator::TearDownJoinHashTable(FunctionBuilder *function,
 }
 
 void HashJoinTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  InitializeJoinHashTable(function, global_join_ht_.GetPtr(codegen_));
+  ast::Expr *global_hash_table = GetQueryStateEntryPtr(global_join_ht_);
+  InitializeJoinHashTable(function, global_hash_table);
 }
 
 void HashJoinTranslator::TearDownQueryState(FunctionBuilder *function) const {
-  TearDownJoinHashTable(function, global_join_ht_.GetPtr(codegen_));
+  ast::Expr *global_hash_table = GetQueryStateEntryPtr(global_join_ht_);
+  TearDownJoinHashTable(function, global_hash_table);
 }
 
-void HashJoinTranslator::InitializePipelineState(const Pipeline &pipeline,
-                                                 FunctionBuilder *function) const {
-  if (IsLeftPipeline(pipeline) && left_pipeline_.IsParallel()) {
-    InitializeJoinHashTable(function, local_join_ht_.GetPtr(codegen_));
+void HashJoinTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
+  if (pipeline_ctx->IsForPipeline(left_pipeline_) && pipeline_ctx->IsParallel()) {
+    ast::Expr *join_ht_type = codegen_->BuiltinType(ast::BuiltinType::JoinHashTable);
+    local_join_ht_ = pipeline_ctx->DeclarePipelineStateEntry("join_hash_table", join_ht_type);
   }
 }
 
-void HashJoinTranslator::TearDownPipelineState(const Pipeline &pipeline,
+void HashJoinTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
+                                                 FunctionBuilder *function) const {
+  if (pipeline_ctx.IsForPipeline(left_pipeline_) && pipeline_ctx.IsParallel()) {
+    ast::Expr *local_hash_table = pipeline_ctx.GetStateEntryPtr(local_join_ht_);
+    InitializeJoinHashTable(function, local_hash_table);
+  }
+}
+
+void HashJoinTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                                FunctionBuilder *function) const {
-  if (IsLeftPipeline(pipeline) && left_pipeline_.IsParallel()) {
-    TearDownJoinHashTable(function, local_join_ht_.GetPtr(codegen_));
+  if (pipeline_ctx.IsForPipeline(left_pipeline_) && pipeline_ctx.IsParallel()) {
+    ast::Expr *local_hash_table = pipeline_ctx.GetStateEntryPtr(local_join_ht_);
+    TearDownJoinHashTable(function, local_hash_table);
   }
 }
 
@@ -128,42 +135,44 @@ void HashJoinTranslator::FillBuildRow(ConsumerContext *ctx, FunctionBuilder *fun
   }
 }
 
-void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *ctx,
+void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *context,
                                                  FunctionBuilder *function) const {
-  const auto join_ht = ctx->GetPipeline().IsParallel() ? local_join_ht_ : global_join_ht_;
+  ast::Expr *hash_table = context->IsParallel() ? context->GetStateEntryPtr(local_join_ht_)
+                                                : GetQueryStateEntryPtr(global_join_ht_);
 
   // var hashVal = @hash(...)
-  auto hash_val = HashKeys(ctx, function, GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys());
+  const auto &left_keys = GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys();
+  ast::Expr *hash_val = HashKeys(context, function, left_keys);
 
   // var buildRow = @joinHTInsert(...)
-  function->Append(codegen_->DeclareVarWithInit(
-      build_row_var_,
-      codegen_->JoinHashTableInsert(join_ht.GetPtr(codegen_), hash_val, build_row_type_)));
+  ast::Expr *insert_call = codegen_->JoinHashTableInsert(hash_table, hash_val, build_row_type_);
+  function->Append(codegen_->DeclareVarWithInit(build_row_var_, insert_call));
 
   // Fill row.
-  FillBuildRow(ctx, function, codegen_->MakeExpr(build_row_var_));
+  FillBuildRow(context, function, codegen_->MakeExpr(build_row_var_));
 }
 
 void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const {
+  const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
+
   // var entryIterBase: HashTableEntryIterator
-  auto iter_name_base = codegen_->MakeFreshIdentifier("entry_iter_base");
+  ast::Identifier iter_name_base = codegen_->MakeFreshIdentifier("entry_iter_base");
   function->Append(
       codegen_->DeclareVarNoInit(iter_name_base, ast::BuiltinType::HashTableEntryIterator));
 
   // var entryIter = &entryIterBase
-  auto iter_name = codegen_->MakeFreshIdentifier("entry_iter");
+  ast::Identifier iter_name = codegen_->MakeFreshIdentifier("entry_iter");
   function->Append(codegen_->DeclareVarWithInit(
       iter_name, codegen_->AddressOf(codegen_->MakeExpr(iter_name_base))));
 
-  auto entry_iter = codegen_->MakeExpr(iter_name);
-  auto hash_val =
-      HashKeys(ctx, function, GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys());
+  const auto entry_iter = [&]() { return codegen_->MakeExpr(iter_name); };
+  ast::Expr *hash_val = HashKeys(ctx, function, join_plan.GetRightHashKeys());
 
   // Probe matches.
-  const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
-  auto lookup_call = codegen_->MakeStmt(
-      codegen_->JoinHashTableLookup(global_join_ht_.GetPtr(codegen_), entry_iter, hash_val));
-  auto has_next_call = codegen_->HTEntryIterHasNext(entry_iter);
+
+  auto lookup_call = codegen_->MakeStmt(codegen_->JoinHashTableLookup(
+      GetQueryStateEntryPtr(global_join_ht_), entry_iter(), hash_val));
+  auto has_next_call = codegen_->HTEntryIterHasNext(entry_iter());
 
   // The probe depends on the join type
   if (join_plan.RequiresRightMark()) {
@@ -178,8 +187,8 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
     Loop entry_loop(function, lookup_call, loop_cond, nullptr);
     {
       // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-      function->Append(codegen_->DeclareVarWithInit(
-          build_row_var_, codegen_->HTEntryIterGetRow(entry_iter, build_row_type_)));
+      ast::Expr *build_row = codegen_->HTEntryIterGetRow(entry_iter(), build_row_type_);
+      function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
       CheckRightMark(ctx, function, right_mark_var);
     }
     entry_loop.EndLoop();
@@ -204,8 +213,8 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
     Loop entry_loop(function, lookup_call, has_next_call, nullptr);
     {
       // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-      function->Append(codegen_->DeclareVarWithInit(
-          build_row_var_, codegen_->HTEntryIterGetRow(entry_iter, build_row_type_)));
+      ast::Expr *build_row = codegen_->HTEntryIterGetRow(entry_iter(), build_row_type_);
+      function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
       CheckJoinPredicate(ctx, function);
     }
     entry_loop.EndLoop();
@@ -252,25 +261,25 @@ void HashJoinTranslator::CheckRightMark(ConsumerContext *ctx, FunctionBuilder *f
   check_condition.EndIf();
 }
 
-void HashJoinTranslator::Consume(ConsumerContext *ctx, FunctionBuilder *function) const {
-  if (IsLeftPipeline(ctx->GetPipeline())) {
-    InsertIntoJoinHashTable(ctx, function);
+void HashJoinTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
+  if (context->IsForPipeline(left_pipeline_)) {
+    InsertIntoJoinHashTable(context, function);
   } else {
-    TPL_ASSERT(IsRightPipeline(ctx->GetPipeline()), "Pipeline is unknown to join translator");
-    ProbeJoinHashTable(ctx, function);
+    TPL_ASSERT(context->IsForPipeline(*GetPipeline()), "Pipeline is unknown to join translator");
+    ProbeJoinHashTable(context, function);
   }
 }
 
-void HashJoinTranslator::FinishPipelineWork(const Pipeline &pipeline,
+void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                             FunctionBuilder *function) const {
-  if (IsLeftPipeline(pipeline)) {
-    auto jht = global_join_ht_.GetPtr(codegen_);
+  if (pipeline_ctx.IsForPipeline(left_pipeline_)) {
+    ast::Expr *global_hash_table = GetQueryStateEntryPtr(global_join_ht_);
     if (left_pipeline_.IsParallel()) {
-      auto tls = GetThreadStateContainer();
-      auto offset = local_join_ht_.OffsetFromState(codegen_);
-      function->Append(codegen_->JoinHashTableBuildParallel(jht, tls, offset));
+      ast::Expr *tls = GetThreadStateContainer();
+      ast::Expr *offset = pipeline_ctx.GetStateEntryByteOffset(local_join_ht_);
+      function->Append(codegen_->JoinHashTableBuildParallel(global_hash_table, tls, offset));
     } else {
-      function->Append(codegen_->JoinHashTableBuild(jht));
+      function->Append(codegen_->JoinHashTableBuild(global_hash_table));
     }
   }
 }
@@ -280,7 +289,7 @@ ast::Expr *HashJoinTranslator::GetChildOutput(ConsumerContext *context, uint32_t
   // If the request is in the probe pipeline and for an attribute in the left
   // child, we read it from the probe/materialized build row. Otherwise, we
   // propagate to the appropriate child.
-  if (IsRightPipeline(context->GetPipeline()) && child_idx == 0) {
+  if (context->IsForPipeline(*GetPipeline()) && child_idx == 0) {
     return GetBuildRowAttribute(codegen_->MakeExpr(build_row_var_), attr_idx);
   }
   return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);

@@ -31,7 +31,7 @@ class ConsumerContext {
    * @param compilation_context The compilation context.
    * @param pipeline The pipeline.
    */
-  ConsumerContext(CompilationContext *compilation_context, const Pipeline &pipeline);
+  ConsumerContext(CompilationContext *compilation_context, const PipelineContext &pipeline_ctx);
 
   /**
    * Derive the value of the given expression.
@@ -58,14 +58,34 @@ class ConsumerContext {
   OperatorTranslator *CurrentOp() const { return *pipeline_iter_; }
 
   /**
-   * @return The pipeline the consumption occurs in.
+   * @return The value of the element at the given slot within this pipeline's state.
    */
-  const Pipeline &GetPipeline() const { return pipeline_; }
+  ast::Expr *GetStateEntry(StateDescriptor::Slot slot) const;
 
   /**
-   * @return True if the pipeline this work is flowing on is paralle; false otherwise.
+   * @return A pointer to the element at the given slot within this pipeline's state.
+   */
+  ast::Expr *GetStateEntryPtr(StateDescriptor::Slot slot) const;
+
+  /**
+   * @return The byte offset of the element at the given slot in the pipeline state.
+   */
+  ast::Expr *GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const;
+
+  /**
+   * @return True if the pipeline this work is flowing on is parallel; false otherwise.
    */
   bool IsParallel() const;
+
+  /**
+   * @return True if the pipeline for this context is vectorized; false otherwise.
+   */
+  bool IsVectorized() const;
+
+  /**
+   * @return True if this context is for the given pipeline; false otherwise.
+   */
+  bool IsForPipeline(const Pipeline &pipeline) const;
 
   /**
    * Controls whether expression caching is enabled in this context.
@@ -77,7 +97,7 @@ class ConsumerContext {
   // The compilation context.
   CompilationContext *compilation_context_;
   // The pipeline that this context flows through.
-  const Pipeline &pipeline_;
+  const PipelineContext &pipeline_ctx_;
   // Cache of expression results.
   std::unordered_map<const planner::AbstractExpression *, ast::Expr *> cache_;
   // The current pipeline step and last pipeline step.

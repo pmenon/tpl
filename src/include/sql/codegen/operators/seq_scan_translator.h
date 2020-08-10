@@ -38,15 +38,22 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
   DISALLOW_COPY_AND_MOVE(SeqScanTranslator);
 
   /**
+   * Declare the filter manager.
+   * @param pipeline_ctx The pipeline context.
+   */
+  void DeclarePipelineState(PipelineContext *pipeline_ctx) override;
+
+  /**
    * Define all predicate functions if the scan has a predicate.
    * @param pipeline The pipeline the functions are being generated for.
    */
-  void DefinePipelineFunctions(const Pipeline &pipeline) override;
+  void DefinePipelineFunctions(const PipelineContext &pipeline_ctx) override;
 
   /**
    * Initialize the FilterManager if required.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
+  void InitializePipelineState(const PipelineContext &pipeline_ctx,
+                               FunctionBuilder *function) const override;
 
   /**
    * Generate the scan.
@@ -57,7 +64,8 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
   /**
    * Tear-down the FilterManager if required.
    */
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *func) const override;
+  void TearDownPipelineState(const PipelineContext &pipeline_ctx,
+                             FunctionBuilder *func) const override;
 
   /**
    * @return The pipeline work function parameters. Just the *TVI.
@@ -93,7 +101,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
                                      bool seen_conjunction);
 
   // Perform a table scan using the provided table vector iterator pointer.
-  void ScanTable(ConsumerContext *ctx, FunctionBuilder *function) const;
+  void ScanTable(ConsumerContext *context, FunctionBuilder *function) const;
 
   // Generate a scan over the VPI.
   void ScanVPI(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const;
@@ -104,7 +112,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
   ast::Identifier vpi_var_;
 
   // Where the filter manager exists.
-  StateDescriptor::Entry local_filter_manager_;
+  StateDescriptor::Slot local_filter_;
 
   // The list of filter manager clauses. Populated during helper function
   // definition, but only if there's a predicate.

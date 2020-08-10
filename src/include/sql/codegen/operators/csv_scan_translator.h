@@ -70,7 +70,7 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
  private:
   // The name of the base row variable.
   ast::Identifier base_row_type_;
-  StateDescriptor::Entry base_row_;
+  StateDescriptor::Slot base_row_;
 };
 
 }  // namespace tpl::sql::codegen
