@@ -192,11 +192,6 @@ class Pipeline {
   void MarkNestedPipeline(Pipeline *parent);
 
   /**
-   * Perform initialization logic before code generation.
-   */
-  void Prepare();
-
-  /**
    * Generate all functions to execute this pipeline in the provided container.
    * @param container The code container.
    */
@@ -271,7 +266,7 @@ class Pipeline {
    * @return The name of this pipeline. This a pretty-printed version of the operators that
    *         constitute the pipeline.
    */
-  std::string BuildPipelineName() const;
+  std::string ConstructPipelinePath() const;
 
   /**
    * @return True if this pipeline is the same as the provided pipeline.
@@ -295,10 +290,13 @@ class Pipeline {
   void LaunchSerial(const PipelineContext &pipeline_ctx) const;
 
   /**
-   *
-   * @param pipeline_ctx
-   * @param dispatch
-   * @param additional_params
+   * Launch the pipeline in parallel. A work function is first generated that encapsulated the logic
+   * for the pipeline. The dispatching function is provided the name of the work function and is
+   * responsible for dispatching the work function in parallel. Callers may provide an additional
+   * list of fields/parameters to the generated work function.
+   * @param pipeline_ctx The pipeline context.
+   * @param dispatch The dispatch function.
+   * @param additional_params The list of any additional parameters. Optional.
    */
   void LaunchParallel(const PipelineContext &pipeline_ctx,
                       std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,

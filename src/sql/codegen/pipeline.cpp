@@ -86,7 +86,9 @@ Pipeline::Pipeline(CompilationContext *compilation_context, PipelineGraph *pipel
       compilation_ctx_(compilation_context),
       pipeline_graph_(pipeline_graph),
       codegen_(compilation_ctx_->GetCodeGen()),
-      parallelism_(Parallelism::Parallel),
+      parallelism_(Settings::Instance()->GetBool(Settings::Name::ParallelQueryExecution)
+                       ? Parallelism::Parallel
+                       : Parallelism::Serial),
       check_parallelism_(true),
       type_(Type::Regular) {
   pipeline_graph_->RegisterPipeline(*this);
@@ -142,7 +144,7 @@ void Pipeline::MarkNestedPipeline(Pipeline *parent) {
   parent_pipelines_.push_back(parent);
 }
 
-std::string Pipeline::BuildPipelineName() const {
+std::string Pipeline::ConstructPipelinePath() const {
   std::string result;
 
   bool first = true;
@@ -156,32 +158,11 @@ std::string Pipeline::BuildPipelineName() const {
 
   if (!child_pipelines_.empty()) {
     for (auto inner : child_pipelines_) {
-      result += " --> { " + inner->BuildPipelineName() + " (nested) } ";
+      result += " --> { " + inner->ConstructPipelinePath() + " (nested) } ";
     }
   }
 
   return result;
-}
-
-void Pipeline::Prepare() {
-  // Finalize the execution mode. We choose serial execution if ANY of the below
-  // conditions are satisfied:
-  //  1. If parallel execution is globally disabled.
-  //  2. If the consumer doesn't support parallel execution.
-  //  3. If ANY operator in the pipeline explicitly requested serial execution.
-
-  const bool parallel_exec_disabled =
-      !Settings::Instance()->GetBool(Settings::Name::ParallelQueryExecution);
-  const bool parallel_consumer = true;
-  if (parallel_exec_disabled || !parallel_consumer ||
-      parallelism_ == Pipeline::Parallelism::Serial) {
-    parallelism_ = Pipeline::Parallelism::Serial;
-  } else {
-    parallelism_ = Pipeline::Parallelism::Parallel;
-  }
-
-  LOG_INFO("Pipeline-{}: parallel={}, vectorized={}, operators=[{}]", id_, IsParallel(),
-           IsVectorized(), BuildPipelineName());
 }
 
 ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction(
@@ -286,6 +267,9 @@ void Pipeline::DefinePipelineFunctions(PipelineContext *pipeline_ctx) const {
 }
 
 std::vector<ast::FunctionDecl *> Pipeline::GeneratePipelineLogic() const {
+  LOG_INFO("Pipeline-{}: par.={}, vec.={}, path=[{}]", id_, IsParallel(), IsVectorized(),
+           ConstructPipelinePath());
+
   PipelineContext pipeline_context(*this);
 
   DeclarePipelineState(&pipeline_context);

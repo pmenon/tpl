@@ -116,18 +116,17 @@ void CompilationContext::GeneratePipelineCode_OneShot(
     const PipelineGraph &graph, const Pipeline &target, std::vector<ExecutionStep> *steps,
     std::unordered_map<PipelineId, ContainerIndex> *mapping) {
   // Determine order.
-  std::vector<const Pipeline *> execution_order;
-  graph.CollectTransitiveDependencies(target, &execution_order);
+  std::vector<const Pipeline *> pipeline_exec_order;
+  graph.CollectTransitiveDependencies(target, &pipeline_exec_order);
 
   // Optimize (prematurely?) by reserving now.
-  steps->reserve(execution_order.size() * 3);
+  steps->reserve(pipeline_exec_order.size() * 3);
 
-  for (const Pipeline *pipeline : execution_order) {
+  for (auto pipeline : pipeline_exec_order) {
     // All pipelines go into the main container (0).
     (*mapping)[pipeline->GetId()] = 0;
 
     // Prepare and generate the pipeline steps.
-    const_cast<Pipeline *>(pipeline)->Prepare();  // HACK
     auto exec_funcs = pipeline->GeneratePipelineLogic();
 
     // Set up each function as an execution step.
