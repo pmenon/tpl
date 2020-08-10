@@ -37,26 +37,26 @@ std::string_view SeqScanTranslator::GetTableName() const {
 void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
                                             const planner::AbstractExpression *term,
                                             ast::Expr *vector_proj, ast::Expr *tid_list) {
-  // var vpiBase: VectorProjectionIterator
-  // var vpi = &vpiBase
-  auto vpi_base = codegen_->MakeFreshIdentifier("vpi_base");
+  // var vpi_base: VectorProjectionIterator
+  // var vpi = &vpi_base
+  ast::Identifier vpi_base = codegen_->MakeFreshIdentifier("vpi_base");
   function->Append(
       codegen_->DeclareVarNoInit(vpi_base, ast::BuiltinType::VectorProjectionIterator));
   function->Append(
       codegen_->DeclareVarWithInit(vpi_var_, codegen_->AddressOf(codegen_->MakeExpr(vpi_base))));
 
   // @vpiInit()
-  auto vpi = codegen_->MakeExpr(vpi_var_);
-  function->Append(codegen_->VPIInit(vpi, vector_proj, tid_list));
+  const auto vpi = [&]() { return codegen_->MakeExpr(vpi_var_); };
+  function->Append(codegen_->VPIInit(vpi(), vector_proj, tid_list));
 
-  Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(vpi),
-                codegen_->MakeStmt(codegen_->VPIAdvance(vpi)));
+  Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(vpi()),
+                codegen_->MakeStmt(codegen_->VPIAdvance(vpi())));
   {
     PipelineContext pipeline_context(*GetPipeline());
     ConsumerContext context(GetCompilationContext(), pipeline_context);
     auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
     auto match = cond_translator->DeriveValue(&context, this);
-    function->Append(codegen_->VPIMatch(vpi, match));
+    function->Append(codegen_->VPIMatch(vpi(), match));
   }
   vpi_loop.EndLoop();
 }
