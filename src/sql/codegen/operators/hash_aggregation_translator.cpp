@@ -408,26 +408,25 @@ template <typename F>
 void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *context,
                                                          FunctionBuilder *function,
                                                          F agg_ht_provider) const {
-  // var iterBase: AHTIterator
-  ast::Identifier aht_iter_base = codegen_->MakeFreshIdentifier("iter_base");
+  // var iter_base: AHTIterator
+  ast::Identifier aht_iter_base_name = codegen_->MakeFreshIdentifier("iter_base");
   ast::Expr *aht_iter_type = codegen_->BuiltinType(ast::BuiltinType::AHTIterator);
-  function->Append(codegen_->DeclareVarNoInit(aht_iter_base, aht_iter_type));
+  function->Append(codegen_->DeclareVarNoInit(aht_iter_base_name, aht_iter_type));
 
-  // var ahtIter = &ahtIterBase
-  ast::Identifier aht_iter = codegen_->MakeFreshIdentifier("iter");
-  ast::Expr *aht_iter_init = codegen_->AddressOf(codegen_->MakeExpr(aht_iter_base));
-  function->Append(codegen_->DeclareVarWithInit(aht_iter, aht_iter_init));
+  // var aht_iter = &iter_base
+  ast::Identifier aht_iter_name = codegen_->MakeFreshIdentifier("iter");
+  const auto aht_iter = [&]() { return codegen_->MakeExpr(aht_iter_name); };
+  function->Append(codegen_->DeclareVarWithInit(
+      aht_iter_name, codegen_->AddressOf(codegen_->MakeExpr(aht_iter_base_name))));
 
   Loop loop(function,
-            codegen_->MakeStmt(codegen_->AggHashTableIteratorInit(codegen_->MakeExpr(aht_iter),
-                                                                  agg_ht_provider())),
-            codegen_->AggHashTableIteratorHasNext(codegen_->MakeExpr(aht_iter)),
-            codegen_->MakeStmt(codegen_->AggHashTableIteratorNext(codegen_->MakeExpr(aht_iter))));
+            codegen_->MakeStmt(codegen_->AggHashTableIteratorInit(aht_iter(), agg_ht_provider())),
+            codegen_->AggHashTableIteratorHasNext(aht_iter()),
+            codegen_->MakeStmt(codegen_->AggHashTableIteratorNext(aht_iter())));
   {
-    // var aggRow = @ahtIterGetRow()
-    function->Append(codegen_->DeclareVarWithInit(
-        agg_row_var_,
-        codegen_->AggHashTableIteratorGetRow(codegen_->MakeExpr(aht_iter), agg_payload_type_)));
+    // var agg_row = @ahtIterGetRow()
+    ast::Expr *row = codegen_->AggHashTableIteratorGetRow(aht_iter(), agg_payload_type_);
+    function->Append(codegen_->DeclareVarWithInit(agg_row_var_, row));
 
     // Check having clause.
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
@@ -440,7 +439,7 @@ void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *contex
   loop.EndLoop();
 
   // Close iterator.
-  function->Append(codegen_->AggHashTableIteratorClose(codegen_->MakeExpr(aht_iter)));
+  function->Append(codegen_->AggHashTableIteratorClose(aht_iter()));
 }
 
 void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {

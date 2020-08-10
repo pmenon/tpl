@@ -135,11 +135,10 @@ void SeqScanTranslator::DefinePipelineFunctions(UNUSED const PipelineContext &pi
   }
 }
 
-void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, FunctionBuilder *function,
-                                ast::Expr *vpi) const {
-  Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(vpi),
-                codegen_->MakeStmt(codegen_->VPIAdvance(vpi)));
-  {  //
+void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, FunctionBuilder *function) const {
+  Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(codegen_->MakeExpr(vpi_var_)),
+                codegen_->MakeStmt(codegen_->VPIAdvance(codegen_->MakeExpr(vpi_var_))));
+  {  // Tuple-at-a-time scan over the VPI.
     ctx->Consume(function);
   }
   vpi_loop.EndLoop();
@@ -149,19 +148,20 @@ void SeqScanTranslator::ScanTable(ConsumerContext *context, FunctionBuilder *fun
   Loop tvi_loop(function, codegen_->TableIterAdvance(codegen_->MakeExpr(tvi_var_)));
   {
     // var vpi = @tableIterGetVPI()
-    auto vpi = codegen_->MakeExpr(vpi_var_);
-    function->Append(codegen_->DeclareVarWithInit(
-        vpi_var_, codegen_->TableIterGetVPI(codegen_->MakeExpr(tvi_var_))));
+    ast::Expr *get_vpi_call = codegen_->TableIterGetVPI(codegen_->MakeExpr(tvi_var_));
+    function->Append(codegen_->DeclareVarWithInit(vpi_var_, get_vpi_call));
 
     if (HasPredicate()) {
+      ast::Expr *vpi = codegen_->MakeExpr(vpi_var_);
       ast::Expr *filter_manager = context->GetStateEntryPtr(local_filter_);
       function->Append(codegen_->FilterManagerRunFilters(filter_manager, vpi));
     }
 
     if (context->IsVectorized()) {
+      // Push the (potentially filtered) VPI directly to consumer.
       context->Consume(function);
     } else {
-      ScanVPI(context, function, vpi);
+      ScanVPI(context, function);
     }
   }
   tvi_loop.EndLoop();

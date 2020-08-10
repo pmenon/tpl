@@ -99,7 +99,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
   void ScanTable(ConsumerContext *context, FunctionBuilder *function) const;
 
   // Generate a scan over the VPI.
-  void ScanVPI(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *vpi) const;
+  void ScanVPI(ConsumerContext *ctx, FunctionBuilder *function) const;
 
  private:
   // The name of the declared TVI and VPI.
