@@ -1835,7 +1835,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
 
   // Emit call
   const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
-  TPL_ASSERT(func_id != FunctionInfo::kInvalidFuncId, "Function not found!");
+  TPL_ASSERT(func_id != kInvalidFuncId, "Function not found!");
   GetEmitter()->EmitCall(func_id, params);
 }
 
