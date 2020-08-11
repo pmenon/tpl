@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <sstream>
 
 #include "spdlog/fmt/fmt.h"
 
@@ -51,7 +50,7 @@
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
-#include "sql/planner/plannodes/set_op_plan_node.h"
+#include "util/timer.h"
 #include "vm/module.h"
 
 namespace tpl::sql::codegen {
@@ -217,11 +216,17 @@ std::unique_ptr<ExecutableQuery> CompilationContext::Compile(const planner::Abst
   // The query we're generating code for.
   auto query = std::make_unique<ExecutableQuery>(plan);
 
-  // Generate the plan for the query
+  // Time the generation/compilation process.
+  util::Timer<std::milli> timer;
+  timer.Start();
+
+  // Generate the plan for the query.
   CompilationContext ctx(query.get(), mode);
   ctx.GeneratePlan(plan);
 
-  // Done
+  timer.Stop();
+  LOG_DEBUG("Compilation time: {:.2f} ms", timer.GetElapsed());
+
   return query;
 }
 

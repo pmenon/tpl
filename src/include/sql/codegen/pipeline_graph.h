@@ -34,6 +34,11 @@ class PipelineGraph {
   PipelineId NextPipelineId();
 
   /**
+   * @return The number of registered pipelines.
+   */
+  std::size_t NumPipelines() const { return dependency_graph_.size(); }
+
+  /**
    * @return True if provided pipeline is registered in this graph.
    */
   bool IsRegistered(const Pipeline &pipeline) const;
