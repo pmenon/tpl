@@ -126,7 +126,7 @@ class ChunkedVector {
     using pointer = byte **;
     using reference = byte *&;
 
-    ConstIterator() noexcept : chunks_iter_(), element_size_(0), curr_(nullptr) {}
+    ConstIterator() noexcept : chunk_iter_(), element_size_(0), curr_(nullptr) {}
 
     // Dereference
     value_type operator*() noexcept { return curr_; }
@@ -141,7 +141,7 @@ class ChunkedVector {
 
       // The total number of bytes between the new and current position
       const int64_t byte_offset =
-          offset * static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
+          offset * static_cast<int64_t>(element_size_) + (curr_ - *chunk_iter_);
 
       // Offset of the new chunk relative to the current chunk
       int64_t chunk_offset;
@@ -161,10 +161,10 @@ class ChunkedVector {
       }
 
       // Update the chunk pointer
-      chunks_iter_ += chunk_offset;
+      chunk_iter_ += chunk_offset;
 
       // Update the pointer within the new current chunk
-      curr_ = *chunks_iter_ + byte_offset - chunk_offset * chunk_size;
+      curr_ = *chunk_iter_ + byte_offset - chunk_offset * chunk_size;
 
       // Finish
       return *this;
@@ -196,12 +196,12 @@ class ChunkedVector {
       // cases when the offset is known.
 
       const int64_t chunk_size = ChunkAllocSize(element_size_);
-      const int64_t byte_offset = static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
+      const int64_t byte_offset = static_cast<int64_t>(element_size_) + (curr_ - *chunk_iter_);
       // NOTE: an explicit if statement is a bit faster despite the possibility
       //       of branch misprediction.
       if (byte_offset >= chunk_size) {
-        ++chunks_iter_;
-        curr_ = *chunks_iter_ + (byte_offset - chunk_size);
+        ++chunk_iter_;
+        curr_ = *chunk_iter_ + (byte_offset - chunk_size);
       } else {
         curr_ += element_size_;
       }
@@ -220,12 +220,12 @@ class ChunkedVector {
       // This is not implemented in terms of operator-=() to optimize for the
       // cases when the offset is known.
       const int64_t chunk_size = ChunkAllocSize(element_size_);
-      const int64_t byte_offset = -static_cast<int64_t>(element_size_) + (curr_ - *chunks_iter_);
+      const int64_t byte_offset = -static_cast<int64_t>(element_size_) + (curr_ - *chunk_iter_);
       // NOTE: an explicit if statement is a bit faster despite the possibility
       //       of branch misprediction.
       if (byte_offset < 0) {
-        --chunks_iter_;
-        curr_ = *chunks_iter_ + byte_offset + chunk_size;
+        --chunk_iter_;
+        curr_ = *chunk_iter_ + byte_offset + chunk_size;
       } else {
         curr_ -= element_size_;
       }
@@ -245,49 +245,47 @@ class ChunkedVector {
     // Equality
     bool operator==(const ConstIterator &that) const noexcept { return curr_ == that.curr_; }
 
-    // Difference
-    bool operator!=(const ConstIterator &that) const noexcept { return !(this->operator==(that)); }
+    // Inequality
+    bool operator!=(const ConstIterator &that) const noexcept { return !(*this == that); }
 
     // Less than
     bool operator<(const ConstIterator &that) const noexcept {
-      if (chunks_iter_ != that.chunks_iter_) {
-        return chunks_iter_ < that.chunks_iter_;
+      if (chunk_iter_ != that.chunk_iter_) {
+        return chunk_iter_ < that.chunk_iter_;
       }
       return curr_ < that.curr_;
     }
 
     // Greater than
-    bool operator>(const ConstIterator &that) const noexcept {
-      return this->operator!=(that) && !(this->operator<(that));
-    }
+    bool operator>(const ConstIterator &that) const noexcept { return that < *this; }
 
     // Less than or equal to
-    bool operator<=(const ConstIterator &that) const noexcept { return !(this->operator>(that)); }
+    bool operator<=(const ConstIterator &that) const noexcept { return !(that < *this); }
 
     // Greater than or equal to
-    bool operator>=(const ConstIterator &that) const noexcept { return !(this->operator<(that)); }
+    bool operator>=(const ConstIterator &that) const noexcept { return !(*this < that); }
 
     difference_type operator-(const ConstIterator &that) const noexcept {
       const int64_t chunk_size = ChunkAllocSize(element_size_);
       const int64_t elem_size = static_cast<int64_t>(element_size_);
 
-      return ((chunks_iter_ - that.chunks_iter_) * chunk_size +
-              ((curr_ - *chunks_iter_) - (that.curr_ - *that.chunks_iter_))) /
+      return ((chunk_iter_ - that.chunk_iter_) * chunk_size +
+              ((curr_ - *chunk_iter_) - (that.curr_ - *that.chunk_iter_))) /
              elem_size;
     }
 
    private:
-    ConstIterator(std::vector<byte *>::const_iterator chunks_iter, byte *position,
+    ConstIterator(std::vector<byte *>::const_iterator chunk_iter, byte *position,
                   std::size_t element_size) noexcept
-        : chunks_iter_(chunks_iter), element_size_(element_size), curr_(position) {
-      if (*chunks_iter + ChunkAllocSize(element_size) == position) {
-        ++chunks_iter_;
-        curr_ = *chunks_iter_;
+        : chunk_iter_(chunk_iter), element_size_(element_size), curr_(position) {
+      if (*chunk_iter + ChunkAllocSize(element_size) == position) {
+        ++chunk_iter_;
+        curr_ = *chunk_iter_;
       }
     }
 
    protected:
-    std::vector<byte *>::const_iterator chunks_iter_;
+    std::vector<byte *>::const_iterator chunk_iter_;
     std::size_t element_size_;
     byte *curr_;
   };
