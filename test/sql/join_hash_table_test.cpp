@@ -1,8 +1,6 @@
 #include <random>
 #include <vector>
 
-#include "tbb/tbb.h"
-
 #include "sql/join_hash_table.h"
 #include "sql/thread_state_container.h"
 #include "util/hash_util.h"
@@ -84,29 +82,17 @@ void PopulateJoinHashTable(JoinHashTable *jht, uint32_t num_tuples, uint32_t dup
 
 template <bool UseCHT>
 void BuildAndProbeTest(uint32_t num_tuples, uint32_t dup_scale_factor) {
-  //
-  // The join table
-  //
-
+  // The join table.
   MemoryPool memory(nullptr);
   JoinHashTable join_hash_table(&memory, sizeof(Tuple), UseCHT);
 
-  //
-  // Populate
-  //
-
+  // Populate.
   PopulateJoinHashTable(&join_hash_table, num_tuples, dup_scale_factor);
 
-  //
-  // Build
-  //
-
+  // Build.
   join_hash_table.Build();
 
-  //
-  // Do some successful lookups
-  //
-
+  // Do some successful lookups.
   for (uint32_t i = 0; i < num_tuples; i++) {
     // The probe tuple
     Tuple probe_tuple = {i, 0, 0, 0};
@@ -123,10 +109,7 @@ void BuildAndProbeTest(uint32_t num_tuples, uint32_t dup_scale_factor) {
         << count << " matches";
   }
 
-  //
   // Do some unsuccessful lookups.
-  //
-
   for (uint32_t i = num_tuples; i < num_tuples + 1000; i++) {
     // A tuple that should NOT find any join partners
     Tuple probe_tuple = {i, 0, 0, 0};
@@ -146,8 +129,6 @@ TEST_F(JoinHashTableTest, UniqueKeyConciseTableTest) { BuildAndProbeTest<true>(4
 TEST_F(JoinHashTableTest, DuplicateKeyLookupConciseTableTest) { BuildAndProbeTest<true>(400, 5); }
 
 TEST_F(JoinHashTableTest, ParallelBuildTest) {
-  tbb::task_scheduler_init sched;
-
   constexpr bool use_concise_ht = false;
   const uint32_t num_tuples = 10000;
   const uint32_t num_thread_local_tables = 4;
@@ -191,6 +172,90 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
     }
     EXPECT_EQ(num_thread_local_tables, count);
   }
+}
+
+TEST_F(JoinHashTableTest, IterationTest) {
+  for (uint32_t p = 0; p < 10; p++) {
+    const uint32_t size = 1u << p;
+
+    // The join table.
+    MemoryPool memory(nullptr);
+    JoinHashTable join_hash_table(&memory, sizeof(Tuple), false);
+
+    // Populate.
+    for (uint32_t i = 0; i < size; i++) {
+      auto tuple = Tuple{i, 1, 2, 44};
+      auto space = join_hash_table.AllocInputTuple(tuple.Hash());
+      *reinterpret_cast<Tuple *>(space) = tuple;
+    }
+
+    // Build.
+    join_hash_table.Build();
+
+    // Iterate.
+    uint32_t count = 0;
+    for (auto iter = JoinHashTableIterator(join_hash_table); iter.HasNext(); iter.Next()) {
+      auto table_tuple = iter.GetCurrentRowAs<Tuple>();
+      EXPECT_EQ(count++, table_tuple->a);
+      EXPECT_EQ(1, table_tuple->b);
+      EXPECT_EQ(2, table_tuple->c);
+      EXPECT_EQ(44, table_tuple->d);
+    }
+
+    EXPECT_EQ(size, count) << "Expected " << size << " tuples in table. Counted: " << count;
+  }
+}
+
+TEST_F(JoinHashTableTest, IterateParallelMergedTableTest) {
+  constexpr uint32_t kNumThreadLocalTables = 4;
+
+  // Create and populate 'kNumThreadLocalTables' thread-local join hash tables.
+  // The size of each table is chosen by each thread randomly (within some
+  // reasonable bound) and placed into 'table_sizes'.
+  //
+  // Then, merge each thread-local hash table (in parallel) into the main join
+  // hash table and iterate over the contents. For now, just check we touch each
+  // tuple once.
+
+  std::array<uint32_t, kNumThreadLocalTables> table_sizes;
+
+  // Thread-local container setup.
+  MemoryPool memory(nullptr);
+  ThreadStateContainer container(&memory);
+  container.Reset(
+      sizeof(JoinHashTable),
+      [](auto ctx, auto space) {
+        new (space) JoinHashTable(reinterpret_cast<MemoryPool *>(ctx), sizeof(Tuple), false);
+      },
+      [](auto ctx, auto space) { std::destroy_at(reinterpret_cast<JoinHashTable *>(space)); },
+      &memory);
+
+  // Make and populate thread-local tables.
+  LaunchParallel(kNumThreadLocalTables, [&](auto tid) {
+    const auto size = std::random_device{}() % 10000;
+    table_sizes[tid] = size;
+
+    auto join_hash_table = container.AccessCurrentThreadStateAs<JoinHashTable>();
+    for (uint32_t i = 0; i < size; i++) {
+      auto tuple = Tuple{i, tid, 2, 44};
+      auto space = join_hash_table->AllocInputTuple(tuple.Hash());
+      *reinterpret_cast<Tuple *>(space) = tuple;
+    }
+  });
+
+  // Merge.
+  JoinHashTable main(&memory, sizeof(Tuple), false);
+  main.MergeParallel(&container, 0);
+
+  // In total, there should be num_thread_local_tables*size tuples.
+  // Also check that each thread's entries exist once.
+  uint32_t count = 0, expected_count = std::accumulate(table_sizes.begin(), table_sizes.end(), 0);
+  for (auto iter = JoinHashTableIterator(main); iter.HasNext(); iter.Next()) {
+    count++;
+  }
+
+  EXPECT_EQ(expected_count, count)
+      << "Expected " << expected_count << " tuples in table. Counted: " << count;
 }
 
 #if 0

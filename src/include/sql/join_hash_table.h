@@ -19,6 +19,8 @@ class ThreadStateContainer;
 class Vector;
 
 /**
+ * General:
+ * --------
  * The main class used to for hash joins. JoinHashTables are bulk-loaded through calls to
  * JoinHashTable::AllocInputTuple() and lazily built through JoinHashTable::Build(). After a
  * JoinHashTable has been built once, it is frozen and immutable. Thus, they're write-once read-many
@@ -35,11 +37,24 @@ class Vector;
  * jht.Build();
  * @endcode
  *
- * In parallel mode, thread-local join hash tables are lazily built and merged in parallel into a
- * global join hash table through a call to JoinHashTable::MergeParallel(). After this call, the
- * global table takes ownership of all thread-local allocated memory and hash index.
+ * In parallel mode, thread-local join hash tables are populated and merged in parallel into a
+ * global join hash table through a call to JoinHashTable::MergeParallel(). An important difference
+ * in the parallel case in contrast to the serial case is that thread-local tables do not call
+ * Build()! After thread-local tables have been merged into one global hash table, the global table
+ * takes ownership of all thread-local allocated memory and hash index.
+ *
+ * Lookup:
+ * -------
+ *
+ *
+ * Iteration:
+ * ----------
+ * Tuple-at-a-time iteration is facilitated using JoinHashTableIterator. Iteration only works if the
+ * JoinHashTable has been finalized either through Build() or MergeParallel().
  */
 class JoinHashTable {
+  friend class JoinHashTableIterator;
+
  public:
   // Default precision to use for HLL estimations
   static constexpr uint32_t kDefaultHLLPrecision = 10;
@@ -134,21 +149,7 @@ class JoinHashTable {
   /**
    * @return The total number of elements in the table, including duplicates.
    */
-  uint64_t GetTupleCount() const {
-    // We don't know if this hash table was built in parallel. To be safe, we
-    // acquire the lock before checking the owned entries vector. This isn't a
-    // performance critical function, so locking should be okay ...
-    util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
-    if (!owned_.empty()) {
-      uint64_t count = 0;
-      for (const auto &entries : owned_) {
-        count += entries.size();
-      }
-      return count;
-    }
-
-    return entries_.size();
-  }
+  uint64_t GetTupleCount() const;
 
   /**
    * @return True if the join hash table has been built; false otherwise.
@@ -243,5 +244,96 @@ inline HashTableEntryIterator JoinHashTable::Lookup<true>(const hash_t hash) con
   auto *entry = (found ? EntryAt(idx) : nullptr);
   return HashTableEntryIterator(entry, hash);
 }
+
+inline uint64_t JoinHashTable::GetTupleCount() const {
+  // We don't know if this hash table was built in parallel. To be safe, we
+  // acquire the lock before checking the owned entries vector. This isn't a
+  // performance critical function, so locking should be okay ...
+  util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
+  if (!owned_.empty()) {
+    uint64_t count = 0;
+    for (const auto &entries : owned_) {
+      count += entries.size();
+    }
+    return count;
+  }
+
+  return entries_.size();
+}
+
+//===----------------------------------------------------------------------===//
+//
+// Join Hash Table Iterator
+//
+//===----------------------------------------------------------------------===//
+
+/**
+ * A tuple-at-a-time iterator over the contents of a join hash table. The join hash table must be
+ * fully built either through a serial call to JoinHashTable::Build() or merged (in parallel) from
+ * other join hash tables through JoinHashTable::MergeParallel().
+ *
+ * Users use the OOP-ish iteration API:
+ * for (JoinHashTableIterator iter(table); iter.HasNext(); iter.Next()) {
+ *   auto row = iter.GetCurrentRowAs<MyFancyAssType>();
+ *   ...
+ * }
+ */
+class JoinHashTableIterator {
+ public:
+  /**
+   * Construct an iterator over the given hash table.
+   * @param table The join hash table to iterate.
+   */
+  explicit JoinHashTableIterator(const JoinHashTable &table);
+
+  /**
+   * @return True if there is more data in the iterator; false otherwise.
+   */
+  bool HasNext() const noexcept { return entry_iter_ != entry_end_ || chunk_iter_ != chunk_end_; }
+
+  /**
+   * Advance to the next tuple.
+   * @pre A previous call to HasNext() must have returned true.
+   */
+  void Next() noexcept {
+    TPL_ASSERT(HasNext(), "HasNext() indicates no more data!");
+    if (++entry_iter_ == entry_end_) {
+      if (chunk_iter_ != chunk_end_) {
+        entry_iter_ = chunk_iter_->begin();
+        entry_end_ = chunk_iter_->end();
+        ++chunk_iter_;
+      }
+    }
+  }
+
+  /**
+   * Access the row the iterator is currently positioned at.
+   * @pre A previous call to HasNext() must have returned true.
+   * @return A read-only opaque byte pointer to the row at the current iteration position.
+   */
+  const byte *GetCurrentRow() const noexcept {
+    TPL_ASSERT(HasNext(), "HasNext() indicates no more data!");
+    const auto entry = reinterpret_cast<const HashTableEntry *>(*entry_iter_);
+    return entry->payload;
+  }
+
+  /**
+   * Access the row the iterator is currently positioned at as the given template type.
+   * @pre A previous call to HasNext() must have returned true.
+   * @tparam T The type of the row.
+   * @return A typed read-only pointer to row at the current iteration position.
+   */
+  template <typename T>
+  const T *GetCurrentRowAs() const noexcept {
+    return reinterpret_cast<const T *>(GetCurrentRow());
+  }
+
+ private:
+  using ChunkIterator = decltype(JoinHashTable::owned_)::const_iterator;
+  using EntryIterator = decltype(JoinHashTable::entries_)::ConstIterator;
+
+  ChunkIterator chunk_iter_, chunk_end_;
+  EntryIterator entry_iter_, entry_end_;
+};
 
 }  // namespace tpl::sql
