@@ -5,9 +5,15 @@
 #include <utility>
 #include <vector>
 
+// Third-party IPS4O.
 #include "ips4o/ips4o.hpp"
-#include "util/chunked_vector.h"
+
+// Test.
 #include "util/test_harness.h"
+
+#include "util/chunked_vector.h"
+#include "util/region.h"
+#include "util/region_containers.h"
 
 namespace tpl::util {
 
