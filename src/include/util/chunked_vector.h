@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -133,22 +134,26 @@ class ChunkedVector {
     using pointer = T *;
     using reference = T &;
 
-    _Iterator() noexcept : chunk_iter_(), element_size_(0), curr_(nullptr) {}
+    _Iterator() noexcept
+        : curr_(),
+          first_(),
+          last_(),
+          chunk_iter_(),
+          chunk_start_(),
+          chunk_end_(),
+          element_size_() {}
 
-    // Dereference
     value_type operator*() noexcept { return curr_; }
 
-    // Dereference
     value_type operator*() const noexcept { return curr_; }
 
-    // In place addition
     _Iterator &operator+=(difference_type offset) {
       // The size (in bytes) of one chunk
       const size_type chunk_size = ChunkAllocSize(element_size_);
 
       // The total number of bytes between the new and current position
       const difference_type byte_offset =
-          offset * static_cast<int64_t>(element_size_) + (curr_ - *chunk_iter_);
+          offset * static_cast<difference_type>(element_size_) + (curr_ - *chunk_iter_);
 
       // Offset of the new chunk relative to the current chunk
       difference_type chunk_offset;
@@ -168,75 +173,62 @@ class ChunkedVector {
       }
 
       // Update the chunk pointer
-      chunk_iter_ += chunk_offset;
+      set_chunk(chunk_iter_ + chunk_offset);
 
       // Update the pointer within the new current chunk
-      curr_ = *chunk_iter_ + byte_offset - chunk_offset * chunk_size;
+      curr_ = first_ + byte_offset - chunk_offset * chunk_size;
 
       // Finish
       return *this;
     }
 
-    // In place subtraction
-    _Iterator &operator-=(int64_t offset) {
+    _Iterator &operator-=(difference_type offset) {
       *this += (-offset);
       return *this;
     }
 
-    // Addition
-    const _Iterator operator+(int64_t offset) const {
+    const _Iterator operator+(difference_type offset) const {
       _Iterator copy(*this);
       copy += offset;
       return copy;
     }
 
     // Subtraction
-    const _Iterator operator-(int64_t offset) const {
+    const _Iterator operator-(difference_type offset) const {
       _Iterator copy(*this);
       copy -= offset;
       return copy;
     }
 
-    // Pre-increment
     _Iterator &operator++() noexcept {
       // This is not implemented in terms of operator+=() to optimize for the
       // cases when the offset is known.
-
-      const size_type chunk_size = ChunkAllocSize(element_size_);
-      const difference_type byte_offset =
-          static_cast<difference_type>(element_size_) + (curr_ - *chunk_iter_);
-      // NOTE: an explicit if statement is a bit faster despite the possibility
-      //       of branch misprediction.
-      if (byte_offset >= chunk_size) {
-        ++chunk_iter_;
-        curr_ = *chunk_iter_ + (byte_offset - chunk_size);
-      } else {
-        curr_ += element_size_;
+      curr_ += element_size_;
+      if (curr_ == last_) {
+        if (chunk_iter_ + 1 != chunk_end_) {
+          set_chunk(chunk_iter_ + 1);
+          curr_ = first_;
+        }
       }
       return *this;
     }
 
-    // Post-increment
     const _Iterator operator++(int) noexcept {
       _Iterator copy(*this);
       ++(*this);
       return copy;
     }
 
-    // Pre-decrement
     _Iterator &operator--() noexcept {
       // This is not implemented in terms of operator-=() to optimize for the
       // cases when the offset is known.
-      const int64_t chunk_size = ChunkAllocSize(element_size_);
-      const int64_t byte_offset = -static_cast<int64_t>(element_size_) + (curr_ - *chunk_iter_);
-      // NOTE: an explicit if statement is a bit faster despite the possibility
-      //       of branch misprediction.
-      if (byte_offset < 0) {
-        --chunk_iter_;
-        curr_ = *chunk_iter_ + byte_offset + chunk_size;
-      } else {
-        curr_ -= element_size_;
+      if (curr_ == first_) {
+        if (chunk_iter_ != chunk_start_) {
+          set_chunk(chunk_iter_ - 1);
+          curr_ = last_;
+        }
       }
+      curr_ -= element_size_;
       return *this;
     }
 
@@ -247,16 +239,12 @@ class ChunkedVector {
       return copy;
     }
 
-    // Indexing
-    value_type operator[](int64_t idx) const noexcept { return *(this->operator+(idx)); }
+    value_type operator[](difference_type idx) const noexcept { return *(this->operator+(idx)); }
 
-    // Equality
     bool operator==(const _Iterator &that) const noexcept { return curr_ == that.curr_; }
 
-    // Inequality
     bool operator!=(const _Iterator &that) const noexcept { return !(*this == that); }
 
-    // Less than
     bool operator<(const _Iterator &that) const noexcept {
       if (chunk_iter_ != that.chunk_iter_) {
         return chunk_iter_ < that.chunk_iter_;
@@ -264,13 +252,10 @@ class ChunkedVector {
       return curr_ < that.curr_;
     }
 
-    // Greater than
     bool operator>(const _Iterator &that) const noexcept { return that < *this; }
 
-    // Less than or equal to
     bool operator<=(const _Iterator &that) const noexcept { return !(that < *this); }
 
-    // Greater than or equal to
     bool operator>=(const _Iterator &that) const noexcept { return !(*this < that); }
 
     difference_type operator-(const _Iterator &that) const noexcept {
@@ -283,19 +268,32 @@ class ChunkedVector {
     }
 
    private:
-    _Iterator(std::vector<byte *>::const_iterator chunk_iter, byte *position,
+    _Iterator(std::vector<byte *>::const_iterator chunk_iter,
+              std::vector<byte *>::const_iterator chunk_start,
+              std::vector<byte *>::const_iterator chunk_finish, byte *position,
               std::size_t element_size) noexcept
-        : chunk_iter_(chunk_iter), element_size_(element_size), curr_(position) {
-      if (*chunk_iter + ChunkAllocSize(element_size) == position) {
-        ++chunk_iter_;
-        curr_ = *chunk_iter_;
-      }
+        : curr_(position),
+          first_(*chunk_iter),
+          last_(*chunk_iter + ChunkAllocSize(element_size)),
+          chunk_iter_(chunk_iter),
+          chunk_start_(chunk_start),
+          chunk_end_(chunk_finish),
+          element_size_(element_size) {}
+
+    void set_chunk(std::vector<byte *>::const_iterator chunk) {
+      chunk_iter_ = chunk;
+      first_ = *chunk;
+      last_ = first_ + ChunkAllocSize(element_size_);
     }
 
    protected:
-    std::vector<byte *>::const_iterator chunk_iter_;
-    std::size_t element_size_;
     byte *curr_;
+    byte *first_;
+    byte *last_;
+    std::vector<byte *>::const_iterator chunk_iter_;
+    std::vector<byte *>::const_iterator chunk_start_;
+    std::vector<byte *>::const_iterator chunk_end_;
+    std::size_t element_size_;
   };
 
   /**
@@ -309,13 +307,23 @@ class ChunkedVector {
   using ConstIterator = _Iterator<const byte *>;
 
   /**
+   * A read-write reverse iterator.
+   */
+  using ReverseIterator = std::reverse_iterator<Iterator>;
+
+  /**
+   * A read-only reverse iterator.
+   */
+  using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
+
+  /**
    * @return An iterator pointing to the first element in this vector.
    */
   Iterator begin() noexcept {
     if (empty()) {
       return Iterator();
     }
-    return Iterator(chunks_.begin(), chunks_[0], element_size());
+    return Iterator(chunks_.begin(), chunks_.begin(), chunks_.end(), chunks_[0], element_size());
   }
 
   /**
@@ -325,7 +333,8 @@ class ChunkedVector {
     if (empty()) {
       return ConstIterator();
     }
-    return ConstIterator(chunks_.begin(), chunks_[0], element_size());
+    return ConstIterator(chunks_.begin(), chunks_.begin(), chunks_.end(), chunks_[0],
+                         element_size());
   }
 
   /**
@@ -335,7 +344,7 @@ class ChunkedVector {
     if (empty()) {
       return Iterator();
     }
-    return Iterator(chunks_.end() - 1, position_, element_size());
+    return Iterator(chunks_.end() - 1, chunks_.begin(), chunks_.end(), position_, element_size());
   }
 
   /**
@@ -345,8 +354,31 @@ class ChunkedVector {
     if (empty()) {
       return ConstIterator();
     }
-    return ConstIterator(chunks_.end() - 1, position_, element_size());
+    return ConstIterator(chunks_.end() - 1, chunks_.begin(), chunks_.end(), position_,
+                         element_size());
   }
+
+  /**
+   * @return An reverse iterator to the first element of the reversed vector. Corresponds to the
+   *         last element of the non-reversed vector.
+   */
+  ReverseIterator rbegin() noexcept { return ReverseIterator(end()); }
+
+  /**
+   * @return An reverse iterator to the first element of the reversed vector. Corresponds to the
+   *         last element of the non-reversed vector.
+   */
+  ConstReverseIterator rbegin() const noexcept { return ConstReverseIterator(end()); }
+
+  /**
+   * @return An iterator positioned one past the last element in the reversed vector.
+   */
+  ReverseIterator rend() noexcept { return ReverseIterator(begin()); }
+
+  /**
+   * @return An iterator positioned one past the last element in the reversed vector.
+   */
+  ConstReverseIterator rend() const noexcept { return ConstReverseIterator(begin()); }
 
   /**
    * @return The element at index @em index. This method performs a bounds-check.
@@ -722,6 +754,16 @@ class ChunkedVectorT {
   };
 
   /**
+   * A read-write reverse iterator.
+   */
+  using ReverseIterator = std::reverse_iterator<Iterator>;
+
+  /**
+   * A read-only reverse iterator.
+   */
+  using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
+
+  /**
    * @return A read-write random access iterator that points to the first element in the vector.
    */
   Iterator begin() { return Iterator(vec_.begin()); }
@@ -742,6 +784,28 @@ class ChunkedVectorT {
    *         vector.
    */
   ConstIterator end() const { return ConstIterator(vec_.end()); }
+
+  /**
+   * @return An reverse iterator to the first element of the reversed vector. Corresponds to the
+   *         last element of the non-reversed vector.
+   */
+  ReverseIterator rbegin() noexcept { return ReverseIterator(end()); }
+
+  /**
+   * @return An reverse iterator to the first element of the reversed vector. Corresponds to the
+   *         last element of the non-reversed vector.
+   */
+  ConstReverseIterator rbegin() const noexcept { return ConstReverseIterator(end()); }
+
+  /**
+   * @return An iterator positioned one past the last element in the reversed vector.
+   */
+  ReverseIterator rend() noexcept { return ReverseIterator(begin()); }
+
+  /**
+   * @return An iterator positioned one past the last element in the reversed vector.
+   */
+  ConstReverseIterator rend() const noexcept { return ConstReverseIterator(begin()); }
 
   // -------------------------------------------------------
   // Element access
