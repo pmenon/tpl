@@ -65,7 +65,7 @@ CompilationContext::CompilationContext(ExecutableQuery *query, const Compilation
       query_(query),
       mode_(mode),
       codegen_(MakeContainer()),
-      query_state_var_(codegen_.MakeIdentifier("queryState")),
+      query_state_var_(codegen_.MakeIdentifier("q_state")),
       query_state_type_(codegen_.MakeIdentifier("QueryState")),
       query_state_(query_state_type_,
                    [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }) {}

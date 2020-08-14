@@ -29,6 +29,28 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
   void DefineStructsAndFunctions() override;
 
   /**
+   * Declare the reader.
+   * @param pipeline_ctx The pipeline contex.t
+   */
+  void DeclarePipelineState(PipelineContext *pipeline_ctx) override;
+
+  /**
+   * Initialize the reader.
+   * @param pipeline_ctx The pipeline context.
+   * @param function The function being built.
+   */
+  void InitializePipelineState(const PipelineContext &pipeline_ctx,
+                               FunctionBuilder *function) const override;
+
+  /**
+   * Destroy the reader.
+   * @param pipeline_ctx The pipeline context.
+   * @param function The function being built.
+   */
+  void TearDownPipelineState(const PipelineContext &pipeline_ctx,
+                             FunctionBuilder *function) const override;
+
+  /**
    * Generate the CSV scan logic.
    * @param context The context of work.
    * @param function The function being built.
@@ -55,14 +77,18 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
   }
 
   // Access the given field in the CSV row.
-  ast::Expr *GetField(uint32_t field_index) const;
+  ast::Expr *GetField(ast::Identifier row, uint32_t field_index) const;
   // Access a pointer to the field in the CSV row.
-  ast::Expr *GetFieldPtr(uint32_t field_index) const;
+  ast::Expr *GetFieldPtr(ast::Identifier row, uint32_t field_index) const;
 
  private:
-  // The name of the base row variable.
+  // The name of the CSV row type, and the CSV row.
   ast::Identifier base_row_type_;
-  StateDescriptor::Slot base_row_;
+  ast::Identifier row_var_;
+  // The slot in pipeline state where the CSV reader is.
+  StateDescriptor::Slot csv_reader_;
+  // The boolean flag indicating if the reader is valid.
+  StateDescriptor::Slot is_valid_reader_;
 };
 
 }  // namespace tpl::sql::codegen

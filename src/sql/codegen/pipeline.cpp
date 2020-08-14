@@ -28,7 +28,7 @@ namespace tpl::sql::codegen {
 PipelineContext::PipelineContext(const Pipeline &pipeline)
     : pipeline_(pipeline),
       codegen_(pipeline.GetCompilationContext()->GetCodeGen()),
-      state_var_(codegen_->MakeIdentifier("pipelineState")),
+      state_var_(codegen_->MakeIdentifier("p_state")),
       state_(codegen_->MakeIdentifier(fmt::format("P{}_State", pipeline_.GetId())),
              [this](CodeGen *codegen) { return codegen->MakeExpr(state_var_); }) {}
 
