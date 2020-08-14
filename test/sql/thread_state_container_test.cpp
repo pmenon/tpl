@@ -112,7 +112,6 @@ TEST_F(ThreadStateContainerTest, SimpleContainerTest) {
   std::vector<uint32_t> input(10000);
   std::iota(input.begin(), input.end(), 0);
 
-  tbb::task_scheduler_init sched;
   tbb::blocked_range r(std::size_t(0), input.size());
   tbb::parallel_for(r, [&container](const auto &range) {
     auto *state = container.AccessCurrentThreadStateAs<uint32_t>();

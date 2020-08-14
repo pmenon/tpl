@@ -111,7 +111,7 @@ list(APPEND TPL_LINK_LIBS libcount)
 # old to use with TPL.
 ############################################################
 
-set(SUPPORTED_CLANGS "clang++-9" "clang++-8" "clang++-7")
+set(SUPPORTED_CLANGS "clang++-10" "clang++-9" "clang++-8" "clang++-7")
 if (${MACOSX})
     # Because MacOS does some weird Clang versioning, and it isn't available
     # through Homebrew, we add in vanilla "clang++". You won't be running TPL

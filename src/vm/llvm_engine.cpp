@@ -529,7 +529,6 @@ void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
         *llvm_module_, string_constant->getType(), true, llvm::GlobalValue::PrivateLinkage,
         string_constant, local_info.GetName(), nullptr, llvm::GlobalVariable::NotThreadLocal);
     global_var->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    global_var->setAlignment(1);
 
     // Convert the global variable into an i8*
     llvm::Constant *zero = llvm::ConstantInt::get(type_map_->Int32Type(), 0);
@@ -1066,8 +1065,7 @@ std::string LLVMEngine::CompiledModuleBuilder::DumpModuleAsm() {
   pass_manager.add(
       llvm::createTargetTransformInfoWrapperPass(target_machine_->getTargetIRAnalysis()));
   target_machine_->Options.MCOptions.AsmVerbose = true;
-  target_machine_->addPassesToEmitFile(pass_manager, ostream, nullptr,
-                                       llvm::TargetMachine::CGFT_AssemblyFile);
+  target_machine_->addPassesToEmitFile(pass_manager, ostream, nullptr, llvm::CGFT_AssemblyFile);
   pass_manager.run(*llvm_module_);
   target_machine_->Options.MCOptions.AsmVerbose = false;
 

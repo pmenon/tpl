@@ -4,8 +4,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "tbb/tbb.h"
-
 #include "sql/aggregation_hash_table.h"
 #include "sql/execution_context.h"
 #include "sql/schema.h"
@@ -351,8 +349,6 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
 }
 
 TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
-  tbb::task_scheduler_init sched;
-
   // The whole-query state.
   struct QueryState {
     std::atomic<uint32_t> row_count;

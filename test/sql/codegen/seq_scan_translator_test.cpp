@@ -2,12 +2,9 @@
 
 #include <memory>
 
-#include "tbb/tbb.h"
-
 #include "sql/catalog.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/execution_context.h"
-#include "sql/planner/plannodes/aggregate_plan_node.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/printing_consumer.h"
@@ -30,9 +27,6 @@ class SeqScanTranslatorTest : public SqlBasedTest {
   void SetUp() override { SqlBasedTest::SetUp(); }
   static void SetUpTestSuite() { tpl::vm::LLVMEngine::Initialize(); }
   static void TearDownTestSuite() { tpl::vm::LLVMEngine::Shutdown(); }
-
- private:
-  tbb::task_scheduler_init anonymous_;
 };
 
 TEST_F(SeqScanTranslatorTest, SimpleSeqScanTest) {

@@ -5,8 +5,6 @@
 #include <random>
 #include <vector>
 
-#include "tbb/tbb.h"
-
 #include "ips4o/ips4o.hpp"
 
 #include "sql/execution_context.h"
@@ -175,8 +173,6 @@ struct TestTuple {
 // The template argument controls the size of the tuple.
 template <uint32_t N>
 void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
-  tbb::task_scheduler_init sched;
-
   // Comparison function
   static const auto cmp_fn = [](const void *left, const void *right) {
     const auto *l = reinterpret_cast<const TestTuple<N> *>(left);

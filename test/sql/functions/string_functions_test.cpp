@@ -1,9 +1,7 @@
-#include <limits>
-#include <memory>
-#include <random>
 #include <string>
 #include <vector>
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "sql/execution_context.h"

@@ -35,6 +35,7 @@ install() {
     LINUX)
       version=$(cat /etc/os-release | grep VERSION_ID | cut -d '"' -f 2)
       case $version in
+        20.04) install_linux ;;
         19.10) install_linux ;;
         19.04) install_linux ;;
         18.10) install_linux ;;
@@ -82,19 +83,19 @@ install_linux() {
   # Update apt-get.
   apt-get -y update
   # Install packages.
-  apt-get -y install  \
-      build-essential \
-      clang-tidy-9    \
-      clang-format-9  \
-      cmake           \
-      doxygen         \
-      git             \
-      lld             \
-      g++-9           \
-      clang-9         \
-      llvm-9          \
-      libjemalloc-dev \
-      libtbb-dev      \
+  apt-get -y install   \
+      build-essential  \
+      clang-tidy-10    \
+      clang-format-10  \
+      cmake            \
+      doxygen          \
+      git              \
+      lld              \
+      g++-10           \
+      clang-10         \
+      llvm-10          \
+      libjemalloc-dev  \
+      libtbb-dev       \
       ninja-build
 }
 

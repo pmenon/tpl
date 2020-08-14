@@ -7,8 +7,6 @@
 #include <string>
 #include <utility>
 
-#include "tbb/task_scheduler_init.h"
-
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -47,8 +45,6 @@ llvm::cl::opt<bool> kTpch("tpch", llvm::cl::desc("Should the TPCH database be lo
 llvm::cl::opt<std::string> kDataDir("data", llvm::cl::desc("Where to find data files of tables to load"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
-
-tbb::task_scheduler_init scheduler;  // NOLINT
 
 namespace tpl {
 
@@ -308,8 +304,6 @@ void ShutdownTPL() {
   tpl::vm::LLVMEngine::Shutdown();
 
   tpl::logging::ShutdownLogger();
-
-  scheduler.terminate();
 
   LOG_INFO("TPL cleanly shutdown ...");
 }
