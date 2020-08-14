@@ -1526,7 +1526,7 @@ void BytecodeGenerator::VisitBuiltinThreadStateContainerCall(ast::CallExpr *call
 
 void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
   LocalVar dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-  LocalVar src = VisitExpressionForRValue(call->Arguments()[0]);
+  LocalVar src = VisitExpressionForLValue(call->Arguments()[0]);
 
   switch (builtin) {
     case ast::Builtin::ACos: {
@@ -1542,7 +1542,7 @@ void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin b
       break;
     }
     case ast::Builtin::ATan2: {
-      LocalVar src2 = VisitExpressionForRValue(call->Arguments()[1]);
+      LocalVar src2 = VisitExpressionForLValue(call->Arguments()[1]);
       GetEmitter()->Emit(Bytecode::Atan2, dest, src, src2);
       break;
     }
@@ -1565,8 +1565,6 @@ void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin b
       UNREACHABLE("Impossible trigonometric bytecode");
     }
   }
-
-  GetExecutionResult()->SetDestination(dest.ValueOf());
 }
 
 void BytecodeGenerator::VisitBuiltinSizeOfCall(ast::CallExpr *call) {
