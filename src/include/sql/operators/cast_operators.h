@@ -201,13 +201,7 @@ struct TryCast<bool, OutType, std::enable_if_t<detail::is_number_type_v<OutType>
 
 //===----------------------------------------------------------------------===//
 //
-// Numeric cast.
-//
-// These casts are grouped into four categories:
-// 1. Down-cast.
-// 2. Signed-to-unsigned cast.
-// 3. Unsigned-to-signed cast.
-// 4. Floating point truncation.
+// Numeric casts.
 //
 //===----------------------------------------------------------------------===//
 
@@ -220,14 +214,26 @@ template <typename InType, typename OutType>
 struct TryCast<InType, OutType,
                std::enable_if_t<detail::is_number_downcast_v<InType, OutType> ||
                                 detail::is_integral_signed_to_unsigned_v<InType, OutType> ||
-                                detail::is_integral_unsigned_to_signed_v<InType, OutType> ||
-                                detail::is_float_truncate_v<InType, OutType>>> {
+                                detail::is_integral_unsigned_to_signed_v<InType, OutType>>> {
   bool operator()(const InType input, OutType *output) const noexcept {
     constexpr OutType kMin = std::numeric_limits<OutType>::lowest();
     constexpr OutType kMax = std::numeric_limits<OutType>::max();
 
     *output = static_cast<OutType>(input);
     return input >= kMin && input <= kMax;
+  }
+};
+
+/**
+ * Floating-point truncation cast.
+ * @tparam InType The numeric input type. Must satisfy internal::is_number_type_v<InType>.
+ * @tparam OutType The numeric output type.  Must satisfy internal::is_number_type_v<OutType>.
+ */
+template <typename InType, typename OutType>
+struct TryCast<InType, OutType, std::enable_if_t<detail::is_float_truncate_v<InType, OutType>>> {
+  bool operator()(const InType input, OutType *output) const noexcept {
+    *output = static_cast<OutType>(input);
+    return static_cast<InType>(*output) == input;
   }
 };
 
