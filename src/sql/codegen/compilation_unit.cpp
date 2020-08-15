@@ -45,7 +45,10 @@ class Callbacks : public compiler::Compiler::Callbacks {
       std::stringstream ss(generated_code);
       ast::AstPrettyPrint::Dump(ss, compiler->GetAST());
     }
-    LOG_ERROR("Compilation Error!\nCode:\n{}\nErrors:\n{}", generated_code, errors);
+    LOG_ERROR("======================== COMPILER ERROR START ========================");
+    LOG_ERROR("Generated Code: {}", generated_code);
+    LOG_ERROR("Errors: {}", errors);
+    LOG_ERROR("======================== COMPILER ERROR END ==========================");
   }
 
   void TakeOwnership(std::unique_ptr<vm::Module> module) override { module_ = std::move(module); }
@@ -68,7 +71,6 @@ std::unique_ptr<vm::Module> CompilationUnit::Compile() {
 
   // Create the file we're to compile.
   ast::File *generated_file = ctx_->GetNodeFactory()->NewFile({0, 0}, std::move(declarations));
-  ast::AstPrettyPrint::Dump(std::cout, generated_file);
 
   // Compile it!
   compiler::Compiler::Input input(name_, ctx_, generated_file);
