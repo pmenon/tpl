@@ -68,7 +68,7 @@ ast::StructDecl *StaticAggregationTranslator::GenerateValuesStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto field_name = codegen_->MakeIdentifier(kAggAttrPrefix + std::to_string(term_idx));
-    auto type = codegen_->TplType(term->GetReturnValueType());
+    auto type = codegen_->TplType(term->GetChild(0)->GetReturnValueType());
     fields.push_back(codegen_->MakeField(field_name, type));
     term_idx++;
   }
