@@ -33,8 +33,9 @@ class ExecutionContext {
   explicit ExecutionContext(MemoryPool *mem_pool, const planner::OutputSchema *schema = nullptr,
                             ResultConsumer *consumer = nullptr)
       : mem_pool_(mem_pool),
-        buffer_(schema == nullptr ? nullptr : new ResultBuffer(mem_pool, *schema, consumer)),
-        thread_state_container_(std::make_unique<ThreadStateContainer>(mem_pool_)) {
+        buffer_(schema == nullptr ? nullptr
+                                  : std::make_unique<ResultBuffer>(mem_pool, *schema, consumer)),
+        thread_state_container_(mem_pool_) {
     TPL_ASSERT(mem_pool != nullptr, "Null memory-pool provided to execution context");
   }
 
@@ -61,7 +62,7 @@ class ExecutionContext {
   /**
    * @return The thread state container.
    */
-  ThreadStateContainer *GetThreadStateContainer() { return thread_state_container_.get(); }
+  ThreadStateContainer *GetThreadStateContainer() { return &thread_state_container_; }
 
  private:
   // Pool for memory allocations required during execution
@@ -75,7 +76,7 @@ class ExecutionContext {
 
   // Container for thread-local state. During parallel processing, execution
   // threads access their thread-local state from this container.
-  std::unique_ptr<ThreadStateContainer> thread_state_container_;
+  ThreadStateContainer thread_state_container_;
 };
 
 }  // namespace tpl::sql
