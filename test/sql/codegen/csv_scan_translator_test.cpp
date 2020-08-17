@@ -25,44 +25,42 @@ class CSVScanTranslatorTest : public SqlBasedTest {
   static void SetUpTestSuite() { tpl::vm::LLVMEngine::Initialize(); }
   static void TearDownTestSuite() { tpl::vm::LLVMEngine::Shutdown(); }
 
-  // Call up.
-  void SetUp() override { SqlBasedTest::SetUp(); }
+  void SetUp() override {
+    // Call up.
+    SqlBasedTest::SetUp();
+    // Setup test file.
+    path_ = std::filesystem::temp_directory_path() / "tpl-csvtest-tmp.csv";
+    file_.Open(path_, util::File::FLAG_CREATE_ALWAYS | util::File::FLAG_WRITE);
+  }
 
-  // Call up and delete all files.
   void TearDown() override {
+    // Call up.
     SqlBasedTest::TearDown();
-    for (const auto &[path, file] : files_) {
-      file->Close();
-      // Remove the file, ignoring the error code.
-      std::error_code ec;
-      std::filesystem::remove(path, ec);
-    }
+    // Delete test file.
+    file_.Close();
+    // Remove the file, ignoring the error code.
+    std::error_code ec;
+    std::filesystem::remove(path_, ec);
   }
 
-  std::pair<std::string, util::File *> CreateTemporaryTestFile() {
-    const auto path = std::filesystem::temp_directory_path() / "tpl-csvtest-tmp.csv";
-    const auto flags = util::File::FLAG_CREATE_ALWAYS | util::File::FLAG_WRITE;
-    auto &[_, file] = files_.emplace_back(path, std::make_unique<util::File>(path, flags));
-    if (!file->IsOpen() || file->HasError()) {
-      throw std::runtime_error(util::File::ErrorToString(file->GetErrorIndicator()));
-    }
-    return std::make_pair(path.string(), file.get());
+  void CreateTemporaryTestCSV(std::string_view contents) {
+    file_.Seek(util::File::Whence::FROM_BEGIN, 0);
+    file_.WriteFull(reinterpret_cast<const byte *>(contents.data()), contents.size());
+    file_.Flush();
   }
 
-  std::string CreateTemporaryTestCSV(std::string_view contents) {
-    auto [path, file] = CreateTemporaryTestFile();
-    file->WriteFull(reinterpret_cast<const byte *>(contents.data()), contents.size());
-    file->Flush();
-    return path;
-  }
+  std::string GetTestCSVPath() const { return path_.string(); }
 
  private:
-  std::vector<std::pair<std::filesystem::path, std::unique_ptr<util::File>>> files_;
+  // The path to the test file.
+  std::filesystem::path path_;
+  // The open file handle.
+  util::File file_;
 };
 
 TEST_F(CSVScanTranslatorTest, ManyTypesTest) {
   // Temporary CSV.
-  auto path = CreateTemporaryTestCSV(
+  CreateTemporaryTestCSV(
       "1,2,3,4,5.0,\"six\"\n"
       "7,8,9,10,11.12,\"thirteen\"\n");
 
@@ -89,15 +87,13 @@ TEST_F(CSVScanTranslatorTest, ManyTypesTest) {
     // Build
     csv_scan = planner::CSVScanPlanNode::Builder()
                    .SetOutputSchema(std::move(schema))
-                   .SetFileName(path)
+                   .SetFileName(GetTestCSVPath())
                    .SetScanPredicate(nullptr)
                    .Build();
   }
 
   // Make the checkers:
   // 1. Expect two tuples.
-  // 2. The count should be size of the table.
-  // 3. The sum should be sum from [1,N] where N=num_tuples.
   TupleCounterChecker counter(2);
   MultiChecker multi_checker({&counter});
 
