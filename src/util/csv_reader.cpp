@@ -3,6 +3,7 @@
 #include <immintrin.h>
 #include <cstring>
 
+#include "common/exception.h"
 #include "logging/logger.h"
 #include "util/fast_double_parser.h"
 
@@ -14,8 +15,15 @@ namespace tpl::util {
 //
 //===----------------------------------------------------------------------===//
 
+// NOTE: Internal buffer creation do not use std::make_unique<> because
+//       make-unique will zero-initialize the buffer. We don't need need the
+//       initial memory clear since it's overwritten by CSV data anyways. For
+//       this reason, we just call ::new and wrap it in a unique_ptr<>. We do
+//       this in the constructor and in Fill() when growing the buffer.
+
 CSVFile::CSVFile(std::string_view path)
-    : file_(path, util::File::FLAG_OPEN | util::File::FLAG_READ),
+    : path_(path),
+      file_(path, util::File::FLAG_OPEN | util::File::FLAG_READ),
       buffer_(std::unique_ptr<char[]>(new char[kDefaultBufferSize + kNumExtraPaddingChars])),
       read_pos_(0),
       end_pos_(0),
@@ -31,9 +39,8 @@ void CSVFile::Consume(const std::size_t n) {
 bool CSVFile::Fill() {
   // If there are any left over bytes in the current buffer, copy it to the
   // front of the buffer before reading more data.
-
   if (const auto left_over_bytes = end_pos_ - read_pos_; left_over_bytes > 0) {
-    std::memcpy(&buffer_[0], &buffer_[read_pos_], left_over_bytes);
+    std::memmove(&buffer_[0], &buffer_[read_pos_], left_over_bytes);
     end_pos_ -= read_pos_;
     read_pos_ = 0;
   }
@@ -42,8 +49,15 @@ bool CSVFile::Fill() {
   // that the consumer's working set is larger than what we're currently
   // delivering. We'll double the buffer size to accommodate, but up to a
   // maximum determined by kMaxAllocSize, usually 1GB.
-
   if (end_pos_ == buffer_alloc_size_) {
+    // If the buffer size is currently at max, we can't grow any further. Throw
+    // an error.
+    if (buffer_alloc_size_ == kMaxAllocSize) {
+      const auto msg = fmt::format("CSV file @ '{}' has row too large to fit in memory", path_);
+      LOG_ERROR(msg);
+      throw Exception(ExceptionType::Execution, msg);
+    }
+
     buffer_alloc_size_ = std::min(buffer_alloc_size_ * 2, kMaxAllocSize);
     auto new_buffer = std::unique_ptr<char[]>(new char[buffer_alloc_size_ + kNumExtraPaddingChars]);
     std::memcpy(&new_buffer[0], &buffer_[0], end_pos_ - read_pos_);
@@ -52,18 +66,23 @@ bool CSVFile::Fill() {
 
   // We have some room to read new data from the file. Do so now. If there's an
   // error, log it and terminate.
-
   const auto available = buffer_alloc_size_ - end_pos_;
   const auto bytes_read = file_.ReadFull(reinterpret_cast<byte *>(&buffer_[end_pos_]), available);
+  LOG_TRACE("Read {} bytes from file", bytes_read);
 
+  // Check error.
   if (bytes_read < 0) {
     LOG_ERROR("Error reading from CSV: {}", util::File::ErrorToString(file_.GetErrorIndicator()));
     return false;
   }
 
-  end_pos_ += bytes_read;
+  // Check if no new data was read.
+  if (bytes_read == 0) return false;
 
-  return read_pos_ < end_pos_;
+  LOG_TRACE("Old end position: {}", end_pos_);
+  end_pos_ += bytes_read;
+  LOG_TRACE("New end position: {}", end_pos_);
+  return end_pos_ > 0;
 }
 
 //===----------------------------------------------------------------------===//

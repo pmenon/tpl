@@ -109,6 +109,7 @@ class CSVFile : public CSVSource {
   bool Fill() override;
 
  protected:
+  std::string path_;
   util::File file_;
   std::unique_ptr<char[]> buffer_;
   std::size_t read_pos_;

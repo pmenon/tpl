@@ -7,7 +7,7 @@
 #include "sql/planner/plannodes/csv_scan_plan_node.h"
 #include "sql/printing_consumer.h"
 #include "sql/schema.h"
-
+#include "util/file.h"
 #include "vm/llvm_engine.h"
 
 // Tests
@@ -21,12 +21,51 @@ using namespace std::chrono_literals;
 
 class CSVScanTranslatorTest : public SqlBasedTest {
  protected:
-  void SetUp() override { SqlBasedTest::SetUp(); }
+  // Initialize and tear-down LLVM once.
   static void SetUpTestSuite() { tpl::vm::LLVMEngine::Initialize(); }
   static void TearDownTestSuite() { tpl::vm::LLVMEngine::Shutdown(); }
+
+  // Call up.
+  void SetUp() override { SqlBasedTest::SetUp(); }
+
+  // Call up and delete all files.
+  void TearDown() override {
+    SqlBasedTest::TearDown();
+    for (const auto &[path, file] : files_) {
+      file->Close();
+      // Remove the file, ignoring the error code.
+      std::error_code ec;
+      std::filesystem::remove(path, ec);
+    }
+  }
+
+  std::pair<std::string, util::File *> CreateTemporaryTestFile() {
+    const auto path = std::filesystem::temp_directory_path() / "tpl-csvtest-tmp.csv";
+    const auto flags = util::File::FLAG_CREATE_ALWAYS | util::File::FLAG_WRITE;
+    auto &[_, file] = files_.emplace_back(path, std::make_unique<util::File>(path, flags));
+    if (!file->IsOpen() || file->HasError()) {
+      throw std::runtime_error(util::File::ErrorToString(file->GetErrorIndicator()));
+    }
+    return std::make_pair(path.string(), file.get());
+  }
+
+  std::string CreateTemporaryTestCSV(std::string_view contents) {
+    auto [path, file] = CreateTemporaryTestFile();
+    file->WriteFull(reinterpret_cast<const byte *>(contents.data()), contents.size());
+    file->Flush();
+    return path;
+  }
+
+ private:
+  std::vector<std::pair<std::filesystem::path, std::unique_ptr<util::File>>> files_;
 };
 
 TEST_F(CSVScanTranslatorTest, ManyTypesTest) {
+  // Temporary CSV.
+  auto path = CreateTemporaryTestCSV(
+      "1,2,3,4,5.0,\"six\"\n"
+      "7,8,9,10,11.12,\"thirteen\"\n");
+
   planner::ExpressionMaker expr_maker;
 
   std::unique_ptr<planner::AbstractPlanNode> csv_scan;
@@ -50,16 +89,17 @@ TEST_F(CSVScanTranslatorTest, ManyTypesTest) {
     // Build
     csv_scan = planner::CSVScanPlanNode::Builder()
                    .SetOutputSchema(std::move(schema))
-                   .SetFileName("/home/pmenon/work/tpl/test.csv")
+                   .SetFileName(path)
                    .SetScanPredicate(nullptr)
                    .Build();
   }
 
   // Make the checkers:
-  // 1. There should be only one output.
+  // 1. Expect two tuples.
   // 2. The count should be size of the table.
   // 3. The sum should be sum from [1,N] where N=num_tuples.
-  MultiChecker multi_checker({});
+  TupleCounterChecker counter(2);
+  MultiChecker multi_checker({&counter});
 
   // Compile and Run
   OutputCollectorAndChecker store(&multi_checker, csv_scan->GetOutputSchema());
