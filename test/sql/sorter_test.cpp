@@ -250,9 +250,9 @@ TEST_F(SorterTest, SingleThreadLocalParallelSortTest) {
 
 TEST_F(SorterTest, UnbalancedParallelSortTest) {
   // All imbalance permutations
-  for (uint32_t x : {0, 1, 10, 100, 1000}) {
-    for (uint32_t y : {0, 1, 10, 100, 1000}) {
-      for (uint32_t z : {0, 1, 10, 100, 1000}) {
+  for (uint32_t x : {0, 1, 10, 100, 500}) {
+    for (uint32_t y : {0, 1, 10, 100, 500}) {
+      for (uint32_t z : {0, 1, 10, 100, 500}) {
         TestParallelSort<2>({x, y, z, x, y, z, x, y, z});
       }
     }
