@@ -50,7 +50,7 @@ class CompactStorage {
    * Create an instance for a row with the provided schema.
    * @param schema The schema of the row to be stored.
    */
-  CompactStorage(const std::vector<TypeId> &schema);
+  explicit CompactStorage(const std::vector<TypeId> &schema);
 
   /**
    * @return The number of elements this storage is configured to handle.

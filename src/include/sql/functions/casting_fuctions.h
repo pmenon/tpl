@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "sql/operators/cast_operators.h"
 #include "sql/value.h"
 

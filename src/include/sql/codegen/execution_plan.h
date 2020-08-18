@@ -27,7 +27,7 @@ class ExecutionStep {
    * @param pipeline_id The ID of the pipeline this steps is a part of.
    * @param func_name The name of the step function.
    */
-  ExecutionStep(PipelineId pipeline_id, std::string func_name);
+  explicit ExecutionStep(PipelineId pipeline_id, std::string func_name);
 
   /**
    * Resolve this step in the provided module.
@@ -67,7 +67,7 @@ class ExecutionPlan {
    * Create a new execution plan composed of the provided steps.
    * @param steps The steps making up the plan.
    */
-  ExecutionPlan(std::vector<ExecutionStep> &&steps);
+  explicit ExecutionPlan(std::vector<ExecutionStep> &&steps);
 
   /**
    * Run the plan using the provided query state, and using the given execution mode.
