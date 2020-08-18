@@ -291,20 +291,17 @@ class JoinHashTableIterator {
   /**
    * @return True if there is more data in the iterator; false otherwise.
    */
-  bool HasNext() const noexcept {
-    return entry_iter_ != entry_end_ || owned_entries_iter_ != owned_entries_end_;
-  }
+  bool HasNext() const noexcept { return entry_iter_ != entry_end_; }
 
   /**
    * Advance to the next tuple.
    */
   void Next() noexcept {
-    if (++entry_iter_ == entry_end_) {
-      if (owned_entries_iter_ != owned_entries_end_) {
-        entry_iter_ = owned_entries_iter_->begin();
-        entry_end_ = owned_entries_iter_->end();
-        ++owned_entries_iter_;
-      }
+    // Advance the entry iterator by one.
+    ++entry_iter_;
+    // If we've exhausted the current entry list, find another.
+    if (entry_iter_ == entry_end_) {
+      FindNextNonEmptyList();
     }
   }
 
@@ -331,11 +328,15 @@ class JoinHashTableIterator {
   }
 
  private:
-  using OwnedEntryListIterator = decltype(JoinHashTable::owned_)::const_iterator;
+  // Advance past any empty entry lists.
+  void FindNextNonEmptyList();
+
+ private:
+  using EntryListIterator = decltype(JoinHashTable::owned_)::const_iterator;
   using EntryIterator = decltype(JoinHashTable::entries_)::ConstIterator;
 
   // An iterator over the entry lists owned by the join hash table.
-  OwnedEntryListIterator owned_entries_iter_, owned_entries_end_;
+  EntryListIterator entry_list_iter_, entry_list_end_;
   // An iterator over the entries in a single entry list.
   EntryIterator entry_iter_, entry_end_;
 };

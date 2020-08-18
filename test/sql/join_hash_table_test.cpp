@@ -220,53 +220,69 @@ TEST_F(JoinHashTableTest, IterationTest) {
 TEST_F(JoinHashTableTest, IterateParallelMergedTableTest) {
   constexpr uint32_t kNumThreadLocalTables = 4;
 
-  // Create and populate 'kNumThreadLocalTables' thread-local join hash tables.
-  // The size of each table is chosen by each thread randomly (within some
-  // reasonable bound) and placed into 'table_sizes'.
-  //
-  // Then, merge each thread-local hash table (in parallel) into the main join
-  // hash table and iterate over the contents. For now, just check we touch each
-  // tuple once.
+  // The state struct.
+  class State {
+   public:
+    // Constructor.
+    State(MemoryPool *memory) : jht_(memory, sizeof(Tuple), false) {}
+    // JHT access.
+    JoinHashTable *JHT() { return &jht_; }
+    // Byte offset of table in state.
+    static std::size_t JHTByteOffset() { return 0; }
 
-  std::array<uint32_t, kNumThreadLocalTables> table_sizes;
+   private:
+    JoinHashTable jht_;
+  };
 
-  // Thread-local container setup.
-  MemoryPool memory(nullptr);
-  ThreadStateContainer container(&memory);
-  container.Reset(
-      sizeof(JoinHashTable),
-      [](auto ctx, auto space) {
-        new (space) JoinHashTable(reinterpret_cast<MemoryPool *>(ctx), sizeof(Tuple), false);
-      },
-      [](auto ctx, auto space) { std::destroy_at(reinterpret_cast<JoinHashTable *>(space)); },
-      &memory);
+  // The list of table sizes to construct.
+  using TableSizes = std::array<uint32_t, kNumThreadLocalTables>;
 
-  // Make and populate thread-local tables.
-  LaunchParallel(kNumThreadLocalTables, [&](auto tid) {
-    const auto size = std::random_device{}() % 10000;
-    table_sizes[tid] = size;
+  // Accepts a list of N integers where each integer value is the size of a hash
+  // table to build. Each of the N hash tables are built in parallel. After
+  // construction, the table is scanned and an expected count is confirmed.
+  const auto build_parallel_and_check_iteration = [](TableSizes table_sizes) {
+    // Thread-local container setup.
+    MemoryPool memory(nullptr);
+    ThreadStateContainer container(&memory);
+    container.Reset(
+        sizeof(State),
+        [](auto ctx, auto space) { new (space) State(reinterpret_cast<MemoryPool *>(ctx)); },
+        [](auto ctx, auto space) { std::destroy_at(reinterpret_cast<State *>(space)); }, &memory);
 
-    auto join_hash_table = container.AccessCurrentThreadStateAs<JoinHashTable>();
-    for (uint32_t i = 0; i < size; i++) {
-      auto tuple = Tuple{i, tid, 2, 44};
-      auto space = join_hash_table->AllocInputTuple(tuple.Hash());
-      *reinterpret_cast<Tuple *>(space) = tuple;
+    // Make and populate thread-local tables.
+    LaunchParallel(kNumThreadLocalTables, [&](auto tid) {
+      const auto size = table_sizes[tid];
+      auto join_hash_table = container.AccessCurrentThreadStateAs<State>()->JHT();
+      for (uint32_t i = 0; i < size; i++) {
+        auto tuple = Tuple{i, tid, 2, 44};
+        auto space = join_hash_table->AllocInputTuple(tuple.Hash());
+        *reinterpret_cast<Tuple *>(space) = tuple;
+      }
+    });
+
+    // Merge.
+    JoinHashTable main(&memory, sizeof(Tuple), false);
+    main.MergeParallel(&container, State::JHTByteOffset());
+
+    // Check.
+    uint32_t count = 0;
+    uint32_t expected_count = std::accumulate(table_sizes.begin(), table_sizes.end(), 0);
+    for (auto iter = JoinHashTableIterator(main); iter.HasNext(); iter.Next()) {
+      count++;
     }
-  });
 
-  // Merge.
-  JoinHashTable main(&memory, sizeof(Tuple), false);
-  main.MergeParallel(&container, 0);
+    EXPECT_EQ(expected_count, count)
+        << "Expected " << expected_count << " tuples in table. Counted: " << count;
+  };
 
-  // In total, there should be num_thread_local_tables*size tuples.
-  // Also check that each thread's entries exist once.
-  uint32_t count = 0, expected_count = std::accumulate(table_sizes.begin(), table_sizes.end(), 0);
-  for (auto iter = JoinHashTableIterator(main); iter.HasNext(); iter.Next()) {
-    count++;
-  }
-
-  EXPECT_EQ(expected_count, count)
-      << "Expected " << expected_count << " tuples in table. Counted: " << count;
+  // All empty tables.
+  build_parallel_and_check_iteration({0, 0, 0, 0});
+  // Some empty tables.
+  build_parallel_and_check_iteration({0, 1, 0, 2});
+  // Some random powers of two.
+  build_parallel_and_check_iteration({1u << 13u, 1u << 3u, 0, 1u << 12u});
+  // Some random primes and powers of two.
+  build_parallel_and_check_iteration({479, 15013, 137, 5857});
 }
 
 #if 0
