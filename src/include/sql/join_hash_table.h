@@ -277,6 +277,8 @@ inline uint64_t JoinHashTable::GetTupleCount() const {
  *   auto row = iter.GetCurrentRowAs<MyFancyAssType>();
  *   ...
  * }
+ *
+ * // TODO(pmenon): Vectorized version, too.
  */
 class JoinHashTableIterator {
  public:
@@ -289,19 +291,19 @@ class JoinHashTableIterator {
   /**
    * @return True if there is more data in the iterator; false otherwise.
    */
-  bool HasNext() const noexcept { return entry_iter_ != entry_end_ || chunk_iter_ != chunk_end_; }
+  bool HasNext() const noexcept {
+    return entry_iter_ != entry_end_ || owned_entries_iter_ != owned_entries_end_;
+  }
 
   /**
    * Advance to the next tuple.
-   * @pre A previous call to HasNext() must have returned true.
    */
   void Next() noexcept {
-    TPL_ASSERT(HasNext(), "HasNext() indicates no more data!");
     if (++entry_iter_ == entry_end_) {
-      if (chunk_iter_ != chunk_end_) {
-        entry_iter_ = chunk_iter_->begin();
-        entry_end_ = chunk_iter_->end();
-        ++chunk_iter_;
+      if (owned_entries_iter_ != owned_entries_end_) {
+        entry_iter_ = owned_entries_iter_->begin();
+        entry_end_ = owned_entries_iter_->end();
+        ++owned_entries_iter_;
       }
     }
   }
@@ -329,10 +331,12 @@ class JoinHashTableIterator {
   }
 
  private:
-  using ChunkIterator = decltype(JoinHashTable::owned_)::const_iterator;
+  using OwnedEntryListIterator = decltype(JoinHashTable::owned_)::const_iterator;
   using EntryIterator = decltype(JoinHashTable::entries_)::ConstIterator;
 
-  ChunkIterator chunk_iter_, chunk_end_;
+  // An iterator over the entry lists owned by the join hash table.
+  OwnedEntryListIterator owned_entries_iter_, owned_entries_end_;
+  // An iterator over the entries in a single entry list.
   EntryIterator entry_iter_, entry_end_;
 };
 

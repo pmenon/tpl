@@ -175,9 +175,7 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
 }
 
 TEST_F(JoinHashTableTest, IterationTest) {
-  for (uint32_t p = 0; p < 10; p++) {
-    const uint32_t size = 1u << p;
-
+  const auto check_iteration_for_size = [](const std::size_t size) {
     // The join table.
     MemoryPool memory(nullptr);
     JoinHashTable join_hash_table(&memory, sizeof(Tuple), false);
@@ -203,6 +201,19 @@ TEST_F(JoinHashTableTest, IterationTest) {
     }
 
     EXPECT_EQ(size, count) << "Expected " << size << " tuples in table. Counted: " << count;
+  };
+
+  // Empty table.
+  check_iteration_for_size(0);
+
+  // Some power-of-two sizes.
+  for (uint32_t p = 3; p < 10; p++) {
+    check_iteration_for_size(1u << p);
+  }
+
+  // Some random prime-sized tables.
+  for (uint32_t size : {134639, 1071223}) {
+    check_iteration_for_size(size);
   }
 }
 
