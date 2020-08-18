@@ -333,7 +333,7 @@ class JoinHashTableIterator {
 
  private:
   using EntryListIterator = decltype(JoinHashTable::owned_)::const_iterator;
-  using EntryIterator = decltype(JoinHashTable::entries_)::ConstIterator;
+  using EntryIterator = decltype(JoinHashTable::entries_)::const_iterator;
 
   // An iterator over the entry lists owned by the join hash table.
   EntryListIterator entry_list_iter_, entry_list_end_;
