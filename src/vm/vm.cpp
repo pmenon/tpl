@@ -74,13 +74,9 @@ class VM::Frame {
 // Virtual Machine
 // ---------------------------------------------------------
 
-// The maximum amount of stack to use. If the function requires more than 16K
+// The maximum amount of stack to use. If the function requires more than 4K
 // bytes, acquire space from the heap.
-static constexpr const uint32_t kMaxStackAllocSize = 1ull << 14ull;
-// A soft-maximum amount of stack to use. If a function's frame requires more
-// than 4K (the soft max), try the stack and fallback to heap. If the function
-// requires less, use the stack.
-static constexpr const uint32_t kSoftMaxStackAllocSize = 1ull << 12ull;
+static constexpr const std::size_t kMaxStackAllocSize = 1ull << 12ull;
 
 VM::VM(const Module *module) : module_(module) {}
 
@@ -97,9 +93,6 @@ void VM::InvokeFunction(const Module *module, const FunctionId func_id, const ui
   if (frame_size > kMaxStackAllocSize) {
     used_heap = true;
     raw_frame = static_cast<uint8_t *>(Memory::MallocAligned(frame_size, alignof(uint64_t)));
-  } else if (frame_size > kSoftMaxStackAllocSize) {
-    // TODO(pmenon): Check stack before allocation
-    raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   } else {
     raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   }
@@ -1800,9 +1793,6 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
   if (frame_size > kMaxStackAllocSize) {
     used_heap = true;
     raw_frame = static_cast<uint8_t *>(Memory::MallocAligned(frame_size, alignof(uint64_t)));
-  } else if (frame_size > kSoftMaxStackAllocSize) {
-    // TODO(pmenon): Check stack before allocation
-    raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   } else {
     raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   }
