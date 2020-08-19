@@ -2296,22 +2296,26 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
   // We're now ready to compute offset. Let's lookup the field's offset in the
   // struct type.
 
-  auto *field_name = node->Member()->As<ast::IdentifierExpr>();
+  auto field_name = node->Member()->As<ast::IdentifierExpr>();
   auto offset = obj_type->GetOffsetOfFieldByName(field_name->Name());
 
   // Now that we have a pointer to the composite object, we need to compute a
-  // pointer to the field within the object. If the offset of the field in the
-  // object is zero, we needn't do anything - we can just reinterpret the object
-  // pointer. If the field offset is greater than zero, we generate a LEA.
+  // pointer to the field within the object. We do so by generating a LEA op.
+  // NOTE: We initially implemented an optimization that elided the LEA if the
+  //       field offset was zero. The thinking was that a zero offset meant we
+  //       could safely reinterpret cast the object pointer directly into a
+  //       pointer to the field since their addresses are equivalent. But, this
+  //       blows things up in the backend because we've lost context required to
+  //       recognize this optimization. Removing this optimization results in
+  //       generating more redundant LEA instructions with zero offsets, which
+  //       may impact VM performance and increase backend compilation times
+  //       (due to more instructions).
+  //       08/19/20 pmenon - Removed optimization. Observed marginal change in
+  //                         VM performance and LLVM time in TPC-H benchmark.
 
-  LocalVar field_ptr;
-  if (offset == 0) {
-    field_ptr = obj_ptr;
-  } else {
-    field_ptr = GetCurrentFunction()->NewLocal(node->GetType()->PointerTo());
-    GetEmitter()->EmitLea(field_ptr, obj_ptr, offset);
-    field_ptr = field_ptr.ValueOf();
-  }
+  LocalVar field_ptr = GetCurrentFunction()->NewLocal(node->GetType()->PointerTo());
+  GetEmitter()->EmitLea(field_ptr, obj_ptr, offset);
+  field_ptr = field_ptr.ValueOf();
 
   if (GetExecutionResult()->IsLValue()) {
     TPL_ASSERT(!GetExecutionResult()->HasDestination(), "L-Values produce their destination");
