@@ -867,10 +867,9 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           ir_builder->CreateStore(addr, args[0]);
         } else {
           llvm::SmallVector<llvm::Value *, 2> gep_args;
-          uint32_t elem_size = dl.getTypeSizeInBits(pointee_type);
-          if (llvm::isa<llvm::ArrayType>(pointee_type)) {
-            llvm::Type *const arr_type = pointee_type->getArrayElementType();
-            elem_size = dl.getTypeSizeInBits(arr_type) / kBitsPerByte;
+          llvm::TypeSize elem_size = dl.getTypeSizeInBits(pointee_type);
+          if (auto arr_type = llvm::dyn_cast<llvm::ArrayType>(pointee_type)) {
+            elem_size = dl.getTypeSizeInBits(arr_type->getArrayElementType()) / kBitsPerByte;
             gep_args.push_back(llvm::ConstantInt::get(type_map_->Int64Type(), 0));
           }
           gep_args.push_back(llvm::ConstantInt::get(type_map_->Int64Type(), offset / elem_size));
@@ -882,10 +881,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
       }
 
       case Bytecode::LeaScaled: {
-        TPL_ASSERT(args[1]->getType()->isPointerTy(), "First argument must be a pointer");
-        // For any LeaScaled, the scale is handled by LLVM's GEP. If it's an
-        // array of structures, we need to handle the final offset/displacement
-        // into the struct as the last GEP index.
+        TPL_ASSERT(args[1]->getType()->isPointerTy(), "Source of LEA_SCALED must be a pointer");
+        // The scale is handled automatically by LLVM's GEP instruction. If it's
+        // an array of structures, we need to handle the final displacement into
+        // the struct as the last GEP index.
         llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
         if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
           llvm::Value *addr = ir_builder->CreateInBoundsGEP(args[1], {args[2]});
