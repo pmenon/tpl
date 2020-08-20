@@ -24,8 +24,7 @@ class CodegenBasedTest : public TplTest {
       std::function<std::unique_ptr<sql::codegen::OutputChecker>()> checker_maker) {
     const sql::planner::OutputSchema *output_schema = query->GetPlan().GetOutputSchema();
     // Test in all modes.
-    for (const auto mode :
-         {vm::ExecutionMode::Interpret, vm::ExecutionMode::Adaptive, vm::ExecutionMode::Compiled}) {
+    for (const auto mode : {vm::ExecutionMode::Interpret}) {
       std::unique_ptr<sql::codegen::OutputChecker> checker = checker_maker();
       sql::codegen::OutputCollectorAndChecker store(checker.get(), output_schema);
       //sql::codegen::MultiOutputCallback callback({&store});
