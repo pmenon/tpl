@@ -1,10 +1,7 @@
-#include "util/sql_test_harness.h"
-
 #include <memory>
 
 #include "sql/catalog.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/execution_context.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
@@ -12,23 +9,17 @@
 #include "sql/schema.h"
 #include "sql/table.h"
 
-#include "vm/llvm_engine.h"
-
 // Tests
 #include "sql/codegen/output_checker.h"
 #include "sql/planner/expression_maker.h"
 #include "sql/planner/output_schema_util.h"
+#include "util/codegen_test_harness.h"
 
 namespace tpl::sql::codegen {
 
 using namespace std::chrono_literals;
 
-class HashAggregationTranslatorTest : public SqlBasedTest {
- protected:
-  void SetUp() override { SqlBasedTest::SetUp(); }
-  static void SetUpTestSuite() { tpl::vm::LLVMEngine::Initialize(); }
-  static void TearDownTestSuite() { tpl::vm::LLVMEngine::Shutdown(); }
-};
+class HashAggregationTranslatorTest : public CodegenBasedTest {};
 
 TEST_F(HashAggregationTranslatorTest, SimpleAggregateTest) {
   // SELECT col2, SUM(col1) FROM test_1 WHERE col1 < 1000 GROUP BY col2;
@@ -80,23 +71,17 @@ TEST_F(HashAggregationTranslatorTest, SimpleAggregateTest) {
               .SetHavingClausePredicate(nullptr)
               .Build();
   }
-  auto last = agg.get();
-  // Make the checkers
-  TupleCounterChecker num_checker(10);
-  SingleIntSumChecker sum_checker(1, (1000 * 999) / 2);
-  MultiChecker multi_checker({&num_checker, &sum_checker});
 
-  // Compile and Run
-  OutputCollectorAndChecker store(&multi_checker, agg->GetOutputSchema());
-  MultiOutputCallback callback({&store});
-  sql::MemoryPool memory(nullptr);
-  sql::ExecutionContext exec_ctx(&memory, agg->GetOutputSchema(), &callback);
+  // Compile.
+  auto query = CompilationContext::Compile(*agg);
 
-  // Run & Check
-  auto query = CompilationContext::Compile(*last);
-  query->Run(&exec_ctx);
-
-  multi_checker.CheckCorrectness();
+  // Run and check.
+  ExecuteAndCheckInAllModes(query.get(), [](){
+    std::vector<std::unique_ptr<OutputChecker>> checks;
+    checks.push_back(std::make_unique<TupleCounterChecker>(10));
+    checks.push_back(std::make_unique<SingleIntSumChecker>(1, (1000 * 999) / 2));
+    return std::make_unique<MultiChecker>(std::move(checks));
+  });
 }
 
 }  // namespace tpl::sql::codegen

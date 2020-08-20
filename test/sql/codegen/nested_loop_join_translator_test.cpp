@@ -1,33 +1,24 @@
-#include "util/sql_test_harness.h"
-
 #include <memory>
 
 #include "sql/catalog.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/execution_context.h"
 #include "sql/planner/plannodes/nested_loop_join_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/printing_consumer.h"
 #include "sql/schema.h"
 #include "sql/table.h"
 
-#include "vm/llvm_engine.h"
-
 // Tests
 #include "sql/codegen/output_checker.h"
 #include "sql/planner/expression_maker.h"
 #include "sql/planner/output_schema_util.h"
+#include "util/codegen_test_harness.h"
 
 namespace tpl::sql::codegen {
 
 using namespace std::chrono_literals;
 
-class NestedLoopJoinTranslatorTest : public SqlBasedTest {
- protected:
-  void SetUp() override { SqlBasedTest::SetUp(); }
-  static void SetUpTestSuite() { tpl::vm::LLVMEngine::Initialize(); }
-  static void TearDownTestSuite() { tpl::vm::LLVMEngine::Shutdown(); }
-};
+class NestedLoopJoinTranslatorTest : public CodegenBasedTest {};
 
 TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
   // Self join:
@@ -107,34 +98,29 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
                   .Build();
   }
 
-  // Checkers:
-  // 1. Only 80 rows should be produced due to where clause.
-  // 2. Joined columns should be equal.
-  // 3. The 4th column is the sum of the 1rst and 3rd columns.
-  TupleCounterChecker tuple_count_check(80);
-  SingleIntJoinChecker join_col_check(1, 2);
-  GenericChecker row_check(
-      [](const std::vector<const sql::Val *> &vals) {
-        // Check that col4 = col1 + col3.
-        auto col1 = static_cast<const sql::Integer *>(vals[0]);
-        auto col3 = static_cast<const sql::Integer *>(vals[2]);
-        auto col4 = static_cast<const sql::Integer *>(vals[3]);
-        ASSERT_EQ(col4->val, col1->val + col3->val);
-      },
-      nullptr);
-  MultiChecker multi_check({&tuple_count_check, &join_col_check, &row_check});
-
-  // Setup for execution.
-  OutputCollectorAndChecker store(&multi_check, nl_join->GetOutputSchema());
-  MultiOutputCallback callback({&store});
-  sql::MemoryPool memory(nullptr);
-  sql::ExecutionContext exec_ctx(&memory, nl_join->GetOutputSchema(), &callback);
-
-  // Run & Check
+  // Compile.
   auto query = CompilationContext::Compile(*nl_join);
-  query->Run(&exec_ctx);
 
-  multi_check.CheckCorrectness();
+  // Run and check.
+  ExecuteAndCheckInAllModes(query.get(), []() {
+    // Checkers:
+    // 1. Only 80 rows should be produced due to where clause.
+    // 2. Joined columns should be equal; columns 1 and 2.
+    // 3. The 4th column is the sum of the 1rst and 3rd columns.
+    std::vector<std::unique_ptr<OutputChecker>> checks;
+    checks.push_back(std::make_unique<TupleCounterChecker>(80));
+    checks.push_back(std::make_unique<SingleIntJoinChecker>(1, 2));
+    checks.push_back(std::make_unique<GenericChecker>(
+        [](const std::vector<const sql::Val *> &vals) {
+          // Check that col4 = col1 + col3.
+          auto col1 = static_cast<const sql::Integer *>(vals[0]);
+          auto col3 = static_cast<const sql::Integer *>(vals[2]);
+          auto col4 = static_cast<const sql::Integer *>(vals[3]);
+          ASSERT_EQ(col4->val, col1->val + col3->val);
+        },
+        nullptr));
+    return std::make_unique<MultiChecker>(std::move(checks));
+  });
 }
 
 }  // namespace tpl::sql::codegen

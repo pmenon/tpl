@@ -10,12 +10,26 @@
 #include "util/test_harness.h"
 
 namespace tpl::sql::codegen {
+
 /**
- * Helper class to check if the output of a query is corrected.
+ * Helper class to check if the output of a query is correct.
  */
 class OutputChecker {
  public:
+  /**
+   * Default base.
+   */
+  virtual ~OutputChecker() = default;
+
+  /**
+   * Called after the query has completed to check the results in total.
+   */
   virtual void CheckCorrectness() = 0;
+
+  /**
+   * Called on a per-output-batch basis.
+   * @param output A batch of output in row-form.
+   */
   virtual void ProcessBatch(const std::vector<std::vector<const sql::Val *>> &output) = 0;
 };
 
@@ -28,13 +42,14 @@ class MultiChecker : public OutputChecker {
    * Constructor
    * @param checkers list of output checkers
    */
-  explicit MultiChecker(std::vector<OutputChecker *> &&checkers) : checkers_(std::move(checkers)) {}
+  explicit MultiChecker(std::vector<std::unique_ptr<OutputChecker>> &&args)
+      : checkers_(std::move(args)) {}
 
   /**
    * Call checkCorrectness on all output checkers
    */
   void CheckCorrectness() override {
-    for (const auto checker : checkers_) {
+    for (const auto &checker : checkers_) {
       checker->CheckCorrectness();
     }
   }
@@ -44,14 +59,13 @@ class MultiChecker : public OutputChecker {
    * @param output current output batch
    */
   void ProcessBatch(const std::vector<std::vector<const sql::Val *>> &output) override {
-    for (const auto checker : checkers_) {
+    for (const auto &checker : checkers_) {
       checker->ProcessBatch(output);
     }
   }
 
  private:
-  // list of checkers
-  std::vector<OutputChecker *> checkers_;
+  std::vector<std::unique_ptr<OutputChecker>> checkers_;
 };
 
 using RowChecker = std::function<void(const std::vector<const sql::Val *> &)>;

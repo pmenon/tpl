@@ -1,5 +1,3 @@
-#include "util/sql_test_harness.h"
-
 #include <memory>
 
 #include "sql/catalog.h"
@@ -11,23 +9,17 @@
 #include "sql/schema.h"
 #include "sql/table.h"
 
-#include "vm/llvm_engine.h"
-
 // Tests
 #include "sql/codegen/output_checker.h"
 #include "sql/planner/expression_maker.h"
 #include "sql/planner/output_schema_util.h"
+#include "util/codegen_test_harness.h"
 
 namespace tpl::sql::codegen {
 
 using namespace std::chrono_literals;
 
-class SeqScanTranslatorTest : public SqlBasedTest {
- protected:
-  void SetUp() override { SqlBasedTest::SetUp(); }
-  static void SetUpTestSuite() { tpl::vm::LLVMEngine::Initialize(); }
-  static void TearDownTestSuite() { tpl::vm::LLVMEngine::Shutdown(); }
-};
+class SeqScanTranslatorTest : public CodegenBasedTest {};
 
 TEST_F(SeqScanTranslatorTest, SimpleSeqScanTest) {
   // SELECT col1, col2, col1 * col2, col1 >= 100*col2 FROM test_1 WHERE col1 < 500 AND col2 >= 5;
@@ -35,6 +27,9 @@ TEST_F(SeqScanTranslatorTest, SimpleSeqScanTest) {
   planner::ExpressionMaker expr_maker;
   sql::Table *table = accessor->LookupTableByName("test_1");
   const auto &table_schema = table->GetSchema();
+
+  const int32_t col1_filter_val = 500, col2_filter_val = 5;
+
   std::unique_ptr<planner::AbstractPlanNode> seq_scan;
   planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
   {
@@ -50,8 +45,8 @@ TEST_F(SeqScanTranslatorTest, SimpleSeqScanTest) {
     seq_scan_out.AddOutput("col4", col4);
     auto schema = seq_scan_out.MakeSchema();
     // Make predicate
-    auto comp1 = expr_maker.CompareLt(col1, expr_maker.Constant(500));
-    auto comp2 = expr_maker.CompareGe(col2, expr_maker.Constant(5));
+    auto comp1 = expr_maker.CompareLt(col1, expr_maker.Constant(col1_filter_val));
+    auto comp2 = expr_maker.CompareGe(col2, expr_maker.Constant(col2_filter_val));
     auto predicate = expr_maker.ConjunctionAnd(comp1, comp2);
     // Build
     planner::SeqScanPlanNode::Builder builder;
@@ -61,23 +56,21 @@ TEST_F(SeqScanTranslatorTest, SimpleSeqScanTest) {
                    .Build();
   }
 
-  auto last = seq_scan.get();
+  // Compile.
+  auto query = CompilationContext::Compile(*seq_scan);
 
-  // Make the output checkers
-  SingleIntComparisonChecker col1_checker(std::less<int64_t>(), 0, 500);
-  SingleIntComparisonChecker col2_checker(std::greater_equal<int64_t>(), 1, 5);
-  MultiChecker multi_checker({&col1_checker, &col2_checker});
-
-  // Create the execution context
-  OutputCollectorAndChecker store(&multi_checker, last->GetOutputSchema());
-  MultiOutputCallback callback({&store});
-  sql::MemoryPool memory(nullptr);
-  sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
-  // Run & Check
-  auto query = CompilationContext::Compile(*last);
-  query->Run(&exec_ctx);
-
-  multi_checker.CheckCorrectness();
+  // Run and check.
+  ExecuteAndCheckInAllModes(query.get(), [&]() {
+    // Checkers:
+    // 1. Filtered column (0) is less than 500 (i.e., the filtering value);
+    // 2. Filtered column (1) is less than 5 (i.e., the filtering value);
+    std::vector<std::unique_ptr<OutputChecker>> checks;
+    checks.push_back(
+        std::make_unique<SingleIntComparisonChecker>(std::less<int64_t>(), 0, col1_filter_val));
+    checks.push_back(std::make_unique<SingleIntComparisonChecker>(std::greater_equal<int64_t>(), 1,
+                                                                  col2_filter_val));
+    return std::make_unique<MultiChecker>(std::move(checks));
+  });
 }
 
 TEST_F(SeqScanTranslatorTest, NonVecFilterTest) {
@@ -120,33 +113,28 @@ TEST_F(SeqScanTranslatorTest, NonVecFilterTest) {
                    .SetTableOid(table->GetId())
                    .Build();
   }
-  auto last = seq_scan.get();
-  // Make the output checkers
-  // Make the checkers
-  uint32_t num_output_rows = 0;
-  RowChecker row_checker = [&num_output_rows](const std::vector<const sql::Val *> &vals) {
-    // Read cols
-    auto col1 = static_cast<const sql::Integer *>(vals[0]);
-    auto col2 = static_cast<const sql::Integer *>(vals[1]);
-    ASSERT_FALSE(col1->is_null || col2->is_null);
-    // Check predicate
-    ASSERT_TRUE((col1->val < 500 && col2->val >= 5) ||
-                (col1->val >= 500 && col1->val < 1000 && (col2->val == 7 || col2->val == 3)));
-    num_output_rows++;
-  };
-  GenericChecker checker(row_checker, {});
 
-  // Create the execution context
-  OutputCollectorAndChecker store(&checker, last->GetOutputSchema());
-  MultiOutputCallback callback({&store});
-  sql::MemoryPool memory(nullptr);
-  sql::ExecutionContext exec_ctx(&memory, last->GetOutputSchema(), &callback);
+  // Compile.
+  auto query = CompilationContext::Compile(*seq_scan);
 
-  // Run & Check
-  auto query = CompilationContext::Compile(*last);
-  query->Run(&exec_ctx);
-
-  checker.CheckCorrectness();
+  // Run and check.
+  ExecuteAndCheckInAllModes(query.get(), [&]() {
+    // Check filtering value.
+    std::vector<std::unique_ptr<OutputChecker>> checks;
+    checks.push_back(std::make_unique<GenericChecker>(
+        [](const std::vector<const sql::Val *> &vals) {
+          // Read cols
+          auto col1 = static_cast<const sql::Integer *>(vals[0]);
+          auto col2 = static_cast<const sql::Integer *>(vals[1]);
+          ASSERT_FALSE(col1->is_null);
+          ASSERT_FALSE(col2->is_null);
+          // Check predicate.
+          ASSERT_TRUE((col1->val < 500 && col2->val >= 5) ||
+                      (col1->val >= 500 && col1->val < 1000 && (col2->val == 7 || col2->val == 3)));
+        },
+        nullptr));
+    return std::make_unique<MultiChecker>(std::move(checks));
+  });
 }
 
 TEST_F(SeqScanTranslatorTest, SeqScanWithProjection) {
@@ -194,33 +182,33 @@ TEST_F(SeqScanTranslatorTest, SeqScanWithProjection) {
     proj = builder.SetOutputSchema(std::move(schema)).AddChild(std::move(seq_scan)).Build();
   }
 
-  // Make the output checkers:
-  // 1. There has to be exactly 500 rows, due to the filter.
-  // 2. col1 must be less than 500, due to the filter.
-  TupleCounterChecker num_checker(500);
-  SingleIntComparisonChecker col1_checker(std::less<>(), 0, 500);
-  GenericChecker col1_issquare_checker(
-      [](const std::vector<const sql::Val *> &vals) {
-        // Ensure col3, which should be col1*col1, is indeed a perfect square.
-        auto col3 = static_cast<const sql::Integer *>(vals[2]);
-        EXPECT_FALSE(col3->is_null);
-        const auto root = std::round(std::sqrt(col3->val));
-        EXPECT_EQ(col3->val, root * root);
-      },
-      nullptr);
-  MultiChecker multi_checker({&num_checker, &col1_checker, &col1_issquare_checker});
-
-  // Create the execution context
-  OutputCollectorAndChecker store{&multi_checker, proj->GetOutputSchema()};
-  MultiOutputCallback callback({&store});
-  sql::MemoryPool memory(nullptr);
-  sql::ExecutionContext exec_ctx(&memory, proj->GetOutputSchema(), &callback);
-
-  // Run & Check
+  // Compile.
   auto query = CompilationContext::Compile(*proj);
-  query->Run(&exec_ctx);
 
-  multi_checker.CheckCorrectness();
+  // Run and check.
+  ExecuteAndCheckInAllModes(query.get(), [&]() {
+    // Make the output checkers:
+    // 1. There has to be exactly 500 rows, due to the filter.
+    // 2. Check col3 and col4 values for each row.
+    std::vector<std::unique_ptr<OutputChecker>> checks;
+    checks.push_back(std::make_unique<SingleIntComparisonChecker>(std::less<>(), 0, 500));
+    checks.push_back(std::make_unique<GenericChecker>(
+        [](const std::vector<const sql::Val *> &vals) {
+          auto col1 = static_cast<const sql::Integer *>(vals[0]);
+          auto col2 = static_cast<const sql::Integer *>(vals[1]);
+          auto col3 = static_cast<const sql::Integer *>(vals[2]);
+          auto col4 = static_cast<const sql::BoolVal *>(vals[3]);
+          // col3 = col1*col1
+          EXPECT_FALSE(col3->is_null);
+          const auto root = std::round(std::sqrt(col3->val));
+          EXPECT_EQ(col3->val, root * root);
+          // col4 = col1 >= 100*col2
+          EXPECT_FALSE(col4->is_null);
+          EXPECT_EQ(col4->val, col1->val >= 100 * col2->val);
+        },
+        nullptr));
+    return std::make_unique<MultiChecker>(std::move(checks));
+  });
 }
 
 }  // namespace tpl::sql::codegen
