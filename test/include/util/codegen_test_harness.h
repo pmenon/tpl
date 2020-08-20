@@ -25,12 +25,12 @@ class CodegenBasedTest : public TplTest {
     const sql::planner::OutputSchema *output_schema = query->GetPlan().GetOutputSchema();
     // Test in all modes.
     for (const auto mode : {vm::ExecutionMode::Interpret}) {
+      // Create a checker.
       std::unique_ptr<sql::codegen::OutputChecker> checker = checker_maker();
       sql::codegen::OutputCollectorAndChecker store(checker.get(), output_schema);
-      //sql::codegen::MultiOutputCallback callback({&store});
+      // Setup and run the query.
       sql::MemoryPool memory(nullptr);
       sql::ExecutionContext exec_ctx(&memory, output_schema, &store);
-      // Run.
       query->Run(&exec_ctx, mode);
       // Check.
       checker->CheckCorrectness();
