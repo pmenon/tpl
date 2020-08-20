@@ -43,7 +43,7 @@ class AstPrettyPrintImpl : public AstVisitor<AstPrettyPrintImpl> {
 void AstPrettyPrintImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
   os_ << "[";
   if (node->HasLength()) {
-    os_ << node->Length();
+    Visit(node->Length());
   } else {
     os_ << "*";
   }
