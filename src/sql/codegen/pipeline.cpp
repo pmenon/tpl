@@ -267,7 +267,7 @@ void Pipeline::DefinePipelineFunctions(PipelineContext *pipeline_ctx) const {
 }
 
 std::vector<ast::FunctionDecl *> Pipeline::GeneratePipelineLogic() const {
-  LOG_INFO("Pipeline-{}: par.={}, vec.={}, path=[{}]", id_, IsParallel(), IsVectorized(),
+  LOG_INFO("Pipeline-{}: parallel={}, vectorized={}, path=[{}]", id_, IsParallel(), IsVectorized(),
            ConstructPipelinePath());
 
   PipelineContext pipeline_context(*this);
