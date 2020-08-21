@@ -15,6 +15,25 @@
 
 namespace tpl::util {
 
+namespace detail {
+
+// Trait to ensure only "valid" word/block types are allowed when defining the
+// bit vector. We only allow unsigned 8-, 16-, 32-, or 64-bit integer types.
+// We explicitly disallow 'bool' which is considered both an integral and
+// unsigned type which should qualify in the first template specialization.
+
+template <typename T>
+struct AllowedWordType {
+  static constexpr bool value = std::is_integral_v<T> && std::is_unsigned_v<T>;
+};
+
+template <>
+struct AllowedWordType<bool> {
+  static constexpr bool value = false;
+};
+
+}  // namespace detail
+
 /**
  * A BitVector represents a set of bits. It provides access to individual bits through
  * BitVector::operator[], along with a collection of operations commonly performed on bit vectors
@@ -33,22 +52,19 @@ namespace tpl::util {
  */
 template <typename WordType = uint64_t, typename Allocator = std::allocator<WordType>>
 class BitVector {
-  static_assert(std::is_integral_v<WordType> && std::is_unsigned_v<WordType>,
-                "Template type 'Word' must be an unsigned integral");
-
-  // The size of a word (in bytes) used to store a contiguous set of bits. This
-  // is the smallest granularity we store bits at.
-  static constexpr uint32_t kWordSizeBytes = sizeof(WordType);
+  // Word type must be unsigned integer type.
+  static_assert(detail::AllowedWordType<WordType>::value,
+                "Base 'Word' type must be an unsigned integral");
 
   // The size of a word in bits.
-  static constexpr uint32_t kWordSizeBits = kWordSizeBytes * kBitsPerByte;
+  static constexpr uint32_t kBitsInWord = std::numeric_limits<WordType>::digits;
 
   // Word value with all ones.
   static constexpr WordType kAllOnesWord = ~static_cast<WordType>(0);
 
   // Ensure the size is a power of two so all the division and modulo math we do
   // is optimized into bit shifts.
-  static_assert(MathUtil::IsPowerOf2(kWordSizeBits),
+  static_assert(MathUtil::IsPowerOf2(kBitsInWord),
                 "Word size in bits expected to be a power of two");
 
  public:
@@ -62,7 +78,7 @@ class BitVector {
    * @return The number of words required to store the given number of bits.
    */
   static constexpr uint32_t NumNeededWords(uint32_t num_bits) {
-    return util::MathUtil::DivRoundUp(num_bits, kWordSizeBits);
+    return util::MathUtil::DivRoundUp(num_bits, kBitsInWord);
   }
 
   /**
@@ -144,8 +160,8 @@ class BitVector {
    */
   bool Test(const uint32_t position) const {
     TPL_ASSERT(position < GetNumBits(), "Index out of range");
-    const WordType mask = WordType(1) << (position % kWordSizeBits);
-    return words_[position / kWordSizeBits] & mask;
+    const WordType mask = WordType(1) << (position % kBitsInWord);
+    return words_[position / kBitsInWord] & mask;
   }
 
   /**
@@ -155,7 +171,7 @@ class BitVector {
    */
   BitVector &Set(const uint32_t position) {
     TPL_ASSERT(position < GetNumBits(), "Index out of range");
-    words_[position / kWordSizeBits] |= WordType(1) << (position % kWordSizeBits);
+    words_[position / kBitsInWord] |= WordType(1) << (position % kBitsInWord);
     return *this;
   }
 
@@ -167,9 +183,9 @@ class BitVector {
    */
   BitVector &Set(const uint32_t position, const bool v) {
     TPL_ASSERT(position < GetNumBits(), "Index out of range");
-    WordType mask = static_cast<WordType>(1) << (position % kWordSizeBits);
-    words_[position / kWordSizeBits] ^=
-        (-static_cast<WordType>(v) ^ words_[position / kWordSizeBits]) & mask;
+    WordType mask = static_cast<WordType>(1) << (position % kBitsInWord);
+    words_[position / kBitsInWord] ^=
+        (-static_cast<WordType>(v) ^ words_[position / kBitsInWord]) & mask;
     return *this;
   }
 
@@ -190,18 +206,18 @@ class BitVector {
       return *this;
     }
 
-    const auto start_word_idx = start / kWordSizeBits;
-    const auto end_word_idx = end / kWordSizeBits;
+    const auto start_word_idx = start / kBitsInWord;
+    const auto end_word_idx = end / kBitsInWord;
 
     if (start_word_idx == end_word_idx) {
-      const WordType prefix_mask = kAllOnesWord << (start % kWordSizeBits);
-      const WordType postfix_mask = ~(kAllOnesWord << (end % kWordSizeBits));
+      const WordType prefix_mask = kAllOnesWord << (start % kBitsInWord);
+      const WordType postfix_mask = ~(kAllOnesWord << (end % kBitsInWord));
       words_[start_word_idx] |= (prefix_mask & postfix_mask);
       return *this;
     }
 
     // Prefix
-    words_[start_word_idx] |= kAllOnesWord << (start % kWordSizeBits);
+    words_[start_word_idx] |= kAllOnesWord << (start % kBitsInWord);
 
     // Middle
     for (uint32_t i = start_word_idx + 1; i < end_word_idx; i++) {
@@ -209,7 +225,7 @@ class BitVector {
     }
 
     // Postfix
-    words_[end_word_idx] |= ~(kAllOnesWord << (end % kWordSizeBits));
+    words_[end_word_idx] |= ~(kAllOnesWord << (end % kBitsInWord));
 
     return *this;
   }
@@ -233,7 +249,7 @@ class BitVector {
    */
   BitVector &Unset(const uint32_t position) {
     TPL_ASSERT(position < GetNumBits(), "Index out of range");
-    words_[position / kWordSizeBits] &= ~(WordType(1) << (position % kWordSizeBits));
+    words_[position / kBitsInWord] &= ~(WordType(1) << (position % kBitsInWord));
     return *this;
   }
 
@@ -255,7 +271,7 @@ class BitVector {
    */
   BitVector &Flip(const uint32_t position) {
     TPL_ASSERT(position < GetNumBits(), "Index out of range");
-    words_[position / kWordSizeBits] ^= WordType(1) << (position % kWordSizeBits);
+    words_[position / kBitsInWord] ^= WordType(1) << (position % kBitsInWord);
     return *this;
   }
 
@@ -356,7 +372,7 @@ class BitVector {
       if (n < count) {
         const WordType mask = _pdep_u64(static_cast<WordType>(1) << n, word);
         const uint32_t pos = BitUtil::CountTrailingZeros(mask);
-        return std::min(GetNumBits(), (i * kWordSizeBits) + pos);
+        return std::min(GetNumBits(), (i * kBitsInWord) + pos);
       }
       n -= count;
     }
@@ -482,7 +498,7 @@ class BitVector {
       WordType word_result = 0;
       while (word != 0) {
         const auto r = BitUtil::CountTrailingZeros(word);
-        word_result |= static_cast<WordType>(p(i * kWordSizeBits + r)) << r;
+        word_result |= static_cast<WordType>(p(i * kBitsInWord + r)) << r;
         word &= (word - 1);  // Should compile into a `blsr`.
       }
       words_[i] &= word_result;
@@ -513,14 +529,14 @@ class BitVector {
     // fully vectorized if the predicate function can also vectorized.
     for (WordType i = 0; i < num_full_words; i++) {
       WordType word_result = 0;
-      for (WordType j = 0; j < kWordSizeBits; j++) {
-        word_result |= static_cast<WordType>(p(i * kWordSizeBits + j)) << j;
+      for (WordType j = 0; j < kBitsInWord; j++) {
+        word_result |= static_cast<WordType>(p(i * kBitsInWord + j)) << j;
       }
       words_[i] &= word_result;
     }
 
     // If the last word isn't full, process it using a scalar loop.
-    for (WordType i = num_full_words * kWordSizeBits; i < GetNumBits(); i++) {
+    for (WordType i = num_full_words * kBitsInWord; i < GetNumBits(); i++) {
       if (!p(i)) {
         Unset(i);
       }
@@ -543,7 +559,7 @@ class BitVector {
     for (WordType i = 0, num_words = GetNumWords(); i < num_words; i++) {
       WordType word = words_[i];
       while (word != 0) {
-        f(i * kWordSizeBits + BitUtil::CountTrailingZeros(word));
+        f(i * kBitsInWord + BitUtil::CountTrailingZeros(word));
         word &= (word - 1);  // Should compile into a `blsr`.
       }
     }
@@ -598,8 +614,8 @@ class BitVector {
 
     position++;
 
-    const uint32_t word_index = position / kWordSizeBits;
-    const uint32_t bit_idx = position % kWordSizeBits;
+    const uint32_t word_index = position / kBitsInWord;
+    const uint32_t bit_idx = position % kBitsInWord;
 
     // Does the current word have any remaining 1 bits?
     if (WordType word = words_[word_index] >> bit_idx; word != WordType(0)) {
@@ -652,7 +668,7 @@ class BitVector {
    */
   BitReference operator[](const uint32_t position) {
     TPL_ASSERT(position < GetNumBits(), "Out-of-range access");
-    return BitReference(&words_[position / kWordSizeBits], position % kWordSizeBits);
+    return BitReference(&words_[position / kBitsInWord], position % kBitsInWord);
   }
 
   /**
@@ -732,7 +748,7 @@ class BitVector {
 
  private:
   // The number of bits in the last word
-  uint32_t GetNumExtraBits() const { return num_bits_ % kWordSizeBits; }
+  uint32_t GetNumExtraBits() const { return num_bits_ % kBitsInWord; }
 
   // Zero unused bits in the last word
   void ZeroUnusedBits() {
@@ -746,7 +762,7 @@ class BitVector {
   uint32_t FindFrom(uint32_t word_index) const noexcept {
     for (uint32_t i = word_index; i < GetNumWords(); i++) {
       if (words_[i] != WordType(0)) {
-        return i * kWordSizeBits + BitUtil::CountTrailingZeros(words_[i]);
+        return i * kBitsInWord + BitUtil::CountTrailingZeros(words_[i]);
       }
     }
     return kInvalidPos;
