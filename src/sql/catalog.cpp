@@ -71,14 +71,14 @@ TableInsertMeta insert_meta[] = {
      {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
 
     // Table 1
-    {TableId::Test1, "test_1", 2000000,
+    {TableId::Test1, "test_1", 20000,
      {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L},
       {"colB", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 9L},
       {"colC", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 9999L},
       {"colD", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 99999L}}},
 
     // Table 2
-    {TableId::Test2, "test_2", 2000000,
+    {TableId::Test2, "test_2", 20000,
      {{"col1", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 100L},
       {"col2", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
 

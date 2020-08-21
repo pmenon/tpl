@@ -4,7 +4,7 @@ struct State {
 }
 
 struct Agg {
-    key: Integer
+    key  : Integer
     count: CountStarAggregate
 }
 
@@ -17,25 +17,26 @@ fun tearDownState(state: *State) -> nil {
     @aggHTFree(&state.table)
 }
 
-fun keyCheck(agg: *Agg, vpi: *VectorProjectionIterator) -> bool {
-    var key = @vpiGetInt(vpi, 1)
-    return @sqlToBool(key == agg.key)
+fun constructAggregates(new: *VectorProjectionIterator, input: *VectorProjectionIterator) -> nil {
+    for (@vpiHasNext(new)) {
+        var new_entry = @ptrCast(*HashTableEntryIterator, @vpiGetPointer(new, 1))
+        var new_agg = @ptrCast(*Agg, @htEntryIterGetRow(new_entry))
+        var input_key = @vpiGetInt(input, 1)
+        new_agg.key = input_key
+        @vpiAdvance(new)
+        @vpiAdvance(input)
+    }
 }
 
-fun hashFn(vpi: *VectorProjectionIterator) -> uint64 {
-    return @hash(@vpiGetInt(vpi, 1))
-}
-
-fun constructAgg(agg: *Agg, vpi: *VectorProjectionIterator) -> nil {
-    // Set key
-    agg.key = @vpiGetInt(vpi, 1)
-    // Initialize aggregate
-    @aggInit(&agg.count)
-}
-
-fun updateAgg(agg: *Agg, vpi: *VectorProjectionIterator) -> nil {
-    var input = @vpiGetInt(vpi, 0)
-    @aggAdvance(&agg.count, &input)
+fun advanceAggregates(new: *VectorProjectionIterator, input: *VectorProjectionIterator) -> nil {
+    for (@vpiHasNext(new)) {
+        var new_entry = @ptrCast(HashTableEntryIterator, @vpiGetPointer(new, 1))
+        var new_agg = @ptrCast(*Agg, @htEntryIterGetRow(new_entry))
+        var input_val = @vpiGetInt(input, 0)
+        @aggAdvance(&new_agg.count, &input_val)
+        @vpiAdvance(new)
+        @vpiAdvance(input)
+    }
 }
 
 fun pipeline_1(state: *State) -> nil {
@@ -46,7 +47,9 @@ fun pipeline_1(state: *State) -> nil {
     var tvi: TableVectorIterator
     for (@tableIterInit(&tvi, "test_1"); @tableIterAdvance(&tvi); ) {
         var vec = @tableIterGetVPI(&tvi)
-        @aggHTProcessBatch(ht, vec, hashFn, keyCheck, constructAgg, updateAgg, false)
+        var key_cols: [1]uint32
+        key_cols[0] = 1
+        @aggHTProcessBatch(ht, vec, key_cols, constructAggregates, advanceAggregates, false)
     }
     @tableIterClose(&tvi)
 }

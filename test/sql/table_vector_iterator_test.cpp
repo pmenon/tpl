@@ -19,17 +19,18 @@ TEST_F(TableVectorIteratorTest, InvalidBlockRangeIteratorTest) {
   auto *table = Catalog::Instance()->LookupTableById(table_id);
 
   const std::tuple<uint32_t, uint32_t, bool> test_cases[] = {
-      {0, 10, true},
+      {0, 0, false},
       {10, 0, false},
       {-10, 2, false},
       {0, table->GetBlockCount(), true},
-      {10, table->GetBlockCount(), true},
-      {10, table->GetBlockCount() + 1, false},
+      {1, table->GetBlockCount(), true},
+      {1, table->GetBlockCount() + 1, false},
   };
 
   for (auto [start_idx, end_idx, valid] : test_cases) {
     TableVectorIterator iter(table_id, start_idx, end_idx);
-    EXPECT_EQ(valid, iter.Init());
+    EXPECT_EQ(valid, iter.Init()) << "Iterator for range [" << start_idx << "," << end_idx
+                                  << "] expected " << valid << ", but was otherwise.";
   }
 }
 

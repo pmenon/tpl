@@ -1,3 +1,7 @@
+// SELECT COUNT(*) FROM test_1 WHERE (cola >= 50 AND colb < 1000000) or (colc < 5000000)
+// cola is monotonically increasing, colb is uniform in [0,9], and
+// colc is uniform in [0,9999]. So, the condition is always true.
+// The result should match the total tuple count in 'test_2'=20000.
 fun main(execCtx: *ExecutionContext) -> int {
     var ret = 0
     var tvi: TableVectorIterator

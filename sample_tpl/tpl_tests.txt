@@ -16,9 +16,9 @@ if-2.tpl,false,1
 if-3.tpl,false,100
 if-4.tpl,false,2
 loop.tpl,false,45
-loop2.tpl,false,2195224853
+loop2.tpl,false,16668333
 loop3.tpl,false,0
-loop4.tpl,false,166167000
+loop4.tpl,false,161700
 #map.tpl,false,10
 nil.tpl,false,0
 offsetof.tpl,false,54
@@ -52,8 +52,8 @@ parallel-agg.tpl,true,10
 parallel-join.tpl,true,500
 parallel-scan.tpl,true,500
 scan-table.tpl,true,500
-scan-table-2.tpl,true,1999950
-scan-table-3.tpl,true,2000000
+scan-table-2.tpl,true,19950
+scan-table-3.tpl,true,20000
 scan-alltypes.tpl,true,1000
 scan-vpi-iter.tpl,true,500
 sort.tpl,true,2000
