@@ -16,7 +16,8 @@ namespace tpl::sql::codegen {
 class CodeGen;
 class CompilationContext;
 class ConsumerContext;
-class Pipeline;
+class FunctionBuilder;
+class PipelineContext;
 
 /**
  * Base class for expression translators.
@@ -59,19 +60,19 @@ class ExpressionTranslator {
   // The expression for this translator as its concrete type.
   template <typename T>
   const T &GetExpressionAs() const {
-    static_assert(std::is_base_of_v<planner::AbstractExpression, T>,
-                  "Template type is not an expression");
+    static_assert(std::is_base_of_v<planner::AbstractExpression, T>, "Type is not an expression");
     return static_cast<const T &>(expr_);
   }
-
-  // Return the code generation instance.
-  CodeGen *GetCodeGen() const;
 
  private:
   // The expression that's to be translated.
   const planner::AbstractExpression &expr_;
   // The context the translation is a part of.
   CompilationContext *compilation_context_;
+
+ protected:
+  // The code generation instance.
+  CodeGen *codegen_;
 };
 
 }  // namespace tpl::sql::codegen

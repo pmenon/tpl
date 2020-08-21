@@ -20,11 +20,12 @@ class ConstantTranslator : public ExpressionTranslator {
 
   /**
    * Derive the value of the expression.
-   * @param ctx The context containing collected subexpressions.
+   * @param context The context containing collected subexpressions.
    * @param provider A provider for specific column values.
    * @return The value of the expression.
    */
-  ast::Expr *DeriveValue(ConsumerContext *ctx, const ColumnValueProvider *provider) const override;
+  ast::Expr *DeriveValue(ConsumerContext *context,
+                         const ColumnValueProvider *provider) const override;
 };
 
 }  // namespace tpl::sql::codegen

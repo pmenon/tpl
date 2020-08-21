@@ -13,29 +13,28 @@ ConstantTranslator::ConstantTranslator(const planner::ConstantValueExpression &e
                                        CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {}
 
-ast::Expr *ConstantTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *ConstantTranslator::DeriveValue(ConsumerContext *context,
                                            const ColumnValueProvider *provider) const {
-  auto codegen = GetCodeGen();
   const auto &val = GetExpressionAs<const planner::ConstantValueExpression>().GetValue();
   switch (val.GetTypeId()) {
     case TypeId::Boolean:
-      return codegen->BoolToSql(val.value_.boolean);
+      return codegen_->BoolToSql(val.value_.boolean);
     case TypeId::TinyInt:
-      return codegen->IntToSql(val.value_.tinyint);
+      return codegen_->IntToSql(val.value_.tinyint);
     case TypeId::SmallInt:
-      return codegen->IntToSql(val.value_.smallint);
+      return codegen_->IntToSql(val.value_.smallint);
     case TypeId::Integer:
-      return codegen->IntToSql(val.value_.integer);
+      return codegen_->IntToSql(val.value_.integer);
     case TypeId::BigInt:
-      return codegen->IntToSql(val.value_.bigint);
+      return codegen_->IntToSql(val.value_.bigint);
     case TypeId::Float:
-      return codegen->FloatToSql(val.value_.float_);
+      return codegen_->FloatToSql(val.value_.float_);
     case TypeId::Double:
-      return codegen->FloatToSql(val.value_.double_);
+      return codegen_->FloatToSql(val.value_.double_);
     case TypeId::Date:
-      return codegen->DateToSql(val.value_.date_);
+      return codegen_->DateToSql(val.value_.date_);
     case TypeId::Varchar:
-      return codegen->StringToSql(val.str_value_);
+      return codegen_->StringToSql(val.str_value_);
     default:
       throw NotImplementedException(
           fmt::format("Translation of constant type {}", TypeIdToString(val.GetTypeId())));

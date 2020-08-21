@@ -14,20 +14,19 @@ BuiltinFunctionTranslator::BuiltinFunctionTranslator(const planner::BuiltinFunct
   }
 }
 
-ast::Expr *BuiltinFunctionTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *BuiltinFunctionTranslator::DeriveValue(ConsumerContext *context,
                                                   const ColumnValueProvider *provider) const {
-  auto codegen = GetCodeGen();
   auto func_expr = GetExpressionAs<planner::BuiltinFunctionExpression>();
 
   // Evaluate the arguments to the function.
   std::vector<ast::Expr *> args;
   args.reserve(func_expr.GetChildrenSize());
   for (const auto &child : func_expr.GetChildren()) {
-    args.emplace_back(ctx->DeriveValue(*child, provider));
+    args.emplace_back(context->DeriveValue(*child, provider));
   }
 
   // Issue the function.
-  return codegen->CallBuiltin(func_expr.GetBuiltin(), args);
+  return codegen_->CallBuiltin(func_expr.GetBuiltin(), args);
 }
 
 }  // namespace tpl::sql::codegen

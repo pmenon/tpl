@@ -1,5 +1,7 @@
 #include "sql/codegen/expression/unary_translator.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
@@ -12,10 +14,9 @@ UnaryTranslator::UnaryTranslator(const planner::OperatorExpression &expr,
   compilation_context->Prepare(*expr.GetChild(0));
 }
 
-ast::Expr *UnaryTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *UnaryTranslator::DeriveValue(ConsumerContext *context,
                                         const ColumnValueProvider *provider) const {
-  auto codegen = GetCodeGen();
-  auto input = ctx->DeriveValue(*GetExpression().GetChild(0), provider);
+  auto input = context->DeriveValue(*GetExpression().GetChild(0), provider);
 
   parsing::Token::Type type;
   switch (GetExpression().GetExpressionType()) {
@@ -26,9 +27,12 @@ ast::Expr *UnaryTranslator::DeriveValue(ConsumerContext *ctx,
       type = parsing::Token::Type::BANG;
       break;
     default:
-      UNREACHABLE("Unsupported expression");
+      throw NotImplementedException(
+          fmt::format("Translation of unary expression type {}",
+                      planner::ExpressionTypeToString(GetExpression().GetExpressionType(), false)));
   }
-  return codegen->UnaryOp(type, input);
+
+  return codegen_->UnaryOp(type, input);
 }
 
 }  // namespace tpl::sql::codegen

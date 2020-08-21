@@ -7,8 +7,8 @@ namespace tpl::sql::codegen {
 
 ExpressionTranslator::ExpressionTranslator(const planner::AbstractExpression &expr,
                                            CompilationContext *compilation_context)
-    : expr_(expr), compilation_context_(compilation_context) {}
-
-CodeGen *ExpressionTranslator::GetCodeGen() const { return compilation_context_->GetCodeGen(); }
+    : expr_(expr),
+      compilation_context_(compilation_context),
+      codegen_(compilation_context->GetCodeGen()) {}
 
 }  // namespace tpl::sql::codegen

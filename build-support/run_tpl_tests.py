@@ -18,15 +18,20 @@ def run(tpl_bin, tpl_file, is_sql):
     if is_sql:
         args.append("-sql")
     args.append(tpl_file)
-    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(" ".join(args))
     result = []
-    for line in reversed(proc.stdout.decode('utf-8').split('\n')):
-        if any(s in line for s in ERROR_STRS):
-            return []
-        for target_string in TARGET_STRINGS:
-            idx = line.find(target_string)
-            if idx != -1:
-                result.append(line[idx + len(target_string):])
+    try:
+        proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
+        print("COMPLETED")
+        for line in reversed(proc.stdout.decode('utf-8').split('\n')):
+            if any(s in line for s in ERROR_STRS):
+                return []
+            for target_string in TARGET_STRINGS:
+                idx = line.find(target_string)
+                if idx != -1:
+                    result.append(line[idx + len(target_string):])
+    except subprocess.TimeoutExpired:
+        pass
     return result
 
 

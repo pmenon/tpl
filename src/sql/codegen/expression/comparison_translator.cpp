@@ -18,34 +18,34 @@ ComparisonTranslator::ComparisonTranslator(const planner::ComparisonExpression &
   }
 }
 
-ast::Expr *ComparisonTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *ComparisonTranslator::DeriveValue(ConsumerContext *context,
                                              const ColumnValueProvider *provider) const {
-  auto codegen = GetCodeGen();
-  auto left_val = ctx->DeriveValue(*GetExpression().GetChild(0), provider);
-  auto right_val = ctx->DeriveValue(*GetExpression().GetChild(1), provider);
+  auto left_val = context->DeriveValue(*GetExpression().GetChild(0), provider);
+  auto right_val = context->DeriveValue(*GetExpression().GetChild(1), provider);
 
   switch (const auto expr_type = GetExpression().GetExpressionType(); expr_type) {
     case planner::ExpressionType::COMPARE_EQUAL:
-      return codegen->Compare(parsing::Token::Type::EQUAL_EQUAL, left_val, right_val);
+      return codegen_->Compare(parsing::Token::Type::EQUAL_EQUAL, left_val, right_val);
     case planner::ExpressionType::COMPARE_GREATER_THAN:
-      return codegen->Compare(parsing::Token::Type::GREATER, left_val, right_val);
+      return codegen_->Compare(parsing::Token::Type::GREATER, left_val, right_val);
     case planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
-      return codegen->Compare(parsing::Token::Type::GREATER_EQUAL, left_val, right_val);
+      return codegen_->Compare(parsing::Token::Type::GREATER_EQUAL, left_val, right_val);
     case planner::ExpressionType::COMPARE_LESS_THAN:
-      return codegen->Compare(parsing::Token::Type::LESS, left_val, right_val);
+      return codegen_->Compare(parsing::Token::Type::LESS, left_val, right_val);
     case planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
-      return codegen->Compare(parsing::Token::Type::LESS_EQUAL, left_val, right_val);
+      return codegen_->Compare(parsing::Token::Type::LESS_EQUAL, left_val, right_val);
     case planner::ExpressionType::COMPARE_NOT_EQUAL:
-      return codegen->Compare(parsing::Token::Type::BANG_EQUAL, left_val, right_val);
+      return codegen_->Compare(parsing::Token::Type::BANG_EQUAL, left_val, right_val);
     case planner::ExpressionType::COMPARE_LIKE:
-      return codegen->Like(left_val, right_val);
+      return codegen_->Like(left_val, right_val);
     case planner::ExpressionType::COMPARE_NOT_LIKE:
-      return codegen->NotLike(left_val, right_val);
+      return codegen_->NotLike(left_val, right_val);
     case planner::ExpressionType::COMPARE_BETWEEN: {
-      auto lo = right_val, hi = ctx->DeriveValue(*GetExpression().GetChild(2), provider);
-      return codegen->BinaryOp(parsing::Token::Type::AND,
-                               codegen->Compare(parsing::Token::Type::GREATER_EQUAL, left_val, lo),
-                               codegen->Compare(parsing::Token::Type::LESS_EQUAL, left_val, hi));
+      auto lo = right_val, hi = context->DeriveValue(*GetExpression().GetChild(2), provider);
+      return codegen_->BinaryOp(
+          parsing::Token::Type::AND,
+          codegen_->Compare(parsing::Token::Type::GREATER_EQUAL, left_val, lo),
+          codegen_->Compare(parsing::Token::Type::LESS_EQUAL, left_val, hi));
     }
     default: {
       throw NotImplementedException(fmt::format("Translation of comparison type {}",

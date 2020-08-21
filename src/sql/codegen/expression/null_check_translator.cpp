@@ -14,16 +14,15 @@ NullCheckTranslator::NullCheckTranslator(const planner::OperatorExpression &expr
   compilation_context->Prepare(*expr.GetChild(0));
 }
 
-ast::Expr *NullCheckTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *NullCheckTranslator::DeriveValue(ConsumerContext *context,
                                             const ColumnValueProvider *provider) const {
-  auto codegen = GetCodeGen();
-  auto input = ctx->DeriveValue(*GetExpression().GetChild(0), provider);
+  auto input = context->DeriveValue(*GetExpression().GetChild(0), provider);
   switch (auto type = GetExpression().GetExpressionType()) {
     case planner::ExpressionType::OPERATOR_IS_NULL:
-      return codegen->CallBuiltin(ast::Builtin::IsValNull, {input});
+      return codegen_->CallBuiltin(ast::Builtin::IsValNull, {input});
     case planner::ExpressionType::OPERATOR_IS_NOT_NULL:
-      return codegen->UnaryOp(parsing::Token::Type::BANG,
-                              codegen->CallBuiltin(ast::Builtin::IsValNull, {input}));
+      return codegen_->UnaryOp(parsing::Token::Type::BANG,
+                               codegen_->CallBuiltin(ast::Builtin::IsValNull, {input}));
     default:
       throw NotImplementedException(
           fmt::format("operator expression type {}", planner::ExpressionTypeToString(type, false)));

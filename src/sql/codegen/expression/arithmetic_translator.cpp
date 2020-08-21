@@ -17,23 +17,22 @@ ArithmeticTranslator::ArithmeticTranslator(const planner::OperatorExpression &ex
   compilation_context->Prepare(*expr.GetChild(1));
 }
 
-ast::Expr *ArithmeticTranslator::DeriveValue(ConsumerContext *ctx,
+ast::Expr *ArithmeticTranslator::DeriveValue(ConsumerContext *context,
                                              const ColumnValueProvider *provider) const {
-  auto codegen = GetCodeGen();
-  auto left_val = ctx->DeriveValue(*GetExpression().GetChild(0), provider);
-  auto right_val = ctx->DeriveValue(*GetExpression().GetChild(1), provider);
+  auto left_val = context->DeriveValue(*GetExpression().GetChild(0), provider);
+  auto right_val = context->DeriveValue(*GetExpression().GetChild(1), provider);
 
   switch (auto expr_type = GetExpression().GetExpressionType(); expr_type) {
     case planner::ExpressionType::OPERATOR_PLUS:
-      return codegen->BinaryOp(parsing::Token::Type::PLUS, left_val, right_val);
+      return codegen_->BinaryOp(parsing::Token::Type::PLUS, left_val, right_val);
     case planner::ExpressionType::OPERATOR_MINUS:
-      return codegen->BinaryOp(parsing::Token::Type::MINUS, left_val, right_val);
+      return codegen_->BinaryOp(parsing::Token::Type::MINUS, left_val, right_val);
     case planner::ExpressionType::OPERATOR_MULTIPLY:
-      return codegen->BinaryOp(parsing::Token::Type::STAR, left_val, right_val);
+      return codegen_->BinaryOp(parsing::Token::Type::STAR, left_val, right_val);
     case planner::ExpressionType::OPERATOR_DIVIDE:
-      return codegen->BinaryOp(parsing::Token::Type::SLASH, left_val, right_val);
+      return codegen_->BinaryOp(parsing::Token::Type::SLASH, left_val, right_val);
     case planner::ExpressionType::OPERATOR_MOD:
-      return codegen->BinaryOp(parsing::Token::Type::PERCENT, left_val, right_val);
+      return codegen_->BinaryOp(parsing::Token::Type::PERCENT, left_val, right_val);
     default: {
       throw NotImplementedException(fmt::format("Translation of arithmetic type {}",
                                                 planner::ExpressionTypeToString(expr_type, true)));
