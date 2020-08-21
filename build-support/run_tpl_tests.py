@@ -52,12 +52,12 @@ def check(tpl_bin, tpl_folder, tpl_tests_file):
             elif len(res) != 3 or not all(output == expected_output for output in res):
                 report = 'FAIL [expect: {}, actual: {}]'.format(expected_output, res)
                 failed.add(tpl_file)
-            results[tpl_file] = "{} ({:.2f} s)".format(report, end-start)
+            results[tpl_file] = "{:<6} ({:.2f} s)".format(report, end-start)
 
         # Print all results.
-        max_test_name = max([len(name) for name in results])
+        max_test_name = max([len(name) for name in results]) + 8
         for name, report in results.items():
-            print('\t{:<{pad}}: {}'.format(name, report, pad=max_test_name))
+            print('\t{:.<{pad}} : {}'.format(name+" ", report, pad=max_test_name))
 
         # Print final stats.
         print('{}/{} tests passed.'.format(len(results) - len(failed), len(results)))
