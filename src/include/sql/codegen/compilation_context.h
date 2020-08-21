@@ -7,19 +7,22 @@
 
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/codegen_defs.h"
-#include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/executable_query.h"
 #include "sql/codegen/execution_plan.h"
-#include "sql/codegen/expression/expression_translator.h"
-#include "sql/codegen/operators/operator_translator.h"
-#include "sql/codegen/pipeline.h"
 #include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
+class AbstractExpression;
 class AbstractPlanNode;
 }  // namespace tpl::sql::planner
 
 namespace tpl::sql::codegen {
+
+class CompilationUnit;
+class ExpressionTranslator;
+class OperatorTranslator;
+class Pipeline;
+class PipelineGraph;
 
 /**
  * Context of all code-generation related structures. A temporary container that lives only during

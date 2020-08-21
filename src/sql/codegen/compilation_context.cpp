@@ -9,7 +9,7 @@
 #include "ast/context.h"
 #include "common/exception.h"
 #include "common/macros.h"
-#include "sql/codegen/codegen.h"
+#include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/executable_query.h"
 #include "sql/codegen/execution_plan.h"
 #include "sql/codegen/expression//derived_value_translator.h"

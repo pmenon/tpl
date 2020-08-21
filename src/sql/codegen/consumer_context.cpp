@@ -1,6 +1,7 @@
 #include "sql/codegen/consumer_context.h"
 
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 
 namespace tpl::sql::codegen {

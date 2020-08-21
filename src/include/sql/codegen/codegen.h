@@ -17,7 +17,6 @@
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/compilation_unit.h"
 #include "sql/planner/expressions/expression_defs.h"
-#include "sql/runtime_types.h"
 #include "sql/sql.h"
 #include "util/region_containers.h"
 
