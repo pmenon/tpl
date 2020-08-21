@@ -9,7 +9,7 @@ call.tpl,false,70
 comments.tpl,false,46
 compare.tpl,false,200
 deref.tpl,false,404
-fib.tpl,false,832040
+fib.tpl,false,196418
 #function_pointer.tpl,false,20
 if.tpl,false,2
 if-2.tpl,false,1

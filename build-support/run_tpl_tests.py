@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import time
 import subprocess
 import sys
 
@@ -10,6 +11,7 @@ ADAPTIVE_TARGET_STRING = 'ADAPTIVE main() returned: '
 JIT_TARGET_STRING = 'JIT main() returned: '
 TARGET_STRINGS = [VM_TARGET_STRING, ADAPTIVE_TARGET_STRING, JIT_TARGET_STRING]
 ERROR_STRS = ['ERROR', 'error', 'fail', 'abort']
+
 
 def run(tpl_bin, tpl_file, is_sql):
     args = [tpl_bin]
@@ -39,26 +41,28 @@ def check(tpl_bin, tpl_folder, tpl_tests_file):
                 continue
             tpl_file, sql, expected_output = [x.strip() for x in line.split(',')]
             is_sql = sql.lower() == "true"
+            start = time.time()
             res = run(tpl_bin, os.path.join(tpl_folder, tpl_file), is_sql)
+            end = time.time()
 
             report = 'PASS'
             if not res:
                 report = 'ERROR'
                 failed.add(tpl_file)
             elif len(res) != 3 or not all(output == expected_output for output in res):
-                report = 'FAIL [expect: {}, actual: {}]'.format(expected_output,
-                                                                res)
+                report = 'FAIL [expect: {}, actual: {}]'.format(expected_output, res)
                 failed.add(tpl_file)
-            results[tpl_file] = report
+            results[tpl_file] = "{} ({:.2f} s)".format(report, end-start)
 
-        # Print all results
+        # Print all results.
         max_test_name = max([len(name) for name in results])
         for name, report in results.items():
-            print('\t{:>{pad}}: {}'.format(name, report, pad=max_test_name))
+            print('\t{:<{pad}}: {}'.format(name, report, pad=max_test_name))
 
-        # Print failed tests
+        # Print final stats.
         print('{}/{} tests passed.'.format(len(results) - len(failed), len(results)))
 
+        # Print all failing tests.
         if len(failed) > 0:
             print('{} failed:'.format(len(failed)))
             for fail in failed:

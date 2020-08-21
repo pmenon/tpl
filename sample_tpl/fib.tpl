@@ -7,5 +7,5 @@ fun fib(n: int) -> int {
 }
 
 fun main() -> int {
-    return fib(30)
+    return fib(27)
 }
