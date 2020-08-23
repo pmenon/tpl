@@ -148,11 +148,10 @@ TEST_F(SortTranslatorTest, SimpleSortTest) {
   // Run and check.
   ExecuteAndCheckInAllModes(query.get(), [&]() {
     // Checkers:
-    // There should be 500 output rows, where col1 < 500.
-    // The output should be sorted by col2 ASC
+    // 1. All 'col1' should be less than 500 due to the filter.
+    // 2. The output should be sorted by col2 ASC.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(
-        std::make_unique<SingleIntComparisonChecker>([](auto a, auto b) { return a < b; }, 0, 500));
+    checks.push_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
     checks.push_back(std::make_unique<SingleIntSortChecker>(1));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
@@ -219,7 +218,7 @@ TEST_F(SortTranslatorTest, TwoColumnSortTest) {
     // The output should be sorted by col2 ASC
     std::vector<std::unique_ptr<OutputChecker>> checks;
     checks.push_back(std::make_unique<TupleCounterChecker>(500));
-    checks.push_back(std::make_unique<SingleIntComparisonChecker>(std::less<>(), 0, 500));
+    checks.push_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
     checks.push_back(std::make_unique<GenericChecker>(
         [curr_col1 = std::numeric_limits<int64_t>::max(),
          curr_col2 = std::numeric_limits<int64_t>::min()](

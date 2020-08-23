@@ -124,28 +124,33 @@ class TupleCounterChecker : public OutputChecker {
 };
 
 /**
- * Checks that the values in a column satisfy a certain comparison.
+ * Checks that the values in a column satisfy a certain comparison for each output row.
  * @tparam CompFn comparison function to use
  */
-class SingleIntComparisonChecker : public OutputChecker {
+template <typename T>
+class SingleColumnValueChecker : public OutputChecker {
+  static_assert(std::is_base_of_v<sql::Val, T>, "Template type must be SQL value");
+
+  // The underlying CPP type.
+  using CppType = decltype(T::val);
+
  public:
-  SingleIntComparisonChecker(std::function<bool(int64_t, int64_t)> fn, uint32_t col_idx,
-                             int64_t rhs)
+  SingleColumnValueChecker(std::function<bool(CppType, CppType)> fn, uint32_t col_idx, CppType rhs)
       : comp_fn_(std::move(fn)), col_idx_(col_idx), rhs_(rhs) {}
 
   void CheckCorrectness() override {}
 
   void ProcessBatch(const std::vector<std::vector<const sql::Val *>> &output) override {
     for (const auto &vals : output) {
-      auto int_val = static_cast<const sql::Integer *>(vals[col_idx_]);
-      EXPECT_TRUE(comp_fn_(int_val->val, rhs_)) << "lhs=" << int_val->val << ",rhs=" << rhs_;
+      auto val = static_cast<const T *>(vals[col_idx_]);
+      EXPECT_TRUE(comp_fn_(val->val, rhs_)) << "lhs=" << val->val << ",rhs=" << rhs_;
     }
   }
 
  private:
-  std::function<bool(int64_t, int64_t)> comp_fn_;
+  std::function<bool(CppType, CppType)> comp_fn_;
   uint32_t col_idx_;
-  int64_t rhs_;
+  CppType rhs_;
 };
 
 /**

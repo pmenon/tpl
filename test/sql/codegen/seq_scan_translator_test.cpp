@@ -2,7 +2,6 @@
 
 #include "sql/catalog.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/execution_context.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/printing_consumer.h"
@@ -21,7 +20,7 @@ using namespace std::chrono_literals;
 
 class SeqScanTranslatorTest : public CodegenBasedTest {};
 
-TEST_F(SeqScanTranslatorTest, SimpleSeqScanTest) {
+TEST_F(SeqScanTranslatorTest, ScanTest) {
   // SELECT col1, col2, col1 * col2, col1 >= 100*col2 FROM test_1 WHERE col1 < 500 AND col2 >= 5;
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
@@ -66,14 +65,51 @@ TEST_F(SeqScanTranslatorTest, SimpleSeqScanTest) {
     // 2. Filtered column (1) is less than 5 (i.e., the filtering value);
     std::vector<std::unique_ptr<OutputChecker>> checks;
     checks.push_back(
-        std::make_unique<SingleIntComparisonChecker>(std::less<int64_t>(), 0, col1_filter_val));
-    checks.push_back(std::make_unique<SingleIntComparisonChecker>(std::greater_equal<int64_t>(), 1,
-                                                                  col2_filter_val));
+        std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, col1_filter_val));
+    checks.push_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::greater_equal<>(), 1,
+                                                                         col2_filter_val));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
 }
 
-TEST_F(SeqScanTranslatorTest, NonVecFilterTest) {
+TEST_F(SeqScanTranslatorTest, ScanWithNullCheckTest) {
+  // SELECT colb FROM test_1 WHERE cola IS NULL;
+  auto accessor = sql::Catalog::Instance();
+  planner::ExpressionMaker expr_maker;
+
+  std::unique_ptr<planner::AbstractPlanNode> seq_scan;
+  planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
+  {
+    sql::Table *table = accessor->LookupTableByName("test_1");
+    const auto &table_schema = table->GetSchema();
+    // Get table columns.
+    auto colb = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    seq_scan_out.AddOutput("colb", colb);
+    // Predicate.
+    auto predicate =
+        expr_maker.Operator(planner::ExpressionType::OPERATOR_IS_NULL, TypeId::Boolean, colb);
+    // Build plan.
+    seq_scan = planner::SeqScanPlanNode::Builder()
+                   .SetOutputSchema(seq_scan_out.MakeSchema())
+                   .SetScanPredicate(predicate)
+                   .SetTableOid(table->GetId())
+                   .Build();
+  }
+
+  // Compile.
+  auto query = CompilationContext::Compile(*seq_scan);
+
+  // Run and check.
+  ExecuteAndCheckInAllModes(query.get(), [&]() {
+    // Checkers:
+    // 1. 'cola' is non-nullable, so no rows should be selected.
+    std::vector<std::unique_ptr<OutputChecker>> checks;
+    checks.push_back(std::make_unique<TupleCounterChecker>(0));
+    return std::make_unique<MultiChecker>(std::move(checks));
+  });
+}
+
+TEST_F(SeqScanTranslatorTest, ScanWithNonVectorizedFilterTest) {
   // SELECT col1, col2, col1 * col2, col1 >= 100*col2 FROM test_1
   // WHERE (col1 < 500 AND col2 >= 5) OR (500 <= col1 <= 1000 AND (col2 = 3 OR col2 = 7));
   // The filter is not in DNF form and can't be vectorized.
@@ -137,7 +173,7 @@ TEST_F(SeqScanTranslatorTest, NonVecFilterTest) {
   });
 }
 
-TEST_F(SeqScanTranslatorTest, SeqScanWithProjection) {
+TEST_F(SeqScanTranslatorTest, ScanWithProjection) {
   // SELECT col1, col2, col1 * col1, col1 >= 100*col2 FROM test_1 WHERE col1 < 500;
   // This test first selects col1 and col2, and then constructs the 4 output columns.
 
@@ -191,7 +227,7 @@ TEST_F(SeqScanTranslatorTest, SeqScanWithProjection) {
     // 1. There has to be exactly 500 rows, due to the filter.
     // 2. Check col3 and col4 values for each row.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<SingleIntComparisonChecker>(std::less<>(), 0, 500));
+    checks.push_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
     checks.push_back(std::make_unique<GenericChecker>(
         [](const std::vector<const sql::Val *> &vals) {
           auto col1 = static_cast<const sql::Integer *>(vals[0]);
@@ -207,6 +243,58 @@ TEST_F(SeqScanTranslatorTest, SeqScanWithProjection) {
           EXPECT_EQ(col4->val, col1->val >= 100 * col2->val);
         },
         nullptr));
+    return std::make_unique<MultiChecker>(std::move(checks));
+  });
+}
+
+TEST_F(SeqScanTranslatorTest, ScanWithAllColumnTypes) {
+  // SELECT * FROM all_types WHERE a=TRUE;
+  // 'a' if filled with 50% true and 50% false.
+
+  auto accessor = sql::Catalog::Instance();
+  planner::ExpressionMaker expr_maker;
+  sql::Table *table = accessor->LookupTableByName("all_types");
+
+  std::unique_ptr<planner::AbstractPlanNode> seq_scan;
+  planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
+  {
+    const auto &table_schema = table->GetSchema();
+    // Get all columns.
+    auto a = expr_maker.CVE(table_schema.GetColumnInfo("a").oid, sql::TypeId::Boolean);
+    auto b = expr_maker.CVE(table_schema.GetColumnInfo("b").oid, sql::TypeId::TinyInt);
+    auto c = expr_maker.CVE(table_schema.GetColumnInfo("c").oid, sql::TypeId::SmallInt);
+    auto d = expr_maker.CVE(table_schema.GetColumnInfo("d").oid, sql::TypeId::Integer);
+    auto e = expr_maker.CVE(table_schema.GetColumnInfo("e").oid, sql::TypeId::BigInt);
+    auto f = expr_maker.CVE(table_schema.GetColumnInfo("f").oid, sql::TypeId::Float);
+    auto g = expr_maker.CVE(table_schema.GetColumnInfo("g").oid, sql::TypeId::Double);
+    // Set outputs.
+    seq_scan_out.AddOutput("a", a);
+    seq_scan_out.AddOutput("b", b);
+    seq_scan_out.AddOutput("c", c);
+    seq_scan_out.AddOutput("d", d);
+    seq_scan_out.AddOutput("e", e);
+    seq_scan_out.AddOutput("f", f);
+    seq_scan_out.AddOutput("g", g);
+    // Build plan.
+    planner::SeqScanPlanNode::Builder builder;
+    seq_scan = builder.SetOutputSchema(seq_scan_out.MakeSchema())
+                   .SetScanPredicate(expr_maker.CompareEq(a, expr_maker.ConstantBool(true)))
+                   .SetTableOid(table->GetId())
+                   .Build();
+  }
+
+  // Compile.
+  auto query = CompilationContext::Compile(*seq_scan);
+
+  // Run and check.
+  ExecuteAndCheckInAllModes(query.get(), [&]() {
+    // Checkers:
+    // 1. Total number of rows should be N/2 where N=table size.
+    // 2. All 'a' values should be true.
+    std::vector<std::unique_ptr<OutputChecker>> checks;
+    checks.push_back(
+        std::make_unique<SingleColumnValueChecker<sql::BoolVal>>(std::equal_to<>(), 0, true));
+    checks.push_back(std::make_unique<TupleCounterChecker>(table->GetTupleCount() / 2));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
 }

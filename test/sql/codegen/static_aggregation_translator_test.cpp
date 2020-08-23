@@ -81,7 +81,8 @@ TEST_F(StaticAggregationTranslatorTest, SimpleTest) {
     //    col2 is a monotonically increasing column.
     std::vector<std::unique_ptr<OutputChecker>> checks;
     checks.push_back(std::make_unique<TupleCounterChecker>(1));
-    checks.push_back(std::make_unique<SingleIntComparisonChecker>(std::equal_to<>(), 0, ntuples));
+    checks.push_back(
+        std::make_unique<SingleColumnValueChecker<Integer>>(std::equal_to<>(), 0, ntuples));
     checks.push_back(std::make_unique<SingleIntSumChecker>(1, ntuples * (ntuples - 1) / 2));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
