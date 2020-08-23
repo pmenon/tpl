@@ -199,7 +199,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   // Parallel construct sorter
 
   LaunchParallel(sorter_sizes.size(), [&](auto tid) {
-    std::random_device r;
+    std::random_device r = RandomDevice();
     std::this_thread::sleep_for(std::chrono::microseconds(r() % 1000));
     auto *sorter = container.AccessCurrentThreadStateAs<Sorter>();
     for (uint32_t i = 0; i < sorter_sizes[tid]; i++) {

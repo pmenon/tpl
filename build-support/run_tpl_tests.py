@@ -30,7 +30,9 @@ def run(tpl_bin, tpl_file, is_sql):
                 idx = line.find(target_string)
                 if idx != -1:
                     result.append(line[idx + len(target_string):])
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as e:
+        for line in reversed(e.stdout.decode('utf-8').split('\n')):
+            print(line)
         pass
     return result
 

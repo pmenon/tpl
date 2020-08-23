@@ -1,5 +1,6 @@
 #pragma once
 
+#include <random>
 #include <thread>  // NOLINT
 #include <vector>
 
@@ -71,6 +72,22 @@ static inline void LaunchParallel(uint32_t num_threads, const F &f) {
   for (uint32_t i = 0; i < num_threads; i++) {
     thread_group[i].join();
   }
+}
+
+/**
+ * @return A new random revice.
+ */
+static inline std::random_device RandomDevice() {
+#if defined(__GLIBCXX__) && __GLIBCXX__ >= 20200128
+  // Workaround for a libstd++ bug:
+  //     https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94087
+  // we cannot simply use `rdrand` everywhere because this is library and
+  // version specific, i.e., other standard C++ libraries do not support
+  // `rdrand`, and even older versions of libstdc++ do not support `rdrand`.
+  return std::random_device("rdrand");
+#else
+  return std::random_device();
+#endif  // defined(__GLIBCXX__) && __GLIBCXX__ >= 20200128
 }
 
 }  // namespace tpl
