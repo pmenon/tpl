@@ -1,3 +1,3 @@
 # tpl
 
-![example workflow name](https://github.com/pmenon/tpl/workflows/CMake%20CI/badge.svg)
+[![Build](https://github.com/pmenon/tpl/workflows/CMake%20CI/badge.svg)](https://github.com/pmenon/tpl/actions)
