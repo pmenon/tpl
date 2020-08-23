@@ -27,7 +27,8 @@ jobs:
         cd build
         LSAN_OPTIONS=$LSAN_OPTIONS ninja
         LSAN_OPTIONS=$LSAN_OPTIONS ninja check
-        LSAN_OPTIONS=$LSAN_OPTIONS ninja check-tpl
+        # Disable check-tpl because LLVM compilation on VM's is super slow!
+        #LSAN_OPTIONS=$LSAN_OPTIONS ninja check-tpl
 
     - name: Build & Test Release x64
       env:
@@ -38,5 +39,6 @@ jobs:
         cmake -E remove_directory build
         cmake -B build -S . -GNinja -DCMAKE_BUILD_TYPE=Release
         cd build
+        # Maybe run benchmarks, too?
         LSAN_OPTIONS=$LSAN_OPTIONS ninja
         LSAN_OPTIONS=$LSAN_OPTIONS ninja check-tpl
