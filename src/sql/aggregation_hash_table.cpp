@@ -227,7 +227,7 @@ void AggregationHashTable::Grow() {
 
 HashTableEntry *AggregationHashTable::AllocateEntryInternal(const hash_t hash) {
   // Allocate an entry
-  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.alloc_entry());
   entry->hash = hash;
   entry->next = nullptr;
 

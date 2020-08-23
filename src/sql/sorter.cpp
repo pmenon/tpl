@@ -34,7 +34,7 @@ Sorter::Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, uint32_t tuple_siz
 Sorter::~Sorter() = default;
 
 byte *Sorter::AllocInputTuple() {
-  byte *ret = tuple_storage_.append();
+  byte *ret = tuple_storage_.alloc_entry();
   tuples_.push_back(ret);
   return ret;
 }

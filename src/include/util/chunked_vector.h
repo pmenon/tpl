@@ -149,7 +149,7 @@ class ChunkedVector {
 
     _iterator &operator+=(difference_type offset) {
       // The size (in bytes) of one chunk
-      const size_type chunk_size = ChunkAllocSize(element_size_);
+      const size_type chunk_size = chunk_alloc_size(element_size_);
 
       // The total number of bytes between the new and current position
       const difference_type byte_offset =
@@ -259,7 +259,7 @@ class ChunkedVector {
     bool operator>=(const _iterator &that) const noexcept { return !(*this < that); }
 
     difference_type operator-(const _iterator &that) const noexcept {
-      const int64_t chunk_size = ChunkAllocSize(element_size_);
+      const int64_t chunk_size = chunk_alloc_size(element_size_);
       const int64_t elem_size = static_cast<int64_t>(element_size_);
 
       return ((chunk_iter_ - that.chunk_iter_) * chunk_size +
@@ -274,7 +274,7 @@ class ChunkedVector {
               std::size_t element_size) noexcept
         : curr_(position),
           first_(*chunk_iter),
-          last_(*chunk_iter + ChunkAllocSize(element_size)),
+          last_(*chunk_iter + chunk_alloc_size(element_size)),
           chunk_iter_(chunk_iter),
           chunk_start_(chunk_start),
           chunk_end_(chunk_finish),
@@ -283,7 +283,7 @@ class ChunkedVector {
     void set_chunk(std::vector<byte *>::const_iterator chunk) {
       chunk_iter_ = chunk;
       first_ = *chunk;
-      last_ = first_ + ChunkAllocSize(element_size_);
+      last_ = first_ + chunk_alloc_size(element_size_);
     }
 
    protected:
@@ -451,17 +451,17 @@ class ChunkedVector {
   }
 
   /**
-   * Append a new entry at the end of the vector, returning a contiguous memory space where the
-   * element can be written to by the caller.
-   * @return A pointer to the memory for the element.
+   * Make room for a new entry at the end of the vector.
+   * @post The returned pointer is guaranteed to be large enough to store one element.
+   * @return A pointer to a contiguous memory space where a new entry can be stored.
    */
-  byte *append() noexcept {
+  byte *alloc_entry() noexcept {
     if (position_ == end_) {
       if (chunks_.empty() || active_chunk_idx_ == chunks_.size() - 1) {
         allocate_chunk();
       } else {
         position_ = chunks_[++active_chunk_idx_];
-        end_ = position_ + ChunkAllocSize(element_size());
+        end_ = position_ + chunk_alloc_size(element_size());
       }
     }
 
@@ -475,7 +475,7 @@ class ChunkedVector {
    * Copy-construct a new element to the end of the vector.
    */
   void push_back(const byte *elem) {
-    byte *dest = append();
+    byte *dest = alloc_entry();
     std::memcpy(dest, elem, element_size());
   }
 
@@ -485,7 +485,7 @@ class ChunkedVector {
   void pop_back() {
     TPL_ASSERT(!empty(), "Popping empty vector");
     if (position_ == chunks_[active_chunk_idx_]) {
-      end_ = chunks_[--active_chunk_idx_] + ChunkAllocSize(element_size());
+      end_ = chunks_[--active_chunk_idx_] + chunk_alloc_size(element_size());
       position_ = end_;
     }
 
@@ -500,7 +500,7 @@ class ChunkedVector {
     active_chunk_idx_ = 0;
     if (!chunks_.empty()) {
       position_ = chunks_[0];
-      end_ = position_ + ChunkAllocSize(element_size());
+      end_ = position_ + chunk_alloc_size(element_size());
     } else {
       position_ = end_ = nullptr;
     }
@@ -522,16 +522,18 @@ class ChunkedVector {
    */
   std::size_t element_size() const noexcept { return element_size_; }
 
-  // Given the size (in bytes) of an individual element, compute the size of
-  // each chunk in the chunked vector
-  static constexpr std::size_t ChunkAllocSize(std::size_t element_size) {
+  /**
+   * @return The size (in bytes) of memory chunks allocated by the vector that make up a chunked
+   *         vector, given the size (in bytes) of the elements the vector stores.
+   */
+  static constexpr std::size_t chunk_alloc_size(std::size_t element_size) {
     return kNumElementsPerChunk * element_size;
   }
 
  private:
   // Allocate a new chunk
   void allocate_chunk() {
-    const std::size_t alloc_size = ChunkAllocSize(element_size());
+    const std::size_t alloc_size = chunk_alloc_size(element_size());
     byte *new_chunk = static_cast<byte *>(allocator_.allocate(alloc_size));
     chunks_.push_back(new_chunk);
     active_chunk_idx_ = chunks_.size() - 1;
@@ -540,7 +542,7 @@ class ChunkedVector {
   }
 
   void deallocate_all_chunks() {
-    const std::size_t chunk_size = ChunkAllocSize(element_size());
+    const std::size_t chunk_size = chunk_alloc_size(element_size());
     for (auto *chunk : chunks_) {
       allocator_.deallocate(chunk, chunk_size);
     }
@@ -810,7 +812,7 @@ class ChunkedVectorT {
    */
   template <class... Args>
   void emplace_back(Args &&... args) {
-    T *space = reinterpret_cast<T *>(vec_.append());
+    T *space = reinterpret_cast<T *>(vec_.alloc_entry());
     new (space) T(std::forward<Args>(args)...);
   }
 
@@ -818,7 +820,7 @@ class ChunkedVectorT {
    * Copy construct the provided element @em to the end of the vector.
    */
   void push_back(const T &elem) {
-    T *space = reinterpret_cast<T *>(vec_.append());
+    T *space = reinterpret_cast<T *>(vec_.alloc_entry());
     new (space) T(elem);
   }
 
@@ -826,7 +828,7 @@ class ChunkedVectorT {
    * Move-construct the provided element @em to the end of the vector.
    */
   void push_back(T &&elem) {
-    T *space = reinterpret_cast<T *>(vec_.append());
+    T *space = reinterpret_cast<T *>(vec_.alloc_entry());
     new (space) T(std::move(elem));
   }
 
