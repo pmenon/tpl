@@ -4,9 +4,10 @@
 #include "gmock/gmock.h"
 
 #include "common/settings.h"
+#include "sql/constant_vector.h"
 #include "sql/filter_manager.h"
 #include "sql/table_vector_iterator.h"
-#include "sql/vector_filter_executor.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "util/test_harness.h"
 
 namespace tpl::sql {
@@ -21,14 +22,15 @@ TEST_F(FilterManagerTest, ConjunctionTest) {
   // Create a filter that implements: colA < 500 AND colB < 9
   FilterManager filter;
   filter.StartNewClause();
-  filter.InsertClauseTerms({[](auto vp, auto tids, auto ctx) {
-                              VectorFilterExecutor::SelectLessThanVal(
-                                  vp, Col::A, GenericValue::CreateInteger(500), tids);
-                            },
-                            [](auto vp, auto tids, auto ctx) {
-                              VectorFilterExecutor::SelectLessThanVal(
-                                  vp, Col::B, GenericValue::CreateInteger(9), tids);
-                            }});
+  filter.InsertClauseTerms(
+      {[](auto vp, auto tids, auto ctx) {
+         VectorOps::SelectLessThan(*vp->GetColumn(Col::A),
+                                   ConstantVector(GenericValue::CreateInteger(500)), tids);
+       },
+       [](auto vp, auto tids, auto ctx) {
+         VectorOps::SelectLessThan(*vp->GetColumn(Col::B),
+                                   ConstantVector(GenericValue::CreateInteger(9)), tids);
+       }});
 
   // Create some random data.
   VectorProjection vp;
@@ -56,11 +58,13 @@ TEST_F(FilterManagerTest, DisjunctionTest) {
   FilterManager filter;
   filter.StartNewClause();
   filter.InsertClauseTerm([](auto vp, auto tids, auto ctx) {
-    VectorFilterExecutor::SelectLessThanVal(vp, Col::A, GenericValue::CreateInteger(500), tids);
+    VectorOps::SelectLessThan(*vp->GetColumn(Col::A),
+                              ConstantVector(GenericValue::CreateInteger(500)), tids);
   });
   filter.StartNewClause();
   filter.InsertClauseTerm([](auto vp, auto tids, auto ctx) {
-    VectorFilterExecutor::SelectLessThanVal(vp, Col::B, GenericValue::CreateInteger(9), tids);
+    VectorOps::SelectLessThan(*vp->GetColumn(Col::B),
+                              ConstantVector(GenericValue::CreateInteger(9)), tids);
   });
 
   // Create some random data.
@@ -92,8 +96,8 @@ TEST_F(FilterManagerTest, MixedTaatVaatFilterTest) {
   filter.StartNewClause();
   filter.InsertClauseTerms(
       {[](auto vp, auto tids, auto ctx) {
-         VectorFilterExecutor::SelectLessThanVal(vp, Col::A, GenericValue::CreateInteger(500),
-                                                 tids);
+         VectorOps::SelectLessThan(*vp->GetColumn(Col::A),
+                                   ConstantVector(GenericValue::CreateInteger(500)), tids);
        },
        [](auto vp, auto tids, auto ctx) {
          VectorProjectionIterator iter(vp, tids);
@@ -130,14 +134,14 @@ TEST_F(FilterManagerTest, AdaptiveCheckTest) {
   filter.InsertClauseTerms({[](auto vp, auto tids, auto ctx) {
                               auto *r = reinterpret_cast<uint32_t *>(ctx);
                               if (*r < 100) std::this_thread::sleep_for(1us);  // Fake a sleep.
-                              const auto val = GenericValue::CreateInteger(500);
-                              VectorFilterExecutor::SelectLessThanVal(vp, Col::A, val, tids);
+                              const auto val = ConstantVector(GenericValue::CreateInteger(500));
+                              VectorOps::SelectLessThan(*vp->GetColumn(Col::A), val, tids);
                             },
                             [](auto vp, auto tids, auto ctx) {
                               auto *r = reinterpret_cast<uint32_t *>(ctx);
                               if (*r > 100) std::this_thread::sleep_for(1us);  // Fake a sleep.
-                              const auto val = GenericValue::CreateInteger(9);
-                              VectorFilterExecutor::SelectLessThanVal(vp, Col::B, val, tids);
+                              const auto val = ConstantVector(GenericValue::CreateInteger(9));
+                              VectorOps::SelectLessThan(*vp->GetColumn(Col::B), val, tids);
                             }});
 
   // Create some random data.

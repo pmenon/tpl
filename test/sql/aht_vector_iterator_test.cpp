@@ -7,8 +7,9 @@
 #include "util/test_harness.h"
 
 #include "sql/aggregation_hash_table.h"
+#include "sql/constant_vector.h"
 #include "sql/execution_context.h"
-#include "sql/vector_filter_executor.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash_util.h"
@@ -214,12 +215,12 @@ TEST_F(AggregationHashTableVectorIteratorTest, DISABLED_Perf) {
       TupleIdList tids(kDefaultVectorSize);
       AHTVectorIterator iter(agg_ht, OutputSchema(), Transpose);
       for (; iter.HasNext(); iter.Next(Transpose)) {
-        auto *vector_projection = iter.GetVectorProjectionIterator()->GetVectorProjection();
-        tids.Resize(vector_projection->GetTotalTupleCount());
+        auto vec_proj = iter.GetVectorProjectionIterator()->GetVectorProjection();
+        tids.Resize(vec_proj->GetTotalTupleCount());
         tids.AddAll();
-        VectorFilterExecutor::SelectLessThanVal(vector_projection, 0,
-                                                GenericValue::CreateBigInt(filter_val), &tids);
-        vector_projection->SetFilteredSelections(tids);
+        VectorOps::SelectLessThan(*vec_proj->GetColumn(0),
+                                  ConstantVector(GenericValue::CreateBigInt(filter_val)), &tids);
+        vec_proj->SetFilteredSelections(tids);
       }
     });
 
