@@ -9,6 +9,7 @@
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/codegen_defs.h"
+#include "sql/codegen/execution_plan.h"
 #include "vm/vm_defs.h"
 
 namespace tpl::sema {
@@ -28,8 +29,6 @@ class Module;
 }  // namespace tpl::vm
 
 namespace tpl::sql::codegen {
-
-class ExecutionPlan;
 
 /**
  * An compiled and executable query object.
@@ -56,7 +55,7 @@ class ExecutableQuery {
    */
   void Setup(std::vector<std::unique_ptr<vm::Module>> &&modules, vm::Module *main_module,
              std::string init_fn, std::string tear_down_fn,
-             std::unique_ptr<ExecutionPlan> execution_plan, std::size_t query_state_size);
+             ExecutionPlan &&execution_plan, std::size_t query_state_size);
 
   /**
    * Execute the query.
@@ -89,7 +88,7 @@ class ExecutableQuery {
   // The IDs of the initialization and tear-down functions.
   std::string init_fn_, tear_down_fn_;
   // The execution plan.
-  std::unique_ptr<ExecutionPlan> execution_plan_;
+  ExecutionPlan execution_plan_;
   // The query state size.
   std::size_t query_state_size_;
 };

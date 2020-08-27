@@ -130,7 +130,7 @@ void CompilationContext::GeneratePipelineCode_OneShot(
 
     // Set up each function as an execution step.
     for (auto func : exec_funcs) {
-      const auto func_name = func->Name().GetString();
+      const auto func_name = func->Name().ToString();
       steps->emplace_back(pipeline->GetId(), func_name);
     }
   }
@@ -202,12 +202,13 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   }
 
   // Setup query and finish.
-  auto execution_plan = std::make_unique<ExecutionPlan>(std::move(steps));
-  auto main_modules = modules[0].get();
-  auto init_fn_name = init_fn->Name().GetString();
-  auto tear_down_fn_name = tear_down_fn->Name().GetString();
-  query_->Setup(std::move(modules), main_modules, init_fn_name, tear_down_fn_name,
-                std::move(execution_plan), query_state_.GetSize());
+  vm::Module *main_module = modules[0].get();
+  query_->Setup(std::move(modules),               // All compiled modules.
+                main_module,                      // Where init/teardown functions exist.
+                init_fn->Name().ToString(),       // The init() function.
+                tear_down_fn->Name().ToString(),  // The teardown() function.
+                ExecutionPlan(std::move(steps)),  // The generated plan.
+                query_state_.GetSize());
 }
 
 // static

@@ -25,10 +25,8 @@ ExecutableQuery::~ExecutableQuery() = default;
 
 void ExecutableQuery::Setup(std::vector<std::unique_ptr<vm::Module>> &&modules,
                             vm::Module *main_module, std::string init_fn, std::string tear_down_fn,
-                            std::unique_ptr<ExecutionPlan> execution_plan,
-                            std::size_t query_state_size) {
+                            ExecutionPlan &&execution_plan, std::size_t query_state_size) {
   TPL_ASSERT(main_module != nullptr, "No main module provided!");
-  TPL_ASSERT(execution_plan != nullptr, "No execution plan provided!");
   TPL_ASSERT(query_state_size >= sizeof(void *),
              "Query state must be large enough to store at least an ExecutionContext pointer.");
 
@@ -74,8 +72,10 @@ void ExecutableQuery::Run(ExecutionContext *exec_ctx, vm::ExecutionMode mode) {
 
   // Run the query initialization function.
   init(query_state.get());
+
   // Now, run the main execution plan!
-  execution_plan_->Run(query_state.get(), mode);
+  execution_plan_.Run(query_state.get(), mode);
+
   // The query tear-down logic is deferred above; it is automatically executed
   // for us if any exceptions occur. Thus, we needn't manually execute it.
 }

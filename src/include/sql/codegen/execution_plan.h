@@ -64,6 +64,11 @@ class ExecutionStep {
 class ExecutionPlan {
  public:
   /**
+   * Empty plan.
+   */
+  explicit ExecutionPlan() = default;
+
+  /**
    * Create a new execution plan composed of the provided steps.
    * @param steps The steps making up the plan.
    */
