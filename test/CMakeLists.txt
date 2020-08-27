@@ -8,7 +8,7 @@ enable_testing()
 
 file(GLOB_RECURSE tpl_test_srs "${PROJECT_SOURCE_DIR}/test/*.cpp")
 
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} ${CTEST_FLAGS} --verbose)
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} ${CTEST_FLAGS} --output-on-failure)
 
 # From list of test files we'll create tests test_name.cpp -> test_name
 foreach(test_src ${tpl_test_srs})
