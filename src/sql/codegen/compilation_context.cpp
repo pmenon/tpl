@@ -60,10 +60,9 @@ namespace {
 std::atomic<uint64_t> kUniqueIds{0};
 }  // namespace
 
-CompilationContext::CompilationContext(ExecutableQuery *query, const CompilationMode mode)
+CompilationContext::CompilationContext(ExecutableQuery *query)
     : unique_id_(kUniqueIds++),
       query_(query),
-      mode_(mode),
       codegen_(MakeContainer()),
       query_state_var_(codegen_.MakeIdentifier("q_state")),
       query_state_type_(codegen_.MakeIdentifier("QueryState")),
@@ -96,6 +95,12 @@ ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
   return builder.Finish();
 }
 
+void CompilationContext::DeclareCommonQueryState() {
+  // Just the execution context.
+  exec_ctx_ = query_state_.DeclareStateEntry(
+      GetCodeGen(), "exec_ctx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
+}
+
 void CompilationContext::EstablishPipelineDependencies() {
   for (const auto &kv : operators_) {
     kv.second->DeclarePipelineDependencies();
@@ -111,53 +116,9 @@ void CompilationContext::DeclareStructsAndFunctions() {
   query_state_.ConstructFinalType(&codegen_);
 }
 
-void CompilationContext::GeneratePipelineCode_OneShot(
-    const PipelineGraph &graph, const Pipeline &target, std::vector<ExecutionStep> *steps,
-    std::unordered_map<PipelineId, ContainerIndex> *mapping) {
-  // Determine order.
-  std::vector<const Pipeline *> pipeline_exec_order;
-  graph.CollectTransitiveDependencies(target, &pipeline_exec_order);
-
-  // Optimize (prematurely?) by reserving now.
-  steps->reserve(pipeline_exec_order.size() * 3);
-
-  for (auto pipeline : pipeline_exec_order) {
-    // All pipelines go into the main container (0).
-    (*mapping)[pipeline->GetId()] = 0;
-
-    // Prepare and generate the pipeline steps.
-    auto exec_funcs = pipeline->GeneratePipelineLogic();
-
-    // Set up each function as an execution step.
-    for (auto func : exec_funcs) {
-      const auto func_name = func->Name().ToString();
-      steps->emplace_back(pipeline->GetId(), func_name);
-    }
-  }
-}
-
-void CompilationContext::GeneratePipelineCode_Incremental(
-    const PipelineGraph &graph, const Pipeline &target, std::vector<ExecutionStep> *steps,
-    std::unordered_map<PipelineId, ContainerIndex> *mapping) {
-  throw NotImplementedException("Incremental code-generation");
-}
-
-void CompilationContext::GeneratePipelineCode(
-    const PipelineGraph &graph, const Pipeline &target, std::vector<ExecutionStep> *steps,
-    std::unordered_map<PipelineId, ContainerIndex> *mapping) {
-  switch (mode_) {
-    case CompilationMode::OneShot:
-      GeneratePipelineCode_OneShot(graph, target, steps, mapping);
-      break;
-    case CompilationMode::Interleaved:
-      GeneratePipelineCode_Incremental(graph, target, steps, mapping);
-      break;
-  }
-}
-
 void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
-  exec_ctx_ = query_state_.DeclareStateEntry(
-      GetCodeGen(), "exec_ctx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
+  // Common state.
+  DeclareCommonQueryState();
 
   // The graph of all pipelines.
   PipelineGraph pipeline_graph;
@@ -178,27 +139,41 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
 
   // Now we're ready to generate some code.
   // First, generate the query state initialization and tear-down logic.
-  auto init_fn = GenerateInitFunction();
-  auto tear_down_fn = GenerateTearDownFunction();
+  ast::FunctionDecl *init_fn = GenerateInitFunction();
+  ast::FunctionDecl *tear_down_fn = GenerateTearDownFunction();
 
   // Next, generate all pipeline code.
+  // Optimize (prematurely?) by reserving now.
   std::vector<ExecutionStep> steps;
-  std::unordered_map<PipelineId, ContainerIndex> mapping;
-  GeneratePipelineCode(pipeline_graph, main_pipeline, &steps, &mapping);
+  steps.reserve(pipeline_graph.NumPipelines() * 3);
 
-  // Compile everything.
-  std::vector<std::unique_ptr<vm::Module>> modules;
-  modules.reserve(containers_.size());
-  for (auto &container : containers_) {
-    modules.emplace_back(container->Compile());
+  // Determine order.
+  std::vector<const Pipeline *> pipeline_exec_order;
+  pipeline_graph.CollectTransitiveDependencies(main_pipeline, &pipeline_exec_order);
+
+  // Generate!
+  for (auto pipeline : pipeline_exec_order) {
+    // Prepare and generate the pipeline steps.
+    auto exec_funcs = pipeline->GeneratePipelineLogic();
+    // Each generated function becomes an execution step in the order
+    // provided by the pipeline.
+    for (auto func : exec_funcs) {
+      steps.emplace_back(pipeline->GetId(), func->Name().ToString());
+    }
   }
 
-  // Resolve.
+  // Compile the single container containing all the code.
+  std::vector<std::unique_ptr<vm::Module>> modules(1);
+  modules[0] = containers_[0]->Compile();
+
+  // Check compilation error.
+  if (modules[0] == nullptr) {
+    throw Exception(ExceptionType::CodeGen, "Error compiling query module!");
+  }
+
+  // Resolve all the steps.
   for (auto &step : steps) {
-    TPL_ASSERT(mapping.find(step.GetPipelineId()) != mapping.end(),
-               "Container for pipeline does not exist!");
-    const auto container_idx = mapping[step.GetPipelineId()];
-    step.Resolve(modules[container_idx].get());
+    step.Resolve(modules[0].get());
   }
 
   // Setup query and finish.
@@ -212,8 +187,8 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
 }
 
 // static
-std::unique_ptr<ExecutableQuery> CompilationContext::Compile(const planner::AbstractPlanNode &plan,
-                                                             const CompilationMode mode) {
+std::unique_ptr<ExecutableQuery> CompilationContext::Compile(
+    const planner::AbstractPlanNode &plan) {
   // The query we're generating code for.
   auto query = std::make_unique<ExecutableQuery>(plan);
 
@@ -222,7 +197,7 @@ std::unique_ptr<ExecutableQuery> CompilationContext::Compile(const planner::Abst
   timer.Start();
 
   // Generate the plan for the query.
-  CompilationContext ctx(query.get(), mode);
+  CompilationContext ctx(query.get());
   ctx.GeneratePlan(plan);
 
   timer.Stop();

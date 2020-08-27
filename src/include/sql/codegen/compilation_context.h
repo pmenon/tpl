@@ -39,8 +39,7 @@ class CompilationContext {
    * @param plan The plan to compile.
    * @param mode The compilation mode.
    */
-  static std::unique_ptr<ExecutableQuery> Compile(const planner::AbstractPlanNode &plan,
-                                                  CompilationMode mode = CompilationMode::OneShot);
+  static std::unique_ptr<ExecutableQuery> Compile(const planner::AbstractPlanNode &plan);
 
   /**
    * Prepare compilation for the given relational plan node participating in the provided pipeline.
@@ -92,14 +91,9 @@ class CompilationContext {
    */
   ast::Expr *GetExecutionContextPtrFromQueryState();
 
-  /**
-   * @return The compilation mode.
-   */
-  CompilationMode GetCompilationMode() const { return mode_; }
-
  private:
   // Private to force use of static Compile() function.
-  explicit CompilationContext(ExecutableQuery *query, CompilationMode mode);
+  explicit CompilationContext(ExecutableQuery *query);
 
   // Given a plan node, compile it into a compiled query object.
   void GeneratePlan(const planner::AbstractPlanNode &plan);
@@ -109,6 +103,9 @@ class CompilationContext {
 
   // Generate the query tear-down function.
   ast::FunctionDecl *GenerateTearDownFunction();
+
+  // Declare common state.
+  void DeclareCommonQueryState();
 
   // Prepare compilation for the output.
   void PrepareOut(const planner::AbstractPlanNode &plan, Pipeline *pipeline);
@@ -122,34 +119,11 @@ class CompilationContext {
   // Create a new container.
   CompilationUnit *MakeContainer();
 
-  using ContainerIndex = std::size_t;
-
-  // Generate all pipeline code. The output vector 'steps' is populated with
-  // list of execution steps to be evaluated in order. The output parameter
-  // 'mapping' contains a mapping of the container that holds each pipeline's
-  // generated code.
-  void GeneratePipelineCode(const PipelineGraph &graph, const Pipeline &target,
-                            std::vector<ExecutionStep> *steps,
-                            std::unordered_map<PipelineId, ContainerIndex> *mapping);
-
-  // Generate pipeline code in one-shot.
-  void GeneratePipelineCode_OneShot(const PipelineGraph &graph, const Pipeline &target,
-                                    std::vector<ExecutionStep> *steps,
-                                    std::unordered_map<PipelineId, ContainerIndex> *mapping);
-
-  // Generate pipeline code incremental. This approach interleaves
-  // code-generation and execution.
-  void GeneratePipelineCode_Incremental(const PipelineGraph &graph, const Pipeline &target,
-                                        std::vector<ExecutionStep> *steps,
-                                        std::unordered_map<PipelineId, ContainerIndex> *mapping);
-
  private:
   // Unique ID used as a prefix for all generated functions to ensure uniqueness.
   uint64_t unique_id_;
   // The compiled query object we'll update.
   ExecutableQuery *query_;
-  // The compilation mode.
-  CompilationMode mode_;
   // All allocated containers.
   std::vector<std::unique_ptr<CompilationUnit>> containers_;
   // The code generator instance.
