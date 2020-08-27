@@ -88,9 +88,9 @@ void JoinHashTableVectorProbe::FollowNext() {
 }
 
 bool JoinHashTableVectorProbe::NextInnerJoin(VectorProjection *input) {
-  const auto *input_filter = input->GetFilteredTupleIdList();
-
-  if (input_filter != nullptr) {
+  if (const auto input_filter = input->GetFilteredTupleIdList()) {
+    // Filter out TIDs from the non-null entries list. This can happen if the
+    // input batch was filtered after the call to Init().
     non_null_entries_.IntersectWith(*input_filter);
   }
 
@@ -127,12 +127,10 @@ bool JoinHashTableVectorProbe::NextSemiOrAntiJoin(VectorProjection *input) {
   // one call to Next(). For every pointer, we chase bucket chain pointers doing
   // comparisons, stopping either when we find the first match (for SEMI), or
   // exhaust the chain (for ANTI).
-  const auto *input_filter = input->GetFilteredTupleIdList();
-
-  // Filter out TIDs from the non-null entries list. This can happen if the
-  // input batch was filtered through another process after we were
-  // initialized.
-  if (input_filter != nullptr) {
+  
+  if (const auto input_filter = input->GetFilteredTupleIdList()) {
+    // Filter out TIDs from the non-null entries list. This can happen if the
+    // input batch was filtered after the call to Init().
     non_null_entries_.IntersectWith(*input_filter);
   }
 
