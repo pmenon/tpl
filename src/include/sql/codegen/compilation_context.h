@@ -5,10 +5,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ast/identifier.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/codegen_defs.h"
-#include "sql/codegen/executable_query.h"
-#include "sql/codegen/execution_plan.h"
 #include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
@@ -19,6 +18,8 @@ class AbstractPlanNode;
 namespace tpl::sql::codegen {
 
 class CompilationUnit;
+class ExecutableQuery;
+class ExecutionStep;
 class ExpressionTranslator;
 class OperatorTranslator;
 class Pipeline;
