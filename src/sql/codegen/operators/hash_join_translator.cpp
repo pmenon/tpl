@@ -99,7 +99,7 @@ void HashJoinTranslator::TearDownPipelineState(const PipelineContext &pipeline_c
   }
 }
 
-ast::Expr *HashJoinTranslator::HashKeys(
+ast::Identifier HashJoinTranslator::HashKeys(
     ConsumerContext *ctx, FunctionBuilder *function,
     const std::vector<const planner::AbstractExpression *> &hash_keys) const {
   std::vector<ast::Expr *> key_values;
@@ -111,7 +111,7 @@ ast::Expr *HashJoinTranslator::HashKeys(
   ast::Identifier hash_val_name = codegen_->MakeFreshIdentifier("hash_val");
   function->Append(codegen_->DeclareVarWithInit(hash_val_name, codegen_->Hash(key_values)));
 
-  return codegen_->MakeExpr(hash_val_name);
+  return hash_val_name;
 }
 
 ast::Expr *HashJoinTranslator::GetBuildRowAttribute(ast::Expr *build_row, uint32_t attr_idx) const {
@@ -142,10 +142,11 @@ void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *context,
 
   // var hashVal = @hash(...)
   const auto &left_keys = GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys();
-  ast::Expr *hash_val = HashKeys(context, function, left_keys);
+  ast::Identifier hash_val = HashKeys(context, function, left_keys);
 
   // var buildRow = @joinHTInsert(...)
-  ast::Expr *insert_call = codegen_->JoinHashTableInsert(hash_table, hash_val, build_row_type_);
+  ast::Expr *insert_call =
+      codegen_->JoinHashTableInsert(hash_table, codegen_->MakeExpr(hash_val), build_row_type_);
   function->Append(codegen_->DeclareVarWithInit(build_row_var_, insert_call));
 
   // Fill row.
@@ -156,13 +157,14 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
   const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
 
   // Compute hash.
-  ast::Expr *hash_val = HashKeys(ctx, function, join_plan.GetRightHashKeys());
+  ast::Identifier hash_val = HashKeys(ctx, function, join_plan.GetRightHashKeys());
 
   // var entry = @jhtLookup(hash)
   ast::Identifier entry_var = codegen_->MakeFreshIdentifier("entry");
   const auto entry = [&]() { return codegen_->MakeExpr(entry_var); };
   auto lookup_call = codegen_->MakeStmt(codegen_->DeclareVarWithInit(
-      entry_var, codegen_->JoinHashTableLookup(GetQueryStateEntryPtr(global_join_ht_), hash_val)));
+      entry_var, codegen_->JoinHashTableLookup(GetQueryStateEntryPtr(global_join_ht_),
+                                               codegen_->MakeExpr(hash_val))));
 
   // entry != null
   auto valid_entry = codegen_->Compare(parsing::Token::Type::BANG_EQUAL, entry(), codegen_->Nil());
@@ -186,7 +188,8 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
       //   var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
       //   ...
       // }
-      If check_hash(function, codegen_->CompareEq(hash_val, codegen_->HTEntryGetHash(entry())));
+      If check_hash(function, codegen_->CompareEq(codegen_->MakeExpr(hash_val),
+                                                  codegen_->HTEntryGetHash(entry())));
       {
         ast::Expr *build_row = codegen_->HTEntryGetRow(entry(), build_row_type_);
         function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
@@ -216,7 +219,8 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
       //   var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
       //   ...
       // }
-      If check_hash(function, codegen_->CompareEq(hash_val, codegen_->HTEntryGetHash(entry())));
+      If check_hash(function, codegen_->CompareEq(codegen_->MakeExpr(hash_val),
+                                                  codegen_->HTEntryGetHash(entry())));
       {
         ast::Expr *build_row = codegen_->HTEntryGetRow(entry(), build_row_type_);
         function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));

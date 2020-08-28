@@ -117,8 +117,8 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // Evaluate the provided hash keys in the provided context and return the
   // results in the provided results output vector.
-  ast::Expr *HashKeys(ConsumerContext *ctx, FunctionBuilder *function,
-                      const std::vector<const planner::AbstractExpression *> &hash_keys) const;
+  ast::Identifier HashKeys(ConsumerContext *ctx, FunctionBuilder *function,
+                           const std::vector<const planner::AbstractExpression *> &hash_keys) const;
 
   // Fill the build row with the columns from the given context.
   void FillBuildRow(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *build_row) const;

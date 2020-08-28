@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sql/codegen/operators/operator_translator.h"
+#include "sql/codegen/pipeline_driver.h"
 
 namespace tpl::sql::planner {
 class ProjectionPlanNode;
@@ -11,7 +12,7 @@ namespace tpl::sql::codegen {
 /**
  * Translator for projections.
  */
-class ProjectionTranslator : public OperatorTranslator {
+class ProjectionTranslator : public OperatorTranslator, PipelineDriver {
  public:
   /**
    * Create a translator for the given plan.
@@ -28,6 +29,13 @@ class ProjectionTranslator : public OperatorTranslator {
    */
   void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
+  /**
+   * Projections only drive the pipeline if they have no children.
+   * @param pipeline_ctx The pipeline.
+   */
+  void DrivePipeline(const PipelineContext &pipeline_ctx) const override;
+
+ public:
   /**
    * Projections do not produce columns from base tables.
    */

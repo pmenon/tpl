@@ -14,13 +14,22 @@ ProjectionTranslator::ProjectionTranslator(const planner::ProjectionPlanNode &pl
                                            CompilationContext *compilation_context,
                                            Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline) {
-  TPL_ASSERT(plan.GetChildrenSize() == 1, "Projections expected to have one child");
-  // Prepare children for codegen.
-  compilation_context->Prepare(*plan.GetChild(0), pipeline);
+  if (plan.GetChildrenSize() > 0) {
+    TPL_ASSERT(plan.GetChildrenSize() == 1, "Projections expected to have one child");
+    compilation_context->Prepare(*plan.GetChild(0), pipeline);
+  } else {
+    // If there are no children, the projection drives the pipeline serially.
+    pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
+  }
 }
 
 void ProjectionTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   context->Consume(function);
+}
+
+void ProjectionTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const {
+  TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "Driving unknown pipeline");
+  GetPipeline()->LaunchSerial(pipeline_ctx);
 }
 
 }  // namespace tpl::sql::codegen
