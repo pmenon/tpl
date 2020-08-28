@@ -25,7 +25,7 @@ struct HashTableEntry {
     uint64_t overflow_count;
   };
 
-  // The hash table.
+  // The hash value.
   hash_t hash;
   // The payload starting position.
   byte payload[0];
@@ -59,5 +59,9 @@ struct HashTableEntry {
     return reinterpret_cast<const T *>(payload);
   }
 };
+
+static_assert(sizeof(HashTableEntry) == 16u,
+              "HashTableEntry expected to be 16-bytes: 8-bytes for chain link or CHT slot, "
+              "8-bytes for hash value.");
 
 }  // namespace tpl::sql
