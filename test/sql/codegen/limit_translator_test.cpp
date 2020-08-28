@@ -65,17 +65,6 @@ class LimitTranslatorTest : public CodegenBasedTest {
                   .Build();
     }
 
-    // Make the checkers
-    GenericChecker row_check(
-        [&](const std::vector<const sql::Val *> &row) {
-          // col2 is monotonically increasing from 0. So, the values we get back
-          // should match: off <= col2 < off+lim.
-          const auto col2 = static_cast<const sql::Integer *>(row[1]);
-          EXPECT_GE(col2->val, off);
-          EXPECT_LT(col2->val, off + lim);
-        },
-        nullptr);
-
     // Compile.
     auto query = CompilationContext::Compile(*limit);
 
@@ -93,7 +82,7 @@ class LimitTranslatorTest : public CodegenBasedTest {
       std::vector<std::unique_ptr<OutputChecker>> checks;
       // 1. Generic per-row check to ensure rows are in limit/offset range.
       // 2. Ensure total count matches expectation.
-      checks.push_back(std::make_unique<GenericChecker>(
+      checks.emplace_back(std::make_unique<GenericChecker>(
           [&](const std::vector<const sql::Val *> &row) {
             // col2 is monotonically increasing from 0. So, the values we get back
             // should match: off <= col2 < off+lim.
@@ -102,7 +91,7 @@ class LimitTranslatorTest : public CodegenBasedTest {
             EXPECT_LT(col2->val, off + lim);
           },
           nullptr));
-      checks.push_back(std::make_unique<TupleCounterChecker>(expected_tuple_count));
+      checks.emplace_back(std::make_unique<TupleCounterChecker>(expected_tuple_count));
       return std::make_unique<MultiChecker>(std::move(checks));
     });
   }

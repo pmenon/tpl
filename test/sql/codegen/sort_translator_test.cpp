@@ -82,9 +82,9 @@ class SortTranslatorTest : public CodegenBasedTest {
       // 2. col2 should be sorted by col2 ASC.
       // 3. The total number of rows should depend on offset and limit.
       std::vector<std::unique_ptr<OutputChecker>> checks;
-      checks.push_back(std::make_unique<TupleCounterChecker>(expected_tuple_count));
-      checks.push_back(std::make_unique<SingleIntSortChecker>(1));
-      checks.push_back(std::make_unique<GenericChecker>(
+      checks.emplace_back(std::make_unique<TupleCounterChecker>(expected_tuple_count));
+      checks.emplace_back(std::make_unique<SingleIntSortChecker>(1));
+      checks.emplace_back(std::make_unique<GenericChecker>(
           [&](const std::vector<const sql::Val *> &row) {
             const auto col2 = static_cast<const sql::Integer *>(row[1]);
             EXPECT_GE(col2->val, off);
@@ -151,8 +151,8 @@ TEST_F(SortTranslatorTest, SimpleSortTest) {
     // 1. All 'col1' should be less than 500 due to the filter.
     // 2. The output should be sorted by col2 ASC.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
-    checks.push_back(std::make_unique<SingleIntSortChecker>(1));
+    checks.emplace_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
+    checks.emplace_back(std::make_unique<SingleIntSortChecker>(1));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
 }
@@ -217,9 +217,9 @@ TEST_F(SortTranslatorTest, TwoColumnSortTest) {
     // There should be 500 output rows, where col1 < 500.
     // The output should be sorted by col2 ASC
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<TupleCounterChecker>(500));
-    checks.push_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
-    checks.push_back(std::make_unique<GenericChecker>(
+    checks.emplace_back(std::make_unique<TupleCounterChecker>(500));
+    checks.emplace_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
+    checks.emplace_back(std::make_unique<GenericChecker>(
         [curr_col1 = std::numeric_limits<int64_t>::max(),
          curr_col2 = std::numeric_limits<int64_t>::min()](
             const std::vector<const sql::Val *> &vals) mutable {

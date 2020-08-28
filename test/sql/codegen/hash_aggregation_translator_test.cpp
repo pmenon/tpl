@@ -76,10 +76,10 @@ TEST_F(HashAggregationTranslatorTest, SimpleAggregateTest) {
   auto query = CompilationContext::Compile(*agg);
 
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [](){
+  ExecuteAndCheckInAllModes(query.get(), []() {
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<TupleCounterChecker>(10));
-    checks.push_back(std::make_unique<SingleIntSumChecker>(1, (1000 * 999) / 2));
+    checks.emplace_back(std::make_unique<TupleCounterChecker>(10));
+    checks.emplace_back(std::make_unique<SingleIntSumChecker>(1, (1000 * 999) / 2));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
 }

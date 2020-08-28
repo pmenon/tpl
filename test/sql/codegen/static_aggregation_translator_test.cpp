@@ -80,10 +80,10 @@ TEST_F(StaticAggregationTranslatorTest, SimpleTest) {
     // 3. The sum should be equal to sum(1,N) where N=num_tuples since
     //    col2 is a monotonically increasing column.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<TupleCounterChecker>(1));
-    checks.push_back(
+    checks.emplace_back(std::make_unique<TupleCounterChecker>(1));
+    checks.emplace_back(
         std::make_unique<SingleColumnValueChecker<Integer>>(std::equal_to<>(), 0, ntuples));
-    checks.push_back(std::make_unique<SingleIntSumChecker>(1, ntuples * (ntuples - 1) / 2));
+    checks.emplace_back(std::make_unique<SingleIntSumChecker>(1, ntuples * (ntuples - 1) / 2));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
 }
@@ -137,7 +137,7 @@ TEST_F(StaticAggregationTranslatorTest, StaticAggregateWithHavingTest) {
     // Checks:
     // 1. Should not output anything since the count is greater than 0.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<TupleCounterChecker>(0));
+    checks.emplace_back(std::make_unique<TupleCounterChecker>(0));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
 }

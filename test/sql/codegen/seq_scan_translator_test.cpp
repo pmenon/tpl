@@ -63,12 +63,12 @@ TEST_F(SeqScanTranslatorTest, ScanTest) {
     // Checkers:
     // 1. Filtered column (0) is less than 500 (i.e., the filtering value);
     // 2. Filtered column (1) is less than 5 (i.e., the filtering value);
+    // clang-format off
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(
-        std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, col1_filter_val));
-    checks.push_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::greater_equal<>(), 1,
-                                                                         col2_filter_val));
+    checks.emplace_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, col1_filter_val));
+    checks.emplace_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::greater_equal<>(), 1, col2_filter_val));
     return std::make_unique<MultiChecker>(std::move(checks));
+    // clang-format on
   });
 }
 
@@ -104,7 +104,7 @@ TEST_F(SeqScanTranslatorTest, ScanWithNullCheckTest) {
     // Checkers:
     // 1. 'cola' is non-nullable, so no rows should be selected.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<TupleCounterChecker>(0));
+    checks.emplace_back(std::make_unique<TupleCounterChecker>(0));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
 }
@@ -157,7 +157,7 @@ TEST_F(SeqScanTranslatorTest, ScanWithNonVectorizedFilterTest) {
   ExecuteAndCheckInAllModes(query.get(), [&]() {
     // Check filtering value.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<GenericChecker>(
+    checks.emplace_back(std::make_unique<GenericChecker>(
         [](const std::vector<const sql::Val *> &vals) {
           // Read cols
           auto col1 = static_cast<const sql::Integer *>(vals[0]);
@@ -227,8 +227,8 @@ TEST_F(SeqScanTranslatorTest, ScanWithProjection) {
     // 1. There has to be exactly 500 rows, due to the filter.
     // 2. Check col3 and col4 values for each row.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
-    checks.push_back(std::make_unique<GenericChecker>(
+    checks.emplace_back(std::make_unique<SingleColumnValueChecker<Integer>>(std::less<>(), 0, 500));
+    checks.emplace_back(std::make_unique<GenericChecker>(
         [](const std::vector<const sql::Val *> &vals) {
           auto col1 = static_cast<const sql::Integer *>(vals[0]);
           auto col2 = static_cast<const sql::Integer *>(vals[1]);
@@ -292,9 +292,9 @@ TEST_F(SeqScanTranslatorTest, ScanWithAllColumnTypes) {
     // 1. Total number of rows should be N/2 where N=table size.
     // 2. All 'a' values should be true.
     std::vector<std::unique_ptr<OutputChecker>> checks;
-    checks.push_back(
+    checks.emplace_back(
         std::make_unique<SingleColumnValueChecker<sql::BoolVal>>(std::equal_to<>(), 0, true));
-    checks.push_back(std::make_unique<TupleCounterChecker>(table->GetTupleCount() / 2));
+    checks.emplace_back(std::make_unique<TupleCounterChecker>(table->GetTupleCount() / 2));
     return std::make_unique<MultiChecker>(std::move(checks));
   });
 }

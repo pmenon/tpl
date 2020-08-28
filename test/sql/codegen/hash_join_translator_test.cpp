@@ -2,7 +2,7 @@
 
 #include "sql/catalog.h"
 #include "sql/codegen/compilation_context.h"
-#include "sql/planner/plannodes/nested_loop_join_plan_node.h"
+#include "sql/planner/plannodes/hash_join_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/printing_consumer.h"
 #include "sql/schema.h"
@@ -18,9 +18,9 @@ namespace tpl::sql::codegen {
 
 using namespace std::chrono_literals;
 
-class NestedLoopJoinTranslatorTest : public CodegenBasedTest {};
+class HashJoinTranslatorTest : public CodegenBasedTest {};
 
-TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
+TEST_F(HashJoinTranslatorTest, SimpleHashJoinTest) {
   // Self join:
   // SELECT t1.col1, t1.col2, t2.col2, t1.col1 + t2.col2
   //   FROM small_1 AS t1 INNER JOIN small_1 AS t2 ON t1.col2 = t2.col2
@@ -43,8 +43,10 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
     seq_scan_out1.AddOutput("col2", col2);
     auto schema = seq_scan_out1.MakeSchema();
     // Build.
-    planner::SeqScanPlanNode::Builder builder;
-    seq_scan1 = builder.SetOutputSchema(std::move(schema)).SetTableOid(table1->GetId()).Build();
+    seq_scan1 = planner::SeqScanPlanNode::Builder()
+                    .SetOutputSchema(std::move(schema))
+                    .SetTableOid(table1->GetId())
+                    .Build();
   }
 
   // Scan small_1.
@@ -62,15 +64,15 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
     // Make predicate: col2 < 80.
     auto predicate = expr_maker.CompareLt(col2, expr_maker.Constant(80));
     // Build.
-    planner::SeqScanPlanNode::Builder builder;
-    seq_scan2 = builder.SetOutputSchema(std::move(schema))
+    seq_scan2 = planner::SeqScanPlanNode::Builder()
+                    .SetOutputSchema(std::move(schema))
                     .SetScanPredicate(predicate)
                     .SetTableOid(table2->GetId())
                     .Build();
   }
 
-  // NLJ plan.
-  std::unique_ptr<planner::AbstractPlanNode> nl_join;
+  // Hash join plan.
+  std::unique_ptr<planner::AbstractPlanNode> hash_join_plan;
   planner::OutputSchemaHelper nl_join_out(&expr_maker, 0);
   {
     // t1.col1 and t1.col2
@@ -89,23 +91,25 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
     // Predicate.
     auto predicate = expr_maker.CompareEq(t1_col2, t2_col2);
     // Build.
-    planner::NestedLoopJoinPlanNode::Builder builder;
-    nl_join = builder.AddChild(std::move(seq_scan1))
-                  .AddChild(std::move(seq_scan2))
-                  .SetOutputSchema(std::move(schema))
-                  .SetJoinType(planner::LogicalJoinType::INNER)
-                  .SetJoinPredicate(predicate)
-                  .Build();
+    hash_join_plan = planner::HashJoinPlanNode::Builder()
+                         .AddChild(std::move(seq_scan1))
+                         .AddChild(std::move(seq_scan2))
+                         .SetOutputSchema(std::move(schema))
+                         .SetJoinType(planner::LogicalJoinType::INNER)
+                         .AddLeftHashKey(t1_col2)
+                         .AddRightHashKey(t2_col2)
+                         .SetJoinPredicate(predicate)
+                         .Build();
   }
 
   // Compile.
-  auto query = CompilationContext::Compile(*nl_join);
+  auto query = CompilationContext::Compile(*hash_join_plan);
 
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), []() {
+  ExecuteAndCheckInAllModes(query.get(), [&]() {
     // Checkers:
     // 1. Only 80 rows should be produced due to where clause.
-    // 2. Joined columns should be equal; columns 1 and 2.
+    // 2. Joined columns should be equal.
     // 3. The 4th column is the sum of the 1rst and 3rd columns.
     std::vector<std::unique_ptr<OutputChecker>> checks;
     checks.emplace_back(std::make_unique<TupleCounterChecker>(80));
