@@ -205,8 +205,8 @@ bool TableVectorIterator::ParallelScan(const uint16_t table_id, void *const quer
   timer.Stop();
 
   double tps = table->GetTupleCount() / timer.GetElapsed() / 1000.0;
-  LOG_INFO("Scanned {} blocks ({} tuples) in {} ms ({:.3f} mtps)", table->GetBlockCount(),
-           table->GetTupleCount(), timer.GetElapsed(), tps);
+  LOG_DEBUG("Scanned {} blocks ({} tuples) in {} ms ({:.3f} mtps)", table->GetBlockCount(),
+            table->GetTupleCount(), timer.GetElapsed(), tps);
 
   return true;
 }

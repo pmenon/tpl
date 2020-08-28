@@ -1108,22 +1108,25 @@ VM_OP void OpJoinHashTableBuildParallel(tpl::sql::JoinHashTable *join_hash_table
                                         tpl::sql::ThreadStateContainer *thread_state_container,
                                         uint32_t jht_offset);
 
-VM_OP_HOT void OpJoinHashTableLookup(tpl::sql::JoinHashTable *join_hash_table,
-                                     tpl::sql::HashTableEntryIterator *ht_entry_iter,
+VM_OP_HOT void OpJoinHashTableLookup(const tpl::sql::HashTableEntry **ht_entry,
+                                     tpl::sql::JoinHashTable *join_hash_table,
                                      const hash_t hash_val) {
-  *ht_entry_iter = join_hash_table->Lookup<false>(hash_val);
+  *ht_entry = join_hash_table->Lookup<false>(hash_val);
 }
 
 VM_OP void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table);
 
-VM_OP_HOT void OpHashTableEntryIteratorHasNext(bool *has_next,
-                                               tpl::sql::HashTableEntryIterator *ht_entry_iter) {
-  *has_next = ht_entry_iter->HasNext();
+VM_OP_HOT void OpHashTableEntryGetHash(hash_t *hash, const tpl::sql::HashTableEntry *ht_entry) {
+  *hash = ht_entry->hash;
 }
 
-VM_OP_HOT void OpHashTableEntryIteratorGetRow(const byte **row,
-                                              tpl::sql::HashTableEntryIterator *ht_entry_iter) {
-  *row = ht_entry_iter->GetMatchPayload();
+VM_OP_HOT void OpHashTableEntryGetRow(const byte **row, const tpl::sql::HashTableEntry *ht_entry) {
+  *row = ht_entry->payload;
+}
+
+VM_OP_HOT void OpHashTableEntryGetNext(const tpl::sql::HashTableEntry **next,
+                                       const tpl::sql::HashTableEntry *ht_entry) {
+  *next = ht_entry->next;
 }
 
 // ---------------------------------------------------------

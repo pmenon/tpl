@@ -1,5 +1,3 @@
-#include <functional>
-#include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -8,10 +6,10 @@
 
 #include "benchmark/benchmark.h"
 
-#include "ast/ast_dump.h"
 #include "compiler/compiler.h"
 #include "sema/sema.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/executable_query.h"
 #include "sql/codegen/output_checker.h"
 #include "sql/execution_context.h"
 #include "sql/planner/expression_maker.h"
@@ -25,7 +23,6 @@
 #include "sql/printing_consumer.h"
 #include "sql/table.h"
 #include "sql/tablegen/table_generator.h"
-#include "sql/value.h"
 #include "vm/bytecode_generator.h"
 #include "vm/bytecode_module.h"
 #include "vm/llvm_engine.h"
@@ -34,6 +31,9 @@
 namespace tpl::sql::codegen {
 
 namespace {
+
+// The execution mode.
+constexpr auto kExecutionMode = vm::ExecutionMode::Interpret;
 
 // Change this path to where your TPC-H data is.
 constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-0.1";
@@ -200,11 +200,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q1)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -343,11 +343,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q4)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -711,11 +711,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -792,11 +792,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q6)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -1211,11 +1211,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -1582,11 +1582,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -1833,11 +1833,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -2138,11 +2138,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q18)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -2313,11 +2313,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
   // Run Once to force compilation
-  query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+  query->Run(&exec_ctx, kExecutionMode);
 
   // Only time execution
   for (auto _ : state) {
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 

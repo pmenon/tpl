@@ -381,6 +381,17 @@ class CodeGen {
                                    ast::Expr *right) const;
 
   /**
+   * Generate a comparison operation of the provided type between the provided left and right
+   * operands, returning its result.
+   * @param left The left input.
+   * @param right The right input.
+   * @return The result of the comparison.
+   */
+  [[nodiscard]] ast::Expr *CompareEq(ast::Expr *left, ast::Expr *right) const {
+    return Compare(parsing::Token::Type::EQUAL_EQUAL, left, right);
+  }
+
+  /**
    * Generate a comparison of the given object pointer to 'nil', checking if it's a nil pointer.
    * @param obj The object to compare.
    * @return The boolean result of the comparison.
@@ -789,16 +800,13 @@ class CodeGen {
 
   /**
    * Call @joinHTLookup(). Performs a single lookup into the hash table with a tuple with the
-   * provided hash value. The provided iterator will provide tuples in the hash table that match the
-   * provided hash, but may not match on key (i.e., it may offer false positives). It is the
-   * responsibility of the user to resolve such hash collisions.
+   * provided hash value. The returned entry points to the start of the bucket chain for the
+   * given hash. It is the responsibility of the user to resolve hash and key collisions.
    * @param join_hash_table The join hash table.
-   * @param entry_iter An iterator over a list of entries.
    * @param hash_val The hash value of the probe key.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableLookup(ast::Expr *join_hash_table, ast::Expr *entry_iter,
-                                               ast::Expr *hash_val);
+  [[nodiscard]] ast::Expr *JoinHashTableLookup(ast::Expr *join_hash_table, ast::Expr *hash_val);
 
   /**
    * Call @joinHTFree(). Cleanup and destroy the provided join hash table instance.
@@ -808,20 +816,25 @@ class CodeGen {
   [[nodiscard]] ast::Expr *JoinHashTableFree(ast::Expr *join_hash_table);
 
   /**
-   * Call @htEntryIterHasNext(). Determine if the provided iterator has more entries. Entries
-   * @param iter The iterator.
+   * Call @htEntryGetHash(). Retrieves the hash value of the hash table entry.
+   * @param entry The hash table entry.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *HTEntryIterHasNext(ast::Expr *iter);
+  [[nodiscard]] ast::Expr *HTEntryGetHash(ast::Expr *entry);
 
   /**
-   * Call @htEntryIterGetRow(). Retrieves a pointer to the current row the iterator is positioned at
-   * casted to the provided row type.
-   * @param iter The iterator.
-   * @param row_type The name of the struct type the row is expected to be.
+   * Call @htEntryGetRow(). Retrieves a pointer to contents of the entry.
+   * @param entry The hash table entry.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type);
+  [[nodiscard]] ast::Expr *HTEntryGetRow(ast::Expr *entry, ast::Identifier row_type);
+
+  /**
+   * Call @htEntryGetNext(). Return the next entry in the bucket chain.
+   * @param entry The hash table entry.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *HTEntryGetNext(ast::Expr *entry);
 
   // -------------------------------------------------------
   //
@@ -1235,6 +1248,11 @@ class CodeGen {
    * @return A new identifier expression representing the given identifier.
    */
   ast::Expr *MakeExpr(ast::Identifier ident) const;
+
+  /**
+   * @return The variable declaration as a standalone statement.
+   */
+  ast::Stmt *MakeStmt(ast::VariableDecl *var) const;
 
   /**
    * @return The expression as a standalone statement.

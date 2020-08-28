@@ -98,8 +98,8 @@ void BuildAndProbeTest(uint32_t num_tuples, uint32_t dup_scale_factor) {
     Tuple probe_tuple = {i, 0, 0, 0};
     // Perform probe
     uint32_t count = 0;
-    for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash()); iter.HasNext();) {
-      auto *matched = reinterpret_cast<const Tuple *>(iter.GetMatchPayload());
+    for (auto e = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash()); e; e = e->next) {
+      auto matched = e->template PayloadAs<Tuple>();
       if (matched->a == probe_tuple.a) {
         count++;
       }
@@ -113,9 +113,12 @@ void BuildAndProbeTest(uint32_t num_tuples, uint32_t dup_scale_factor) {
   for (uint32_t i = num_tuples; i < num_tuples + 1000; i++) {
     // A tuple that should NOT find any join partners
     Tuple probe_tuple = {i, 0, 0, 0};
-    for (auto iter = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash()); iter.HasNext();) {
-      FAIL() << "Should not find any matches for key [" << i
-             << "] that was not inserted into the join hash table";
+    for (auto e = join_hash_table.Lookup<UseCHT>(probe_tuple.Hash()); e; e = e->next) {
+      auto matched = e->template PayloadAs<Tuple>();
+      if (matched->a == probe_tuple.a) {
+        FAIL() << "Should not find any matches for key [" << i << "]. Only keys in [0,"
+               << num_tuples << "] were inserted";
+      }
     }
   }
 }
@@ -164,8 +167,8 @@ TEST_F(JoinHashTableTest, ParallelBuildTest) {
   for (uint32_t i = 0; i < num_tuples; i++) {
     auto probe = Tuple{i, 1, 2, 3};
     uint32_t count = 0;
-    for (auto iter = main_jht.Lookup<use_concise_ht>(probe.Hash()); iter.HasNext();) {
-      auto *matched = reinterpret_cast<const Tuple *>(iter.GetMatchPayload());
+    for (auto e = main_jht.Lookup<use_concise_ht>(probe.Hash()); e; e = e->next) {
+      auto matched = e->PayloadAs<Tuple>();
       if (matched->a == probe.a) {
         count++;
       }

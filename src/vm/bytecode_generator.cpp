@@ -1266,9 +1266,10 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call, ast::
       break;
     }
     case ast::Builtin::JoinHashTableLookup: {
-      LocalVar ht_entry_iter = VisitExpressionForRValue(call->Arguments()[1]);
-      LocalVar hash = VisitExpressionForRValue(call->Arguments()[2]);
-      GetEmitter()->Emit(Bytecode::JoinHashTableLookup, join_hash_table, ht_entry_iter, hash);
+      LocalVar ht_entry = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+      LocalVar hash = VisitExpressionForRValue(call->Arguments()[1]);
+      GetEmitter()->Emit(Bytecode::JoinHashTableLookup, ht_entry, join_hash_table, hash);
+      GetExecutionResult()->SetDestination(ht_entry.ValueOf());
       break;
     }
     case ast::Builtin::JoinHashTableFree: {
@@ -1281,21 +1282,27 @@ void BytecodeGenerator::VisitBuiltinJoinHashTableCall(ast::CallExpr *call, ast::
   }
 }
 
-void BytecodeGenerator::VisitBuiltinHashTableEntryIteratorCall(ast::CallExpr *call,
-                                                               ast::Builtin builtin) {
+void BytecodeGenerator::VisitBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin builtin) {
   // The hash table entry iterator is always the first argument to all calls
-  LocalVar ht_entry_iter = VisitExpressionForRValue(call->Arguments()[0]);
+  LocalVar ht_entry = VisitExpressionForRValue(call->Arguments()[0]);
 
   switch (builtin) {
-    case ast::Builtin::HashTableEntryIterHasNext: {
-      LocalVar has_more = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-      GetEmitter()->Emit(Bytecode::HashTableEntryIteratorHasNext, has_more, ht_entry_iter);
-      GetExecutionResult()->SetDestination(has_more.ValueOf());
+    case ast::Builtin::HashTableEntryGetHash: {
+      LocalVar hash = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+      GetEmitter()->Emit(Bytecode::HashTableEntryGetHash, hash, ht_entry);
+      GetExecutionResult()->SetDestination(hash.ValueOf());
       break;
     }
-    case ast::Builtin::HashTableEntryIterGetRow: {
+    case ast::Builtin::HashTableEntryGetRow: {
       LocalVar row = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-      GetEmitter()->Emit(Bytecode::HashTableEntryIteratorGetRow, row, ht_entry_iter);
+      GetEmitter()->Emit(Bytecode::HashTableEntryGetRow, row, ht_entry);
+      GetExecutionResult()->SetDestination(row.ValueOf());
+      break;
+    }
+    case ast::Builtin::HashTableEntryGetNext: {
+      LocalVar next_entry = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+      GetEmitter()->Emit(Bytecode::HashTableEntryGetNext, next_entry, ht_entry);
+      GetExecutionResult()->SetDestination(next_entry.ValueOf());
       break;
     }
     default: {
@@ -1738,9 +1745,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinJoinHashTableCall(call, builtin);
       break;
     }
-    case ast::Builtin::HashTableEntryIterHasNext:
-    case ast::Builtin::HashTableEntryIterGetRow: {
-      VisitBuiltinHashTableEntryIteratorCall(call, builtin);
+    case ast::Builtin::HashTableEntryGetHash:
+    case ast::Builtin::HashTableEntryGetRow:
+    case ast::Builtin::HashTableEntryGetNext: {
+      VisitBuiltinHashTableEntryCall(call, builtin);
       break;
     }
     case ast::Builtin::SorterInit:

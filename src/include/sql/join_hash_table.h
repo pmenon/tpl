@@ -104,7 +104,7 @@ class JoinHashTable {
    * @return An iterator over all elements that match the hash.
    */
   template <bool UseCHT>
-  HashTableEntryIterator Lookup(hash_t hash) const;
+  const HashTableEntry *Lookup(hash_t hash) const;
 
   /**
    * Perform a bulk lookup of tuples whose hash values are stored in @em hashes, storing the results
@@ -230,19 +230,20 @@ class JoinHashTable {
 // ---------------------------------------------------------
 
 template <>
-inline HashTableEntryIterator JoinHashTable::Lookup<false>(const hash_t hash) const {
+inline const HashTableEntry *JoinHashTable::Lookup<false>(const hash_t hash) const {
   HashTableEntry *entry = chaining_hash_table_.FindChainHead(hash);
   while (entry != nullptr && entry->hash != hash) {
     entry = entry->next;
   }
-  return HashTableEntryIterator(entry, hash);
+  return entry;
 }
 
 template <>
-inline HashTableEntryIterator JoinHashTable::Lookup<true>(const hash_t hash) const {
+inline const HashTableEntry *JoinHashTable::Lookup<true>(const hash_t hash) const {
   const auto [found, idx] = concise_hash_table_.Lookup(hash);
-  auto *entry = (found ? EntryAt(idx) : nullptr);
-  return HashTableEntryIterator(entry, hash);
+  auto entry = (found ? EntryAt(idx) : nullptr);
+  // TODO(pmenon): Traverse chain until correct hash is found?
+  return entry;
 }
 
 inline uint64_t JoinHashTable::GetTupleCount() const {

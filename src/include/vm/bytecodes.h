@@ -393,8 +393,9 @@ namespace tpl::vm {
   F(JoinHashTableBuildParallel, OperandType::Local, OperandType::Local, OperandType::Local)                            \
   F(JoinHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local)                                   \
   F(JoinHashTableFree, OperandType::Local)                                                                             \
-  F(HashTableEntryIteratorHasNext, OperandType::Local, OperandType::Local)                                             \
-  F(HashTableEntryIteratorGetRow, OperandType::Local, OperandType::Local)                                              \
+  F(HashTableEntryGetHash, OperandType::Local, OperandType::Local)                                                     \
+  F(HashTableEntryGetRow, OperandType::Local, OperandType::Local)                                                      \
+  F(HashTableEntryGetNext, OperandType::Local, OperandType::Local)                                                     \
                                                                                                                        \
   /* Sorting */                                                                                                        \
   F(SorterInit, OperandType::Local, OperandType::Local, OperandType::FunctionId, OperandType::Local)                   \

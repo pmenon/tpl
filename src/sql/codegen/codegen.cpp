@@ -647,10 +647,8 @@ ast::Expr *CodeGen::JoinHashTableBuildParallel(ast::Expr *join_hash_table,
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableLookup(ast::Expr *join_hash_table, ast::Expr *entry_iter,
-                                        ast::Expr *hash_val) {
-  ast::Expr *call =
-      CallBuiltin(ast::Builtin::JoinHashTableLookup, {join_hash_table, entry_iter, hash_val});
+ast::Expr *CodeGen::JoinHashTableLookup(ast::Expr *join_hash_table, ast::Expr *hash_val) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableLookup, {join_hash_table, hash_val});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
@@ -661,16 +659,22 @@ ast::Expr *CodeGen::JoinHashTableFree(ast::Expr *join_hash_table) {
   return call;
 }
 
-ast::Expr *CodeGen::HTEntryIterHasNext(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryIterHasNext, {iter});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
+ast::Expr *CodeGen::HTEntryGetHash(ast::Expr *entry) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryGetHash, {entry});
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint64));
   return call;
 }
 
-ast::Expr *CodeGen::HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryIterGetRow, {iter});
+ast::Expr *CodeGen::HTEntryGetRow(ast::Expr *entry, ast::Identifier row_type) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryGetRow, {entry});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
   return PtrCast(row_type, call);
+}
+
+ast::Expr *CodeGen::HTEntryGetNext(ast::Expr *entry) {
+  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryGetNext, {entry});
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::HashTableEntry)->PointerTo());
+  return call;
 }
 
 // ---------------------------------------------------------
@@ -984,6 +988,10 @@ ast::Identifier CodeGen::MakeIdentifier(std::string_view str) const {
 
 ast::Expr *CodeGen::MakeExpr(ast::Identifier ident) const {
   return NodeFactory()->NewIdentifierExpr(position_, ident);
+}
+
+ast::Stmt *CodeGen::MakeStmt(ast::VariableDecl *var) const {
+  return NodeFactory()->NewDeclStmt(var);
 }
 
 ast::Stmt *CodeGen::MakeStmt(ast::Expr *expr) const {

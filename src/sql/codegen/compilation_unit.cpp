@@ -37,13 +37,15 @@ class Callbacks : public compiler::Compiler::Callbacks {
     std::string generated_code, errors;
     // Serialize the errors.
     {
-      std::stringstream ss(errors);
+      std::stringstream ss;
       compiler->GetErrorReporter()->PrintErrors(ss);
+      errors = ss.str();
     }
     // Serialize the generated code.
     {
-      std::stringstream ss(generated_code);
+      std::stringstream ss;
       ast::AstPrettyPrint::Dump(ss, compiler->GetAST());
+      generated_code = ss.str();
     }
     LOG_ERROR("======================== COMPILER ERROR START ========================");
     LOG_ERROR("Generated Code: {}", generated_code);

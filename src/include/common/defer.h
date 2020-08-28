@@ -34,7 +34,7 @@ namespace detail {
 template <typename F>
 class Defer {
  public:
-  Defer(F f) : fn_(f) {}
+  explicit Defer(F f) : fn_(f) {}
   ~Defer() { fn_(); }
 
  private:
@@ -43,9 +43,7 @@ class Defer {
 
 }  // namespace detail
 
-#define __XDEFER(x, line)          \
-  auto __x##line = [&] { (x)(); }; \
-  auto __defer##line = detail::Defer<decltype(__x##line)>(__x##line)
+#define __XDEFER(x, line) auto __defer##line = detail::Defer([&] { (x)(); })
 #define _XDEFER(x, line) __XDEFER(x, line)
 #define XDEFER(x) _XDEFER(x, __LINE__)
 

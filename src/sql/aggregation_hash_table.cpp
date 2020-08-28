@@ -692,8 +692,8 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
                       });
 
   double tps = (tuple_count / timer.GetElapsed()) / 1000.0;
-  LOG_INFO("Built and scanned {} tables totalling {} tuples in {:.2f} ms ({:.2f} mtps)",
-           nonempty_parts.size(), tuple_count, timer.GetElapsed(), tps);
+  LOG_DEBUG("Built and scanned {} tables totalling {} tuples in {:.2f} ms ({:.2f} mtps)",
+            nonempty_parts.size(), tuple_count, timer.GetElapsed(), tps);
 }
 
 void AggregationHashTable::BuildAllPartitions(void *query_state) {

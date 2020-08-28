@@ -155,24 +155,20 @@ void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *context,
 void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const {
   const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
 
-  // var entryIterBase: HashTableEntryIterator
-  ast::Identifier iter_name_base = codegen_->MakeFreshIdentifier("entry_iter_base");
-  function->Append(
-      codegen_->DeclareVarNoInit(iter_name_base, ast::BuiltinType::HashTableEntryIterator));
-
-  // var entryIter = &entryIterBase
-  ast::Identifier iter_name = codegen_->MakeFreshIdentifier("entry_iter");
-  function->Append(codegen_->DeclareVarWithInit(
-      iter_name, codegen_->AddressOf(codegen_->MakeExpr(iter_name_base))));
-
-  const auto entry_iter = [&]() { return codegen_->MakeExpr(iter_name); };
+  // Compute hash.
   ast::Expr *hash_val = HashKeys(ctx, function, join_plan.GetRightHashKeys());
 
-  // Probe matches.
+  // var entry = @jhtLookup(hash)
+  ast::Identifier entry_var = codegen_->MakeFreshIdentifier("entry");
+  const auto entry = [&]() { return codegen_->MakeExpr(entry_var); };
+  auto lookup_call = codegen_->MakeStmt(codegen_->DeclareVarWithInit(
+      entry_var, codegen_->JoinHashTableLookup(GetQueryStateEntryPtr(global_join_ht_), hash_val)));
 
-  auto lookup_call = codegen_->MakeStmt(codegen_->JoinHashTableLookup(
-      GetQueryStateEntryPtr(global_join_ht_), entry_iter(), hash_val));
-  auto has_next_call = codegen_->HTEntryIterHasNext(entry_iter());
+  // entry != null
+  auto valid_entry = codegen_->Compare(parsing::Token::Type::BANG_EQUAL, entry(), codegen_->Nil());
+
+  // entry = @htEntryGetNext(entry)
+  auto next_call = codegen_->Assign(entry(), codegen_->HTEntryGetNext(entry()));
 
   // The probe depends on the join type
   if (join_plan.RequiresRightMark()) {
@@ -183,39 +179,49 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
 
     // Probe hash table and check for a match. Loop condition becomes false as
     // soon as a match is found.
-    auto loop_cond = codegen_->BinaryOp(parsing::Token::Type::AND, right_mark, has_next_call);
-    Loop entry_loop(function, lookup_call, loop_cond, nullptr);
+    auto loop_cond = codegen_->BinaryOp(parsing::Token::Type::AND, right_mark, valid_entry);
+    Loop entry_loop(function, lookup_call, loop_cond, next_call);
     {
-      // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-      ast::Expr *build_row = codegen_->HTEntryIterGetRow(entry_iter(), build_row_type_);
-      function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
-      CheckRightMark(ctx, function, right_mark_var);
+      // if (entry->hash == hash) {
+      //   var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
+      //   ...
+      // }
+      If check_hash(function, codegen_->CompareEq(hash_val, codegen_->HTEntryGetHash(entry())));
+      {
+        ast::Expr *build_row = codegen_->HTEntryGetRow(entry(), build_row_type_);
+        function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
+        CheckRightMark(ctx, function, right_mark_var);
+      }
     }
     entry_loop.EndLoop();
 
-    // The next step depends on the join type.
     if (join_plan.GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_ANTI) {
-      // If the right mark is true, then we can perform the anti join.
+      // If the right mark is true, the row didn't find a matches.
       // if (right_mark)
       If right_anti_check(function, codegen_->MakeExpr(right_mark_var));
       ctx->Consume(function);
-      right_anti_check.EndIf();
     } else if (join_plan.GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_SEMI) {
       // If the right mark is unset, then there is at least one match.
       // if (!right_mark)
       auto cond = codegen_->UnaryOp(parsing::Token::Type::BANG, codegen_->MakeExpr(right_mark_var));
       If right_semi_check(function, cond);
       ctx->Consume(function);
-      right_semi_check.EndIf();
     }
   } else {
-    // For regular joins: while (has_next)
-    Loop entry_loop(function, lookup_call, has_next_call, nullptr);
+    // For regular joins:
+    // for (var entry = @jhtLookup(); entry != nil; entry = @htEntryNext(entry)) { }
+    Loop entry_loop(function, lookup_call, valid_entry, next_call);
     {
-      // var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-      ast::Expr *build_row = codegen_->HTEntryIterGetRow(entry_iter(), build_row_type_);
-      function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
-      CheckJoinPredicate(ctx, function);
+      // if (entry->hash == hash) {
+      //   var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
+      //   ...
+      // }
+      If check_hash(function, codegen_->CompareEq(hash_val, codegen_->HTEntryGetHash(entry())));
+      {
+        ast::Expr *build_row = codegen_->HTEntryGetRow(entry(), build_row_type_);
+        function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
+        CheckJoinPredicate(ctx, function);
+      }
     }
     entry_loop.EndLoop();
   }
