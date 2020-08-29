@@ -90,29 +90,56 @@ class Token {
 #undef T
   };
 
+  /**
+   * The total number of tokens.
+   */
   static const uint32_t kTokenCount = static_cast<uint32_t>(Type::Last) + 1;
 
-  // Get the name of a given token type
+  /**
+   * @return The name of the given token.
+   */
   static const char *GetName(Type type) { return kTokenNames[static_cast<uint32_t>(type)]; }
 
-  // Get the stringified version of a given token type
+  /**
+   * @return The stringified version of a given token, i.e., GetString(Type::TOKEN_EQUAL) = "=".
+   */
   static const char *GetString(Type type) { return kTokenStrings[static_cast<uint32_t>(type)]; }
 
-  // Get the precedence of a given token
+  /**
+   * @return The precedence of a given token.
+   */
   static uint32_t GetPrecedence(Type type) { return kTokenPrecedence[static_cast<uint32_t>(type)]; }
 
-  // Get the lowest operator precedence we support
+  /**
+   * @return The lowest precedence of all tokens.
+   */
   static uint32_t LowestPrecedence() { return 0; }
 
-  // Is the given token a comparison operator?
+  /**
+   * @return True if the given operator represents a binary operation; false otherwise.
+   */
+  static bool IsBinaryOp(Type op) {
+    return (static_cast<uint8_t>(Type::COMMA) <= static_cast<uint8_t>(op) &&
+            static_cast<uint8_t>(op) <= static_cast<uint8_t>(Type::PERCENT));
+  }
+
+  /**
+   * @return True if the given token represents a comparison operator; false otherwise.
+   */
   static bool IsCompareOp(Type op) {
     return (static_cast<uint8_t>(Type::BANG_EQUAL) <= static_cast<uint8_t>(op) &&
             static_cast<uint8_t>(op) <= static_cast<uint8_t>(Type::LESS_EQUAL));
   }
 
-  // If the given token either '==' or '!='
+  /**
+   * @return True if @em token is equality-like, i.e., either '==' or '!='; false otherwise.
+   */
   static bool IsEqualityOp(Type op) { return op == Type::BANG_EQUAL || op == Type::EQUAL_EQUAL; }
 
+  /**
+   * @return True if the given token is a call or member-access operation. A left or right
+   *         parenthesis, or a dot member access.
+   */
   static bool IsCallOrMemberOrIndex(Type op) {
     return (op == Type::LEFT_PAREN || op == Type::DOT || op == Type::LEFT_BRACKET);
   }

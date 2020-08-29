@@ -70,7 +70,7 @@ class Sema : public ast::AstVisitor<Sema> {
   // Resolve the type of the input expression
   ast::Type *Resolve(ast::Expr *expr) {
     Visit(expr);
-    return expr->type();
+    return expr->GetType();
   }
 
   // Create a builtin type
@@ -105,6 +105,10 @@ class Sema : public ast::AstVisitor<Sema> {
   CheckResult CheckComparisonOperands(parsing::Token::Type op, const SourcePosition &pos,
                                       ast::Expr *left, ast::Expr *right);
 
+  // Check operands to a comparison where at least one of the inputs is a SQL value.
+  CheckResult CheckSqlComparisonOperands(parsing::Token::Type op, const SourcePosition &pos,
+                                         ast::Expr *left, ast::Expr *right);
+
   // Check the assignment of the expression to a variable or the target type.
   // Return true if the assignment is valid, and false otherwise.
   // Will also apply an implicit cast to make the assignment valid.
@@ -112,8 +116,10 @@ class Sema : public ast::AstVisitor<Sema> {
 
   // Dispatched from VisitCall() to handle builtin functions
   void CheckBuiltinCall(ast::CallExpr *call);
-  void CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckNullValueCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinStringLikeCall(ast::CallExpr *call);
+  void CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin);
@@ -123,7 +129,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinJoinHashTableLookup(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableFree(ast::CallExpr *call);
-  void CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterInit(ast::CallExpr *call);
   void CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin);
@@ -142,6 +148,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinVectorFilterCall(ast::CallExpr *call);
   void CheckBuiltinHashCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin);
 
   // -------------------------------------------------------
   // Scoping
@@ -175,7 +182,9 @@ class Sema : public ast::AstVisitor<Sema> {
     }
   }
 
-  /// RAII scope class to track the current scope
+  /**
+   * RAII scope class to track the current scope.
+   */
   class SemaScope {
    public:
     SemaScope(Sema *check, Scope::Kind scope_kind) : check_(check), exited_(false) {
@@ -198,7 +207,9 @@ class Sema : public ast::AstVisitor<Sema> {
     bool exited_;
   };
 
-  /// RAII scope class to capture both the current function and its scope
+  /**
+   * RAII scope class to capture both the current function and its scope.
+   */
   class FunctionSemaScope {
    public:
     FunctionSemaScope(Sema *check, ast::FunctionLitExpr *func)

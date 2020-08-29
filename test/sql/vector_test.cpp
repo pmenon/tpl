@@ -255,12 +255,10 @@ TEST_F(VectorTest, CopyWithOffset) {
   // vec = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
   auto vec = MakeIntegerVector(10);
   for (uint64_t i = 0; i < vec->GetSize(); i++) {
-    if (i == 4 || i == 8) {
-      vec->SetNull(i, true);
-    } else {
-      vec->SetValue(i, GenericValue::CreateInteger(i));
-    }
+    vec->SetValue(i, GenericValue::CreateInteger(i));
   }
+  vec->SetNull(4, true);
+  vec->SetNull(8, true);
 
   // Filtered vec = [0, 2, NULL, 6, NULL]
   auto filter = TupleIdList(vec->GetCount());
@@ -312,145 +310,6 @@ TEST_F(VectorTest, CopyStringVector) {
   EXPECT_EQ(GenericValue::CreateVarchar("val-4"), target->GetValue(2));
   EXPECT_EQ(GenericValue::CreateVarchar("val-6"), target->GetValue(3));
   EXPECT_EQ(GenericValue::CreateVarchar("val-8"), target->GetValue(4));
-}
-
-TEST_F(VectorTest, Cast) {
-  // vec(i8) = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-  auto vec = MakeTinyIntVector(10);
-  for (uint64_t i = 0; i < vec->GetSize(); i++) {
-    vec->SetValue(i, GenericValue::CreateTinyInt(i));
-  }
-
-  // vec(i8) = [1, 2, NULL, 8]
-  auto filter = TupleIdList(vec->GetCount());
-  filter = {1, 2, 7, 8};
-  vec->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
-  vec->SetNull(2, true);
-
-  // Case 1: try up-cast from int8_t -> int32_t with valid values
-  EXPECT_NO_THROW(vec->Cast(TypeId::Integer));
-  EXPECT_EQ(TypeId::Integer, vec->GetTypeId());
-  EXPECT_EQ(10u, vec->GetSize());
-  EXPECT_EQ(filter.GetTupleCount(), vec->GetCount());
-  EXPECT_EQ(&filter, vec->GetFilteredTupleIdList());
-  EXPECT_EQ(GenericValue::CreateInteger(1), vec->GetValue(0));
-  EXPECT_EQ(GenericValue::CreateInteger(2), vec->GetValue(1));
-  EXPECT_TRUE(vec->IsNull(2));
-  EXPECT_EQ(GenericValue::CreateInteger(8), vec->GetValue(3));
-
-  // Case 2: try down-cast int32_t -> int16_t with valid values
-  EXPECT_NO_THROW(vec->Cast(TypeId::SmallInt));
-  EXPECT_TRUE(vec->GetTypeId() == TypeId::SmallInt);
-  EXPECT_EQ(10u, vec->GetSize());
-  EXPECT_EQ(filter.GetTupleCount(), vec->GetCount());
-  EXPECT_EQ(&filter, vec->GetFilteredTupleIdList());
-  EXPECT_EQ(GenericValue::CreateSmallInt(1), vec->GetValue(0));
-  EXPECT_EQ(GenericValue::CreateSmallInt(2), vec->GetValue(1));
-  EXPECT_TRUE(vec->IsNull(2));
-  EXPECT_EQ(GenericValue::CreateSmallInt(8), vec->GetValue(3));
-
-  // Case 3: try down-cast int16_t -> int8_t with one value out-of-range
-  // vec = [1, 150, NULL, 8] -- 150 is in an invalid int8_t
-  vec->SetValue(1, GenericValue::CreateSmallInt(150));
-  EXPECT_THROW(vec->Cast(TypeId::TinyInt), std::runtime_error);
-}
-
-TEST_F(VectorTest, CastWithNulls) {
-  // vec(int) = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
-  auto vec = MakeIntegerVector(10);
-  for (uint64_t i = 0; i < vec->GetSize(); i++) {
-    vec->SetValue(i, GenericValue::CreateInteger(i));
-  }
-  vec->SetNull(4, true);
-  vec->SetNull(8, true);
-
-  // After casting vec(int) to vec(bigint), the NULL values are retained
-  // vec(bigint) = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
-
-  EXPECT_NO_THROW(vec->Cast(TypeId::BigInt));
-  EXPECT_EQ(TypeId::BigInt, vec->GetTypeId());
-  EXPECT_EQ(10u, vec->GetSize());
-  EXPECT_EQ(10u, vec->GetCount());
-  EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());
-
-  for (uint64_t i = 0; i < vec->GetSize(); i++) {
-    if (i == 4 || i == 8) {
-      EXPECT_TRUE(vec->IsNull(i));
-    } else {
-      EXPECT_EQ(GenericValue::CreateBigInt(i), vec->GetValue(i));
-    }
-  }
-}
-
-TEST_F(VectorTest, NumericDowncast) {
-#define CHECK_CAST(SRC_TYPE, DEST_TYPE, DEST_CPP_TYPE)                                             \
-  {                                                                                                \
-    auto vec = Make##SRC_TYPE##Vector(10);                                                         \
-    for (uint32_t i = 0; i < vec->GetSize(); i++) {                                                \
-      vec->SetValue(i, GenericValue::Create##SRC_TYPE(i));                                         \
-    }                                                                                              \
-    EXPECT_NO_THROW(vec->Cast(TypeId::DEST_TYPE));                                                 \
-    EXPECT_EQ(TypeId::DEST_TYPE, vec->GetTypeId());                                                \
-    EXPECT_EQ(10u, vec->GetSize());                                                                \
-    EXPECT_EQ(10u, vec->GetCount());                                                               \
-    EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());                                             \
-    for (uint64_t i = 0; i < vec->GetSize(); i++) {                                                \
-      EXPECT_EQ(GenericValue::Create##DEST_TYPE(static_cast<DEST_CPP_TYPE>(i)), vec->GetValue(i)); \
-    }                                                                                              \
-  }
-
-  CHECK_CAST(Double, Boolean, bool);
-  CHECK_CAST(Float, Boolean, bool);
-  CHECK_CAST(BigInt, Boolean, bool);
-  CHECK_CAST(Integer, Boolean, bool);
-  CHECK_CAST(SmallInt, Boolean, bool);
-  CHECK_CAST(TinyInt, Boolean, bool);
-
-  CHECK_CAST(Double, TinyInt, int8_t);
-  CHECK_CAST(Float, TinyInt, int8_t);
-  CHECK_CAST(BigInt, TinyInt, int8_t);
-  CHECK_CAST(Integer, TinyInt, int8_t);
-  CHECK_CAST(SmallInt, TinyInt, int8_t);
-
-  CHECK_CAST(Double, SmallInt, int16_t);
-  CHECK_CAST(Float, SmallInt, int16_t);
-  CHECK_CAST(BigInt, SmallInt, int16_t);
-  CHECK_CAST(Integer, SmallInt, int16_t);
-
-  CHECK_CAST(Double, Integer, int32_t);
-  CHECK_CAST(Float, Integer, int32_t);
-  CHECK_CAST(BigInt, Integer, int32_t);
-
-  CHECK_CAST(Double, BigInt, int64_t);
-  CHECK_CAST(Float, BigInt, int64_t);
-
-  CHECK_CAST(Double, Float, float);
-
-#undef CHECK_CAST
-}
-
-TEST_F(VectorTest, DateCast) {
-  // a = [NULL, "1980-01-01", "2016-01-27", NULL, "2000-01-01", "2015-08-01"]
-  auto a = MakeDateVector(
-      {Date::FromYMD(1980, 1, 1), Date::FromYMD(1980, 1, 1), Date::FromYMD(2016, 1, 27),
-       Date::FromYMD(1980, 1, 1), Date::FromYMD(2000, 1, 1), Date::FromYMD(2015, 8, 1)},
-      {true, false, false, true, false, false});
-
-  EXPECT_THROW(a->Cast(TypeId::TinyInt), NotImplementedException);
-  EXPECT_THROW(a->Cast(TypeId::SmallInt), NotImplementedException);
-  EXPECT_THROW(a->Cast(TypeId::Integer), NotImplementedException);
-  EXPECT_THROW(a->Cast(TypeId::BigInt), NotImplementedException);
-  EXPECT_THROW(a->Cast(TypeId::Float), NotImplementedException);
-  EXPECT_THROW(a->Cast(TypeId::Double), NotImplementedException);
-  EXPECT_NO_THROW(a->Cast(TypeId::Varchar));
-
-  EXPECT_EQ(TypeId::Varchar, a->GetTypeId());
-  EXPECT_TRUE(a->IsNull(0));
-  EXPECT_EQ(GenericValue::CreateVarchar("1980-01-01"), a->GetValue(1));
-  EXPECT_EQ(GenericValue::CreateVarchar("2016-01-27"), a->GetValue(2));
-  EXPECT_TRUE(a->IsNull(3));
-  EXPECT_EQ(GenericValue::CreateVarchar("2000-01-01"), a->GetValue(4));
-  EXPECT_EQ(GenericValue::CreateVarchar("2015-08-01"), a->GetValue(5));
 }
 
 TEST_F(VectorTest, Append) {
@@ -507,6 +366,89 @@ TEST_F(VectorTest, AppendWithSelectionVector) {
   EXPECT_EQ(GenericValue::CreateFloat(11.0), vec2->GetValue(1));
   EXPECT_TRUE(vec2->IsNull(2));
   EXPECT_EQ(GenericValue::CreateFloat(3.0), vec2->GetValue(3));
+}
+
+TEST_F(VectorTest, Pack) {
+  // vec = [NULL,1,2,3,4,5,6,7,8,NULL]
+  auto vec = MakeSmallIntVector({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, {true, false, false, false, false,
+                                                                 false, false, false, false, true});
+
+  // Try to flatten an already flattened vector
+  {
+    vec->Pack();
+    EXPECT_EQ(10u, vec->GetCount());
+    EXPECT_EQ(10u, vec->GetSize());
+    EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());
+    EXPECT_TRUE(vec->IsNull(0));
+    EXPECT_TRUE(vec->IsNull(vec->GetSize() - 1));
+  }
+
+  // Try flattening with a filtered vector
+  {
+    // vec = [NULL,3,5,7]
+    auto tids = TupleIdList(vec->GetSize());
+    tids = {0, 3, 5, 7};
+    vec->SetFilteredTupleIdList(&tids, tids.GetTupleCount());
+    vec->Pack();
+
+    EXPECT_EQ(4u, vec->GetCount());
+    EXPECT_EQ(4u, vec->GetSize());
+    EXPECT_EQ(nullptr, vec->GetFilteredTupleIdList());
+    EXPECT_TRUE(vec->IsNull(0));
+    EXPECT_EQ(GenericValue::CreateSmallInt(3), vec->GetValue(1));
+    EXPECT_EQ(GenericValue::CreateSmallInt(5), vec->GetValue(2));
+    EXPECT_EQ(GenericValue::CreateSmallInt(7), vec->GetValue(3));
+  }
+}
+
+TEST_F(VectorTest, GetNonNullSelections) {
+  // vec1 = [1,2,3,4,5,6,7,8,9,10,11,12]
+  auto vec1 = MakeFloatVector(
+      {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+      {false, false, false, false, false, false, false, false, false, false, false, false});
+
+  TupleIdList non_null_tids(vec1->GetSize());
+  TupleIdList null_tids(vec1->GetSize());
+
+  // Initially, no NULLs
+  {
+    vec1->GetNonNullSelections(&non_null_tids, &null_tids);
+    EXPECT_TRUE(null_tids.IsEmpty());
+    EXPECT_TRUE(non_null_tids.IsFull());
+  }
+
+  // vec1      = [1,2,3,4,NULL,6,7,8,9,10,NULL,12]
+  // NULLs     = [4,10]
+  // non-NULLs = [0,1,2,3,5,6,7,8,9,11]
+  {
+    vec1->SetNull(4, true);
+    vec1->SetNull(10, true);
+    vec1->GetNonNullSelections(&non_null_tids, &null_tids);
+    EXPECT_EQ(2, null_tids.GetTupleCount());
+    EXPECT_EQ(4u, null_tids[0]);
+    EXPECT_EQ(10u, null_tids[1]);
+    EXPECT_EQ(vec1->GetSize() - 2, non_null_tids.GetTupleCount());
+    EXPECT_FALSE(non_null_tids.Contains(4));
+    EXPECT_FALSE(non_null_tids.Contains(10));
+  }
+
+  // vec1       = [1,3,NULL,7,9]
+  // selections = [0,2,4,6,8]
+  // NULLs      = [2]
+  // non-NULLs  = [0,2,6,8]
+  {
+    TupleIdList selections(vec1->GetSize());
+    selections = {0, 2, 4, 6, 8};
+    vec1->SetFilteredTupleIdList(&selections, selections.GetTupleCount());
+    vec1->GetNonNullSelections(&non_null_tids, &null_tids);
+    EXPECT_EQ(1, null_tids.GetTupleCount());
+    EXPECT_EQ(4u, null_tids[0]);
+    EXPECT_EQ(4u, non_null_tids.GetTupleCount());
+    EXPECT_EQ(0u, non_null_tids[0]);
+    EXPECT_EQ(2u, non_null_tids[1]);
+    EXPECT_EQ(6u, non_null_tids[2]);
+    EXPECT_EQ(8u, non_null_tids[3]);
+  }
 }
 
 TEST_F(VectorTest, Print) {

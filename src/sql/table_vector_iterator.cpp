@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/tbb.h"
+#include "tbb/parallel_for.h"
 
 #include "logging/logger.h"
 #include "sql/catalog.h"
@@ -199,15 +199,14 @@ bool TableVectorIterator::ParallelScan(const uint16_t table_id, void *const quer
   timer.Start();
 
   // Execute parallel scan
-  tbb::task_scheduler_init scan_scheduler;
   tbb::blocked_range<uint32_t> block_range(0, table->GetBlockCount(), min_grain_size);
   tbb::parallel_for(block_range, ScanTask(table_id, query_state, thread_states, scan_fn));
 
   timer.Stop();
 
   double tps = table->GetTupleCount() / timer.GetElapsed() / 1000.0;
-  LOG_INFO("Scanned {} blocks ({} tuples) blocks in {} ms ({:.3f} mtps)", table->GetBlockCount(),
-           table->GetTupleCount(), timer.GetElapsed(), tps);
+  LOG_DEBUG("Scanned {} blocks ({} tuples) in {} ms ({:.3f} mtps)", table->GetBlockCount(),
+            table->GetTupleCount(), timer.GetElapsed(), tps);
 
   return true;
 }

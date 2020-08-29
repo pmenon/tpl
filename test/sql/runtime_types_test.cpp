@@ -10,18 +10,24 @@ TEST_F(RuntimeTypesTest, ExtractDateParts) {
   // Valid date
   Date d;
   EXPECT_NO_THROW({ d = Date::FromYMD(2016, 12, 19); });
-  EXPECT_EQ(2016u, d.ExtractYear());
-  EXPECT_EQ(12u, d.ExtractMonth());
-  EXPECT_EQ(19u, d.ExtractDay());
+  EXPECT_EQ(2016, d.ExtractYear());
+  EXPECT_EQ(12, d.ExtractMonth());
+  EXPECT_EQ(19, d.ExtractDay());
+
+  // BC date.
+  EXPECT_NO_THROW({ d = Date::FromYMD(-4000, 1, 2); });
+  EXPECT_EQ(-4000, d.ExtractYear());
+  EXPECT_EQ(1, d.ExtractMonth());
+  EXPECT_EQ(2, d.ExtractDay());
 
   // Invalid
   EXPECT_THROW({ d = Date::FromYMD(1234, 3, 1111); }, ConversionException);
   EXPECT_THROW({ d = Date::FromYMD(1234, 93874, 11); }, ConversionException);
   EXPECT_THROW({ d = Date::FromYMD(1234, 7283, 192873); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromYMD(88888, 12, 12); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromYMD(88888, 12, 987); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromYMD(88888, 921873, 1); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromYMD(88888, 921873, 21938); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromYMD(-40000, 12, 12); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromYMD(50000000, 12, 987); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromYMD(50000000, 921873, 1); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromYMD(-50000000, 921873, 21938); }, ConversionException);
 }
 
 TEST_F(RuntimeTypesTest, DateFromString) {
@@ -46,9 +52,9 @@ TEST_F(RuntimeTypesTest, DateFromString) {
   EXPECT_THROW({ d = Date::FromString("1000-11-23123"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("1000-12323-19"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("1000-12323-199"); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromString("129398-12-20"); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromString("129398-12-120"); }, ConversionException);
-  EXPECT_THROW({ d = Date::FromString("129398-1289217-12"); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromString("50000000-12-20"); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromString("50000000-12-120"); }, ConversionException);
+  EXPECT_THROW({ d = Date::FromString("50000000-1289217-12"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("da fuk?"); }, ConversionException);
   EXPECT_THROW({ d = Date::FromString("-1-1-23"); }, ConversionException);
 }
@@ -64,6 +70,11 @@ TEST_F(RuntimeTypesTest, DateComparisons) {
   EXPECT_GT(d4, d3);
   EXPECT_GT(d4, d2);
   EXPECT_GT(d4, d1);
+
+  d1 = Date::FromYMD(-4000, 1, 1);
+  d2 = Date::FromYMD(-4000, 1, 2);
+  EXPECT_NE(d1, d2);
+  EXPECT_LT(d1, d2);
 }
 
 TEST_F(RuntimeTypesTest, DateToString) {
@@ -73,6 +84,116 @@ TEST_F(RuntimeTypesTest, DateToString) {
   // Make sure we pad months and days
   d1 = Date::FromString("2000-1-1");
   EXPECT_EQ("2000-01-01", d1.ToString());
+}
+
+TEST_F(RuntimeTypesTest, ExtractTimestampParts) {
+  // Valid timestamp.
+  Timestamp t;
+  EXPECT_NO_THROW({ t = Timestamp::FromYMDHMS(2016, 12, 19, 10, 20, 30); });
+  EXPECT_EQ(2016, t.ExtractYear());
+  EXPECT_EQ(12, t.ExtractMonth());
+  EXPECT_EQ(19, t.ExtractDay());
+  EXPECT_EQ(10, t.ExtractHour());
+  EXPECT_EQ(20, t.ExtractMinute());
+  EXPECT_EQ(30, t.ExtractSecond());
+
+  // BC timestamp.
+  EXPECT_NO_THROW({ t = Timestamp::FromYMDHMS(-4000, 1, 2, 12, 24, 48); });
+  EXPECT_EQ(-4000, t.ExtractYear());
+  EXPECT_EQ(1, t.ExtractMonth());
+  EXPECT_EQ(2, t.ExtractDay());
+  EXPECT_EQ(12, t.ExtractHour());
+  EXPECT_EQ(24, t.ExtractMinute());
+  EXPECT_EQ(48, t.ExtractSecond());
+
+  // Invalid
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 1, 1, 100); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 1, 100, 1); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 1, 100, 100); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 25, 1, 1); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 25, 1, 100); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 25, 100, 1); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(1234, 3, 4, 25, 100, 100); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(50000000, 12, 9, 100, 1, 1); }, ConversionException);
+  EXPECT_THROW({ t = Timestamp::FromYMDHMS(50000000, 92187, 1, 13, 59, 60); }, ConversionException);
+}
+
+TEST_F(RuntimeTypesTest, TimestampComparisons) {
+  Timestamp t1 = Timestamp::FromYMDHMS(2000, 1, 1, 12, 0, 0);
+  Timestamp t2 = Timestamp::FromYMDHMS(2000, 1, 1, 16, 0, 0);
+  Timestamp t3 = t1;
+  Timestamp t4 = Timestamp::FromYMDHMS(2017, 1, 1, 18, 18, 18);
+
+  EXPECT_NE(t1, t2);
+  EXPECT_LT(t1, t2);
+  EXPECT_EQ(t1, t3);
+  EXPECT_GT(t4, t3);
+  EXPECT_GT(t4, t2);
+  EXPECT_GT(t4, t1);
+
+  t1 = Timestamp::FromYMDHMS(-4000, 1, 1, 10, 10, 10);
+  t2 = Timestamp::FromYMDHMS(-4000, 1, 1, 10, 10, 11);
+  EXPECT_NE(t1, t2);
+  EXPECT_LT(t1, t2);
+}
+
+TEST_F(RuntimeTypesTest, VarlenComparisons) {
+  // Short strings first.
+  {
+    auto v1 = VarlenEntry::Create("somethings");
+    auto v2 = VarlenEntry::Create("anotherone");
+    auto v3 = v1;
+    EXPECT_TRUE(v1.IsInlined());
+    EXPECT_TRUE(v2.IsInlined());
+    EXPECT_NE(v1, v2);
+    EXPECT_LT(v2, v1);
+    EXPECT_GT(v1, v2);
+    EXPECT_EQ(v1, v3);
+  }
+
+  // Very short strings.
+  {
+    auto v1 = VarlenEntry::Create("a");
+    auto v2 = VarlenEntry::Create("b");
+    auto v3 = v1;
+    auto v4 = VarlenEntry::Create("");
+    EXPECT_TRUE(v1.IsInlined());
+    EXPECT_TRUE(v2.IsInlined());
+    EXPECT_TRUE(v3.IsInlined());
+    EXPECT_TRUE(v4.IsInlined());
+    EXPECT_NE(v1, v2);
+    EXPECT_LT(v1, v2);
+    EXPECT_GT(v2, v1);
+    EXPECT_EQ(v1, v3);
+    EXPECT_NE(v1, v4);
+    EXPECT_NE(v2, v4);
+    EXPECT_NE(v3, v4);
+    EXPECT_LT(v4, v1);
+  }
+
+  // Longer strings.
+  auto s1 = "This is sort of a long string, but the end of the string should be different than XXX";
+  auto s2 = "This is sort of a long string, but the end of the string should be different than YYY";
+  {
+    auto v1 = VarlenEntry::Create(s1);
+    auto v2 = VarlenEntry::Create(s2);
+    auto v3 = VarlenEntry::Create("smallstring");
+    auto v4 = VarlenEntry::Create("This is so");  // A prefix of the longer strings.
+    EXPECT_FALSE(v1.IsInlined());
+    EXPECT_FALSE(v2.IsInlined());
+    EXPECT_NE(v1, v2);
+    EXPECT_LT(v1, v2);
+    EXPECT_GT(v2, v1);
+    EXPECT_EQ(v2, v2);
+
+    EXPECT_NE(v1, v3);
+    EXPECT_NE(v2, v3);
+    EXPECT_GT(v3, v1);
+    EXPECT_GT(v3, v2);
+
+    EXPECT_LT(v4, v1);
+    EXPECT_LT(v4, v2);
+  }
 }
 
 }  // namespace tpl::sql

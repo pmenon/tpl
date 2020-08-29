@@ -12,22 +12,22 @@ void Sema::VisitBadExpr(ast::BadExpr *node) {
 }
 
 void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
-  ast::Type *left_type = Resolve(node->left());
-  ast::Type *right_type = Resolve(node->right());
+  ast::Type *left_type = Resolve(node->Left());
+  ast::Type *right_type = Resolve(node->Right());
 
   if (left_type == nullptr || right_type == nullptr) {
     // Some error occurred
     return;
   }
 
-  switch (node->op()) {
+  switch (node->Op()) {
     case parsing::Token::Type::AND:
     case parsing::Token::Type::OR: {
       auto [result_type, left, right] =
-          CheckLogicalOperands(node->op(), node->position(), node->left(), node->right());
-      node->set_type(result_type);
-      if (node->left() != left) node->set_left(left);
-      if (node->right() != right) node->set_right(right);
+          CheckLogicalOperands(node->Op(), node->Position(), node->Left(), node->Right());
+      node->SetType(result_type);
+      if (node->Left() != left) node->SetLeft(left);
+      if (node->Right() != right) node->SetRight(right);
       break;
     }
     case parsing::Token::Type::AMPERSAND:
@@ -39,26 +39,28 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     case parsing::Token::Type::SLASH:
     case parsing::Token::Type::PERCENT: {
       auto [result_type, left, right] =
-          CheckArithmeticOperands(node->op(), node->position(), node->left(), node->right());
-      node->set_type(result_type);
-      if (node->left() != left) node->set_left(left);
-      if (node->right() != right) node->set_right(right);
+          CheckArithmeticOperands(node->Op(), node->Position(), node->Left(), node->Right());
+      node->SetType(result_type);
+      if (node->Left() != left) node->SetLeft(left);
+      if (node->Right() != right) node->SetRight(right);
       break;
     }
-    default: { LOG_ERROR("{} is not a binary operation!", parsing::Token::GetString(node->op())); }
+    default: {
+      LOG_ERROR("{} is not a binary operation!", parsing::Token::GetString(node->Op()));
+    }
   }
 }
 
 void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
-  ast::Type *left_type = Resolve(node->left());
-  ast::Type *right_type = Resolve(node->right());
+  ast::Type *left_type = Resolve(node->Left());
+  ast::Type *right_type = Resolve(node->Right());
 
   if (left_type == nullptr || right_type == nullptr) {
     // Some error occurred
     return;
   }
 
-  switch (node->op()) {
+  switch (node->Op()) {
     case parsing::Token::Type::BANG_EQUAL:
     case parsing::Token::Type::EQUAL_EQUAL:
     case parsing::Token::Type::GREATER:
@@ -66,27 +68,27 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
     case parsing::Token::Type::LESS:
     case parsing::Token::Type::LESS_EQUAL: {
       auto [result_type, left, right] =
-          CheckComparisonOperands(node->op(), node->position(), node->left(), node->right());
-      node->set_type(result_type);
-      if (node->left() != left) node->set_left(left);
-      if (node->right() != right) node->set_right(right);
+          CheckComparisonOperands(node->Op(), node->Position(), node->Left(), node->Right());
+      node->SetType(result_type);
+      if (node->Left() != left) node->SetLeft(left);
+      if (node->Right() != right) node->SetRight(right);
       break;
     }
     default: {
-      LOG_ERROR("{} is not a comparison operation", parsing::Token::GetString(node->op()));
+      LOG_ERROR("{} is not a comparison operation", parsing::Token::GetString(node->Op()));
     }
   }
 }
 
 void Sema::VisitCallExpr(ast::CallExpr *node) {
   // If the call claims to be to a builtin, validate it
-  if (node->call_kind() == ast::CallExpr::CallKind::Builtin) {
+  if (node->GetCallKind() == ast::CallExpr::CallKind::Builtin) {
     CheckBuiltinCall(node);
     return;
   }
 
   // Resolve the function type
-  ast::Type *type = Resolve(node->function());
+  ast::Type *type = Resolve(node->Function());
   if (type == nullptr) {
     return;
   }
@@ -94,7 +96,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Check that the resolved function type is actually a function
   auto *func_type = type->SafeAs<ast::FunctionType>();
   if (func_type == nullptr) {
-    error_reporter()->Report(node->position(), ErrorMessages::kNonFunction);
+    error_reporter()->Report(node->Position(), ErrorMessages::kNonFunction);
     return;
   }
 
@@ -104,7 +106,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Resolve function arguments
-  for (auto *arg : node->arguments()) {
+  for (auto *arg : node->Arguments()) {
     ast::Type *arg_type = Resolve(arg);
     if (arg_type == nullptr) {
       return;
@@ -114,7 +116,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Check args
   bool has_errors = false;
 
-  const auto &actual_args = node->arguments();
+  const auto &actual_args = node->Arguments();
   for (uint32_t arg_num = 0; arg_num < actual_args.size(); arg_num++) {
     ast::Type *expected_type = func_type->GetParams()[arg_num].type;
     ast::Expr *arg = actual_args[arg_num];
@@ -124,14 +126,14 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
     // may apply an implicit cast to make the assignment work.
     if (!CheckAssignmentConstraints(expected_type, arg)) {
       has_errors = true;
-      error_reporter_->Report(arg->position(), ErrorMessages::kIncorrectCallArgType,
-                              node->GetFuncName(), expected_type, arg_num, arg->type());
+      error_reporter_->Report(arg->Position(), ErrorMessages::kIncorrectCallArgType,
+                              node->GetFuncName(), expected_type, arg_num, arg->GetType());
       continue;
     }
 
     // If the check applied an implicit cast, set the argument
     if (arg != actual_args[arg_num]) {
-      node->set_argument(arg_num, arg);
+      node->SetArgument(arg_num, arg);
     }
   }
 
@@ -140,21 +142,21 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Looks good ...
-  node->set_type(func_type->GetReturnType());
+  node->SetType(func_type->GetReturnType());
 }
 
 void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Resolve the type, if not resolved already
-  if (auto *type = node->type_repr()->type(); type == nullptr) {
-    type = Resolve(node->type_repr());
+  if (auto *type = node->TypeRepr()->GetType(); type == nullptr) {
+    type = Resolve(node->TypeRepr());
     if (type == nullptr) {
       return;
     }
   }
 
   // Good function type, insert into node
-  auto *func_type = node->type_repr()->type()->As<ast::FunctionType>();
-  node->set_type(func_type);
+  auto *func_type = node->TypeRepr()->GetType()->As<ast::FunctionType>();
+  node->SetType(func_type);
 
   // The function scope
   FunctionSemaScope function_scope(this, node);
@@ -165,38 +167,37 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   }
 
   // Recurse into the function body
-  Visit(node->body());
+  Visit(node->Body());
 
   // Check the return value. We allow functions to be empty or elide a final
   // "return" statement only if the function has a "nil" return type. In this
   // case, we automatically insert a "return" statement.
-  if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->body())) {
+  if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->Body())) {
     if (!func_type->GetReturnType()->IsNilType()) {
-      error_reporter()->Report(node->body()->right_brace_position(), ErrorMessages::kMissingReturn);
+      error_reporter()->Report(node->Body()->RightBracePosition(), ErrorMessages::kMissingReturn);
       return;
     }
 
-    ast::ReturnStmt *empty_ret =
-        context()->node_factory()->NewReturnStmt(node->position(), nullptr);
-    node->body()->statements().push_back(empty_ret);
+    auto *empty_ret = context()->GetNodeFactory()->NewReturnStmt(node->Position(), nullptr);
+    node->Body()->AppendStatement(empty_ret);
   }
 }
 
 void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   // Check the current context
-  if (auto *type = current_scope()->Lookup(node->name())) {
-    node->set_type(type);
+  if (auto *type = current_scope()->Lookup(node->Name())) {
+    node->SetType(type);
     return;
   }
 
   // Check the builtin types
-  if (auto *type = context()->LookupBuiltinType(node->name())) {
-    node->set_type(type);
+  if (auto *type = context()->LookupBuiltinType(node->Name())) {
+    node->SetType(type);
     return;
   }
 
   // Error
-  error_reporter()->Report(node->position(), ErrorMessages::kUndefinedVariable, node->name());
+  error_reporter()->Report(node->Position(), ErrorMessages::kUndefinedVariable, node->Name());
 }
 
 void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
@@ -204,53 +205,67 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
 }
 
 void Sema::VisitIndexExpr(ast::IndexExpr *node) {
-  ast::Type *obj_type = Resolve(node->object());
-  ast::Type *index_type = Resolve(node->index());
+  ast::Type *obj_type = Resolve(node->Object());
+  ast::Type *index_type = Resolve(node->Index());
 
   if (obj_type == nullptr || index_type == nullptr) {
-    // Error
     return;
   }
 
   if (!obj_type->IsArrayType() && !obj_type->IsMapType()) {
-    error_reporter()->Report(node->position(), ErrorMessages::kInvalidIndexOperation, obj_type);
+    error_reporter()->Report(node->Position(), ErrorMessages::kInvalidIndexOperation, obj_type);
     return;
   }
 
   if (!index_type->IsIntegerType()) {
-    error_reporter()->Report(node->position(), ErrorMessages::kInvalidArrayIndexValue);
+    error_reporter()->Report(node->Position(), ErrorMessages::kNonIntegerArrayIndexValue);
     return;
   }
 
-  if (auto *arr_type = obj_type->SafeAs<ast::ArrayType>()) {
-    node->set_type(arr_type->GetElementType());
+  if (auto arr_type = obj_type->SafeAs<ast::ArrayType>()) {
+    if (auto index = node->Index()->SafeAs<ast::LitExpr>()) {
+      const int32_t index_val = index->Int32Val();
+      // Check negative array indices.
+      if (index_val < 0) {
+        error_reporter()->Report(index->Position(), ErrorMessages::kNegativeArrayIndexValue,
+                                 index_val);
+        return;
+      }
+      // Check known out-of-bounds array access.
+      if (arr_type->HasKnownLength() && static_cast<uint64_t>(index_val) >= arr_type->GetLength()) {
+        error_reporter()->Report(index->Position(), ErrorMessages::kOutOfBoundsArrayIndexValue,
+                                 index_val, arr_type->GetLength());
+        return;
+      }
+    }
+    node->SetType(arr_type->GetElementType());
   } else {
-    node->set_type(obj_type->As<ast::MapType>()->GetValueType());
+    node->SetType(obj_type->As<ast::MapType>()->GetValueType());
   }
 }
 
 void Sema::VisitLitExpr(ast::LitExpr *node) {
-  switch (node->literal_kind()) {
+  switch (node->GetLiteralKind()) {
     case ast::LitExpr::LitKind::Nil: {
-      node->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
+      node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }
     case ast::LitExpr::LitKind::Boolean: {
-      node->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
+      node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
       break;
     }
     case ast::LitExpr::LitKind::Float: {
       // Literal floats default to float32
-      node->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Float32));
+      node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Float32));
       break;
     }
     case ast::LitExpr::LitKind::Int: {
       // Literal integers default to int32
-      node->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Int32));
+      node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Int32));
       break;
     }
     case ast::LitExpr::LitKind::String: {
-      node->set_type(ast::StringType::Get(context()));
+      node->SetType(ast::StringType::Get(context()));
       break;
     }
   }
@@ -258,60 +273,62 @@ void Sema::VisitLitExpr(ast::LitExpr *node) {
 
 void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   // Resolve the type of the sub expression
-  ast::Type *expr_type = Resolve(node->expr());
+  ast::Type *expr_type = Resolve(node->Input());
 
   if (expr_type == nullptr) {
     // Some error occurred
     return;
   }
 
-  switch (node->op()) {
+  switch (node->Op()) {
     case parsing::Token::Type::BANG: {
       if (!expr_type->IsBoolType()) {
-        error_reporter()->Report(node->position(), ErrorMessages::kInvalidOperation, node->op(),
+        error_reporter()->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
                                  expr_type);
         return;
       }
 
-      node->set_type(expr_type);
+      node->SetType(expr_type);
       break;
     }
     case parsing::Token::Type::MINUS: {
       if (!expr_type->IsArithmetic()) {
-        error_reporter()->Report(node->position(), ErrorMessages::kInvalidOperation, node->op(),
+        error_reporter()->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
                                  expr_type);
         return;
       }
 
-      node->set_type(expr_type);
+      node->SetType(expr_type);
       break;
     }
     case parsing::Token::Type::STAR: {
       if (!expr_type->IsPointerType()) {
-        error_reporter()->Report(node->position(), ErrorMessages::kInvalidOperation, node->op(),
+        error_reporter()->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
                                  expr_type);
         return;
       }
 
-      node->set_type(expr_type->As<ast::PointerType>()->GetBase());
+      node->SetType(expr_type->As<ast::PointerType>()->GetBase());
       break;
     }
     case parsing::Token::Type::AMPERSAND: {
       if (expr_type->IsFunctionType()) {
-        error_reporter()->Report(node->position(), ErrorMessages::kInvalidOperation, node->op(),
+        error_reporter()->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
                                  expr_type);
         return;
       }
 
-      node->set_type(expr_type->PointerTo());
+      node->SetType(expr_type->PointerTo());
       break;
     }
-    default: { UNREACHABLE("Impossible unary operation!"); }
+    default: {
+      UNREACHABLE("Impossible unary operation!");
+    }
   }
 }
 
 void Sema::VisitMemberExpr(ast::MemberExpr *node) {
-  ast::Type *obj_type = Resolve(node->object());
+  ast::Type *obj_type = Resolve(node->Object());
 
   if (obj_type == nullptr) {
     // Some error
@@ -323,27 +340,27 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   }
 
   if (!obj_type->IsStructType()) {
-    error_reporter()->Report(node->position(), ErrorMessages::kMemberObjectNotComposite, obj_type);
+    error_reporter()->Report(node->Position(), ErrorMessages::kMemberObjectNotComposite, obj_type);
     return;
   }
 
-  if (!node->member()->IsIdentifierExpr()) {
-    error_reporter()->Report(node->member()->position(),
+  if (!node->Member()->IsIdentifierExpr()) {
+    error_reporter()->Report(node->Member()->Position(),
                              ErrorMessages::kExpectedIdentifierForMember);
     return;
   }
 
-  ast::Identifier member = node->member()->As<ast::IdentifierExpr>()->name();
+  ast::Identifier member = node->Member()->As<ast::IdentifierExpr>()->Name();
 
   ast::Type *member_type = obj_type->As<ast::StructType>()->LookupFieldByName(member);
 
   if (member_type == nullptr) {
-    error_reporter()->Report(node->member()->position(), ErrorMessages::kFieldObjectDoesNotExist,
+    error_reporter()->Report(node->Member()->Position(), ErrorMessages::kFieldObjectDoesNotExist,
                              member, obj_type);
     return;
   }
 
-  node->set_type(member_type);
+  node->SetType(member_type);
 }
 
 }  // namespace tpl::sema

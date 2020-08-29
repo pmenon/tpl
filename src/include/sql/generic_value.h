@@ -10,6 +10,10 @@
 
 namespace tpl::sql {
 
+namespace codegen {
+class ConstantTranslator;
+}  // namespace codegen
+
 struct Val;
 
 /**
@@ -21,6 +25,7 @@ class GenericValue {
   friend class Vector;
   friend class VectorOps;
   friend class GenericValueTests;
+  friend class codegen::ConstantTranslator;
 
  public:
   /**
@@ -60,18 +65,16 @@ class GenericValue {
   /**
    * @return True if this value is equal @em that. Note that this is NOT SQL equality!
    */
-  bool operator==(const GenericValue &that) const { return this->Equals(that); }
+  bool operator==(const GenericValue &that) const { return Equals(that); }
 
   /**
    * @return True if this value is not equal to @em that. Note that this is NOT SQL inequality!
    */
   bool operator!=(const GenericValue &that) const { return !(*this == that); }
 
-  //===--------------------------------------------------------------------===//
-  //
+  // -------------------------------------------------------
   // Static factory methods
-  //
-  //===--------------------------------------------------------------------===//
+  // -------------------------------------------------------
 
   /**
    * Create a NULL value.
@@ -177,12 +180,24 @@ class GenericValue {
   static GenericValue CreateDate(uint32_t year, uint32_t month, uint32_t day);
 
   /**
+   * Crete a non-NULL timestamp value.
+   * @param timestamp The timestamp.
+   * @return A timestamp value.
+   */
+  static GenericValue CreateTimestamp(Timestamp timestamp);
+
+  /**
    * Create a non-NULL timestamp value.
-   * @param value The value.
+   * @param year The year of the timestamp.
+   * @param month The month of the timestamp.
+   * @param day The day of the timestamp.
+   * @param hour The hour of the timestamp.
+   * @param min The minute of the timestamp.
+   * @param sec The second of the timestamp.
    * @return A Timestamp value.
    */
   static GenericValue CreateTimestamp(int32_t year, int32_t month, int32_t day, int32_t hour,
-                                      int32_t min, int32_t sec, int32_t msec);
+                                      int32_t min, int32_t sec);
 
   /**
    * Create a non-NULL varchar value.
@@ -193,9 +208,9 @@ class GenericValue {
 
   /**
    * Create a generic value from a runtime value.
-   * @param type_id
-   * @param val
-   * @return
+   * @param type_id The type of the runtime value.
+   * @param val The true SQL value.
+   * @return The generic value equivalent to the provided explicit runtime value.
    */
   static GenericValue CreateFromRuntimeValue(TypeId type_id, const Val &val);
 
@@ -203,7 +218,8 @@ class GenericValue {
   friend std::ostream &operator<<(std::ostream &out, const GenericValue &val);
 
  private:
-  explicit GenericValue(TypeId type_id) : type_id_(type_id), is_null_(true) {}
+  // Private constructor to force usage of factory methods.
+  explicit GenericValue(TypeId type_id) : type_id_(type_id), is_null_(true), value_() {}
 
  private:
   // The primitive type
@@ -220,6 +236,7 @@ class GenericValue {
     hash_t hash;
     uintptr_t pointer;
     Date date_;
+    Timestamp timestamp_;
     float float_;
     double double_;
   } value_;

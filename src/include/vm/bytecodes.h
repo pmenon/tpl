@@ -100,13 +100,14 @@ namespace tpl::vm {
                                                                                                                        \
   /* Execution Context */                                                                                              \
   F(ExecutionContextGetMemoryPool, OperandType::Local, OperandType::Local)                                             \
+  F(ExecutionContextGetTLS, OperandType::Local, OperandType::Local)                                                    \
                                                                                                                        \
   /* Thread State Container */                                                                                         \
-  F(ThreadStateContainerInit, OperandType::Local, OperandType::Local)                                                  \
   F(ThreadStateContainerIterate, OperandType::Local, OperandType::Local, OperandType::FunctionId)                      \
+  F(ThreadStateContainerAccessCurrentThreadState, OperandType::Local, OperandType::Local)                              \
   F(ThreadStateContainerReset, OperandType::Local, OperandType::Local, OperandType::FunctionId,                        \
       OperandType::FunctionId, OperandType::Local)                                                                     \
-  F(ThreadStateContainerFree, OperandType::Local)                                                                      \
+  F(ThreadStateContainerClear, OperandType::Local)                                                                     \
                                                                                                                        \
   /* Table Vector Iterator */                                                                                          \
   F(TableVectorIteratorInit, OperandType::Local, OperandType::UImm2)                                                   \
@@ -124,14 +125,12 @@ namespace tpl::vm {
   F(VPIGetSelectedRowCount, OperandType::Local, OperandType::Local)                                                    \
   F(VPIGetVectorProjection, OperandType::Local, OperandType::Local)                                                    \
   F(VPIHasNext, OperandType::Local, OperandType::Local)                                                                \
-  F(VPIHasNextFiltered, OperandType::Local, OperandType::Local)                                                        \
   F(VPIAdvance, OperandType::Local)                                                                                    \
-  F(VPIAdvanceFiltered, OperandType::Local)                                                                            \
   F(VPISetPosition, OperandType::Local, OperandType::Local)                                                            \
-  F(VPISetPositionFiltered, OperandType::Local, OperandType::Local)                                                    \
   F(VPIMatch, OperandType::Local, OperandType::Local)                                                                  \
   F(VPIReset, OperandType::Local)                                                                                      \
-  F(VPIResetFiltered, OperandType::Local)                                                                              \
+  F(VPIGetBool, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPIGetTinyInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
@@ -140,6 +139,9 @@ namespace tpl::vm {
   F(VPIGetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPIGetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPIGetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPIGetPointer, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
+  F(VPIGetBoolNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPIGetTinyIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPIGetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
@@ -148,6 +150,8 @@ namespace tpl::vm {
   F(VPIGetDecimalNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPIGetDateNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPIGetStringNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
+  F(VPISetBool, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
+  F(VPISetTinyInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
   F(VPISetInteger, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetBigInt, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
@@ -156,6 +160,8 @@ namespace tpl::vm {
   F(VPISetDecimal, OperandType::Local, OperandType::Local, OperandType::UImm4)                                         \
   F(VPISetDate, OperandType::Local, OperandType::Local, OperandType::UImm4)                                            \
   F(VPISetString, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
+  F(VPISetBoolNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                        \
+  F(VPISetTinyIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPISetSmallIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                    \
   F(VPISetIntegerNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                     \
   F(VPISetBigIntNull, OperandType::Local, OperandType::Local, OperandType::UImm4)                                      \
@@ -169,7 +175,6 @@ namespace tpl::vm {
   F(FilterManagerInit, OperandType::Local)                                                                             \
   F(FilterManagerStartNewClause, OperandType::Local)                                                                   \
   F(FilterManagerInsertFilter, OperandType::Local, OperandType::FunctionId)                                            \
-  F(FilterManagerFinalize, OperandType::Local)                                                                         \
   F(FilterManagerRunFilters, OperandType::Local, OperandType::Local)                                                   \
   F(FilterManagerFree, OperandType::Local)                                                                             \
                                                                                                                        \
@@ -187,15 +192,37 @@ namespace tpl::vm {
   F(VectorFilterNotEqual, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)              \
   F(VectorFilterNotEqualVal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)           \
                                                                                                                        \
-  /* SQL type comparisons */                                                                                           \
+  /* SQL value creation */                                                                                             \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
   F(InitBool, OperandType::Local, OperandType::Local)                                                                  \
   F(InitInteger, OperandType::Local, OperandType::Local)                                                               \
   F(InitReal, OperandType::Local, OperandType::Local)                                                                  \
   F(InitDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                          \
   F(InitString, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4)                                      \
+  /* SQL value conversion */                                                                                           \
+  F(BoolToInteger, OperandType::Local, OperandType::Local)                                                             \
+  F(IntegerToBool, OperandType::Local, OperandType::Local)                                                             \
   F(IntegerToReal, OperandType::Local, OperandType::Local)                                                             \
+  F(IntegerToString, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(RealToBool, OperandType::Local, OperandType::Local)                                                                \
   F(RealToInteger, OperandType::Local, OperandType::Local)                                                             \
+  F(RealToString, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(DateToTimestamp, OperandType::Local, OperandType::Local)                                                           \
+  F(DateToString, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(TimestampToDate, OperandType::Local, OperandType::Local)                                                           \
+  F(TimestampToString, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(StringToBool, OperandType::Local, OperandType::Local)                                                              \
+  F(StringToInteger, OperandType::Local, OperandType::Local)                                                           \
+  F(StringToReal, OperandType::Local, OperandType::Local)                                                              \
+  F(StringToDate, OperandType::Local, OperandType::Local)                                                              \
+  F(StringToTimestamp, OperandType::Local, OperandType::Local)                                                         \
+  /* SQL value comparisons */                                                                                          \
+  F(LessThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
+  F(LessThanEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(GreaterThanBool, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(GreaterThanEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
+  F(EqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                             \
+  F(NotEqualBool, OperandType::Local, OperandType::Local, OperandType::Local)                                          \
   F(LessThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
   F(LessThanEqualInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                  \
   F(GreaterThanInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                    \
@@ -241,8 +268,9 @@ namespace tpl::vm {
   /* Hashing */                                                                                                        \
   F(HashInt, OperandType::Local, OperandType::Local, OperandType::Local)                                               \
   F(HashReal, OperandType::Local, OperandType::Local, OperandType::Local)                                              \
-  F(HashString, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(HashDate, OperandType::Local, OperandType::Local, OperandType::Local)                                              \
+  F(HashTimestamp, OperandType::Local, OperandType::Local, OperandType::Local)                                         \
+  F(HashString, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(HashCombine, OperandType::Local, OperandType::Local)                                                               \
                                                                                                                        \
   /* Aggregation Hash Table */                                                                                         \
@@ -252,9 +280,13 @@ namespace tpl::vm {
   F(AggregationHashTableLinkHashTableEntry, OperandType::Local, OperandType::Local)                                    \
   F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
       OperandType::Local)                                                                                              \
-  F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::FunctionId,                 \
-      OperandType::FunctionId, OperandType::FunctionId, OperandType::FunctionId, OperandType::Local)                   \
+  F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local,  \
+      OperandType::FunctionId, OperandType::FunctionId, OperandType::Local)                                            \
   F(AggregationHashTableTransferPartitions, OperandType::Local, OperandType::Local, OperandType::Local,                \
+      OperandType::FunctionId)                                                                                         \
+  F(AggregationHashTableBuildAllHashTablePartitions, OperandType::Local, OperandType::Local)                           \
+  F(AggregationHashTableRepartition, OperandType::Local)                                                               \
+  F(AggregationHashTableMergePartitions, OperandType::Local, OperandType::Local, OperandType::Local,                   \
       OperandType::FunctionId)                                                                                         \
   F(AggregationHashTableParallelPartitionedScan, OperandType::Local, OperandType::Local, OperandType::Local,           \
       OperandType::FunctionId)                                                                                         \
@@ -361,14 +393,9 @@ namespace tpl::vm {
   F(JoinHashTableBuildParallel, OperandType::Local, OperandType::Local, OperandType::Local)                            \
   F(JoinHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local)                                   \
   F(JoinHashTableFree, OperandType::Local)                                                                             \
-  F(JoinHashTableVectorProbeInit, OperandType::Local, OperandType::Local)                                              \
-  F(JoinHashTableVectorProbePrepare, OperandType::Local, OperandType::Local, OperandType::FunctionId)                  \
-  F(JoinHashTableVectorProbeGetNextOutput, OperandType::Local, OperandType::Local, OperandType::Local,                 \
-      OperandType::FunctionId)                                                                                         \
-  F(JoinHashTableVectorProbeFree, OperandType::Local)                                                                  \
-  F(HashTableEntryIteratorHasNext, OperandType::Local, OperandType::Local, OperandType::FunctionId,                    \
-      OperandType::Local, OperandType::Local)                                                                          \
-  F(HashTableEntryIteratorGetRow, OperandType::Local, OperandType::Local)                                              \
+  F(HashTableEntryGetHash, OperandType::Local, OperandType::Local)                                                     \
+  F(HashTableEntryGetRow, OperandType::Local, OperandType::Local)                                                      \
+  F(HashTableEntryGetNext, OperandType::Local, OperandType::Local)                                                     \
                                                                                                                        \
   /* Sorting */                                                                                                        \
   F(SorterInit, OperandType::Local, OperandType::Local, OperandType::FunctionId, OperandType::Local)                   \
@@ -383,11 +410,20 @@ namespace tpl::vm {
   F(SorterIteratorGetRow, OperandType::Local, OperandType::Local)                                                      \
   F(SorterIteratorHasNext, OperandType::Local, OperandType::Local)                                                     \
   F(SorterIteratorNext, OperandType::Local)                                                                            \
+  F(SorterIteratorSkipRows, OperandType::Local, OperandType::Local)                                                    \
   F(SorterIteratorFree, OperandType::Local)                                                                            \
                                                                                                                        \
   /* Output */                                                                                                         \
   F(ResultBufferAllocOutputRow, OperandType::Local, OperandType::Local)                                                \
   F(ResultBufferFinalize, OperandType::Local)                                                                          \
+                                                                                                                       \
+  /* CSV Reader */                                                                                                     \
+  F(CSVReaderInit, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4)                                   \
+  F(CSVReaderPerformInit, OperandType::Local, OperandType::Local)                                                      \
+  F(CSVReaderAdvance, OperandType::Local, OperandType::Local)                                                          \
+  F(CSVReaderGetField, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(CSVReaderGetRecordNumber, OperandType::Local, OperandType::Local)                                                  \
+  F(CSVReaderClose, OperandType::Local)                                                                                \
                                                                                                                        \
   /* Trig functions */                                                                                                 \
   F(Pi, OperandType::Local)                                                                                            \
@@ -421,6 +457,7 @@ namespace tpl::vm {
   F(Pow, OperandType::Local, OperandType::Local, OperandType::Local)                                                   \
                                                                                                                        \
   /* String functions */                                                                                               \
+  F(Concat, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                            \
   F(Left, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(Length, OperandType::Local, OperandType::Local, OperandType::Local)                                                \
   F(Like, OperandType::Local, OperandType::Local, OperandType::Local)                                                  \
@@ -435,7 +472,10 @@ namespace tpl::vm {
   F(SplitPart, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)     \
   F(Substring, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)     \
   F(Trim, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
-  F(Upper, OperandType::Local, OperandType::Local, OperandType::Local)
+  F(Upper, OperandType::Local, OperandType::Local, OperandType::Local)                                                 \
+                                                                                                                       \
+  /* Date Functions */                                                                                                 \
+  F(ExtractYear, OperandType::Local, OperandType::Local)
 
 // clang-format on
 

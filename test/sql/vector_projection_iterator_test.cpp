@@ -242,21 +242,21 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
       iter.Match(!null);
     }
 
-    iter.ResetFiltered();
+    iter.Reset();
 
     EXPECT_TRUE(iter.IsFiltered());
     EXPECT_LT(iter.GetSelectedTupleCount(), iter.GetTotalTupleCount());
 
     // Now all selected/active elements must not be null
     uint32_t num_non_null = 0;
-    for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
+    for (; iter.HasNext(); iter.Advance()) {
       bool null = false;
       iter.GetValue<int32_t, true>(ColId::col_b, &null);
       EXPECT_FALSE(null);
       num_non_null++;
     }
 
-    iter.ResetFiltered();
+    iter.Reset();
 
     const auto &col_data = ColumnData(ColId::col_b);
     uint32_t actual_non_null = col_data.num_tuples - col_data.num_nulls;
@@ -283,19 +283,19 @@ TEST_F(VectorProjectionIteratorTest, ManualFilterTest) {
       iter.Match(*val < 100);
     }
 
-    iter.ResetFiltered();
+    iter.Reset();
 
-    for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
+    for (; iter.HasNext(); iter.Advance()) {
       bool null = false;
       iter.GetValue<int32_t, true>(ColId::col_b, &null);
       iter.Match(null);
     }
 
-    iter.ResetFiltered();
+    iter.Reset();
 
     EXPECT_LE(iter.GetSelectedTupleCount(), 100u);
 
-    for (; iter.HasNextFiltered(); iter.AdvanceFiltered()) {
+    for (; iter.HasNext(); iter.Advance()) {
       // col_a must be less than 100
       {
         auto *val = iter.GetValue<int16_t, false>(ColId::col_a, nullptr);

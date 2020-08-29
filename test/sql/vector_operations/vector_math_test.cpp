@@ -1,7 +1,7 @@
 #include "common/exception.h"
 #include "sql/constant_vector.h"
 #include "sql/vector.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "util/sql_test_harness.h"
 #include "util/test_harness.h"
 
@@ -113,6 +113,84 @@ TEST_F(VectorArithmeticTest, DivMod) {
         EXPECT_EQ(GenericValue::CreateSmallInt(2), result.GetValue(i));
       }
     }
+  }
+}
+
+TEST_F(VectorArithmeticTest, InPlaceAdditionInvalid) {
+  auto a = MakeSmallIntVector(100);
+  auto b = MakeBigIntVector(100);
+  auto c = MakeSmallIntVector(10);
+
+  // Mismatched types
+  EXPECT_ANY_THROW(VectorOps::AddInPlace(a.get(), *b));
+
+  // Mismatched sizes
+  EXPECT_ANY_THROW(VectorOps::AddInPlace(a.get(), *c));
+}
+
+TEST_F(VectorArithmeticTest, InPlaceAdditionNull) {
+  auto a = MakeSmallIntVector(100);
+  VectorOps::Generate(a.get(), 0, 2);
+  VectorOps::AddInPlace(a.get(), ConstantVector(GenericValue::CreateNull(TypeId::SmallInt)));
+
+  EXPECT_EQ(100, a->GetSize());
+  EXPECT_EQ(100, a->GetCount());
+  EXPECT_EQ(nullptr, a->GetFilteredTupleIdList());
+  EXPECT_TRUE(a->GetNullMask().All());
+}
+
+TEST_F(VectorArithmeticTest, InPlaceAdditionSimple) {
+#define GEN_CASE(TYPE)                                              \
+  {                                                                 \
+    auto a = Make##TYPE##Vector(100);                               \
+    auto b = Make##TYPE##Vector(100);                               \
+                                                                    \
+    /* a = [0,2,4,6,8,10,...]   */                                  \
+    /* b = [0,4,8,12,16,20,...] */                                  \
+    VectorOps::Generate(a.get(), 0, 2);                             \
+    VectorOps::Generate(b.get(), 0, 4);                             \
+                                                                    \
+    VectorOps::AddInPlace(a.get(), *b);                             \
+                                                                    \
+    EXPECT_EQ(100, a->GetSize());                                   \
+    EXPECT_EQ(100, a->GetCount());                                  \
+    EXPECT_EQ(nullptr, a->GetFilteredTupleIdList());                \
+    for (uint64_t i = 0; i < a->GetCount(); i++) {                  \
+      EXPECT_FALSE(a->IsNull(i));                                   \
+      EXPECT_EQ(GenericValue::Create##TYPE(6 * i), a->GetValue(i)); \
+    }                                                               \
+  }
+
+  GEN_CASE(TinyInt);
+  GEN_CASE(SmallInt);
+  GEN_CASE(Integer);
+  GEN_CASE(BigInt);
+  GEN_CASE(Float);
+  GEN_CASE(Double);
+  GEN_CASE(Pointer);
+#undef GEN_CASE
+}
+
+TEST_F(VectorArithmeticTest, InPlaceAdditionFilteredWithNulls) {
+  auto a = MakeIntegerVector(10);
+  auto b = MakeIntegerVector(10);
+
+  VectorOps::Generate(a.get(), 0, 2);
+  VectorOps::Generate(b.get(), 0, 4);
+
+  auto tids = TupleIdList(a->GetSize());
+  tids = {0, 2, 4, 6, 8};
+  a->SetFilteredTupleIdList(&tids, tids.GetTupleCount());
+  b->SetFilteredTupleIdList(&tids, tids.GetTupleCount());
+
+  VectorOps::AddInPlace(a.get(), *b);
+
+  EXPECT_EQ(10, a->GetSize());
+  EXPECT_EQ(tids.GetTupleCount(), a->GetCount());
+  EXPECT_EQ(&tids, a->GetFilteredTupleIdList());
+  for (uint64_t i = 0; i < a->GetCount(); i++) {
+    EXPECT_FALSE(a->IsNull(i));
+    EXPECT_EQ(GenericValue::CreateInteger(6 * tids[i]), a->GetValue(i));
   }
 }
 

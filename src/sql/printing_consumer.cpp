@@ -2,101 +2,85 @@
 
 #include <iomanip>
 
-#include "sql/schema.h"
+#include "sql/planner/plannodes/output_schema.h"
 #include "sql/sql.h"
 #include "sql/value.h"
 
 namespace tpl::sql {
 
-// TODO(pmenon): Templatize all "Print" functions based on NULL-ability if they become a bottleneck
-// TODO(pmenon): Compressed values?
+PrintingConsumer::PrintingConsumer(std::ostream &os,
+                                   const sql::planner::OutputSchema *output_schema)
+    : os_(os), output_schema_(output_schema) {}
 
-namespace {
+void PrintingConsumer::PrintTuple(const byte *tuple) const {
+  bool first = true;
+  for (const auto &col : output_schema_->GetColumns()) {
+    // Comma
+    if (!first) os_ << ",";
+    first = false;
 
-const byte *PrintBoolVal(std::ostream &os, const byte *ptr) {
-  auto *val = reinterpret_cast<const BoolVal *>(ptr);
-  os << (val->is_null ? "NULL" : val->val ? "True" : "False");
-  return ptr + sizeof(BoolVal);
-}
-
-const byte *PrintIntegerVal(std::ostream &os, const byte *ptr) {
-  auto *val = reinterpret_cast<const Integer *>(ptr);
-  os << (val->is_null ? "NULL" : std::to_string(val->val));
-  return ptr + sizeof(Integer);
-}
-
-const byte *PrintRealVal(std::ostream &os, const byte *ptr) {
-  auto *val = reinterpret_cast<const Real *>(ptr);
-  if (val->is_null) {
-    os << "NULL";
-  } else {
-    os << std::fixed << std::setprecision(2) << val->val << std::dec;
-  }
-  return ptr + sizeof(Real);
-}
-
-const byte *PrintDateVal(std::ostream &os, const byte *ptr) {
-  auto *val = reinterpret_cast<const DateVal *>(ptr);
-  os << (val->is_null ? "NULL" : val->val.ToString());
-  return ptr + sizeof(DateVal);
-}
-
-const byte *PrintStringVal(std::ostream &os, const byte *ptr) {
-  auto *val = reinterpret_cast<const StringVal *>(ptr);
-  if (val->is_null) {
-    os << "NULL";
-  } else {
-    os << "'" << val->val.GetStringView() << "'";
-  }
-  return ptr + sizeof(StringVal);
-}
-
-}  // namespace
-
-PrintingConsumer::PrintingConsumer(std::ostream &os, const sql::Schema &output_schema)
-    : os_(os), output_schema_(output_schema) {
-  col_printers_.reserve(output_schema_.GetColumnCount());
-  for (const auto &col_info : output_schema_.GetColumns()) {
-    switch (col_info.sql_type.id()) {
-      case SqlTypeId::Boolean:
-        col_printers_.emplace_back(PrintBoolVal);
+    // Column value
+    switch (GetSqlTypeFromInternalType(col.GetType())) {
+      case SqlTypeId::Boolean: {
+        const auto val = reinterpret_cast<const BoolVal *>(tuple);
+        os_ << (val->is_null ? "NULL" : val->val ? "True" : "False");
+        tuple += sizeof(BoolVal);
         break;
+      }
       case SqlTypeId::TinyInt:
       case SqlTypeId::SmallInt:
       case SqlTypeId::Integer:
       case SqlTypeId::BigInt: {
-        col_printers_.emplace_back(PrintIntegerVal);
+        const auto val = reinterpret_cast<const Integer *>(tuple);
+        os_ << (val->is_null ? "NULL" : std::to_string(val->val));
+        tuple += sizeof(Integer);
         break;
       }
       case SqlTypeId::Real:
       case SqlTypeId::Double:
       case SqlTypeId::Decimal: {
-        col_printers_.emplace_back(PrintRealVal);
+        const auto val = reinterpret_cast<const Real *>(tuple);
+        if (val->is_null) {
+          os_ << "NULL";
+        } else {
+          os_ << std::fixed << std::setprecision(2) << val->val << std::dec;
+        }
+        tuple += sizeof(Real);
         break;
       }
       case SqlTypeId::Date: {
-        col_printers_.emplace_back(PrintDateVal);
+        const auto val = reinterpret_cast<const DateVal *>(tuple);
+        os_ << (val->is_null ? "NULL" : val->val.ToString());
+        tuple += sizeof(DateVal);
+        break;
+      }
+      case SqlTypeId::Timestamp: {
+        const auto val = reinterpret_cast<const TimestampVal *>(tuple);
+        os_ << (val->is_null ? "NULL" : val->val.ToString());
+        tuple += sizeof(TimestampVal);
         break;
       }
       case SqlTypeId::Char:
       case SqlTypeId::Varchar: {
-        col_printers_.emplace_back(PrintStringVal);
+        const auto val = reinterpret_cast<const StringVal *>(tuple);
+        if (val->is_null) {
+          os_ << "NULL";
+        } else {
+          os_ << "'" << val->val.GetStringView() << "'";
+        }
+        tuple += sizeof(StringVal);
         break;
       }
     }
   }
+
+  // New line
+  os_ << std::endl;
 }
 
 void PrintingConsumer::Consume(const OutputBuffer &batch) {
-  for (const auto raw_tuple : batch) {
-    const byte *ptr = raw_tuple;
-    bool first = true;
-    for (const auto &col_printer : col_printers_) {
-      if (!first) os_ << ",";
-      first = false;
-      ptr = col_printer(os_, ptr);
-    }
-    os_ << std::endl;
+  for (const byte *raw_tuple : batch) {
+    PrintTuple(raw_tuple);
   }
 }
 

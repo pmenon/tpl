@@ -5,19 +5,6 @@
 extern "C" {
 
 // ---------------------------------------------------------
-// Thread State Container
-// ---------------------------------------------------------
-
-void OpThreadStateContainerInit(tpl::sql::ThreadStateContainer *const thread_state_container,
-                                tpl::sql::MemoryPool *const memory) {
-  new (thread_state_container) tpl::sql::ThreadStateContainer(memory);
-}
-
-void OpThreadStateContainerFree(tpl::sql::ThreadStateContainer *const thread_state_container) {
-  thread_state_container->~ThreadStateContainer();
-}
-
-// ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------
 
@@ -60,12 +47,8 @@ void OpFilterManagerStartNewClause(tpl::sql::FilterManager *filter_manager) {
 }
 
 void OpFilterManagerInsertFilter(tpl::sql::FilterManager *filter_manager,
-                                 tpl::sql::FilterManager::MatchFn flavor) {
-  filter_manager->InsertClauseTerm(flavor);
-}
-
-void OpFilterManagerFinalize(tpl::sql::FilterManager *filter_manager) {
-  filter_manager->Finalize();
+                                 tpl::sql::FilterManager::MatchFn clause) {
+  filter_manager->InsertClauseTerm(clause);
 }
 
 void OpFilterManagerRunFilters(tpl::sql::FilterManager *filter_manager,
@@ -98,16 +81,6 @@ void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {
   join_hash_table->~JoinHashTable();
 }
 
-void OpJoinHashTableVectorProbeInit(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe,
-                                    tpl::sql::JoinHashTable *jht) {
-  TPL_ASSERT(jht != nullptr, "Null JHT");
-  new (jht_vector_probe) tpl::sql::JoinHashTableVectorProbe(*jht);
-}
-
-void OpJoinHashTableVectorProbeFree(tpl::sql::JoinHashTableVectorProbe *jht_vector_probe) {
-  jht_vector_probe->~JoinHashTableVectorProbe();
-}
-
 // ---------------------------------------------------------
 // Aggregation Hash Table
 // ---------------------------------------------------------
@@ -125,6 +98,22 @@ void OpAggregationHashTableIteratorInit(tpl::sql::AHTIterator *iter,
                                         tpl::sql::AggregationHashTable *agg_hash_table) {
   TPL_ASSERT(agg_hash_table != nullptr, "Null hash table");
   new (iter) tpl::sql::AHTIterator(*agg_hash_table);
+}
+
+void OpAggregationHashTableBuildAllHashTablePartitions(
+    tpl::sql::AggregationHashTable *agg_hash_table, void *query_state) {
+  agg_hash_table->BuildAllPartitions(query_state);
+}
+
+void OpAggregationHashTableRepartition(tpl::sql::AggregationHashTable *agg_hash_table) {
+  agg_hash_table->Repartition();
+}
+
+void OpAggregationHashTableMergePartitions(
+    tpl::sql::AggregationHashTable *agg_hash_table,
+    tpl::sql::AggregationHashTable *target_agg_hash_table, void *query_state,
+    tpl::sql::AggregationHashTable::MergePartitionFn merge_partition_fn) {
+  agg_hash_table->MergePartitions(target_agg_hash_table, query_state, merge_partition_fn);
 }
 
 void OpAggregationHashTableIteratorFree(tpl::sql::AHTIterator *iter) { iter->~AHTIterator(); }
@@ -159,5 +148,20 @@ void OpSorterIteratorInit(tpl::sql::SorterIterator *iter, tpl::sql::Sorter *sort
 }
 
 void OpSorterIteratorFree(tpl::sql::SorterIterator *iter) { iter->~SorterIterator(); }
+
+// ---------------------------------------------------------
+// CSV Reader
+// ---------------------------------------------------------
+
+void OpCSVReaderInit(tpl::util::CSVReader *reader, const uint8_t *file_name, uint32_t len) {
+  std::string_view fname(reinterpret_cast<const char *>(file_name), len);
+  new (reader) tpl::util::CSVReader(std::make_unique<tpl::util::CSVFile>(fname));
+}
+
+void OpCSVReaderPerformInit(bool *result, tpl::util::CSVReader *reader) {
+  *result = reader->Initialize();
+}
+
+void OpCSVReaderClose(tpl::util::CSVReader *reader) { std::destroy_at(reader); }
 
 }  //

@@ -1,8 +1,8 @@
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 
 #include "common/exception.h"
 #include "common/macros.h"
-#include "sql/operations/like_operators.h"
+#include "sql/operators/like_operators.h"
 #include "sql/tuple_id_list.h"
 
 namespace tpl::sql {
@@ -24,7 +24,7 @@ void TemplatedLikeOperation_Vector_Constant(const Vector &a, const Vector &b,
   tid_list->GetMutableBits()->Difference(a.GetNullMask());
 
   // Lift-off
-  tid_list->Filter([&](const uint64_t i) { return Op::Apply(a_data[i], b_data[0]); });
+  tid_list->Filter([&](const uint64_t i) { return Op{}(a_data[i], b_data[0]); });
 }
 
 template <typename Op>
@@ -39,7 +39,7 @@ void TemplatedLikeOperation_Vector_Vector(const Vector &a, const Vector &b, Tupl
   tid_list->GetMutableBits()->Difference(a.GetNullMask()).Difference(b.GetNullMask());
 
   // Lift-off
-  tid_list->Filter([&](const uint64_t i) { return Op::Apply(a_data[i], b_data[i]); });
+  tid_list->Filter([&](const uint64_t i) { return Op{}(a_data[i], b_data[i]); });
 }
 
 template <typename Op>

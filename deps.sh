@@ -35,6 +35,9 @@ install() {
     LINUX)
       version=$(cat /etc/os-release | grep VERSION_ID | cut -d '"' -f 2)
       case $version in
+        20.04) install_linux ;;
+        19.10) install_linux ;;
+        19.04) install_linux ;;
         18.10) install_linux ;;
         18.04) install_linux ;;
         *) give_up ;;
@@ -67,25 +70,33 @@ install_mac() {
   brew update
   # Install packages.
   brew ls --versions cmake || brew install cmake
+  brew ls --versions coreutils || brew install coreutils
+  brew ls --versions doxygen || brew install doxygen
   brew ls --versions git || brew install git
-  (brew ls --versions llvm | grep 7) || brew install llvm@7
+  (brew ls --versions llvm@9 | grep 9) || brew install llvm@9
   brew ls --versions jemalloc || brew install jemalloc
+  brew ls --versions tbb || brew install tbb
+  brew ls --versions ninja || brew install ninja
 }
 
 install_linux() {
   # Update apt-get.
   apt-get -y update
   # Install packages.
-  apt-get -y install \
-      build-essential \
-      clang-tidy-7 \
-      clang-format-7 \
-      cmake \
-      git \
-      g++-7 \
-      clang-7 \
-      llvm-7 \
-      libjemalloc-dev
+  apt-get -y install   \
+      build-essential  \
+      clang-tidy-10    \
+      clang-format-10  \
+      cmake            \
+      doxygen          \
+      git              \
+      lld              \
+      g++-10           \
+      clang-10         \
+      llvm-10          \
+      libjemalloc-dev  \
+      libtbb-dev       \
+      ninja-build
 }
 
 main "$@"

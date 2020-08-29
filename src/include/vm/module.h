@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>  // NOLINT
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -11,6 +11,7 @@
 #include "ast/type.h"
 #include "vm/bytecode_module.h"
 #include "vm/llvm_engine.h"
+#include "vm/vm_defs.h"
 
 namespace tpl::vm {
 
@@ -18,33 +19,17 @@ namespace tpl::vm {
 class BytecodeTrampolineTest;
 
 /**
- * An enumeration capturing different execution methods and optimization levels.
- */
-enum class ExecutionMode : uint8_t {
-  // Always execute in interpreted mode
-  Interpret,
-  // Execute in interpreted mode, but trigger a compilation asynchronously. As
-  // compiled code becomes available, seamlessly swap it in and execute mixed
-  // interpreter and compiled code.
-  Adaptive,
-  // Compile and generate all machine code before executing the function
-  Compiled
-};
-
-/**
- * A Module instance is used to store all information associated with a single
- * TPL program. Module's are a top-level container for metadata about all TPL
- * functions, data structures, types, etc. They also contain the generated TBC
- * bytecode and their implementations, along with compiled machine-code versions
- * of TPL functions.
+ * A Module instance is used to store all information associated with a single TPL program. Module's
+ * are a top-level container for metadata about all TPL functions, data structures, types, etc.
+ * They also contain the generated TBC bytecode and their implementations, along with compiled
+ * machine-code versions of TPL functions.
  *
  * Modules are thread-safe.
  */
 class Module {
  public:
   /**
-   * Create a TPL module using the given bytecode module as the only
-   * implementation.
+   * Create a TPL module using the given bytecode module as the initial implementation.
    * @param bytecode_module The bytecode module implementation.
    */
   explicit Module(std::unique_ptr<BytecodeModule> bytecode_module);
@@ -63,41 +48,43 @@ class Module {
   DISALLOW_COPY_AND_MOVE(Module);
 
   /**
-   * Look up a TPL function in this module by its ID
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Look up the metadata for a TPL function in this module by its ID.
+   * @return A pointer to the function's info if it exists; null otherwise.
    */
   const FunctionInfo *GetFuncInfoById(const FunctionId func_id) const {
     return bytecode_module_->GetFuncInfoById(func_id);
   }
 
   /**
-   * Look up a TPL function in this module by its name
-   * @param name The name of the function to lookup
-   * @return A pointer to the function's info if it exists; null otherwise
+   * Look up metadata for a TPL function in this module by its name.
+   * @param name The name of the function to lookup.
+   * @return A pointer to the function's info if it exists; null otherwise.
    */
-  const FunctionInfo *GetFuncInfoByName(const std::string &name) const {
+  const FunctionInfo *GetFuncInfoByName(std::string_view name) const {
     return bytecode_module_->LookupFuncInfoByName(name);
   }
 
   /**
-   * Retrieve and wrap a TPL function inside a C++ function object, thus making
-   * the TPL function callable as a C++ function. Callers can request different
-   * versions of the TPL code including an interpreted version and a compiled
-   * version.
-   * @tparam Ret Ret The C/C++ return type of the function
-   * @tparam ArgTypes ArgTypes The C/C++ argument types to the function
-   * @param name The name of the function the caller wants
-   * @param[out] func The function wrapper we use to wrap the TPL function
-   * @return True if the function was found and the output parameter was set
+   * Retrieve the TPL function in this module with the name @em name as an invokable STL function.
+   * Callers can request different implementations of function by specifying an execution mode.
+   * @tparam Ret Ret The C/C++ return type of the function.
+   * @tparam ArgTypes ArgTypes The C/C++ argument types to the function.
+   * @param name The name of the function to retrieve.
+   * @param[out] func The function wrapper we use to wrap the TPL function.
+   * @return True if the function was found and the output parameter was set.
    */
   template <typename Ret, typename... ArgTypes>
-  bool GetFunction(const std::string &name, ExecutionMode exec_mode,
+  bool GetFunction(std::string_view name, ExecutionMode exec_mode,
                    std::function<Ret(ArgTypes...)> &func);
 
   /**
-   * Return the raw function implementation for the function in this module with
-   * ID @em func_id. The returned function will either be interpreted or
-   * compiled, but the implementation is hidden from the caller.
+   * Return the raw function implementation for the function in this module with the given function
+   * ID. The returned function will either be interpreted or compiled, but the implementation is
+   * hidden from the caller.
+   *
+   * The caller is responsible for knowing the function's interface and casting to the appropriate
+   * type.
+   *
    * @param func_id The ID of the function the caller wants.
    * @return The function address if it exists; null otherwise.
    */
@@ -112,57 +99,44 @@ class Module {
   const BytecodeModule *GetBytecodeModule() const { return bytecode_module_.get(); }
 
  private:
-  friend class VM;
-  friend class AsyncCompileTask;
-
-  // Accesses the trampoline functions
-  friend class BytecodeTrampolineTest;
-
-  // This class encapsulates the ability to asynchronously JIT compile a module.
-  class AsyncCompileTask;
+  friend class VM;                      // For the VM to access raw bytecode.
+  friend class BytecodeTrampolineTest;  // For the tests to check private methods.
 
   // A trampoline is a stub function that serves as a landing point for all
   // functions executed in interpreted mode. The purpose of the trampoline is
   // to arrange and adjust call arguments from the C/C++ ABI to the TPL ABI.
   class Trampoline {
    public:
-    // Create an empty/uninitialized trampoline
+    // Create an empty/uninitialized trampoline.
     Trampoline() = default;
 
-    // Create a trampoline over the given memory block
-    explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) noexcept : mem_(std::move(mem)) {}
+    // Create a trampoline over the given memory block.
+    explicit Trampoline(llvm::sys::OwningMemoryBlock &&mem) : mem_(std::move(mem)) {}
 
-    // Move assignment
-    Trampoline &operator=(Trampoline &&other) noexcept {
-      mem_ = std::move(other.mem_);
-      return *this;
-    }
-
-    // Access the trampoline code
-    void *code() const { return mem_.base(); }
+    // Access the raw trampoline code.
+    void *GetCode() const { return mem_.base(); }
 
    private:
-    // Memory region where the trampoline's code is
+    // Memory region where the trampoline's code resides.
     llvm::sys::OwningMemoryBlock mem_;
   };
 
-  // Create a trampoline function for the function with id @em func_id
+  // Create a trampoline function for the function with the provided ID.
   void CreateFunctionTrampoline(FunctionId func_id);
 
-  // Generate a trampoline for the function
-  void CreateFunctionTrampoline(const FunctionInfo &func, Trampoline &trampoline);
+  // Generate a trampoline for the function.
+  void CreateFunctionTrampoline(const FunctionInfo &func, Trampoline *trampoline);
 
-  // Access the raw bytecode trampoline function
+  // Access the bytecode trampoline for the function with the given ID.
   void *GetBytecodeImpl(const FunctionId func_id) const {
-    return bytecode_trampolines_[func_id].code();
+    return bytecode_trampolines_[func_id].GetCode();
   }
 
-  // Access the compiled implementation of the function with the given ID
+  // Access the compiled implementation of the function with the given ID.
   void *GetCompiledImpl(const FunctionId func_id) const {
     if (jit_module_ == nullptr) {
       return nullptr;
     }
-
     const auto *func_info = GetFuncInfoById(func_id);
     return jit_module_->GetFunctionPointer(func_info->GetName());
   }
@@ -177,16 +151,20 @@ class Module {
  private:
   // The module containing all TBC (i.e., bytecode) for the TPL program.
   std::unique_ptr<BytecodeModule> bytecode_module_;
+
   // The module containing compiled machine code for the TPL program.
   std::unique_ptr<LLVMEngine::CompiledModule> jit_module_;
+
   // Function pointers for all functions defined in the TPL program. Pointers
   // may point into bytecode stub functions (i.e., interpreted implementations),
   // or into compiled machine-code implementations.
   std::unique_ptr<std::atomic<void *>[]> functions_;
-  // Trampolines for all bytecode functions.
+
+  // Trampolines for all bytecode functions. There is one for each function in
+  // program. Initially, all function pointers point into these trampolines.
   std::unique_ptr<Trampoline[]> bytecode_trampolines_;
-  // Compilation flag used to ensure compilation occurs only once, even under
-  // concurrent invocations.
+
+  // Flag to indicate if the JIT compilation has occurred.
   std::once_flag compiled_flag_;
 };
 
@@ -210,7 +188,7 @@ inline void CopyAll(uint8_t *buffer, const HeadT &head, const RestT &... rest) {
 }  // namespace detail
 
 template <typename Ret, typename... ArgTypes>
-inline bool Module::GetFunction(const std::string &name, const ExecutionMode exec_mode,
+inline bool Module::GetFunction(std::string_view name, const ExecutionMode exec_mode,
                                 std::function<Ret(ArgTypes...)> &func) {
   // Lookup function
   const FunctionInfo *func_info = bytecode_module_->LookupFuncInfoByName(name);

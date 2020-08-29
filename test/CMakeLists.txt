@@ -8,7 +8,7 @@ enable_testing()
 
 file(GLOB_RECURSE tpl_test_srs "${PROJECT_SOURCE_DIR}/test/*.cpp")
 
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} ${CTEST_FLAGS} --verbose)
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} ${CTEST_FLAGS} --output-on-failure)
 
 # From list of test files we'll create tests test_name.cpp -> test_name
 foreach(test_src ${tpl_test_srs})
@@ -23,6 +23,8 @@ foreach(test_src ${tpl_test_srs})
     add_dependencies(check ${test_name})
 
     # Register as a test
-    add_test(${test_name} ${test_name} --gtest_color=yes)
-    set_tests_properties(${test_name} PROPERTIES TIMEOUT 5)
+    add_test(NAME ${test_name}
+             COMMAND ${test_name} --gtest_color=yes
+             WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    set_tests_properties(${test_name} PROPERTIES TIMEOUT 6)
 endforeach()

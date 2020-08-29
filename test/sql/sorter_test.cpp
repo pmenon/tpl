@@ -5,8 +5,6 @@
 #include <random>
 #include <vector>
 
-#include "tbb/tbb.h"
-
 #include "ips4o/ips4o.hpp"
 
 #include "sql/execution_context.h"
@@ -161,81 +159,6 @@ TEST_F(SorterTest, TopKTest) {
   TestAllIntegral(TestTopKRandomTupleSize, num_iters, max_elems, &generator_);
 }
 
-TEST_F(SorterTest, DISABLED_PerfSortTest) {
-  // TODO(Amadou): Figure out a way to avoid manually changing this. Maybe
-  // metaprogramming?
-  using data = std::array<byte, 128>;
-  using int_type = uint32_t;
-
-  // 10 million elements
-  const uint32_t num_elems = 10000000;
-
-  // The sort comparison function
-  auto sorter_cmp_fn = [](const void *a, const void *b) -> int32_t {
-    // Just compare the first few bytes
-    const auto val_a = *reinterpret_cast<const int_type *>(a);
-    const auto val_b = *reinterpret_cast<const int_type *>(b);
-    return val_a < val_b ? -1 : (val_a == val_b ? 0 : 1);
-  };
-
-  auto cmp_fn = [](const data &a, const data &b) -> bool {
-    const auto val_a = *reinterpret_cast<const int_type *>(a.data());
-    const auto val_b = *reinterpret_cast<const int_type *>(b.data());
-    return val_a < val_b;
-  };
-
-  // Create the different kinds of vectors.
-  // Some of these are commented out to reduce the memory usage of this test.
-  MemoryPool memory(nullptr);
-  std::vector<data, MemoryPoolAllocator<data>> vec{MemoryPoolAllocator<data>(&memory)};
-  util::ChunkedVectorT<data, MemoryPoolAllocator<data>> chunk_vec{
-      MemoryPoolAllocator<data>(&memory)};
-  Sorter sorter(&memory, sorter_cmp_fn, sizeof(data));
-  std::cout << "Sizeof(data) is " << (sizeof(data)) << std::endl;
-
-  // Fill up the regular vector. This is our reference.
-  for (int_type i = 0; i < num_elems; i++) {
-    data val;
-    // Only the first few bytes are useful for comparison
-    std::memcpy(val.data(), &i, sizeof(int_type));
-    vec.push_back(val);
-  }
-
-  // Shuffle vector to get a random ordering
-  std::shuffle(vec.begin(), vec.end(), generator_);
-
-  // Fill the ChunkedVectorT<data> and the Sorter instance with the same data
-  for (int_type i = 0; i < num_elems; i++) {
-    chunk_vec.push_back(vec[i]);
-  }
-  for (int_type i = 0; i < num_elems; i++) {
-    auto *elem = sorter.AllocInputTuple();
-    std::memcpy(elem, vec[i].data(), sizeof(int_type));
-  }
-
-  // Run benchmarks
-  // NOTE: keep the number of runs to 1.
-  // Otherwise the vector will be presorted in subsequent runs, which avoids
-  // copies and speeds up the function.
-  auto stdvec_ms = Bench(1, [&vec, &cmp_fn]() { ips4o::sort(vec.begin(), vec.end(), cmp_fn); });
-
-  auto chunk_ms = Bench(
-      1, [&chunk_vec, &cmp_fn]() { ips4o::sort(chunk_vec.begin(), chunk_vec.end(), cmp_fn); });
-
-  auto sorter_ms = Bench(1, [&]() { sorter.Sort(); });
-
-  for (uint32_t i = 0; i < num_elems; i++) {
-    const auto std_a = *reinterpret_cast<const int_type *>(vec[i].data());
-    const auto chunk_a = *reinterpret_cast<const int_type *>(chunk_vec[i].data());
-    EXPECT_EQ(std_a, chunk_a);
-  }
-
-  std::cout << std::fixed << std::setprecision(4);
-  std::cout << "std::sort(std::vector): " << stdvec_ms << " ms" << std::endl;
-  std::cout << "ips4o::sort(ChunkedVector): " << chunk_ms << " ms" << std::endl;
-  std::cout << "Sorter.Sort(): " << sorter_ms << " ms" << std::endl;
-}
-
 template <uint32_t N>
 struct TestTuple {
   uint32_t key;
@@ -250,8 +173,6 @@ struct TestTuple {
 // The template argument controls the size of the tuple.
 template <uint32_t N>
 void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
-  tbb::task_scheduler_init sched;
-
   // Comparison function
   static const auto cmp_fn = [](const void *left, const void *right) {
     const auto *l = reinterpret_cast<const TestTuple<N> *>(left);
@@ -278,7 +199,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
   // Parallel construct sorter
 
   LaunchParallel(sorter_sizes.size(), [&](auto tid) {
-    std::random_device r;
+    std::random_device r = RandomDevice();
     std::this_thread::sleep_for(std::chrono::microseconds(r() % 1000));
     auto *sorter = container.AccessCurrentThreadStateAs<Sorter>();
     for (uint32_t i = 0; i < sorter_sizes[tid]; i++) {
@@ -329,9 +250,9 @@ TEST_F(SorterTest, SingleThreadLocalParallelSortTest) {
 
 TEST_F(SorterTest, UnbalancedParallelSortTest) {
   // All imbalance permutations
-  for (uint32_t x : {0, 1, 10, 100, 1000}) {
-    for (uint32_t y : {0, 1, 10, 100, 1000}) {
-      for (uint32_t z : {0, 1, 10, 100, 1000}) {
+  for (uint32_t x : {0, 1, 10, 100, 500}) {
+    for (uint32_t y : {0, 1, 10, 100, 500}) {
+      for (uint32_t z : {0, 1, 10, 100, 500}) {
         TestParallelSort<2>({x, y, z, x, y, z, x, y, z});
       }
     }

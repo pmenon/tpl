@@ -14,16 +14,29 @@ namespace tpl::ast {
   F(DateToSql, dateToSql)                                       \
   F(StringToSql, stringToSql)                                   \
   F(SqlToBool, sqlToBool)                                       \
+  F(IsValNull, isValNull)                                       \
+                                                                \
+  /* SQL Conversions */                                         \
+  F(ConvertBoolToInteger, convertBoolToInt)                     \
+  F(ConvertIntegerToReal, convertIntToReal)                     \
+  F(ConvertDateToTimestamp, convertDateToTime)                  \
+  F(ConvertStringToBool, convertStringToBool)                   \
+  F(ConvertStringToInt, convertStringToInt)                     \
+  F(ConvertStringToReal, convertStringToReal)                   \
+  F(ConvertStringToDate, convertStringToDate)                   \
+  F(ConvertStringToTime, convertStringToTime)                   \
                                                                 \
   /* SQL Functions */                                           \
   F(Like, like)                                                 \
+  F(ExtractYear, extractYear)                                   \
                                                                 \
   /* Thread State Container */                                  \
   F(ExecutionContextGetMemoryPool, execCtxGetMem)               \
-  F(ThreadStateContainerInit, tlsInit)                          \
+  F(ExecutionContextGetTLS, execCtxGetTLS)                      \
   F(ThreadStateContainerReset, tlsReset)                        \
+  F(ThreadStateContainerGetState, tlsGetCurrentThreadState)     \
   F(ThreadStateContainerIterate, tlsIterate)                    \
-  F(ThreadStateContainerFree, tlsFree)                          \
+  F(ThreadStateContainerClear, tlsClear)                        \
                                                                 \
   /* Table scans */                                             \
   F(TableIterInit, tableIterInit)                               \
@@ -38,14 +51,12 @@ namespace tpl::ast {
   F(VPIGetSelectedRowCount, vpiSelectedRowCount)                \
   F(VPIGetVectorProjection, vpiGetVectorProjection)             \
   F(VPIHasNext, vpiHasNext)                                     \
-  F(VPIHasNextFiltered, vpiHasNextFiltered)                     \
   F(VPIAdvance, vpiAdvance)                                     \
-  F(VPIAdvanceFiltered, vpiAdvanceFiltered)                     \
   F(VPISetPosition, vpiSetPosition)                             \
-  F(VPISetPositionFiltered, vpiSetPositionFiltered)             \
   F(VPIMatch, vpiMatch)                                         \
   F(VPIReset, vpiReset)                                         \
-  F(VPIResetFiltered, vpiResetFiltered)                         \
+  F(VPIGetBool, vpiGetBool)                                     \
+  F(VPIGetTinyInt, vpiGetTinyInt)                               \
   F(VPIGetSmallInt, vpiGetSmallInt)                             \
   F(VPIGetInt, vpiGetInt)                                       \
   F(VPIGetBigInt, vpiGetBigInt)                                 \
@@ -53,6 +64,9 @@ namespace tpl::ast {
   F(VPIGetDouble, vpiGetDouble)                                 \
   F(VPIGetDate, vpiGetDate)                                     \
   F(VPIGetString, vpiGetString)                                 \
+  F(VPIGetPointer, vpiGetPointer)                               \
+  F(VPISetBool, vpiSetBool)                                     \
+  F(VPISetTinyInt, vpiSetTinyInt)                               \
   F(VPISetSmallInt, vpiSetSmallInt)                             \
   F(VPISetInt, vpiSetInt)                                       \
   F(VPISetBigInt, vpiSetBigInt)                                 \
@@ -68,7 +82,6 @@ namespace tpl::ast {
   /* Filter Manager */                                          \
   F(FilterManagerInit, filterManagerInit)                       \
   F(FilterManagerInsertFilter, filterManagerInsertFilter)       \
-  F(FilterManagerFinalize, filterManagerFinalize)               \
   F(FilterManagerRunFilters, filterManagerRunFilters)           \
   F(FilterManagerFree, filterManagerFree)                       \
   /* Filter Execution */                                        \
@@ -112,9 +125,10 @@ namespace tpl::ast {
   F(JoinHashTableLookup, joinHTLookup)                          \
   F(JoinHashTableFree, joinHTFree)                              \
                                                                 \
-  /* Hash Table Entry Iterator (for hash joins) */              \
-  F(HashTableEntryIterHasNext, htEntryIterHasNext)              \
-  F(HashTableEntryIterGetRow, htEntryIterGetRow)                \
+  /* Hash Table Entry */                                        \
+  F(HashTableEntryGetHash, htEntryGetHash)                      \
+  F(HashTableEntryGetRow, htEntryGetRow)                        \
+  F(HashTableEntryGetNext, htEntryGetNext)                      \
                                                                 \
   /* Sorting */                                                 \
   F(SorterInit, sorterInit)                                     \
@@ -128,11 +142,20 @@ namespace tpl::ast {
   F(SorterIterInit, sorterIterInit)                             \
   F(SorterIterHasNext, sorterIterHasNext)                       \
   F(SorterIterNext, sorterIterNext)                             \
+  F(SorterIterSkipRows, sorterIterSkipRows)                     \
   F(SorterIterGetRow, sorterIterGetRow)                         \
   F(SorterIterClose, sorterIterClose)                           \
                                                                 \
+  /* Output */                                                  \
   F(ResultBufferAllocOutRow, resultBufferAllocRow)              \
   F(ResultBufferFinalize, resultBufferFinalize)                 \
+                                                                \
+  /* CSV */                                                     \
+  F(CSVReaderInit, csvReaderInit)                               \
+  F(CSVReaderAdvance, csvReaderAdvance)                         \
+  F(CSVReaderGetField, csvReaderGetField)                       \
+  F(CSVReaderGetRecordNumber, csvReaderGetRecordNumber)         \
+  F(CSVReaderClose, csvReaderClose)                             \
                                                                 \
   /* Trig */                                                    \
   F(ACos, acos)                                                 \
@@ -167,7 +190,7 @@ enum class Builtin : uint8_t {
 class Builtins : public AllStatic {
  public:
   // The total number of builtin functions
-  static const uint32_t kBuiltinsCount = static_cast<uint32_t>(Builtin ::Last) + 1;
+  static const uint32_t kBuiltinsCount = static_cast<uint32_t>(Builtin::Last) + 1;
 
   /**
    * @return The total number of builtin functions.

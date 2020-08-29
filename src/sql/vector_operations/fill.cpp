@@ -1,4 +1,4 @@
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 
 #include "common/exception.h"
 #include "sql/generic_value.h"
@@ -49,6 +49,9 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
     case TypeId::BigInt:
       TemplatedFillOperation(vector, value.value_.bigint);
       break;
+    case TypeId::Hash:
+      TemplatedFillOperation(vector, value.value_.hash);
+      break;
     case TypeId::Float:
       TemplatedFillOperation(vector, value.value_.float_);
       break;
@@ -57,6 +60,9 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
       break;
     case TypeId::Date:
       TemplatedFillOperation(vector, value.value_.date_);
+      break;
+    case TypeId::Timestamp:
+      TemplatedFillOperation(vector, value.value_.timestamp_);
       break;
     case TypeId::Varchar:
       TemplatedFillOperation(vector, vector->varlen_heap_.AddVarlen(value.str_value_));

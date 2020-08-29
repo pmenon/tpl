@@ -7,9 +7,6 @@
 
 #include "sql/catalog.h"
 
-// TODO(siva): Hack! Fix me!
-int32_t current_partition = -1;
-
 namespace tpl::sql {
 
 //===----------------------------------------------------------------------===//
@@ -37,71 +34,44 @@ namespace {
 
 void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment &col,
                   uint32_t row_idx) {
-  switch (sql_type.id()) {
-    case SqlTypeId::Boolean: {
+  if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
+    os << "NULL";
+    return;
+  }
+  switch (sql_type.GetId()) {
+    case SqlTypeId::Boolean:
+      os << col.TypedAccessAt<bool>(row_idx);
       break;
-    }
-    case SqlTypeId::TinyInt: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
-        os << "NULL";
-      } else {
-        os << col.TypedAccessAt<int8_t>(row_idx);
-      }
+    case SqlTypeId::TinyInt:
+      os << col.TypedAccessAt<int8_t>(row_idx);
       break;
-    }
-    case SqlTypeId::SmallInt: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
-        os << "NULL";
-      } else {
-        os << col.TypedAccessAt<int16_t>(row_idx);
-      }
+    case SqlTypeId::SmallInt:
+      os << col.TypedAccessAt<int16_t>(row_idx);
       break;
-    }
-    case SqlTypeId::Integer: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
-        os << "NULL";
-      } else {
-        os << col.TypedAccessAt<int32_t>(row_idx);
-      }
+    case SqlTypeId::Integer:
+      os << col.TypedAccessAt<int32_t>(row_idx);
       break;
-    }
-    case SqlTypeId::BigInt: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
-        os << "NULL";
-      } else {
-        os << col.TypedAccessAt<int64_t>(row_idx);
-      }
+    case SqlTypeId::BigInt:
+      os << col.TypedAccessAt<int64_t>(row_idx);
       break;
-    }
-    case SqlTypeId::Real: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
-        os << "NULL";
-      } else {
-        os << col.TypedAccessAt<float>(row_idx);
-      }
+    case SqlTypeId::Real:
+      os << col.TypedAccessAt<float>(row_idx);
       break;
-    }
-    case SqlTypeId::Double: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
-        os << "NULL";
-      } else {
-        os << col.TypedAccessAt<double>(row_idx);
-      }
+    case SqlTypeId::Double:
+      os << col.TypedAccessAt<double>(row_idx);
       break;
-    }
+    case SqlTypeId::Date:
+      os << col.TypedAccessAt<Date>(row_idx).ToString();
+      break;
+    case SqlTypeId::Timestamp:
+      os << col.TypedAccessAt<Timestamp>(row_idx).ToString();
+      break;
     case SqlTypeId::Char:
-    case SqlTypeId::Varchar: {
-      if (sql_type.nullable() && col.IsNullAt(row_idx)) {
-        os << "NULL";
-      } else {
-        os << std::string(col.TypedAccessAt<const char *>(row_idx));
-      }
+    case SqlTypeId::Varchar:
+      os << col.TypedAccessAt<VarlenEntry>(row_idx).GetStringView();
       break;
-    }
     case SqlTypeId::Decimal:
-    case SqlTypeId::Date: {
       break;
-    }
   }
 }
 

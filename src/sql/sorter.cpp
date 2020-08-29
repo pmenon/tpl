@@ -9,13 +9,19 @@
 
 #include "llvm/ADT/STLExtras.h"
 
-#include "tbb/tbb.h"
+#include "tbb/parallel_for_each.h"
 
 #include "logging/logger.h"
 #include "sql/thread_state_container.h"
 #include "util/stage_timer.h"
 
 namespace tpl::sql {
+
+//===----------------------------------------------------------------------===//
+//
+// Sorter
+//
+//===----------------------------------------------------------------------===//
 
 Sorter::Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, uint32_t tuple_size)
     : memory_(memory),
@@ -28,7 +34,7 @@ Sorter::Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, uint32_t tuple_siz
 Sorter::~Sorter() = default;
 
 byte *Sorter::AllocInputTuple() {
-  byte *ret = tuple_storage_.append();
+  byte *ret = tuple_storage_.alloc_entry();
   tuples_.push_back(ret);
   return ret;
 }
@@ -36,19 +42,21 @@ byte *Sorter::AllocInputTuple() {
 byte *Sorter::AllocInputTupleTopK(UNUSED uint64_t top_k) { return AllocInputTuple(); }
 
 void Sorter::AllocInputTupleTopKFinish(const uint64_t top_k) {
-  // If the number of buffered tuples is less than top_k, we're done
+  // If the number of buffered tuples is less than top_k, we're done.
   if (tuples_.size() < top_k) {
     return;
   }
 
-  // If we've buffered k elements, build the heap. Note: this is only ever triggered once!
+  // If we've buffered k elements, build the heap. Note: this is only ever
+  // triggered once!
   if (tuples_.size() == top_k) {
     BuildHeap();
     return;
   }
 
-  // We've buffered ONE more tuple than should be in the top-k, so we may need to reorder the heap.
-  // Check if the most recently inserted tuple belongs in the heap.
+  // We've buffered ONE more tuple than should be in the top-k, so we may need
+  // to reorder the heap. Check if the most recently inserted tuple belongs in
+  // the heap.
 
   const byte *last_insert = tuples_.back();
   tuples_.pop_back();
@@ -56,7 +64,8 @@ void Sorter::AllocInputTupleTopKFinish(const uint64_t top_k) {
   const byte *heap_top = tuples_.front();
 
   if (cmp_fn_(last_insert, heap_top) <= 0) {
-    // The last insertion belongs in the top-k. Swap it with the current maximum and sift it down.
+    // The last insertion belongs in the top-k. Swap it with the current maximum
+    // and sift it down.
     tuples_.front() = last_insert;
     HeapSiftDown();
   }
@@ -154,7 +163,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   // -------------------------------------------------------
 
   std::vector<Sorter *> tl_sorters;
-  thread_state_container->CollectThreadLocalStateElementsAs(tl_sorters, sorter_offset);
+  thread_state_container->CollectThreadLocalStateElementsAs(&tl_sorters, sorter_offset);
   llvm::erase_if(tl_sorters, [](const Sorter *sorter) { return sorter->IsEmpty(); });
 
   // If there's nothing to sort, exit.
@@ -211,7 +220,6 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Parallel Sort Thread-Local Instances");
 
-  tbb::task_scheduler_init sched;
   tbb::parallel_for_each(tl_sorters, [](Sorter *sorter) { sorter->Sort(); });
 
   timer.ExitStage();
@@ -370,6 +378,23 @@ void Sorter::SortTopKParallel(const ThreadStateContainer *thread_state_container
   if (top_k < GetTupleCount()) {
     tuples_.resize(top_k);
   }
+}
+
+//===----------------------------------------------------------------------===//
+//
+// Sorter Iterator
+//
+//===----------------------------------------------------------------------===//
+
+SorterIterator::SorterIterator(const Sorter &sorter)
+    : iter_(sorter.tuples_.begin()), end_(sorter.tuples_.end()) {}
+
+void SorterIterator::AdvanceBy(uint64_t n) {
+  if (n > NumRemaining()) {
+    iter_ = end_;
+    return;
+  }
+  iter_ += n;
 }
 
 }  // namespace tpl::sql

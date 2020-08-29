@@ -13,8 +13,8 @@ static std::unordered_set<Token::Type> kTopLevelDecls = {Token::Type::STRUCT, To
 Parser::Parser(Scanner *scanner, ast::Context *context)
     : scanner_(scanner),
       context_(context),
-      node_factory_(context->node_factory()),
-      error_reporter_(context->error_reporter()) {}
+      node_factory_(context->GetNodeFactory()),
+      error_reporter_(context->GetErrorReporter()) {}
 
 ast::AstNode *Parser::Parse() {
   util::RegionVector<ast::Decl *> decls(region());
@@ -46,11 +46,11 @@ ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
   }
 
   if (auto *expr_stmt = node->SafeAs<ast::ExpressionStmt>()) {
-    return expr_stmt->expression();
+    return expr_stmt->Expression();
   }
 
   const auto err_msg = sema::ErrorMessages::kExpectingExpression;
-  error_reporter_->Report(node->position(), err_msg);
+  error_reporter_->Report(node->Position(), err_msg);
   return nullptr;
 }
 
@@ -63,7 +63,9 @@ ast::Decl *Parser::ParseDecl() {
     case Token::Type::FUN: {
       return ParseFunctionDecl();
     }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 
   // Report error, sync up and try again
@@ -168,7 +170,9 @@ ast::Stmt *Parser::ParseStmt() {
       ast::Decl *var_decl = ParseVariableDecl();
       return node_factory_->NewDeclStmt(var_decl);
     }
-    default: { return ParseSimpleStmt(); }
+    default: {
+      return ParseSimpleStmt();
+    }
   }
 }
 
@@ -408,11 +412,32 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
     case Token::Type::MINUS:
     case Token::Type::STAR: {
       Token::Type op = Next();
-      const SourcePosition &position = scanner_->current_position();
-      ast::Expr *expr = ParseUnaryOpExpr();
-      return node_factory_->NewUnaryOpExpr(position, op, expr);
+      SourcePosition pos = scanner_->current_position();
+      ast::Expr *expression = ParseUnaryOpExpr();
+
+      // Some quick rewrites here.
+      if (const auto literal = expression->SafeAs<ast::LitExpr>()) {
+        if (op == Token::Type::BANG && literal->IsBoolLitExpr()) {
+          // Negate the boolean value and return a new literal.
+          return node_factory_->NewBoolLiteral(pos, !literal->BoolVal());
+        } else if (literal->IsIntLitExpr()) {
+          // Simple rewrites involving numbers.
+          switch (op) {
+            case Token::Type::PLUS:
+              return expression;
+            case Token::Type::MINUS:
+              return node_factory_->NewIntLiteral(pos, -literal->Int32Val());
+            default:
+              break;
+          }
+        }
+      }
+
+      return node_factory_->NewUnaryOpExpr(pos, op, expression);
     }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 
   return ParsePrimaryExpr();
@@ -447,7 +472,7 @@ ast::Expr *Parser::ParsePrimaryExpr() {
         // Member expression
         Consume(Token::Type::DOT);
         ast::Expr *member = ParseOperand();
-        result = node_factory_->NewMemberExpr(result->position(), result, member);
+        result = node_factory_->NewMemberExpr(result->Position(), result, member);
         break;
         // @ptrCast(*Row, expr)
       }
@@ -456,10 +481,12 @@ ast::Expr *Parser::ParsePrimaryExpr() {
         Consume(Token::Type::LEFT_BRACKET);
         ast::Expr *index = ParseExpr();
         Expect(Token::Type::RIGHT_BRACKET);
-        result = node_factory_->NewIndexExpr(result->position(), result, index);
+        result = node_factory_->NewIndexExpr(result->Position(), result, index);
         break;
       }
-      default: { break; }
+      default: {
+        break;
+      }
     }
   } while (Token::IsCallOrMemberOrIndex(peek()));
 
@@ -506,14 +533,14 @@ ast::Expr *Parser::ParseOperand() {
       Next();
       // Convert the number
       char *end = nullptr;
-      int32_t num = std::strtol(GetSymbol().data(), &end, 10);
+      int32_t num = std::strtol(GetSymbol().GetData(), &end, 10);
       return node_factory_->NewIntLiteral(scanner_->current_position(), num);
     }
     case Token::Type::FLOAT: {
       Next();
       // Convert the number
       char *end = nullptr;
-      float num = std::strtof(GetSymbol().data(), &end);
+      float num = std::strtof(GetSymbol().GetData(), &end);
       return node_factory_->NewFloatLiteral(scanner_->current_position(), num);
     }
     case Token::Type::STRING: {
@@ -530,7 +557,9 @@ ast::Expr *Parser::ParseOperand() {
       Expect(Token::Type::RIGHT_PAREN);
       return expr;
     }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 
   // Error
@@ -577,7 +606,9 @@ ast::Expr *Parser::ParseType() {
     case Token::Type::STRUCT: {
       return ParseStructType();
     }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 
   // Error
@@ -600,7 +631,7 @@ ast::Expr *Parser::ParseFunctionType() {
   while (peek() != Token::Type::RIGHT_PAREN) {
     const SourcePosition &field_position = scanner_->current_position();
 
-    ast::Identifier ident(nullptr);
+    ast::Identifier ident;
 
     ast::Expr *type = nullptr;
 
@@ -608,11 +639,11 @@ ast::Expr *Parser::ParseFunctionType() {
       ident = GetSymbol();
     }
 
-    if (Matches(Token::Type::COLON) || ident.data() == nullptr) {
+    if (Matches(Token::Type::COLON) || ident.GetData() == nullptr) {
       type = ParseType();
     } else {
       type = node_factory_->NewIdentifierExpr(field_position, ident);
-      ident = ast::Identifier(nullptr);
+      ident = ast::Identifier();
     }
 
     // That's it

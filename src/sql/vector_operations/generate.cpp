@@ -1,4 +1,6 @@
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
+
+#include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
 
@@ -56,8 +58,8 @@ void VectorOps::Generate(Vector *vector, int64_t start, int64_t increment) {
       TemplatedGenerateOperation<double>(vector, start, increment);
       break;
     default:
-      throw NotImplementedException("Cannot generate into vector type {}",
-                                    TypeIdToString(vector->GetTypeId()));
+      throw NotImplementedException(
+          fmt::format("cannot generate into vector type {}", TypeIdToString(vector->GetTypeId())));
   }
 }
 

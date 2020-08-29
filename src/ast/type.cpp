@@ -7,16 +7,15 @@
 #include "sql/aggregators.h"
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
-#include "sql/generic_value.h"
 #include "sql/hash_table_entry.h"
 #include "sql/join_hash_table.h"
-#include "sql/join_hash_table_vector_probe.h"
 #include "sql/sorter.h"
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/value.h"
 #include "sql/vector_filter_executor.h"
 #include "sql/vector_projection_iterator.h"
+#include "util/csv_reader.h"
 
 namespace tpl::ast {
 
@@ -26,8 +25,11 @@ namespace tpl::ast {
 
 // TODO(pmenon): Fix me
 bool Type::IsArithmetic() const {
-  return IsIntegerType() || IsFloatType() || IsSpecificBuiltin(BuiltinType::Integer) ||
-         IsSpecificBuiltin(BuiltinType::Real) || IsSpecificBuiltin(BuiltinType::Decimal);
+  return IsIntegerType() ||                          // Primitive TPL integers
+         IsFloatType() ||                            // Primitive TPL floats
+         IsSpecificBuiltin(BuiltinType::Integer) ||  // SQL integer
+         IsSpecificBuiltin(BuiltinType::Real) ||     // SQL reals
+         IsSpecificBuiltin(BuiltinType::Decimal);    // SQL decimals
 }
 
 // ---------------------------------------------------------

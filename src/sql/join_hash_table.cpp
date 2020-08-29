@@ -5,20 +5,19 @@
 #include <utility>
 #include <vector>
 
-// Libcount
 #include "count/hll.h"
 
-// LLVM
 #include "llvm/ADT/STLExtras.h"
 
-// Intel TBB
-#include "tbb/tbb.h"
+#include "tbb/parallel_for_each.h"
 
 #include "common/cpu_info.h"
 #include "common/memory.h"
 #include "logging/logger.h"
 #include "sql/memory_pool.h"
 #include "sql/thread_state_container.h"
+#include "sql/vector.h"
+#include "sql/vector_operations/unary_operation_executor.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
@@ -39,27 +38,24 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   hll_estimator_->Update(hash);
 
   // Allocate space for a new tuple
-  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.alloc_entry());
   entry->hash = hash;
   entry->next = nullptr;
   return entry->payload;
 }
 
-// ---------------------------------------------------------
-// Generic hash tables
-// ---------------------------------------------------------
-
-void JoinHashTable::BuildGenericHashTable() {
+void JoinHashTable::BuildChainingHashTable() {
   // Perfectly size the generic hash table in preparation for bulk-load.
-  generic_hash_table_.SetSize(GetTupleCount());
+  chaining_hash_table_.SetSize(GetTupleCount());
 
   // Bulk-load the, now correctly sized, generic hash table using a non-concurrent algorithm.
-  generic_hash_table_.InsertBatch<false>(&entries_);
-}
+  chaining_hash_table_.InsertBatch<false>(&entries_);
 
-// ---------------------------------------------------------
-// Concise hash tables
-// ---------------------------------------------------------
+#ifndef NDEBUG
+  const auto [min, max, avg] = chaining_hash_table_.GetChainLengthStats();
+  LOG_DEBUG("ChainingHashTable chain stats: min={}, max={}, avg={}", min, max, avg);
+#endif
+}
 
 namespace {
 
@@ -269,7 +265,6 @@ void JoinHashTable::ReorderOverflowEntries() {
   const uint64_t overflow_start_idx = num_main_entries;
   const uint64_t no_overflow = std::numeric_limits<uint64_t>::max();
 
-  //
   // General idea:
   // -------------
   // This function reorders the overflow entries in-place. The high-level idea
@@ -283,29 +278,24 @@ void JoinHashTable::ReorderOverflowEntries() {
   // index in the entries array where overflow elements for the entry belongs.
   // We begin by clearing these counts (which were modified earlier when
   // rearranging the main entries).
-  //
 
   for (uint64_t idx = 0; idx < num_main_entries; idx++) {
     EntryAt(idx)->overflow_count = 0;
   }
 
-  //
-  // If there arne't any overflow entries, we can early exit. We just NULLed
+  // If there aren't any overflow entries, we can early exit. We just NULLed
   // overflow pointers in all main arena entries in the loop above.
-  //
 
   if (num_overflow_entries == 0) {
     return;
   }
 
-  //
   // Step 2:
   // -------
   // Now iterate over the overflow entries (in vectors) and update the overflow
   // count for each overflow entry's parent. At the end of this process if a
   // main arena entry has an overflow chain the "overflow count" will count the
   // length of the chain.
-  //
 
   HashTableEntry *parents[kDefaultVectorSize];
 
@@ -332,7 +322,6 @@ void JoinHashTable::ReorderOverflowEntries() {
     }
   }
 
-  //
   // Step 3:
   // -------
   // Now iterate over all main arena entries and compute a prefix sum of the
@@ -340,7 +329,6 @@ void JoinHashTable::ReorderOverflowEntries() {
   // overflow, the "overflow count" will be one greater than the index of the
   // last overflow entry in the overflow chain. We use these indexes in the last
   // step when assigning overflow entries to their final locations.
-  //
 
   for (uint64_t idx = 0, count = 0; idx < num_main_entries; idx++) {
     HashTableEntry *entry = EntryAt(idx);
@@ -348,13 +336,11 @@ void JoinHashTable::ReorderOverflowEntries() {
     entry->overflow_count = (entry->overflow_count == 0 ? no_overflow : num_main_entries + count);
   }
 
-  //
   // Step 4:
   // ------
   // Buffer N overflow entries into a reorder buffer and find each's main arena
   // parent. Use the "overflow count" in the main arena entry as the destination
   // index to write the overflow entry into.
-  //
 
   ReorderBuffer reorder_buf(&entries_, kDefaultVectorSize, overflow_start_idx, num_entries);
   while (reorder_buf.Fill()) {
@@ -410,7 +396,6 @@ void JoinHashTable::ReorderOverflowEntries() {
     reorder_buf.Reset(buf_write_idx);
   }
 
-  //
   // Step 5:
   // -------
   // Final chain hookup. We decompose this into two parts: one loop for the main
@@ -423,7 +408,6 @@ void JoinHashTable::ReorderOverflowEntries() {
   // For the overflow entries, we connect all overflow entries mapping to the
   // same CHT slot. At this point, entries with the same CHT slot are guaranteed
   // to be store contiguously.
-  //
 
   for (uint64_t idx = 0; idx < num_main_entries; idx++) {
     HashTableEntry *entry = EntryAt(idx);
@@ -468,9 +452,9 @@ void JoinHashTable::BuildConciseHashTableInternal() {
   concise_hash_table_.InsertBatch(&entries_);
   concise_hash_table_.Build();
 
-  LOG_INFO("Concise Table Stats: {} entries, {} overflow ({} % overflow)", entries_.size(),
-           concise_hash_table_.GetOverflowEntryCount(),
-           100.0 * (concise_hash_table_.GetOverflowEntryCount() * 1.0 / entries_.size()));
+  LOG_DEBUG("Concise Table Stats: {} entries, {} overflow ({} % overflow)", entries_.size(),
+            concise_hash_table_.GetOverflowEntryCount(),
+            100.0 * (concise_hash_table_.GetOverflowEntryCount() * 1.0 / entries_.size()));
 
   // Reorder all the main entries in place according to CHT order
   ReorderMainEntries<PrefetchCHT, PrefetchEntries>();
@@ -518,7 +502,7 @@ void JoinHashTable::Build() {
   if (UsingConciseHashTable()) {
     BuildConciseHashTable();
   } else {
-    BuildGenericHashTable();
+    BuildChainingHashTable();
   }
 
   timer.Stop();
@@ -528,47 +512,29 @@ void JoinHashTable::Build() {
   built_ = true;
 }
 
-void JoinHashTable::LookupBatchInGenericHashTable(uint32_t num_tuples, const hash_t hashes[],
-                                                  const HashTableEntry *results[]) const {
-  // TODO(pmenon): Use tagged insertions/probes if no bloom filter exists
-  generic_hash_table_.LookupBatch(num_tuples, hashes, results);
+// TODO(pmenon): Vectorized bloom filter pre-filtering.
+// TODO(pmenon): Implement prefetching.
+
+void JoinHashTable::LookupBatchInChainingHashTable(const Vector &hashes, Vector *results) const {
+  UnaryOperationExecutor::Execute<hash_t, const HashTableEntry *>(
+      hashes, results,
+      [&](const hash_t hash_val) noexcept { return chaining_hash_table_.FindChainHead(hash_val); });
 }
 
-template <bool Prefetch>
-void JoinHashTable::LookupBatchInConciseHashTableInternal(uint32_t num_tuples,
-                                                          const hash_t hashes[],
-                                                          const HashTableEntry *results[]) const {
-  for (uint32_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_tuples;
-       idx++, prefetch_idx++) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < num_tuples)) {
-        concise_hash_table_.PrefetchSlotGroup<true>(hashes[prefetch_idx]);
-      }
-    }
-
-    const auto [found, entry_idx] = concise_hash_table_.Lookup(hashes[idx]);
-    results[idx] = (found ? EntryAt(entry_idx) : nullptr);
-  }
+void JoinHashTable::LookupBatchInConciseHashTable(const Vector &hashes, Vector *results) const {
+  UnaryOperationExecutor::Execute<hash_t, const HashTableEntry *>(
+      hashes, results, [&](const hash_t hash_val) noexcept {
+        const auto [found, entry_idx] = concise_hash_table_.Lookup(hash_val);
+        return (found ? EntryAt(entry_idx) : nullptr);
+      });
 }
 
-void JoinHashTable::LookupBatchInConciseHashTable(uint32_t num_tuples, const hash_t hashes[],
-                                                  const HashTableEntry *results[]) const {
-  uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (concise_hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
-    LookupBatchInConciseHashTableInternal<true>(num_tuples, hashes, results);
-  } else {
-    LookupBatchInConciseHashTableInternal<false>(num_tuples, hashes, results);
-  }
-}
-
-void JoinHashTable::LookupBatch(uint32_t num_tuples, const hash_t hashes[],
-                                const HashTableEntry *results[]) const {
+void JoinHashTable::LookupBatch(const Vector &hashes, Vector *results) const {
   TPL_ASSERT(IsBuilt(), "Cannot perform lookup before table is built!");
-
   if (UsingConciseHashTable()) {
-    LookupBatchInConciseHashTable(num_tuples, hashes, results);
+    LookupBatchInConciseHashTable(hashes, results);
   } else {
-    LookupBatchInGenericHashTable(num_tuples, hashes, results);
+    LookupBatchInChainingHashTable(hashes, results);
   }
 }
 
@@ -578,7 +544,7 @@ void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
   TPL_ASSERT(!source->UsingConciseHashTable(), "Merging incomplete concise tables not supported");
 
   // First, bulk-load all entries in the source table into our hash table
-  generic_hash_table_.InsertBatch<Concurrent>(&source->entries_);
+  chaining_hash_table_.InsertBatch<Concurrent>(&source->entries_);
 
   // Next, take ownership of source table's memory
   util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
@@ -587,18 +553,18 @@ void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
 
 void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_container,
                                   const std::size_t jht_offset) {
-  // Collect thread-local hash tables
   std::vector<JoinHashTable *> tl_join_tables;
-  thread_state_container->CollectThreadLocalStateElementsAs(tl_join_tables, jht_offset);
+  thread_state_container->CollectThreadLocalStateElementsAs(&tl_join_tables, jht_offset);
 
-  // Combine HLL counts to get a global estimate
-  for (auto *jht : tl_join_tables) {
+  // Combine each thread-local HLL instance (in each hash table) into the global
+  // instance to estimate the number of unique keys. Use this estimate to create
+  // and resize an empty global hash table. Doing so removes the need to
+  // dynamically grow during a lazy build, which has significant overhead.
+  for (auto jht : tl_join_tables) {
     hll_estimator_->Merge(jht->hll_estimator_.get());
   }
-
-  // Size the global hash table
-  uint64_t num_elem_estimate = hll_estimator_->Estimate();
-  generic_hash_table_.SetSize(num_elem_estimate);
+  const uint64_t num_elem_estimate = hll_estimator_->Estimate();
+  chaining_hash_table_.SetSize(num_elem_estimate);
 
   // Resize the owned entries vector now to avoid resizing concurrently during
   // merge. All the thread-local join table data will get placed into our owned
@@ -611,23 +577,23 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   const bool use_serial_build = num_elem_estimate < kDefaultMinSizeForParallelMerge;
   if (use_serial_build) {
     // TODO(pmenon): Switch to parallel-mode if estimate is wrong.
-    LOG_INFO(
-        "JHT: Estimated total {} elements < {} element parallel threshold. Using serial merge.",
-        num_elem_estimate, kDefaultMinSizeForParallelMerge);
+    LOG_DEBUG("JHT: Estimated {} elements < {} element parallel threshold. Using serial merge.",
+              num_elem_estimate, kDefaultMinSizeForParallelMerge);
     llvm::for_each(tl_join_tables, [this](auto *source) { MergeIncomplete<false>(source); });
   } else {
-    LOG_INFO(
-        "JHT: Estimated total {} elements >= {} element parallel threshold. Using parallel merge.",
-        num_elem_estimate, kDefaultMinSizeForParallelMerge);
-    tbb::parallel_for_each(tl_join_tables, [this](auto *source) { MergeIncomplete<true>(source); });
+    LOG_DEBUG("JHT: Estimated {} elements >= {} element parallel threshold. Using parallel merge.",
+              num_elem_estimate, kDefaultMinSizeForParallelMerge);
+    tbb::parallel_for_each(tl_join_tables, [this](auto source) { MergeIncomplete<true>(source); });
   }
 
   timer.Stop();
 
-  double tps = (generic_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
-  LOG_INFO("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
-           use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
-           generic_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
+  const double tps = (chaining_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
+  LOG_DEBUG("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
+            use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
+            chaining_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
+
+  built_ = true;
 }
 
 }  // namespace tpl::sql

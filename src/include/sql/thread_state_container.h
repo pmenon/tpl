@@ -86,18 +86,21 @@ namespace tpl::sql {
 class ThreadStateContainer {
  public:
   /**
-   * Function used to initialize a thread's local state upon first use
+   * Function used to initialize a thread's local state upon first use.
+   * Arguments: pointer to opaque context, pointer to a thread-local state.
    */
   using InitFn = void (*)(void *, void *);
 
   /**
-   * Function used to destroy a thread's local state if the container is
-   * destructed, or if the states are reset.
+   * Function used to destroy a thread's local state. Called if the container is destructed, or if
+   * the states are reset.
+   * Arguments: pointer to opaque context, pointer to a thread-local state.
    */
   using DestroyFn = void (*)(void *, void *);
 
   /**
    * Function to iterate over all thread-local states in this container.
+   * Arguments: pointer to opaque context, pointer to a thread-local state.
    */
   using IterateFn = void (*)(void *, void *);
 
@@ -155,7 +158,7 @@ class ThreadStateContainer {
    * Collect all thread-local states and store pointers in the output container @em container.
    * @param container The output container to store the results.
    */
-  void CollectThreadLocalStates(std::vector<byte *> &container) const;
+  void CollectThreadLocalStates(std::vector<byte *> *container) const;
 
   /**
    * Collect an element at offset @em element_offset from all thread-local states in this container
@@ -163,7 +166,7 @@ class ThreadStateContainer {
    * @param[out] container The output container to store the results.
    * @param element_offset The offset of the element in the thread-local state.
    */
-  void CollectThreadLocalStateElements(std::vector<byte *> &container,
+  void CollectThreadLocalStateElements(std::vector<byte *> *container,
                                        std::size_t element_offset) const;
 
   /**
@@ -178,38 +181,46 @@ class ThreadStateContainer {
    * @param element_offset The offset of the element in the thread-local state.
    */
   template <typename T>
-  void CollectThreadLocalStateElementsAs(std::vector<T *> &container,
+  void CollectThreadLocalStateElementsAs(std::vector<T *> *container,
                                          const std::size_t element_offset) const {
     std::vector<byte *> tmp;
-    CollectThreadLocalStateElements(tmp, element_offset);
-    container.clear();
-    container.resize(tmp.size());
+    CollectThreadLocalStateElements(&tmp, element_offset);
+    container->clear();
+    container->resize(tmp.size());
     for (uint64_t idx = 0; idx < tmp.size(); idx++) {
-      container[idx] = reinterpret_cast<T *>(tmp[idx]);
+      (*container)[idx] = reinterpret_cast<T *>(tmp[idx]);
     }
   }
 
   /**
-   * Iterate over all thread-local states in this container invoking the given callback function
-   * @em iterate_fn for each such state.
+   * Apply the provided callback function to each thread-state element in this container. Callback
+   * invocations are made serially.
    * @param ctx An opaque context object.
    * @param iterate_fn The function to call for each state.
    */
   void IterateStates(void *ctx, IterateFn iterate_fn) const;
 
   /**
+   * Apply the provided callback function to each thread-state element in this container. Callback
+   * invocations are made in parallel.
+   * @param ctx An opaque context object.
+   * @param iterate_fn The function to call for each state in parallel.
+   */
+  void IterateStatesParallel(void *ctx, IterateFn iterate_fn) const;
+
+  /**
    * Apply a function on each thread local state. This is mostly for tests from C++.
-   * @tparam F Functor with signature void(const void*).
-   * @param fn The function to apply.
+   * @param f The function to apply.
    */
   template <typename T, typename F>
-  void ForEach(const F &fn) const {
+  void ForEach(F &&f) const {
     static_assert(std::is_invocable_v<F, T *>,
                   "Callback must be a single-argument functor accepting a pointer to state");
-    IterateStates(const_cast<F *>(&fn), [](void *ctx, void *raw_state) {
-      auto *state = reinterpret_cast<T *>(raw_state);
-      std::invoke(*reinterpret_cast<const F *>(ctx), state);
-    });
+    std::vector<T *> states;
+    CollectThreadLocalStateElementsAs<T>(&states, 0);
+    for (const auto state : states) {
+      f(state);
+    }
   }
 
   /**
@@ -233,7 +244,7 @@ class ThreadStateContainer {
     ~TLSHandle();
 
     // Thread-local state
-    byte *state() { return state_; }
+    byte *State() { return state_; }
 
    private:
     // Handle to container

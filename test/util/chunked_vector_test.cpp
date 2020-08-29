@@ -1,13 +1,18 @@
 #include <algorithm>
-#include <deque>
 #include <memory>
 #include <random>
 #include <utility>
 #include <vector>
 
+// Third-party IPS4O.
 #include "ips4o/ips4o.hpp"
-#include "util/chunked_vector.h"
+
+// Test.
 #include "util/test_harness.h"
+
+#include "util/chunked_vector.h"
+#include "util/region.h"
+#include "util/region_containers.h"
 
 namespace tpl::util {
 
@@ -47,18 +52,41 @@ TEST_F(ChunkedVectorTest, RandomLookupTest) {
   }
 }
 
-TEST_F(ChunkedVectorTest, IterationTest) {
+namespace {
+
+void PopulateAndCheckIteration(const std::size_t s) {
   ChunkedVectorT<uint32_t> vec;
 
-  for (uint32_t i = 0; i < 10; i++) {
-    vec.push_back(i);
+  for (uint32_t i = 0; i < s; i++) {
+    vec.emplace_back(i);
   }
 
-  {
-    uint32_t i = 0;
-    for (auto x : vec) {
-      EXPECT_EQ(i++, x);
-    }
+  // Forward iterate.
+  uint32_t counter = 0;
+  for (const auto x : vec) {
+    EXPECT_EQ(counter++, x);
+  }
+
+  // Reverse iterate.
+  for (auto iter = vec.rbegin(), end = vec.rend(); iter != end; ++iter) {
+    EXPECT_EQ(--counter, *iter);
+  }
+}
+
+}  // namespace
+
+TEST_F(ChunkedVectorTest, IterationTest) {
+  // Zero-sizes tables.
+  PopulateAndCheckIteration(0);
+
+  // Power-of-two tests for corner cases.
+  for (uint32_t p = 0; p < 14; p++) {
+    PopulateAndCheckIteration(1u << p);
+  }
+
+  // Some random prime-number sizes tables for fun.
+  for (uint32_t size : {379, 2503, 10529, 134639, 1071223}) {
+    PopulateAndCheckIteration(size);
   }
 }
 

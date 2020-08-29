@@ -48,7 +48,8 @@ class Context {
   ~Context();
 
   /**
-   * Return @em str as a unique string in this context.
+   * Return a unique and context-owned version of the provided string. Identifiers are any string
+   * that appear in TPL source code. Identical strings will map to the same AST Identifier object.
    * @param str The input string.
    * @return A uniqued (interned) version of the string in this context.
    */
@@ -68,27 +69,30 @@ class Context {
    */
   bool IsBuiltinFunction(Identifier name, Builtin *builtin = nullptr) const;
 
+  /**
+   * @return The AST node factory.
+   */
+  AstNodeFactory *GetNodeFactory() const { return node_factory_.get(); }
+
+  /**
+   * @return The error reporter for this context.
+   */
+  sema::ErrorReporter *GetErrorReporter() const { return error_reporter_; }
+
+  /**
+   * @return The memory region this context uses to perform ALL allocations.
+   */
+  util::Region *GetRegion() { return &region_; }
+
+  /**
+   * PIMPL type.
+   */
   struct Implementation;
 
   /**
    * @return The internal opaque implementation.
    */
   Implementation *impl() const { return impl_.get(); }
-
-  /**
-   * @return The AST node factory.
-   */
-  AstNodeFactory *node_factory() const { return node_factory_.get(); }
-
-  /**
-   * @return The error reporter for this context.
-   */
-  sema::ErrorReporter *error_reporter() const { return error_reporter_; }
-
-  /**
-   * @return The memory region this context uses to perform ALL allocations.
-   */
-  util::Region *region() { return &region_; }
 
  private:
   // Region allocator for all Ast objects this context needs

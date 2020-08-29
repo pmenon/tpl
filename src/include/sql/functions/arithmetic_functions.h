@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include "sql/operations/numeric_binary_operators.h"
-#include "sql/operations/numeric_operators.h"
+#include "sql/operators/numeric_binary_operators.h"
+#include "sql/operators/numeric_operators.h"
 #include "sql/value.h"
 
 namespace tpl::sql {
@@ -69,61 +69,55 @@ class ArithmeticFunctions : public AllStatic {
 
 #define UNARY_MATH_EXPENSIVE_HIDE_NULL(OP, RET_TYPE, INPUT_TYPE)               \
   inline void ArithmeticFunctions::OP(RET_TYPE *result, const INPUT_TYPE &v) { \
+    using CppType = decltype(v.val);                                           \
     if (v.is_null) {                                                           \
       *result = RET_TYPE::Null();                                              \
       return;                                                                  \
     }                                                                          \
-    *result = RET_TYPE(OP::Apply(v.val));                                      \
-  }
-
-#define BINARY_MATH_EXPENSIVE_HIDE_NULL(OP, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2) \
-  inline void ArithmeticFunctions::OP(RET_TYPE *result, const INPUT_TYPE1 &a,   \
-                                      const INPUT_TYPE2 &b) {                   \
-    if (a.is_null || b.is_null) {                                               \
-      *result = RET_TYPE::Null();                                               \
-      return;                                                                   \
-    }                                                                           \
-    *result = RET_TYPE(OP::Apply(a.val, b.val));                                \
+    *result = RET_TYPE(tpl::sql::OP<CppType>{}(v.val));                        \
   }
 
 #define BINARY_MATH_FAST_HIDE_NULL(NAME, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2, OP) \
   inline void ArithmeticFunctions::NAME(RET_TYPE *result, const INPUT_TYPE1 &a,  \
                                         const INPUT_TYPE2 &b) {                  \
+    using CppType = decltype(result->val);                                       \
     result->is_null = (a.is_null || b.is_null);                                  \
-    result->val = OP::Apply(a.val, b.val);                                       \
+    result->val = OP<CppType>{}(a.val, b.val);                                   \
   }
 
 #define BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(NAME, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2, OP) \
   inline void ArithmeticFunctions::NAME(RET_TYPE *result, const INPUT_TYPE1 &a,           \
                                         const INPUT_TYPE2 &b, bool *overflow) {           \
+    using CppType = decltype(result->val);                                                \
     result->is_null = (a.is_null || b.is_null);                                           \
-    *overflow = OP::Apply(a.val, b.val, &result->val);                                    \
+    *overflow = OP<CppType>{}(a.val, b.val, &result->val);                                \
   }
 
 #define BINARY_MATH_CHECK_ZERO_HIDE_NULL(NAME, RET_TYPE, INPUT_TYPE1, INPUT_TYPE2, OP) \
   inline void ArithmeticFunctions::NAME(RET_TYPE *result, const INPUT_TYPE1 &a,        \
                                         const INPUT_TYPE2 &b, bool *div_by_zero) {     \
+    using CppType = decltype(result->val);                                             \
     if (a.is_null || b.is_null || b.val == 0) {                                        \
       *div_by_zero = true;                                                             \
       *result = RET_TYPE::Null();                                                      \
       return;                                                                          \
     }                                                                                  \
-    *result = RET_TYPE(OP::Apply(a.val, b.val));                                       \
+    *result = RET_TYPE(OP<CppType>{}(a.val, b.val));                                   \
   }
 
-BINARY_MATH_FAST_HIDE_NULL(Add, Integer, Integer, Integer, Add);
-BINARY_MATH_FAST_HIDE_NULL(Add, Real, Real, Real, Add);
-BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(Add, Integer, Integer, Integer, Add);
-BINARY_MATH_FAST_HIDE_NULL(Sub, Integer, Integer, Integer, Subtract);
-BINARY_MATH_FAST_HIDE_NULL(Sub, Real, Real, Real, Subtract);
-BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(Sub, Integer, Integer, Integer, Subtract);
-BINARY_MATH_FAST_HIDE_NULL(Mul, Integer, Integer, Integer, Multiply);
-BINARY_MATH_FAST_HIDE_NULL(Mul, Real, Real, Real, Multiply);
-BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(Mul, Integer, Integer, Integer, Multiply);
-BINARY_MATH_CHECK_ZERO_HIDE_NULL(IntDiv, Integer, Integer, Integer, Divide);
-BINARY_MATH_CHECK_ZERO_HIDE_NULL(Div, Real, Real, Real, Divide);
-BINARY_MATH_CHECK_ZERO_HIDE_NULL(IntMod, Integer, Integer, Integer, Modulo);
-BINARY_MATH_CHECK_ZERO_HIDE_NULL(Mod, Real, Real, Real, Modulo);
+BINARY_MATH_FAST_HIDE_NULL(Add, Integer, Integer, Integer, tpl::sql::Add);
+BINARY_MATH_FAST_HIDE_NULL(Add, Real, Real, Real, tpl::sql::Add);
+BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(Add, Integer, Integer, Integer, tpl::sql::AddWithOverflow);
+BINARY_MATH_FAST_HIDE_NULL(Sub, Integer, Integer, Integer, tpl::sql::Subtract);
+BINARY_MATH_FAST_HIDE_NULL(Sub, Real, Real, Real, tpl::sql::Subtract);
+BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(Sub, Integer, Integer, Integer, tpl::sql::SubtractWithOverflow);
+BINARY_MATH_FAST_HIDE_NULL(Mul, Integer, Integer, Integer, tpl::sql::Multiply);
+BINARY_MATH_FAST_HIDE_NULL(Mul, Real, Real, Real, tpl::sql::Multiply);
+BINARY_MATH_FAST_HIDE_NULL_OVERFLOW(Mul, Integer, Integer, Integer, tpl::sql::MultiplyWithOverflow);
+BINARY_MATH_CHECK_ZERO_HIDE_NULL(IntDiv, Integer, Integer, Integer, tpl::sql::Divide);
+BINARY_MATH_CHECK_ZERO_HIDE_NULL(Div, Real, Real, Real, tpl::sql::Divide);
+BINARY_MATH_CHECK_ZERO_HIDE_NULL(IntMod, Integer, Integer, Integer, tpl::sql::Modulo);
+BINARY_MATH_CHECK_ZERO_HIDE_NULL(Mod, Real, Real, Real, tpl::sql::Modulo);
 
 inline void ArithmeticFunctions::Pi(Real *result) { *result = Real(M_PI); }
 
@@ -155,16 +149,42 @@ UNARY_MATH_EXPENSIVE_HIDE_NULL(Radians, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Degrees, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Round, Real, Real);
 
-BINARY_MATH_EXPENSIVE_HIDE_NULL(Atan2, Real, Real, Real);
-BINARY_MATH_EXPENSIVE_HIDE_NULL(Log, Real, Real, Real);
-BINARY_MATH_EXPENSIVE_HIDE_NULL(Pow, Real, Real, Real);
-BINARY_MATH_EXPENSIVE_HIDE_NULL(RoundUpTo, Real, Real, Integer);
+inline void ArithmeticFunctions::Atan2(Real *result, const Real &a, const Real &b) {
+  if (a.is_null || b.is_null) {
+    *result = Real::Null();
+    return;
+  }
+  *result = Real(tpl::sql::Atan2<double>{}(a.val, b.val));
+}
+
+inline void ArithmeticFunctions::RoundUpTo(Real *result, const Real &v, const Integer &scale) {
+  if (v.is_null || scale.is_null) {
+    *result = Real::Null();
+    return;
+  }
+  *result = Real(tpl::sql::RoundUpTo<double, int64_t>{}(v.val, scale.val));
+}
+
+inline void ArithmeticFunctions::Log(Real *result, const Real &base, const Real &val) {
+  if (base.is_null || val.is_null) {
+    *result = Real::Null();
+    return;
+  }
+  *result = Real(tpl::sql::Log<double>{}(base.val, val.val));
+}
+
+inline void ArithmeticFunctions::Pow(Real *result, const Real &base, const Real &val) {
+  if (base.is_null || val.is_null) {
+    *result = Real::Null();
+    return;
+  }
+  *result = Real(tpl::sql::Pow<double, double>{}(base.val, val.val));
+}
 
 #undef BINARY_FN_CHECK_ZERO
 #undef BINARY_MATH_CHECK_ZERO_HIDE_NULL
 #undef BINARY_MATH_FAST_HIDE_NULL_OVERFLOW
 #undef BINARY_MATH_FAST_HIDE_NULL
-#undef BINARY_MATH_EXPENSIVE_HIDE_NULL
 #undef UNARY_MATH_EXPENSIVE_HIDE_NULL
 
 }  // namespace tpl::sql

@@ -1,48 +1,49 @@
 #include "sema/error_reporter.h"
 
 #include <cstring>
+#include <iostream>
 #include <string>
 
 #include "ast/type.h"
-#include "ast/type_visitor.h"
 
 namespace tpl::sema {
 
 namespace {
+
+// All error strings.
 #define F(id, str, arg_types) str,
-// NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
 constexpr const char *kErrorStrings[] = {MESSAGE_LIST(F)};
 #undef F
+
+// Helper template class for MessageArgument::FormatMessageArgument().
+template <class T>
+struct always_false : std::false_type {};
 
 }  // namespace
 
 void ErrorReporter::MessageArgument::FormatMessageArgument(std::string &str) const {
-  switch (kind()) {
-    case Kind::CString: {
-      str.append(raw_str_);
-      break;
-    }
-    case MessageArgument::Kind::Int: {
-      str.append(std::to_string(integer_));
-      break;
-    }
-    case Kind::Position: {
-      str.append("[line/col: ")
-          .append(std::to_string(pos_.line))
-          .append("/")
-          .append(std::to_string(pos_.column))
-          .append("]");
-      break;
-    }
-    case Kind::Token: {
-      str.append(parsing::Token::GetString(static_cast<parsing::Token::Type>(integer_)));
-      break;
-    }
-    case Kind::Type: {
-      str.append(ast::Type::ToString(type_));
-      break;
-    }
-  }
+  std::visit(
+      [&](auto &&arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, const char *>) {
+          str.append(arg);
+        } else if constexpr (std::is_same_v<T, int32_t>) {
+          str.append(std::to_string(arg));
+        } else if constexpr (std::is_same_v<T, SourcePosition>) {
+          str.append("[line/col: ")
+              .append(std::to_string(arg.line))
+              .append("/")
+              .append(std::to_string(arg.column))
+              .append("]");
+        } else if constexpr (std::is_same_v<T, parsing::Token::Type>) {
+          str.append(parsing::Token::GetString(static_cast<parsing::Token::Type>(arg)));
+        } else if constexpr (std::is_same_v<T, ast::Type *>) {
+          str.append(ast::Type::ToString(arg));
+        } else {
+          static_assert(always_false<T>::value, "non-exhaustive visitor");
+        }
+      },
+      arg_);
 }
 
 std::string ErrorReporter::MessageWithArgs::FormatMessage() const {

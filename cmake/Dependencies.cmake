@@ -69,11 +69,11 @@ list(APPEND TPL_LINK_LIBS ${JEMALLOC_LIBRARIES})
 # LLVM
 ############################################################
 
-# Look for LLVM 7+
-find_package(LLVM REQUIRED CONFIG)
+# Look for LLVM 10+
+find_package(LLVM 10.0 REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-if (${LLVM_PACKAGE_VERSION} VERSION_LESS "7")
-    message(FATAL_ERROR "LLVM 7 or newer is required.")
+if (${LLVM_PACKAGE_VERSION} VERSION_LESS "10")
+    message(FATAL_ERROR "LLVM 10 or newer is required.")
 endif ()
 llvm_map_components_to_libnames(LLVM_LIBRARIES core mcjit nativecodegen native ipo)
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
@@ -111,7 +111,7 @@ list(APPEND TPL_LINK_LIBS libcount)
 # old to use with TPL.
 ############################################################
 
-set(SUPPORTED_CLANGS "clang++-9" "clang++-8" "clang++-7")
+set(SUPPORTED_CLANGS "clang++-10" "clang++-9" "clang++-8" "clang++-7")
 if (${MACOSX})
     # Because MacOS does some weird Clang versioning, and it isn't available
     # through Homebrew, we add in vanilla "clang++". You won't be running TPL
@@ -161,10 +161,16 @@ endif ()
 
 set(GTEST_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} ${GTEST_CMAKE_CXX_FLAGS}")
 
+if(UPPERCASE_BUILD_TYPE MATCHES DEBUG)
+    set(GTEST_LIBRARY_EXTENSION "d${CMAKE_STATIC_LIBRARY_SUFFIX}")
+else()
+    set(GTEST_LIBRARY_EXTENSION "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+endif()
+
 set(GTEST_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/googletest_ep-prefix/src/googletest_ep")
 set(GTEST_INCLUDE_DIR "${GTEST_PREFIX}/include")
-set(GTEST_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(GTEST_MAIN_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(GTEST_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${GTEST_LIBRARY_EXTENSION}")
+set(GTEST_MAIN_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${GTEST_LIBRARY_EXTENSION}")
 
 # Flags to pass to Googletest
 set(GTEST_CMAKE_ARGS
@@ -182,7 +188,7 @@ ExternalProject_Add(googletest_ep
 
 message(STATUS "GTest version: ${GTEST_VERSION}")
 message(STATUS "GTest include dir: ${GTEST_INCLUDE_DIR}")
-message(STATUS "GTest static library: ${GTEST_MAIN_STATIC_LIB}")
+message(STATUS "GTest static library: ${GTEST_STATIC_LIB}")
 message(STATUS "GTest Main static library: ${GTEST_MAIN_STATIC_LIB}")
 
 include_directories(SYSTEM ${GTEST_INCLUDE_DIR})

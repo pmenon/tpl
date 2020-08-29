@@ -1,9 +1,7 @@
-#include <limits>
-#include <memory>
-#include <random>
 #include <string>
 #include <vector>
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "sql/execution_context.h"
@@ -28,6 +26,31 @@ class StringFunctionsTests : public TplTest {
   ExecutionContext ctx_;
 };
 
+TEST_F(StringFunctionsTests, Concat) {
+  // Nulls
+  {
+    auto result = StringVal("");
+    StringFunctions::Concat(&result, ctx(), StringVal::Null(), StringVal::Null());
+    EXPECT_TRUE(result.is_null);
+
+    StringFunctions::Concat(&result, ctx(), StringVal::Null(), StringVal("xy"));
+    EXPECT_TRUE(result.is_null);
+
+    StringFunctions::Concat(&result, ctx(), StringVal("xy"), StringVal::Null());
+    EXPECT_TRUE(result.is_null);
+  }
+
+  // Simple Case
+  {
+    auto result = StringVal("");
+    auto x = StringVal("xyz");
+    auto a = StringVal("abc");
+
+    StringFunctions::Concat(&result, ctx(), x, a);
+    EXPECT_TRUE(StringVal("xyzabc") == result);
+  }
+}
+
 TEST_F(StringFunctionsTests, Substring) {
   // Nulls
   {
@@ -36,11 +59,11 @@ TEST_F(StringFunctionsTests, Substring) {
     auto pos = Integer(0);
     auto len = Integer(0);
 
-    StringFunctions::Substring(ctx(), &result, x, pos);
+    StringFunctions::Substring(&result, ctx(), x, pos);
     EXPECT_TRUE(result.is_null);
 
     result = StringVal("");
-    StringFunctions::Substring(ctx(), &result, x, pos, len);
+    StringFunctions::Substring(&result, ctx(), x, pos, len);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -52,7 +75,7 @@ TEST_F(StringFunctionsTests, Substring) {
   {
     auto pos = Integer(3);
     auto len = Integer(4);
-    StringFunctions::Substring(ctx(), &result, x, pos, len);
+    StringFunctions::Substring(&result, ctx(), x, pos, len);
     EXPECT_TRUE(StringVal("only") == result);
   }
 
@@ -60,7 +83,7 @@ TEST_F(StringFunctionsTests, Substring) {
   {
     auto pos = Integer(-3);
     auto len = Integer(4);
-    StringFunctions::Substring(ctx(), &result, x, pos, len);
+    StringFunctions::Substring(&result, ctx(), x, pos, len);
     EXPECT_TRUE(StringVal("") == result);
   }
 
@@ -68,7 +91,7 @@ TEST_F(StringFunctionsTests, Substring) {
   {
     auto pos = Integer(1);
     auto len = Integer(-1);
-    StringFunctions::Substring(ctx(), &result, x, pos, len);
+    StringFunctions::Substring(&result, ctx(), x, pos, len);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -76,7 +99,7 @@ TEST_F(StringFunctionsTests, Substring) {
   {
     auto pos = Integer(1);
     auto len = Integer(-1);
-    StringFunctions::Substring(ctx(), &result, x, pos, len);
+    StringFunctions::Substring(&result, ctx(), x, pos, len);
     EXPECT_TRUE(result.is_null);
   }
 }
@@ -89,11 +112,11 @@ TEST_F(StringFunctionsTests, SplitPart) {
     auto delim = StringVal("");
     auto field = Integer(0);
 
-    StringFunctions::SplitPart(ctx(), &result, x, delim, field);
+    StringFunctions::SplitPart(&result, ctx(), x, delim, field);
     EXPECT_TRUE(result.is_null);
 
     result = StringVal("");
-    StringFunctions::SplitPart(ctx(), &result, x, delim, field);
+    StringFunctions::SplitPart(&result, ctx(), x, delim, field);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -103,7 +126,7 @@ TEST_F(StringFunctionsTests, SplitPart) {
     auto result = StringVal("");
     auto delim = StringVal("");
     auto field = Integer(-30);
-    StringFunctions::SplitPart(ctx(), &result, x, delim, field);
+    StringFunctions::SplitPart(&result, ctx(), x, delim, field);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -113,7 +136,7 @@ TEST_F(StringFunctionsTests, SplitPart) {
     auto result = StringVal("");
     auto delim = StringVal(" ");
     auto field = Integer(30);
-    StringFunctions::SplitPart(ctx(), &result, x, delim, field);
+    StringFunctions::SplitPart(&result, ctx(), x, delim, field);
     EXPECT_TRUE(StringVal("") == result);
   }
 
@@ -123,7 +146,7 @@ TEST_F(StringFunctionsTests, SplitPart) {
     auto result = StringVal("");
     auto delim = StringVal("");
     auto field = Integer(3);
-    StringFunctions::SplitPart(ctx(), &result, x, delim, field);
+    StringFunctions::SplitPart(&result, ctx(), x, delim, field);
     EXPECT_TRUE(x == result);
   }
 
@@ -139,7 +162,7 @@ TEST_F(StringFunctionsTests, SplitPart) {
     s.split(splits, delim);
 
     for (uint32_t i = 0; i < splits.size(); i++) {
-      StringFunctions::SplitPart(ctx(), &result, x, StringVal(delim), Integer(i + 1));
+      StringFunctions::SplitPart(&result, ctx(), x, StringVal(delim), Integer(i + 1));
       auto split = splits[i].str();
       EXPECT_TRUE(StringVal(split.c_str()) == result);
     }
@@ -153,14 +176,14 @@ TEST_F(StringFunctionsTests, Repeat) {
     auto result = StringVal("");
     auto n = Integer(0);
 
-    StringFunctions::Repeat(ctx(), &result, x, n);
+    StringFunctions::Repeat(&result, ctx(), x, n);
     EXPECT_TRUE(result.is_null);
 
     x = StringVal(test_string_2);
     result = StringVal("");
     n = Integer::Null();
 
-    StringFunctions::Repeat(ctx(), &result, x, n);
+    StringFunctions::Repeat(&result, ctx(), x, n);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -169,17 +192,17 @@ TEST_F(StringFunctionsTests, Repeat) {
   auto n = Integer(0);
 
   // n = 0, expect empty result
-  StringFunctions::Repeat(ctx(), &result, x, n);
+  StringFunctions::Repeat(&result, ctx(), x, n);
   EXPECT_TRUE(StringVal("") == result);
 
   // n = -1, expect empty
   n = Integer(-1);
-  StringFunctions::Repeat(ctx(), &result, x, n);
+  StringFunctions::Repeat(&result, ctx(), x, n);
   EXPECT_TRUE(StringVal("") == result);
 
   // n = 1, expect original back
   n = Integer(1);
-  StringFunctions::Repeat(ctx(), &result, x, n);
+  StringFunctions::Repeat(&result, ctx(), x, n);
   EXPECT_TRUE(x == result);
 
   // n = 4, expect four copies
@@ -189,7 +212,7 @@ TEST_F(StringFunctionsTests, Repeat) {
   for (auto i = 0; i < repeats; i++) s += test_string_2;
 
   n = Integer(repeats);
-  StringFunctions::Repeat(ctx(), &result, x, n);
+  StringFunctions::Repeat(&result, ctx(), x, n);
   EXPECT_FALSE(result.is_null);
   EXPECT_TRUE(StringVal(s.c_str()) == result);
 }
@@ -202,7 +225,7 @@ TEST_F(StringFunctionsTests, Lpad) {
     auto len = Integer(0);
     auto pad = StringVal("");
 
-    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    StringFunctions::Lpad(&result, ctx(), x, len, pad);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -213,7 +236,7 @@ TEST_F(StringFunctionsTests, Lpad) {
     auto len = Integer(4);
     auto pad = StringVal("");
 
-    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    StringFunctions::Lpad(&result, ctx(), x, len, pad);
     EXPECT_TRUE(x == result);
   }
 
@@ -224,7 +247,7 @@ TEST_F(StringFunctionsTests, Lpad) {
     auto len = Integer(2);
     auto pad = StringVal("");
 
-    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    StringFunctions::Lpad(&result, ctx(), x, len, pad);
     EXPECT_TRUE(StringVal("te") == result);
   }
 
@@ -233,7 +256,7 @@ TEST_F(StringFunctionsTests, Lpad) {
   auto len = Integer(5);
   auto pad = StringVal("xy");
 
-  StringFunctions::Lpad(ctx(), &result, x, len, pad);
+  StringFunctions::Lpad(&result, ctx(), x, len, pad);
   EXPECT_TRUE(StringVal("xyxhi") == result);
 }
 
@@ -245,7 +268,7 @@ TEST_F(StringFunctionsTests, Rpad) {
     auto len = Integer(0);
     auto pad = StringVal("");
 
-    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    StringFunctions::Lpad(&result, ctx(), x, len, pad);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -256,7 +279,7 @@ TEST_F(StringFunctionsTests, Rpad) {
     auto len = Integer(4);
     auto pad = StringVal("");
 
-    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    StringFunctions::Lpad(&result, ctx(), x, len, pad);
     EXPECT_TRUE(x == result);
   }
 
@@ -267,7 +290,7 @@ TEST_F(StringFunctionsTests, Rpad) {
     auto len = Integer(2);
     auto pad = StringVal("");
 
-    StringFunctions::Lpad(ctx(), &result, x, len, pad);
+    StringFunctions::Lpad(&result, ctx(), x, len, pad);
     EXPECT_TRUE(StringVal("te") == result);
   }
 
@@ -276,7 +299,7 @@ TEST_F(StringFunctionsTests, Rpad) {
   auto len = Integer(5);
   auto pad = StringVal("xy");
 
-  StringFunctions::Rpad(ctx(), &result, x, len, pad);
+  StringFunctions::Rpad(&result, ctx(), x, len, pad);
   EXPECT_TRUE(StringVal("hixyx") == result);
 }
 
@@ -286,13 +309,13 @@ TEST_F(StringFunctionsTests, Lower) {
     auto x = StringVal::Null();
     auto result = StringVal("");
 
-    StringFunctions::Lower(ctx(), &result, x);
+    StringFunctions::Lower(&result, ctx(), x);
     EXPECT_TRUE(result.is_null);
   }
 
   auto x = StringVal("TEST");
   auto result = StringVal("");
-  StringFunctions::Lower(ctx(), &result, x);
+  StringFunctions::Lower(&result, ctx(), x);
   EXPECT_TRUE(StringVal("test") == result);
 }
 
@@ -302,13 +325,13 @@ TEST_F(StringFunctionsTests, Upper) {
     auto x = StringVal::Null();
     auto result = StringVal("");
 
-    StringFunctions::Upper(ctx(), &result, x);
+    StringFunctions::Upper(&result, ctx(), x);
     EXPECT_TRUE(result.is_null);
   }
 
   auto x = StringVal("test");
   auto result = StringVal("");
-  StringFunctions::Upper(ctx(), &result, x);
+  StringFunctions::Upper(&result, ctx(), x);
   EXPECT_TRUE(StringVal("TEST") == result);
 }
 
@@ -318,7 +341,7 @@ TEST_F(StringFunctionsTests, Reverse) {
     auto x = StringVal::Null();
     auto result = StringVal("");
 
-    StringFunctions::Upper(ctx(), &result, x);
+    StringFunctions::Upper(&result, ctx(), x);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -327,13 +350,13 @@ TEST_F(StringFunctionsTests, Reverse) {
     auto x = StringVal("");
     auto result = StringVal("");
 
-    StringFunctions::Upper(ctx(), &result, x);
+    StringFunctions::Upper(&result, ctx(), x);
     EXPECT_TRUE(x == result);
   }
 
   auto x = StringVal("test");
   auto result = StringVal("");
-  StringFunctions::Reverse(ctx(), &result, x);
+  StringFunctions::Reverse(&result, ctx(), x);
   EXPECT_TRUE(StringVal("tset") == result);
 }
 
@@ -341,7 +364,7 @@ TEST_F(StringFunctionsTests, Left) {
   // Nulls
   {
     auto result = StringVal("");
-    StringFunctions::Left(ctx(), &result, StringVal::Null(), Integer::Null());
+    StringFunctions::Left(&result, ctx(), StringVal::Null(), Integer::Null());
     EXPECT_TRUE(result.is_null);
   }
 
@@ -349,25 +372,25 @@ TEST_F(StringFunctionsTests, Left) {
   auto x = StringVal("abcde");
   auto n = Integer(2);
   auto result = StringVal("");
-  StringFunctions::Left(ctx(), &result, x, n);
+  StringFunctions::Left(&result, ctx(), x, n);
   EXPECT_TRUE(StringVal("ab") == result);
 
   // Negative length
   n = Integer(-2);
   result = StringVal("");
-  StringFunctions::Left(ctx(), &result, x, n);
+  StringFunctions::Left(&result, ctx(), x, n);
   EXPECT_TRUE(StringVal("abc") == result);
 
   // Large length
   n = Integer(10);
   result = StringVal("");
-  StringFunctions::Left(ctx(), &result, x, n);
+  StringFunctions::Left(&result, ctx(), x, n);
   EXPECT_TRUE(x == result);
 
   // Large negative length
   n = Integer(-10);
   result = StringVal("");
-  StringFunctions::Left(ctx(), &result, x, n);
+  StringFunctions::Left(&result, ctx(), x, n);
   EXPECT_TRUE(StringVal("") == result);
 }
 
@@ -375,7 +398,7 @@ TEST_F(StringFunctionsTests, Right) {
   // Nulls
   {
     auto result = StringVal("");
-    StringFunctions::Right(ctx(), &result, StringVal::Null(), Integer::Null());
+    StringFunctions::Right(&result, ctx(), StringVal::Null(), Integer::Null());
     EXPECT_TRUE(result.is_null);
   }
 
@@ -383,25 +406,25 @@ TEST_F(StringFunctionsTests, Right) {
   auto x = StringVal("abcde");
   auto n = Integer(2);
   auto result = StringVal("");
-  StringFunctions::Right(ctx(), &result, x, n);
+  StringFunctions::Right(&result, ctx(), x, n);
   EXPECT_TRUE(StringVal("de") == result);
 
   // Negative length
   n = Integer(-2);
   result = StringVal("");
-  StringFunctions::Right(ctx(), &result, x, n);
+  StringFunctions::Right(&result, ctx(), x, n);
   EXPECT_TRUE(StringVal("cde") == result);
 
   // Large length
   n = Integer(10);
   result = StringVal("");
-  StringFunctions::Right(ctx(), &result, x, n);
+  StringFunctions::Right(&result, ctx(), x, n);
   EXPECT_TRUE(x == result);
 
   // Large negative length
   n = Integer(-10);
   result = StringVal("");
-  StringFunctions::Right(ctx(), &result, x, n);
+  StringFunctions::Right(&result, ctx(), x, n);
   EXPECT_TRUE(StringVal("") == result);
 }
 
@@ -409,10 +432,10 @@ TEST_F(StringFunctionsTests, Ltrim) {
   // Nulls
   {
     auto result = StringVal("");
-    StringFunctions::Ltrim(ctx(), &result, StringVal::Null());
+    StringFunctions::Ltrim(&result, ctx(), StringVal::Null());
     EXPECT_TRUE(result.is_null);
 
-    StringFunctions::Ltrim(ctx(), &result, StringVal::Null(), StringVal("xy"));
+    StringFunctions::Ltrim(&result, ctx(), StringVal::Null(), StringVal("xy"));
     EXPECT_TRUE(result.is_null);
   }
 
@@ -420,18 +443,18 @@ TEST_F(StringFunctionsTests, Ltrim) {
   auto x = StringVal("zzzytest");
   auto chars = StringVal("xyz");
   auto result = StringVal("");
-  StringFunctions::Ltrim(ctx(), &result, x, chars);
+  StringFunctions::Ltrim(&result, ctx(), x, chars);
   EXPECT_TRUE(StringVal("test") == result);
 
   // Remove all
   x = StringVal("zzzyxyyz");
   chars = StringVal("xyz");
-  StringFunctions::Ltrim(ctx(), &result, x, chars);
+  StringFunctions::Ltrim(&result, ctx(), x, chars);
   EXPECT_TRUE(StringVal("") == result);
 
   // Remove spaces
   x = StringVal("  test");
-  StringFunctions::Ltrim(ctx(), &result, x);
+  StringFunctions::Ltrim(&result, ctx(), x);
   EXPECT_TRUE(StringVal("test") == result);
 }
 
@@ -439,10 +462,10 @@ TEST_F(StringFunctionsTests, Rtrim) {
   // Nulls
   {
     auto result = StringVal("");
-    StringFunctions::Rtrim(ctx(), &result, StringVal::Null());
+    StringFunctions::Rtrim(&result, ctx(), StringVal::Null());
     EXPECT_TRUE(result.is_null);
 
-    StringFunctions::Rtrim(ctx(), &result, StringVal::Null(), StringVal("xy"));
+    StringFunctions::Rtrim(&result, ctx(), StringVal::Null(), StringVal("xy"));
     EXPECT_TRUE(result.is_null);
   }
 
@@ -450,18 +473,18 @@ TEST_F(StringFunctionsTests, Rtrim) {
   auto x = StringVal("testxxzx");
   auto chars = StringVal("xyz");
   auto result = StringVal("");
-  StringFunctions::Rtrim(ctx(), &result, x, chars);
+  StringFunctions::Rtrim(&result, ctx(), x, chars);
   EXPECT_TRUE(StringVal("test") == result);
 
   // Remove all
   x = StringVal("zzzyxyyz");
   chars = StringVal("xyz");
-  StringFunctions::Rtrim(ctx(), &result, x, chars);
+  StringFunctions::Rtrim(&result, ctx(), x, chars);
   EXPECT_TRUE(StringVal("") == result);
 
   // Remove spaces
   x = StringVal("test   ");
-  StringFunctions::Rtrim(ctx(), &result, x);
+  StringFunctions::Rtrim(&result, ctx(), x);
   EXPECT_TRUE(StringVal("test") == result);
 }
 
@@ -469,10 +492,10 @@ TEST_F(StringFunctionsTests, Trim) {
   // Nulls
   {
     auto result = StringVal("");
-    StringFunctions::Trim(ctx(), &result, StringVal::Null());
+    StringFunctions::Trim(&result, ctx(), StringVal::Null());
     EXPECT_TRUE(result.is_null);
 
-    StringFunctions::Trim(ctx(), &result, StringVal::Null(), StringVal("xy"));
+    StringFunctions::Trim(&result, ctx(), StringVal::Null(), StringVal("xy"));
     EXPECT_TRUE(result.is_null);
   }
 
@@ -480,24 +503,24 @@ TEST_F(StringFunctionsTests, Trim) {
   auto x = StringVal("yxPrashanthxx");
   auto chars = StringVal("xyz");
   auto result = StringVal("");
-  StringFunctions::Trim(ctx(), &result, x, chars);
+  StringFunctions::Trim(&result, ctx(), x, chars);
   EXPECT_TRUE(StringVal("Prashanth") == result);
 
   // Remove all
   x = StringVal("zzzyxyyz");
   chars = StringVal("xyz");
-  StringFunctions::Trim(ctx(), &result, x, chars);
+  StringFunctions::Trim(&result, ctx(), x, chars);
   EXPECT_TRUE(StringVal("") == result);
 
   // Remove all, but one
   x = StringVal("zzzyXxyyz");
   chars = StringVal("xyz");
-  StringFunctions::Trim(ctx(), &result, x, chars);
+  StringFunctions::Trim(&result, ctx(), x, chars);
   EXPECT_TRUE(StringVal("X") == result);
 
   // Remove spaces
   x = StringVal("   test   ");
-  StringFunctions::Trim(ctx(), &result, x);
+  StringFunctions::Trim(&result, ctx(), x);
   EXPECT_TRUE(StringVal("test") == result);
 }
 

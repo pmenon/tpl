@@ -2,11 +2,12 @@
 
 #include <string>
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
-#include "common/macros.h"
 #include "sql/constant_vector.h"
 #include "sql/value.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "util/math_util.h"
 
 namespace tpl::sql {
@@ -45,8 +46,8 @@ bool GenericValue::Equals(const GenericValue &other) const {
     case TypeId::Varchar:
       return str_value_ == other.str_value_;
     default:
-      throw NotImplementedException("Equality of '{}' generic value is unsupported",
-                                    TypeIdToString(type_id_));
+      throw NotImplementedException(
+          fmt::format("Equality of '{}' generic value is unsupported", TypeIdToString(type_id_)));
   }
   return false;
 }
@@ -85,14 +86,15 @@ std::string GenericValue::ToString() const {
       return std::to_string(value_.float_);
     case TypeId::Double:
       return std::to_string(value_.double_);
-    case TypeId::Date: {
+    case TypeId::Date:
       return value_.date_.ToString();
-    }
+    case TypeId::Timestamp:
+      return value_.timestamp_.ToString();
     case TypeId::Varchar:
       return "'" + str_value_ + "'";
     default:
-      throw NotImplementedException("String-ification of '{}' generic value is unsupported",
-                                    TypeIdToString(type_id_));
+      throw NotImplementedException(fmt::format(
+          "string-ification of '{}' generic value is unsupported", TypeIdToString(type_id_)));
   }
 }
 
@@ -177,17 +179,19 @@ GenericValue GenericValue::CreateDate(Date date) {
 }
 
 GenericValue GenericValue::CreateDate(uint32_t year, uint32_t month, uint32_t day) {
-  GenericValue result(TypeId::Date);
-  result.value_.date_ = Date::FromYMD(year, month, day);
+  return CreateDate(Date::FromYMD(year, month, day));
+}
+
+GenericValue GenericValue::CreateTimestamp(Timestamp timestamp) {
+  GenericValue result(TypeId::Timestamp);
+  result.value_.timestamp_ = timestamp;
   result.is_null_ = false;
   return result;
 }
 
-GenericValue GenericValue::CreateTimestamp(UNUSED int32_t year, UNUSED int32_t month,
-                                           UNUSED int32_t day, UNUSED int32_t hour,
-                                           UNUSED int32_t min, UNUSED int32_t sec,
-                                           UNUSED int32_t msec) {
-  throw NotImplementedException("Timestamp generic values are not supported");
+GenericValue GenericValue::CreateTimestamp(int32_t year, int32_t month, int32_t day, int32_t hour,
+                                           int32_t min, int32_t sec) {
+  return CreateTimestamp(Timestamp::FromYMDHMS(year, month, day, hour, min, sec));
 }
 
 GenericValue GenericValue::CreateVarchar(std::string_view str) {
@@ -215,11 +219,13 @@ GenericValue GenericValue::CreateFromRuntimeValue(const TypeId type_id, const Va
       return GenericValue::CreateDouble(static_cast<const Real &>(val).val);
     case TypeId::Date:
       return GenericValue::CreateDate(static_cast<const DateVal &>(val).val);
+    case TypeId::Timestamp:
+      return GenericValue::CreateTimestamp(static_cast<const TimestampVal &>(val).val);
     case TypeId::Varchar:
       return GenericValue::CreateVarchar(static_cast<const StringVal &>(val).val.GetStringView());
     default:
-      throw NotImplementedException("Run-time value of type '{}' not supported as generic value",
-                                    TypeIdToString(type_id));
+      throw NotImplementedException(fmt::format(
+          "run-time value of type '{}' not supported as generic value", TypeIdToString(type_id)));
   }
 }
 

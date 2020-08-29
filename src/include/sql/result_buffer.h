@@ -3,8 +3,13 @@
 #include "common/common.h"
 #include "sql/result_consumer.h"
 #include "util/chunked_vector.h"
+#include "util/spin_latch.h"
 
 namespace tpl::sql {
+
+namespace planner {
+class OutputSchema;
+}  // namespace planner
 
 class MemoryPool;
 class Schema;
@@ -27,7 +32,7 @@ class ResultBuffer {
    * @param consumer The callback invoked to consume batches of results.
    * @param batch_size The size of the buffer to use to batch results.
    */
-  ResultBuffer(sql::MemoryPool *memory_pool, const sql::Schema &output_schema,
+  ResultBuffer(sql::MemoryPool *memory_pool, const planner::OutputSchema &output_schema,
                ResultConsumer *consumer, uint32_t batch_size = kDefaultBatchSize);
 
   /**
@@ -39,11 +44,12 @@ class ResultBuffer {
    * @return an output slot to be written to.
    */
   byte *AllocOutputSlot() {
+    util::SpinLatch::ScopedSpinLatch latch(&output_latch_);
     if (tuples_.size() == GetBatchSize()) {
       consumer_->Consume(tuples_);
       tuples_.clear();
     }
-    return tuples_.append();
+    return tuples_.alloc_entry();
   }
 
   /**
@@ -59,12 +65,12 @@ class ResultBuffer {
  private:
   // Buffer storing output tuples
   OutputBuffer tuples_;
-
   // The consumer of the results
   ResultConsumer *consumer_;
-
   // The batch size
   uint32_t batch_size_;
+  // Lock for parallel output.
+  util::SpinLatch output_latch_;
 };
 
 }  // namespace tpl::sql

@@ -21,6 +21,7 @@ class Schema {
     std::string name;
     const SqlType &sql_type;
     ColumnEncoding encoding;
+    uint16_t oid{0};
 
     ColumnInfo(std::string name, const SqlType &sql_type,
                ColumnEncoding encoding = ColumnEncoding::None)
@@ -37,13 +38,21 @@ class Schema {
       const auto prim_type = sql_type.GetPrimitiveTypeId();
       return GetTypeIdSize(prim_type);
     }
+
+    void SetOid(uint16_t oid) { this->oid = oid; }
   };
 
   /**
    * Create a schema with the given columns.
    * @param cols All the columns in the schema and their metadata.
    */
-  explicit Schema(std::vector<ColumnInfo> &&cols) : cols_(std::move(cols)) {}
+  explicit Schema(std::vector<ColumnInfo> &&cols) : cols_(std::move(cols)) {
+    uint16_t oid = 0;
+    for (auto &col : cols_) {
+      col.SetOid(oid);
+      oid++;
+    }
+  }
 
   /**
    * This class cannot be copied or moved.
@@ -58,6 +67,15 @@ class Schema {
   const ColumnInfo *GetColumnInfo(uint32_t col_idx) const {
     TPL_ASSERT(col_idx < cols_.size(), "Out-of-bounds column access");
     return &cols_[col_idx];
+  }
+
+  const ColumnInfo &GetColumnInfo(const std::string &name) const {
+    for (const auto &c : cols_) {
+      if (c.name == name) {
+        return c;
+      }
+    }
+    throw std::out_of_range("Column name doesn't exist");
   }
 
   /**
@@ -87,7 +105,7 @@ class Schema {
 
  private:
   // The metadata for each column. This is immutable after construction.
-  const std::vector<ColumnInfo> cols_;
+  std::vector<ColumnInfo> cols_;
 };
 
 }  // namespace tpl::sql

@@ -56,13 +56,11 @@ class Context;
   NON_PRIM(AHTIterator, tpl::sql::AHTIterator)                                   \
   NON_PRIM(AHTVectorIterator, tpl::sql::AHTVectorIterator)                       \
   NON_PRIM(AHTOverflowPartitionIterator, tpl::sql::AHTOverflowPartitionIterator) \
-  NON_PRIM(BloomFilter, tpl::sql::BloomFilter)                                   \
+  NON_PRIM(CSVReader, tpl::util::CSVReader)                                      \
   NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                         \
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                               \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                             \
-  NON_PRIM(HashTableEntryIterator, tpl::sql::HashTableEntryIterator)             \
   NON_PRIM(JoinHashTable, tpl::sql::JoinHashTable)                               \
-  NON_PRIM(JoinHashTableVectorProbe, tpl::sql::JoinHashTableVectorProbe)         \
   NON_PRIM(MemoryPool, tpl::sql::MemoryPool)                                     \
   NON_PRIM(Sorter, tpl::sql::Sorter)                                             \
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                             \
@@ -82,6 +80,10 @@ class Context;
   NON_PRIM(RealMaxAggregate, tpl::sql::RealMaxAggregate)                         \
   NON_PRIM(RealMinAggregate, tpl::sql::RealMinAggregate)                         \
   NON_PRIM(RealSumAggregate, tpl::sql::RealSumAggregate)                         \
+  NON_PRIM(DateMinAggregate, tpl::sql::DateMinAggregate)                         \
+  NON_PRIM(DateMaxAggregate, tpl::sql::DateMaxAggregate)                         \
+  NON_PRIM(StringMinAggregate, tpl::sql::StringMinAggregate)                     \
+  NON_PRIM(StringMaxAggregate, tpl::sql::StringMaxAggregate)                     \
                                                                                  \
   /* Non-primitive SQL Runtime Values */                                         \
   SQL(Boolean, tpl::sql::BoolVal)                                                \
@@ -209,13 +211,45 @@ class Type : public util::RegionObject {
   TYPE_LIST(F)
 #undef F
 
+  /**
+   * @return True if this type is arithmetic. Arithmetic types are 8-bit, 16-bit, 32-bit, or 64-bit
+   *         signed and unsigned integer types, or 32- or 64-bit floating point types.
+   */
   bool IsArithmetic() const;
-  bool IsSpecificBuiltin(uint16_t kind) const;
-  bool IsNilType() const;
-  bool IsBoolType() const;
+
+  /**
+   * @return True if this is a 8-bit, 16-bit, 32-bit, or 64-bit signed or unsigned TPL integer type.
+   */
   bool IsIntegerType() const;
+
+  /**
+   * @return True if this is a 32-bit or 64-bit floating point type; false otherwise.
+   */
   bool IsFloatType() const;
+
+  /**
+   * @return True if this type is a specific builtin; false otherwise.
+   */
+  bool IsSpecificBuiltin(uint16_t kind) const;
+
+  /**
+   * @return True if this is a TPL nil; false otherwise.
+   */
+  bool IsNilType() const;
+
+  /**
+   * @return True if this is a TPL boolean type; false otherwise.
+   */
+  bool IsBoolType() const;
+
+  /**
+   * @return True if this is a builtin SQL value type; false otherwise.
+   */
   bool IsSqlValueType() const;
+
+  /**
+   * @return True if this is a builtin SQL aggregate type; false otherwise.
+   */
   bool IsSqlAggregatorType() const;
 
   /**

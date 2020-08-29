@@ -40,14 +40,15 @@ TEST_F(ThreadStateContainerTest, ComplexObjectContainerTest) {
   MemoryPool memory(nullptr);
   ThreadStateContainer container(&memory);
 
-  container.Reset(sizeof(Object),
-                  [](UNUSED auto *_, auto *s) {
-                    // Set some stuff to indicate object is initialized
-                    auto obj = new (s) Object();
-                    obj->x = 10;
-                    obj->initialized = true;
-                  },
-                  nullptr, nullptr);
+  container.Reset(
+      sizeof(Object),
+      [](UNUSED auto *_, auto *s) {
+        // Set some stuff to indicate object is initialized
+        auto obj = new (s) Object();
+        obj->x = 10;
+        obj->initialized = true;
+      },
+      nullptr, nullptr);
   ForceCreationOfThreadStates(&container, 4);
 
   // Check
@@ -104,14 +105,13 @@ TEST_F(ThreadStateContainerTest, SimpleContainerTest) {
 
   MemoryPool memory(nullptr);
   ThreadStateContainer container(&memory);
-  container.Reset(sizeof(uint32_t),
-                  [](UNUSED auto *ctx, auto *s) { *reinterpret_cast<uint32_t *>(s) = 0; }, nullptr,
-                  nullptr);
+  container.Reset(
+      sizeof(uint32_t), [](UNUSED auto *ctx, auto *s) { *reinterpret_cast<uint32_t *>(s) = 0; },
+      nullptr, nullptr);
 
   std::vector<uint32_t> input(10000);
   std::iota(input.begin(), input.end(), 0);
 
-  tbb::task_scheduler_init sched;
   tbb::blocked_range r(std::size_t(0), input.size());
   tbb::parallel_for(r, [&container](const auto &range) {
     auto *state = container.AccessCurrentThreadStateAs<uint32_t>();
@@ -128,7 +128,7 @@ TEST_F(ThreadStateContainerTest, SimpleContainerTest) {
   // Manually collect and add
   {
     std::vector<uint32_t *> counts;
-    container.CollectThreadLocalStateElementsAs<uint32_t>(counts, 0);
+    container.CollectThreadLocalStateElementsAs<uint32_t>(&counts, 0);
 
     total = std::accumulate(counts.begin(), counts.end(), 0,
                             [](auto partial, auto *c) { return partial + *c; });

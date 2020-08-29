@@ -6,13 +6,20 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/tbb.h"
-
 #include "count/hll.h"
 
+#include "spdlog/fmt/fmt.h"
+
+#include "tbb/parallel_for_each.h"
+
 #include "common/cpu_info.h"
+#include "common/exception.h"
 #include "logging/logger.h"
+#include "sql/constant_vector.h"
+#include "sql/generic_value.h"
 #include "sql/thread_state_container.h"
+#include "sql/vector_operations/unary_operation_executor.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/bit_util.h"
 #include "util/math_util.h"
@@ -20,14 +27,126 @@
 
 namespace tpl::sql {
 
+class AggregationHashTable::HashToGroupIdMap {
+  // Marker indicating an empty slot in the hash table
+  static constexpr const uint16_t kEmpty = std::numeric_limits<uint16_t>::max();
+
+ public:
+  // An entry in the hash table.
+  struct Entry {
+    uint16_t gid;
+    uint16_t next;
+  };
+
+  HashToGroupIdMap() {
+    const uint64_t max_size = kDefaultVectorSize;
+    capacity_ = max_size * 2;
+    mask_ = capacity_ - 1;
+    entries_ = std::unique_ptr<uint16_t[]>(new uint16_t[capacity_]{kEmpty});
+    storage_ = std::make_unique<Entry[]>(max_size);
+    storage_used_ = 0;
+  }
+
+  // This class cannot be copied or moved.
+  DISALLOW_COPY_AND_MOVE(HashToGroupIdMap);
+
+  // Remove all elements from the hash table.
+  void Clear() {
+    storage_used_ = 0;
+    std::memset(entries_.get(), kEmpty, capacity_ * sizeof(uint16_t));
+  }
+
+  // Find the group associated to the input hash, but only if the predicate is
+  // true. If no such value is found, return a nullptr.
+  template <typename P>
+  uint16_t *Find(const hash_t hash, P p) {
+    uint16_t candidate = entries_[hash & mask_];
+    if (candidate == kEmpty) {
+      return nullptr;
+    }
+    for (auto candidate_ptr = &storage_[candidate]; candidate != kEmpty;
+         candidate = candidate_ptr->next, candidate_ptr = &storage_[candidate]) {
+      if (p(candidate_ptr->gid)) {
+        return &candidate_ptr->gid;
+      }
+    }
+    return nullptr;
+  }
+
+  // Insert a new hash-group mapping.
+  void Insert(const hash_t hash, const uint16_t gid) {
+    TPL_ASSERT(storage_used_ < kDefaultVectorSize, "Too many elements in table");
+
+    // Determine the spot in the storage the new entry occupies.
+    uint16_t entry_pos = storage_used_++;
+    Entry *entry = &storage_[entry_pos];
+
+    // Put the new entry at the head of the chain.
+    entry->next = entries_[hash & mask_];
+    entries_[hash & mask_] = entry_pos;
+
+    // Fill the group ID.
+    entry->gid = gid;
+  }
+
+  // Iterators.
+  Entry *begin() { return storage_.get(); }
+  Entry *end() { return storage_.get() + storage_used_; }
+
+ private:
+  // The mask to use to map hashes to slots in the 'entries' array.
+  hash_t mask_;
+  // The main entries directory mapping to indexes of storage slots.
+  std::unique_ptr<uint16_t[]> entries_;
+  // Main array storage of hash table data (keys, values, hashes, etc.)
+  std::unique_ptr<Entry[]> storage_;
+  // The capacity of the directory.
+  uint16_t capacity_;
+  // The number of slots of storage that have been used.
+  uint16_t storage_used_;
+};
+
 // ---------------------------------------------------------
 // Batch Process State
 // ---------------------------------------------------------
 
-AggregationHashTable::BatchProcessState::BatchProcessState(std::unique_ptr<libcount::HLL> estimator)
-    : hll_estimator(std::move(estimator)), hashes{0}, entries{nullptr}, groups_found{0} {}
+AggregationHashTable::BatchProcessState::BatchProcessState(
+    std::unique_ptr<libcount::HLL> estimator, std::unique_ptr<HashToGroupIdMap> hash_to_group_map)
+    : hll_estimator(std::move(estimator)),
+      hash_to_group_map(std::move(hash_to_group_map)),
+      groups_not_found(kDefaultVectorSize),
+      groups_found(kDefaultVectorSize),
+      key_not_equal(kDefaultVectorSize),
+      key_equal(kDefaultVectorSize) {
+  hash_and_entries.Initialize({TypeId::Hash, TypeId::Pointer});
+}
 
 AggregationHashTable::BatchProcessState::~BatchProcessState() = default;
+
+void AggregationHashTable::BatchProcessState::Reset(VectorProjectionIterator *input_batch) {
+  // Resize the lists if they don't match the input. This should only happen
+  // once, on the last input batch where the size may be less than one full
+  // vector.
+  if (const auto count = input_batch->GetTotalTupleCount();
+      count != hash_and_entries.GetTotalTupleCount()) {
+    hash_and_entries.Reset(count);
+    groups_not_found.Resize(count);
+    groups_found.Resize(count);
+    key_not_equal.Resize(count);
+    key_equal.Resize(count);
+  }
+
+  // Initially, there are no groups found and all keys are unequal.
+  input_batch->GetVectorProjection()->CopySelectionsTo(&groups_not_found);
+  input_batch->GetVectorProjection()->CopySelectionsTo(&key_not_equal);
+
+  // Clear the rest of the lists.
+  groups_found.Clear();
+  key_equal.Clear();
+
+  // Clear the collision table.
+  hash_to_group_map->Clear();
+}
 
 // ---------------------------------------------------------
 // Aggregation Hash Table
@@ -72,8 +191,8 @@ AggregationHashTable::~AggregationHashTable() {
     memory_->DeallocateArray(partition_tails_, kDefaultNumPartitions);
   }
   if (partition_estimates_ != nullptr) {
-    // The estimates array uses HLL instances acquired from libcount. We own them so we have to
-    // delete them manually.
+    // The estimates array uses HLL instances acquired from libcount. We own
+    // them so we have to delete them manually.
     for (uint32_t i = 0; i < kDefaultNumPartitions; i++) {
       delete partition_estimates_[i];
     }
@@ -106,21 +225,29 @@ void AggregationHashTable::Grow() {
   stats_.num_growths++;
 }
 
-byte *AggregationHashTable::AllocInputTuple(hash_t hash) {
-  // Grow if need be
-  if (NeedsToGrow()) {
-    Grow();
-  }
-
+HashTableEntry *AggregationHashTable::AllocateEntryInternal(const hash_t hash) {
   // Allocate an entry
-  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.alloc_entry());
   entry->hash = hash;
   entry->next = nullptr;
 
   // Insert into table
   hash_table_.Insert<false>(entry);
 
-  // Give the payload so the client can write into it
+  // Done
+  return entry;
+}
+
+byte *AggregationHashTable::AllocInputTuple(const hash_t hash) {
+  // Grow if need be
+  if (NeedsToGrow()) {
+    Grow();
+  }
+
+  // Allocate an entry
+  HashTableEntry *entry = AllocateEntryInternal(hash);
+
+  // Return the payload so the client can write into it
   return entry->payload;
 }
 
@@ -170,239 +297,246 @@ void AggregationHashTable::FlushToOverflowPartitions() {
 
 byte *AggregationHashTable::AllocInputTuplePartitioned(hash_t hash) {
   byte *ret = AllocInputTuple(hash);
-  if (hash_table_.GetElementCount() >= flush_threshold_) {
+  if (NeedsToFlushToOverflowPartitions()) {
     FlushToOverflowPartitions();
   }
   return ret;
 }
 
-void AggregationHashTable::ProcessBatch(VectorProjectionIterator *vpi,
-                                        const AggregationHashTable::HashFn hash_fn,
-                                        const AggregationHashTable::KeyEqFn key_eq_fn,
-                                        const AggregationHashTable::InitAggFn init_agg_fn,
-                                        const AggregationHashTable::AdvanceAggFn advance_agg_fn,
-                                        const bool partitioned) {
-  TPL_ASSERT(vpi->GetSelectedTupleCount() <= kDefaultVectorSize, "Vector projection is too large");
+void AggregationHashTable::ComputeHash(VectorProjectionIterator *input_batch,
+                                       const std::vector<uint32_t> &key_indexes) {
+  input_batch->GetVectorProjection()->Hash(key_indexes, batch_state_->Hashes());
+}
 
-  // Allocate all required batch state, but only on first invocation.
-  if (TPL_UNLIKELY(batch_state_ == nullptr)) {
-    batch_state_ =
-        memory_->MakeObject<BatchProcessState>(libcount::HLL::Create(kDefaultHLLPrecision));
+void AggregationHashTable::LookupInitial() {
+  // Probe the hash table for every active hash in the hashes vector. Store the
+  // result in the entries vector, copying NULLs and the filter, too.
+  // TODO(pmenon): Move bulk lookup into ChainingHashTable? Batch lookups should
+  //               use SIMD gathers if hashes vector is full. For some reason it
+  //               isn't. Investigate why.
+  UnaryOperationExecutor::Execute<hash_t, const HashTableEntry *>(
+      *batch_state_->Hashes(), batch_state_->Entries(),
+      [&](const hash_t hash) noexcept { return hash_table_.FindChainHead(hash); });
+
+  // Find non-null entries whose keys must be checked and place them in the
+  // key-not-equal list which is used during key equality checking.
+  ConstantVector null_ptr(GenericValue::CreatePointer(0));
+  VectorOps::SelectNotEqual(*batch_state_->Entries(), null_ptr, batch_state_->KeyNotEqual());
+}
+
+void AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *input_batch,
+                                            const std::vector<uint32_t> &key_indexes) {
+  // The list of tuples whose keys need to be checked is stored in
+  // key-not-equal. We copy it to the key-equal list which we'll use as the
+  // running list of tuples that DO have matching keys to table aggregates.
+  batch_state_->KeyEqual()->AssignFrom(*batch_state_->KeyNotEqual());
+
+  // If no tuples to check, we can exit.
+  if (batch_state_->KeyEqual()->IsEmpty()) {
+    return;
   }
 
-  // Launch
-  if (vpi->IsFiltered()) {
-    ProcessBatchImpl<true>(vpi, hash_fn, key_eq_fn, init_agg_fn, advance_agg_fn, partitioned);
-  } else {
-    ProcessBatchImpl<false>(vpi, hash_fn, key_eq_fn, init_agg_fn, advance_agg_fn, partitioned);
+  // Check all key components one at a time.
+  std::size_t key_offset = HashTableEntry::ComputePayloadOffset();
+  for (const auto key_index : key_indexes) {
+    const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
+    VectorOps::GatherAndSelectEqual(*key_vector, *batch_state_->Entries(), key_offset,
+                                    batch_state_->KeyEqual());
+    key_offset += GetTypeIdSize(key_vector->GetTypeId());
+  }
+
+  // The key-equal list now contains the TIDs of all tuples that succeeded in
+  // matching keys with their associated group. Add them to the running list
+  // of groups-found.
+  batch_state_->GroupsFound()->UnionWith(*batch_state_->KeyEqual());
+
+  // Tuples that didn't match keys need to proceed through the chain of
+  // candidate entries. Collect them in the key-not-equal list.
+  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->KeyEqual());
+}
+
+void AggregationHashTable::FollowNext() {
+  auto *raw_entries = reinterpret_cast<HashTableEntry **>(batch_state_->Entries()->GetData());
+  batch_state_->KeyNotEqual()->Filter(
+      [&](uint64_t i) { return (raw_entries[i] = raw_entries[i]->next) != nullptr; });
+}
+
+void AggregationHashTable::FindGroups(VectorProjectionIterator *input_batch,
+                                      const std::vector<uint32_t> &key_indexes) {
+  // Perform initial lookup.
+  LookupInitial();
+
+  // Check keys.
+  CheckKeyEquality(input_batch, key_indexes);
+
+  // While we have unmatched keys, move along chain.
+  while (!batch_state_->KeyNotEqual()->IsEmpty()) {
+    FollowNext();
+    CheckKeyEquality(input_batch, key_indexes);
   }
 }
 
-template <bool VPIIsFiltered>
-void AggregationHashTable::ProcessBatchImpl(VectorProjectionIterator *vpi,
-                                            const AggregationHashTable::HashFn hash_fn,
-                                            const AggregationHashTable::KeyEqFn key_eq_fn,
-                                            const AggregationHashTable::InitAggFn init_agg_fn,
-                                            const AggregationHashTable::AdvanceAggFn advance_agg_fn,
-                                            const bool partitioned) {
-  // Compute the hashes
-  ComputeHash<VPIIsFiltered>(vpi, hash_fn);
+namespace {
 
-  // Try to find associated groups for all input tuples
-  const uint32_t found_groups = FindGroups<VPIIsFiltered>(vpi, key_eq_fn);
-  vpi->Reset();
-
-  // Create aggregates for those tuples that didn't find a match
-  if (partitioned) {
-    CreateMissingGroups<VPIIsFiltered, true>(vpi, key_eq_fn, init_agg_fn);
-  } else {
-    CreateMissingGroups<VPIIsFiltered, false>(vpi, key_eq_fn, init_agg_fn);
-  }
-  vpi->Reset();
-
-  // Advance the aggregates for all tuples that did find a match
-  AdvanceGroups<VPIIsFiltered>(vpi, found_groups, advance_agg_fn);
-  vpi->Reset();
-}
-
-template <bool VPIIsFiltered>
-void AggregationHashTable::ComputeHash(VectorProjectionIterator *vpi,
-                                       const AggregationHashTable::HashFn hash_fn) {
-  auto &hashes = batch_state_->hashes;
-  if constexpr (VPIIsFiltered) {
-    for (uint32_t idx = 0; vpi->HasNextFiltered(); vpi->AdvanceFiltered()) {
-      hashes[idx++] = hash_fn(vpi);
-    }
-  } else {  // NOLINT
-    for (uint32_t idx = 0; vpi->HasNext(); vpi->Advance()) {
-      hashes[idx++] = hash_fn(vpi);
-    }
-  }
-}
-
-template <bool VPIIsFiltered>
-uint32_t AggregationHashTable::FindGroups(VectorProjectionIterator *vpi,
-                                          const AggregationHashTable::KeyEqFn key_eq_fn) {
-  batch_state_->key_not_eq.Clear();
-  batch_state_->groups_not_found.Clear();
-  uint32_t found = LookupInitial(vpi->GetSelectedTupleCount());
-  uint32_t keys_equal = CheckKeyEquality<VPIIsFiltered>(vpi, found, key_eq_fn);
-  while (!batch_state_->key_not_eq.IsEmpty()) {
-    found = FollowNext();
-    if (found == 0) break;
-    batch_state_->key_not_eq.Clear();
-    keys_equal += CheckKeyEquality<VPIIsFiltered>(vpi, found, key_eq_fn);
-  }
-  return keys_equal;
-}
-
-uint32_t AggregationHashTable::LookupInitial(const uint32_t num_elems) {
-  // If the hash table is larger than cache, inject prefetch instructions
-  uint64_t l3_cache_size = CpuInfo::Instance()->GetCacheSize(CpuInfo::L3_CACHE);
-  if (hash_table_.GetTotalMemoryUsage() > l3_cache_size) {
-    return LookupInitialImpl<true>(num_elems);
-  } else {  // NOLINT
-    return LookupInitialImpl<false>(num_elems);
-  }
-}
-
-// This function will perform an initial lookup for all input tuples, storing
-// entries that match on hash value in the 'entries' array.
-template <bool Prefetch>
-uint32_t AggregationHashTable::LookupInitialImpl(const uint32_t num_elems) {
-  auto &hashes = batch_state_->hashes;
-  auto &entries = batch_state_->entries;
-  auto &groups_found = batch_state_->groups_found;
-  auto &groups_not_found = batch_state_->groups_not_found;
-
-  uint32_t found = 0;
-  for (uint32_t idx = 0, prefetch_idx = kPrefetchDistance; idx < num_elems;) {
-    if constexpr (Prefetch) {
-      if (TPL_LIKELY(prefetch_idx < num_elems)) {
-        hash_table_.PrefetchChainHead<false>(hashes[prefetch_idx++]);
-      }
-    }
-
-    const auto hash = hashes[idx];
-    if (auto *entry = hash_table_.FindChainHead(hash)) {
-      if (entry->hash == hash) {
-        entries[idx] = entry;
-        groups_found[found++] = idx;
-        goto nextChain;
-      }
-      for (entry = entry->next; entry != nullptr; entry = entry->next) {
-        if (entry->hash == hash) {
-          entries[idx] = entry;
-          groups_found[found++] = idx;
-          goto nextChain;
-        }
-      }
-    }
-    groups_not_found.Append(idx);
-  nextChain:
-    idx++;
-  }
-
-  return found;
-}
-
-// For all entries in 'groups_found', check whether their keys match. After this
-// function, groups_found will densely contain the indexes of matching keys, and
-// 'key_not_eq' will contain indexes of tuples that didn't match on key.
-template <bool VPIIsFiltered>
-uint32_t AggregationHashTable::CheckKeyEquality(VectorProjectionIterator *vpi, uint32_t num_elems,
-                                                const AggregationHashTable::KeyEqFn key_eq_fn) {
-  auto &entries = batch_state_->entries;
-  auto &groups_found = batch_state_->groups_found;
-  auto &key_not_eq = batch_state_->key_not_eq;
-
-  uint32_t matched = 0;
-  for (uint32_t i = 0; i < num_elems; i++) {
-    const uint32_t index = groups_found[i];
-
-    // Position the iterator on the tuple we're about the compare keys with
-    vpi->SetPosition<VPIIsFiltered>(index);
-
-    // Compare keys of the aggregate and the input tuple
-    if (key_eq_fn(entries[index]->payload, vpi)) {
-      groups_found[matched++] = index;
+template <typename T, typename F>
+void TemplatedFixGrouping(AggregationHashTable::HashToGroupIdMap *hash_to_group_map,
+                          const Vector &hashes, const Vector &entries, const Vector &probe_keys,
+                          TupleIdList *tid_list, F f) {
+  auto *RESTRICT raw_hashes = reinterpret_cast<const hash_t *>(hashes.GetData());
+  auto *RESTRICT raw_entries = reinterpret_cast<const HashTableEntry **>(entries.GetData());
+  auto *RESTRICT raw_keys = reinterpret_cast<const T *>(probe_keys.GetData());
+  tid_list->Filter([&](const uint64_t i) {
+    auto *gid = hash_to_group_map->Find(
+        raw_hashes[i], [&](const uint16_t gid) { return raw_keys[gid] == raw_keys[i]; });
+    if (gid != nullptr) {
+      raw_entries[i] = raw_entries[*gid];
     } else {
-      key_not_eq.Append(index);
+      hash_to_group_map->Insert(raw_hashes[i], i);
+      raw_entries[i] = f(raw_hashes[i]);
     }
-  }
-
-  return matched;
+    return gid != nullptr;
+  });
 }
 
-// For all unmatched keys, move along the chain until we find another hash
-// match. After this function, 'groups_found' will densely contain the indexes
-// of tuples that matched on hash and should be checked for keys.
-uint32_t AggregationHashTable::FollowNext() {
-  const auto &hashes = batch_state_->hashes;
-  const auto &key_not_eq = batch_state_->key_not_eq;
-  auto &entries = batch_state_->entries;
-  auto &groups_found = batch_state_->groups_found;
-  auto &groups_not_found = batch_state_->groups_not_found;
-
-  uint32_t matched = 0;
-  for (uint32_t i = 0; i < key_not_eq.GetSize();) {
-    const auto index = key_not_eq[i];
-    for (auto *entry = entries[index]; entry != nullptr; entry = entry->next) {
-      const auto hash = hashes[index];
-      if (entry->hash == hash) {
-        entries[index] = entry;
-        groups_found[matched++] = index;
-        goto nextChain;
-      }
-    }
-    groups_not_found.Append(index);
-  nextChain:
-    i++;
-  }
-  return matched;
-}
-
-template <bool VPIIsFiltered, bool Partitioned>
-void AggregationHashTable::CreateMissingGroups(VectorProjectionIterator *vpi,
-                                               const AggregationHashTable::KeyEqFn key_eq_fn,
-                                               const AggregationHashTable::InitAggFn init_agg_fn) {
-  const auto &hashes = batch_state_->hashes;
-  const auto &groups_not_found = batch_state_->groups_not_found;
-  auto &entries = batch_state_->entries;
-
-  for (uint64_t i = 0; i < groups_not_found.GetSize(); i++) {
-    const auto index = groups_not_found[i];
-
-    // Position the iterator to the tuple we're inserting
-    vpi->SetPosition<VPIIsFiltered>(index);
-
-    // But before we insert, check if already inserted
-    const hash_t hash = hashes[index];
-    if (auto *entry = LookupEntryInternal(hash, key_eq_fn, vpi)) {
-      entries[index] = entry;
-      continue;
-    }
-
-    // Initialize
-    init_agg_fn(Partitioned ? AllocInputTuplePartitioned(hash) : AllocInputTuple(hash), vpi);
+template <typename F>
+void FixGrouping(AggregationHashTable::HashToGroupIdMap *groups, const Vector &hashes,
+                 const Vector &entries, const Vector &probe_keys, TupleIdList *tid_list, F f) {
+  switch (probe_keys.GetTypeId()) {
+    case TypeId::Boolean:
+      TemplatedFixGrouping<bool>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::TinyInt:
+      TemplatedFixGrouping<int8_t>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::SmallInt:
+      TemplatedFixGrouping<int16_t>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Integer:
+      TemplatedFixGrouping<int32_t>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::BigInt:
+      TemplatedFixGrouping<int64_t>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Float:
+      TemplatedFixGrouping<float>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Double:
+      TemplatedFixGrouping<double>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Date:
+      TemplatedFixGrouping<Date>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Timestamp:
+      TemplatedFixGrouping<Timestamp>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Varchar:
+      TemplatedFixGrouping<VarlenEntry>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    case TypeId::Varbinary:
+      TemplatedFixGrouping<Blob>(groups, hashes, entries, probe_keys, tid_list, f);
+      break;
+    default:
+      throw NotImplementedException(fmt::format("key comparison on type {} not supported",
+                                                TypeIdToString(probe_keys.GetTypeId())));
   }
 }
 
-template <bool VPIIsFiltered>
-void AggregationHashTable::AdvanceGroups(VectorProjectionIterator *vpi, const uint32_t num_groups,
-                                         const AggregationHashTable::AdvanceAggFn advance_agg_fn) {
-  const auto &entries = batch_state_->entries;
-  const auto &groups_found = batch_state_->groups_found;
+}  // namespace
 
-  for (uint32_t i = 0; i < num_groups; i++) {
-    const auto index = groups_found[i];
+void AggregationHashTable::CreateMissingGroups(
+    VectorProjectionIterator *input_batch, const std::vector<uint32_t> &key_indexes,
+    const AggregationHashTable::VectorInitAggFn init_agg_fn) {
+  // The groups-found list contains all tuples that found a matching group in
+  // the aggregation hash table. Thus, the list of tuples that did not find a
+  // match is the complement of the groups-found list.
+  batch_state_->GroupsNotFound()->UnsetFrom(*batch_state_->GroupsFound());
 
-    // Position the iterator at the tuple we'll use to update the aggregate
-    vpi->SetPosition<VPIIsFiltered>(index);
-
-    // Call the advancement function
-    advance_agg_fn(entries[index]->payload, vpi);
+  // If all tuples found a matching group, we don't need to create any.
+  if (batch_state_->GroupsNotFound()->IsEmpty()) {
+    return;
   }
+
+  // Find and resolve duplicate keys in this batch.
+  batch_state_->KeyNotEqual()->AssignFrom(*batch_state_->GroupsNotFound());
+  batch_state_->KeyEqual()->AssignFrom(*batch_state_->GroupsNotFound());
+  for (const auto key_index : key_indexes) {
+    const Vector *key_vector = input_batch->GetVectorProjection()->GetColumn(key_index);
+    FixGrouping(batch_state_->HashToGroupMap(),  // Hash-to-group mapping
+                *batch_state_->Hashes(),         // Hashes
+                *batch_state_->Entries(),        // Entries
+                *key_vector,                     // Keys
+                batch_state_->KeyEqual(),        // The running list of tuples that found a match
+                [this](const hash_t hash) { return AllocateEntryInternal(hash); });
+  }
+
+  // The key-not-equal list contains the list of all TIDs that did not find a
+  // matching group. The key-equal list contains TIDs tuples that found a
+  // matching group WITHIN this batch. The difference between these lists is
+  // the list of tuples that require NEW groups.
+  batch_state_->KeyNotEqual()->UnsetFrom(*batch_state_->KeyEqual());
+
+  // Let the initialization function handle all the newly created aggregates.
+  VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->KeyNotEqual());
+  input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->KeyNotEqual());
+  init_agg_fn(&iter, input_batch);
+
+  // All new aggregates have been created. Add in the new groups into found
+  // groups; this is the final list.
+  batch_state_->GroupsFound()->UnionWith(*batch_state_->GroupsNotFound());
+}
+
+void AggregationHashTable::AdvanceGroups(
+    VectorProjectionIterator *input_batch,
+    const AggregationHashTable::VectorAdvanceAggFn advance_agg_fn) {
+  // Let the callback handle updating the aggregates.
+  VectorProjectionIterator iter(batch_state_->Projection(), batch_state_->GroupsFound());
+  input_batch->SetVectorProjection(input_batch->GetVectorProjection(), batch_state_->GroupsFound());
+  advance_agg_fn(&iter, input_batch);
+}
+
+void AggregationHashTable::ProcessBatch(
+    VectorProjectionIterator *input_batch, const std::vector<uint32_t> &key_indexes,
+    const AggregationHashTable::VectorInitAggFn init_agg_fn,
+    const AggregationHashTable::VectorAdvanceAggFn advance_agg_fn,
+    const bool partitioned_aggregation) {
+  // No-op if the iterator is empty.
+  if (input_batch->IsEmpty()) {
+    return;
+  }
+
+  // Initialize the batch state if need be. Note: this is only performed once.
+  if (TPL_UNLIKELY(batch_state_ == nullptr)) {
+    batch_state_ = memory_->MakeObject<BatchProcessState>(
+        libcount::HLL::Create(kDefaultHLLPrecision),  // The Hyper-Log-Log estimator
+        std::make_unique<HashToGroupIdMap>());        // The Hash-to-GroupID map
+  }
+
+  // Reset state for the incoming batch.
+  batch_state_->Reset(input_batch);
+
+  // Compute the hashes.
+  ComputeHash(input_batch, key_indexes);
+
+  // Find groups.
+  FindGroups(input_batch, key_indexes);
+
+  // Creating missing groups.
+  CreateMissingGroups(input_batch, key_indexes, init_agg_fn);
+
+  // If the caller requested a partitioned aggregation, drain the main hash
+  // table out to the overflow partitions, but only if needed.
+  if (partitioned_aggregation) {
+    if (NeedsToFlushToOverflowPartitions()) {
+      FlushToOverflowPartitions();
+    }
+  } else {
+    if (NeedsToGrow()) {
+      Grow();
+    }
+  }
+
+  // Advance the aggregates for all tuples that found a match.
+  AdvanceGroups(input_batch, advance_agg_fn);
 }
 
 void AggregationHashTable::TransferMemoryAndPartitions(
@@ -425,7 +559,7 @@ void AggregationHashTable::TransferMemoryAndPartitions(
   // Okay, now we actually pull out the thread-local aggregation hash tables and
   // move both their main entry data and the overflow partitions to us.
   std::vector<AggregationHashTable *> tl_agg_ht;
-  thread_states->CollectThreadLocalStateElementsAs(tl_agg_ht, agg_ht_offset);
+  thread_states->CollectThreadLocalStateElementsAs(&tl_agg_ht, agg_ht_offset);
 
   for (auto *table : tl_agg_ht) {
     // Flush each table to ensure their hash tables are empty and their overflow
@@ -455,11 +589,14 @@ void AggregationHashTable::TransferMemoryAndPartitions(
   }
 }
 
-AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const query_state,
-                                                                    const uint32_t partition_idx) {
+AggregationHashTable *AggregationHashTable::GetOrBuildTableOverPartition(
+    void *query_state, const uint32_t partition_idx) {
   TPL_ASSERT(partition_idx < kDefaultNumPartitions, "Out-of-bounds partition access");
   TPL_ASSERT(partition_heads_[partition_idx] != nullptr,
              "Should not build aggregation table over empty partition!");
+  TPL_ASSERT(
+      merge_partition_fn_ != nullptr,
+      "Merging function was not provided! Did you forget to call TransferMemoryAndPartitions()?");
 
   // If the table has already been built, return it
   if (partition_tables_[partition_idx] != nullptr) {
@@ -481,16 +618,31 @@ AggregationHashTable *AggregationHashTable::BuildTableOverPartition(void *const 
   merge_partition_fn_(query_state, agg_table, &iter);
 
   timer.Stop();
-  LOG_DEBUG(
-      "Overflow Partition {}: estimated size = {}, actual size = {}, "
-      "build time = {:2f} ms",
-      partition_idx, estimated_size, agg_table->GetTupleCount(), timer.GetElapsed());
+  LOG_DEBUG("Overflow Partition {}: estimated size = {}, actual size = {}, build time = {:2f} ms",
+            partition_idx, estimated_size, agg_table->GetTupleCount(), timer.GetElapsed());
 
   // Set it
   partition_tables_[partition_idx] = agg_table;
 
   // Return it
   return agg_table;
+}
+
+void AggregationHashTable::ExecutePartitionedScan(void *query_state,
+                                                  AggregationHashTable::ScanPartitionFn scan_fn) {
+  TPL_ASSERT(partition_heads_ != nullptr && merge_partition_fn_ != nullptr,
+             "No overflow partitions allocated, or no merging function allocated. Did you call "
+             "TransferMemoryAndPartitions() before issuing the partitioned scan?");
+
+  // Determine the non-empty overflow partitions.
+  for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    if (partition_heads_[part_idx] != nullptr) {
+      // Get or build the table on the partition.
+      auto agg_table_partition = GetOrBuildTableOverPartition(query_state, part_idx);
+      // Scan the partition.
+      scan_fn(query_state, nullptr, agg_table_partition);
+    }
+  }
 }
 
 void AggregationHashTable::ExecuteParallelPartitionedScan(
@@ -522,13 +674,13 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
 
   tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
     // Build a hash table over the given partition
-    auto *agg_table_part = BuildTableOverPartition(query_state, part_idx);
+    auto agg_table_partition = GetOrBuildTableOverPartition(query_state, part_idx);
 
     // Get a handle to the thread-local state of the executing thread
-    auto *thread_state = thread_states->AccessCurrentThreadState();
+    auto thread_state = thread_states->AccessCurrentThreadState();
 
     // Scan the partition
-    scan_fn(query_state, thread_state, agg_table_part);
+    scan_fn(query_state, thread_state, agg_table_partition);
   });
 
   timer.Stop();
@@ -540,8 +692,87 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(
                       });
 
   double tps = (tuple_count / timer.GetElapsed()) / 1000.0;
-  LOG_INFO("Built and scanned {} tables totalling {} tuples in {:.2f} ms ({:.2f} mtps)",
-           nonempty_parts.size(), tuple_count, timer.GetElapsed(), tps);
+  LOG_DEBUG("Built and scanned {} tables totalling {} tuples in {:.2f} ms ({:.2f} mtps)",
+            nonempty_parts.size(), tuple_count, timer.GetElapsed(), tps);
+}
+
+void AggregationHashTable::BuildAllPartitions(void *query_state) {
+  TPL_ASSERT(partition_tables_ == nullptr, "Should not have built aggregation hash tables already");
+  partition_tables_ = memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
+
+  // Find non-empty partitions.
+  std::vector<uint32_t> nonempty_parts;
+  nonempty_parts.reserve(kDefaultNumPartitions);
+  for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    if (partition_heads_[part_idx] != nullptr) {
+      nonempty_parts.push_back(part_idx);
+    }
+  }
+
+  // For each valid partition, build a hash table over its contents.
+  tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
+    GetOrBuildTableOverPartition(query_state, part_idx);
+  });
+}
+
+void AggregationHashTable::Repartition() {
+  // Find all non-empty partitions.
+  std::vector<AggregationHashTable *> nonempty_tables;
+  nonempty_tables.reserve(kDefaultNumPartitions);
+  for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    if (partition_tables_[part_idx] != nullptr) {
+      nonempty_tables.push_back(partition_tables_[part_idx]);
+    }
+  }
+
+  // First, flush all hash table partitions to their own overflow buckets.
+  tbb::parallel_for_each(nonempty_tables, [&](auto table) { table->FlushToOverflowPartitions(); });
+
+  // Now, transfer each hash table partition's overflow buckets to us.
+  for (auto *table : nonempty_tables) {
+    for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+      if (table->partition_heads_[part_idx] != nullptr) {
+        table->partition_tails_[part_idx]->next = partition_heads_[part_idx];
+        partition_heads_[part_idx] = table->partition_heads_[part_idx];
+        if (partition_tails_[part_idx] == nullptr) {
+          partition_tails_[part_idx] = table->partition_tails_[part_idx];
+        }
+      }
+    }
+
+    // Move partitioned hash table memory into this main hash table.
+    owned_entries_.emplace_back(std::move(table->entries_));
+  }
+}
+
+void AggregationHashTable::MergePartitions(AggregationHashTable *target, void *query_state,
+                                           AggregationHashTable::MergePartitionFn merge_func) {
+  if (target->partition_tables_ == nullptr) {
+    target->partition_tables_ =
+        memory_->AllocateArray<AggregationHashTable *>(kDefaultNumPartitions, true);
+  }
+
+  // Find non-empty partitions.
+  std::vector<uint32_t> nonempty_parts;
+  nonempty_parts.reserve(kDefaultNumPartitions);
+  for (uint32_t part_idx = 0; part_idx < kDefaultNumPartitions; part_idx++) {
+    if (partition_heads_[part_idx] != nullptr) {
+      nonempty_parts.push_back(part_idx);
+    }
+  }
+
+  // Merge overflow data into the appropriate partitioned table in the target.
+  tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
+    // Get the partitioned hash table from the target.
+    auto agg_table_partition = target->GetOrBuildTableOverPartition(query_state, part_idx);
+
+    // Merge our overflow partition into target table.
+    AHTOverflowPartitionIterator iter(partition_heads_ + part_idx, partition_heads_ + part_idx + 1);
+    merge_func(query_state, agg_table_partition, &iter);
+  });
+
+  // Move our memory to the target.
+  target->owned_entries_.emplace_back(std::move(entries_));
 }
 
 }  // namespace tpl::sql

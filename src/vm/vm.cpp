@@ -74,13 +74,9 @@ class VM::Frame {
 // Virtual Machine
 // ---------------------------------------------------------
 
-// The maximum amount of stack to use. If the function requires more than 16K
+// The maximum amount of stack to use. If the function requires more than 4K
 // bytes, acquire space from the heap.
-static constexpr const uint32_t kMaxStackAllocSize = 1ull << 14ull;
-// A soft-maximum amount of stack to use. If a function's frame requires more
-// than 4K (the soft max), try the stack and fallback to heap. If the function
-// requires less, use the stack.
-static constexpr const uint32_t kSoftMaxStackAllocSize = 1ull << 12ull;
+static constexpr const std::size_t kMaxStackAllocSize = 1ull << 12ull;
 
 VM::VM(const Module *module) : module_(module) {}
 
@@ -97,9 +93,6 @@ void VM::InvokeFunction(const Module *module, const FunctionId func_id, const ui
   if (frame_size > kMaxStackAllocSize) {
     used_heap = true;
     raw_frame = static_cast<uint8_t *>(Memory::MallocAligned(frame_size, alignof(uint64_t)));
-  } else if (frame_size > kSoftMaxStackAllocSize) {
-    // TODO(pmenon): Check stack before allocation
-    raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   } else {
     raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   }
@@ -459,10 +452,17 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(ThreadStateContainerInit) : {
+  OP(ExecutionContextGetTLS) : {
+    auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer **>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    OpExecutionContextGetTLS(thread_state_container, exec_ctx);
+    DISPATCH_NEXT();
+  }
+
+  OP(ThreadStateContainerAccessCurrentThreadState) : {
+    auto *state = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
-    auto *memory = frame->LocalAt<tpl::sql::MemoryPool *>(READ_LOCAL_ID());
-    OpThreadStateContainerInit(thread_state_container, memory);
+    OpThreadStateContainerAccessCurrentThreadState(state, thread_state_container);
     DISPATCH_NEXT();
   }
 
@@ -492,9 +492,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(ThreadStateContainerFree) : {
+  OP(ThreadStateContainerClear) : {
     auto *thread_state_container = frame->LocalAt<sql::ThreadStateContainer *>(READ_LOCAL_ID());
-    OpThreadStateContainerFree(thread_state_container);
+    OpThreadStateContainerClear(thread_state_container);
     DISPATCH_NEXT();
   }
 
@@ -594,22 +594,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(VPIHasNextFiltered) : {
-    auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
-    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVPIHasNextFiltered(has_more, iter);
-    DISPATCH_NEXT();
-  }
-
   OP(VPIAdvance) : {
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     OpVPIAdvance(iter);
-    DISPATCH_NEXT();
-  }
-
-  OP(VPIAdvanceFiltered) : {
-    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVPIAdvanceFiltered(iter);
     DISPATCH_NEXT();
   }
 
@@ -617,13 +604,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     auto index = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
     OpVPISetPosition(iter, index);
-    DISPATCH_NEXT();
-  }
-
-  OP(VPISetPositionFiltered) : {
-    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    auto index = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
-    OpVPISetPositionFiltered(iter, index);
     DISPATCH_NEXT();
   }
 
@@ -637,12 +617,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(VPIReset) : {
     auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
     OpVPIReset(iter);
-    DISPATCH_NEXT();
-  }
-
-  OP(VPIResetFiltered) : {
-    auto *iter = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    OpVPIResetFiltered(iter);
     DISPATCH_NEXT();
   }
 
@@ -685,6 +659,8 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     OpVPISet##NAME##Null(vpi, input, col_idx);                                    \
     DISPATCH_NEXT();                                                              \
   }
+  GEN_VPI_ACCESS(Bool, sql::BoolVal)
+  GEN_VPI_ACCESS(TinyInt, sql::Integer)
   GEN_VPI_ACCESS(SmallInt, sql::Integer)
   GEN_VPI_ACCESS(Integer, sql::Integer)
   GEN_VPI_ACCESS(BigInt, sql::Integer)
@@ -694,6 +670,14 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_VPI_ACCESS(Date, sql::DateVal)
   GEN_VPI_ACCESS(String, sql::StringVal)
 #undef GEN_VPI_ACCESS
+
+  OP(VPIGetPointer) : {
+    auto result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
+    auto col_idx = READ_UIMM4();
+    OpVPIGetPointer(result, vpi, col_idx);
+    DISPATCH_NEXT();
+  }
 
   // ------------------------------------------------------
   // Hashing
@@ -710,8 +694,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 
   GEN_HASH(Int, sql::Integer)
   GEN_HASH(Real, sql::Real)
-  GEN_HASH(String, sql::StringVal)
   GEN_HASH(Date, sql::DateVal)
+  GEN_HASH(Timestamp, sql::TimestampVal)
+  GEN_HASH(String, sql::StringVal)
 #undef GEN_HASH
 
   OP(HashCombine) : {
@@ -742,12 +727,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     auto func_id = READ_FUNC_ID();
     auto fn = reinterpret_cast<sql::FilterManager::MatchFn>(module_->GetRawFunctionImpl(func_id));
     OpFilterManagerInsertFilter(filter_manager, fn);
-    DISPATCH_NEXT();
-  }
-
-  OP(FilterManagerFinalize) : {
-    auto *filter_manager = frame->LocalAt<sql::FilterManager *>(READ_LOCAL_ID());
-    OpFilterManagerFinalize(filter_manager);
     DISPATCH_NEXT();
   }
 
@@ -796,13 +775,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #undef GEN_VEC_FILTER
 
   // -------------------------------------------------------
-  // SQL Integer Comparison Operations
+  // SQL Value Creation.
   // -------------------------------------------------------
 
   OP(ForceBoolTruth) : {
     auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
-    auto *sql_int = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
-    OpForceBoolTruth(result, sql_int);
+    auto *sql_bool = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    OpForceBoolTruth(result, sql_bool);
     DISPATCH_NEXT();
   }
 
@@ -820,20 +799,6 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(IntegerToReal) : {
-    auto *real_result = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    OpIntegerToReal(real_result, input);
-    DISPATCH_NEXT();
-  }
-
-  OP(RealToInteger) : {
-    auto *int_result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
-    auto *input = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
-    OpRealToInteger(int_result, input);
-    DISPATCH_NEXT();
-  }
-
   OP(InitReal) : {
     auto *sql_real = frame->LocalAt<sql::Real *>(READ_LOCAL_ID());
     auto val = frame->LocalAt<float>(READ_LOCAL_ID());
@@ -843,9 +808,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 
   OP(InitDate) : {
     auto *sql_date = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());
-    auto year = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
-    auto month = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
-    auto day = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    auto year = frame->LocalAt<int32_t>(READ_LOCAL_ID());
+    auto month = frame->LocalAt<int32_t>(READ_LOCAL_ID());
+    auto day = frame->LocalAt<int32_t>(READ_LOCAL_ID());
     OpInitDate(sql_date, year, month, day);
     DISPATCH_NEXT();
   }
@@ -859,7 +824,67 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  // -------------------------------------------------------
+  // SQL Value Casts.
+  // -------------------------------------------------------
+
+#define GEN_CONVERT_TO_STRING(Bytecode, InputType)                             \
+  OP(Bytecode) : {                                                             \
+    auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());          \
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID()); \
+    auto *input = frame->LocalAt<InputType *>(READ_LOCAL_ID());                \
+    Op##Bytecode(result, exec_ctx, input);                                     \
+    DISPATCH_NEXT();                                                           \
+  }
+
+  // Convert something to string.
+  GEN_CONVERT_TO_STRING(IntegerToString, sql::Integer);
+  GEN_CONVERT_TO_STRING(RealToString, sql::Real);
+  GEN_CONVERT_TO_STRING(DateToString, sql::DateVal);
+  GEN_CONVERT_TO_STRING(TimestampToString, sql::TimestampVal);
+#undef GEN_CONVERT_TO_STRING
+
+#define GEN_CONVERSION(Bytecode, InputType, OutputType)           \
+  OP(Bytecode) : {                                                \
+    auto *result = frame->LocalAt<OutputType *>(READ_LOCAL_ID()); \
+    auto *input = frame->LocalAt<InputType *>(READ_LOCAL_ID());   \
+    Op##Bytecode(result, input);                                  \
+    DISPATCH_NEXT();                                              \
+  }
+
+  // Boolean to something.
+  GEN_CONVERSION(BoolToInteger, sql::BoolVal, sql::Integer);
+  // Integer to something.
+  GEN_CONVERSION(IntegerToBool, sql::Integer, sql::BoolVal);
+  GEN_CONVERSION(IntegerToReal, sql::Integer, sql::Real);
+  // Real to something.
+  GEN_CONVERSION(RealToBool, sql::Real, sql::BoolVal);
+  GEN_CONVERSION(RealToInteger, sql::Real, sql::Integer);
+  // Date to something.
+  GEN_CONVERSION(DateToTimestamp, sql::DateVal, sql::TimestampVal);
+  // Timestamp to something.
+  GEN_CONVERSION(TimestampToDate, sql::TimestampVal, sql::DateVal);
+  // String to something.
+  GEN_CONVERSION(StringToBool, sql::StringVal, sql::BoolVal);
+  GEN_CONVERSION(StringToInteger, sql::StringVal, sql::Integer);
+  GEN_CONVERSION(StringToReal, sql::StringVal, sql::Real);
+  GEN_CONVERSION(StringToDate, sql::StringVal, sql::DateVal);
+  GEN_CONVERSION(StringToTimestamp, sql::StringVal, sql::TimestampVal);
+
+#undef GEN_CONVERSION
+
+  // -------------------------------------------------------
+  // Comparisons.
+  // -------------------------------------------------------
+
 #define GEN_CMP(op)                                                  \
+  OP(op##Bool) : {                                                   \
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
+    auto *left = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());    \
+    auto *right = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());   \
+    Op##op##Bool(result, left, right);                               \
+    DISPATCH_NEXT();                                                 \
+  }                                                                  \
   OP(op##Integer) : {                                                \
     auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());  \
     auto *left = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());    \
@@ -915,14 +940,14 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #undef GEN_UNARY_MATH_OPS
 
   OP(ValIsNull) : {
-    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *val = frame->LocalAt<const sql::Val *>(READ_LOCAL_ID());
     OpValIsNull(result, val);
     DISPATCH_NEXT();
   }
 
   OP(ValIsNotNull) : {
-    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto *val = frame->LocalAt<const sql::Val *>(READ_LOCAL_ID());
     OpValIsNotNull(result, val);
     DISPATCH_NEXT();
@@ -1003,22 +1028,18 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(AggregationHashTableProcessBatch) : {
     auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    auto hash_fn_id = READ_FUNC_ID();
-    auto key_eq_fn_id = READ_FUNC_ID();
+    auto num_keys = READ_UIMM4();
+    auto key_cols = frame->LocalAt<uint32_t *>(READ_LOCAL_ID());
     auto init_agg_fn_id = READ_FUNC_ID();
     auto merge_agg_fn_id = READ_FUNC_ID();
     auto partitioned = frame->LocalAt<bool>(READ_LOCAL_ID());
 
-    auto hash_fn = reinterpret_cast<sql::AggregationHashTable::HashFn>(
-        module_->GetRawFunctionImpl(hash_fn_id));
-    auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
-        module_->GetRawFunctionImpl(key_eq_fn_id));
-    auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::InitAggFn>(
+    auto init_agg_fn = reinterpret_cast<sql::AggregationHashTable::VectorInitAggFn>(
         module_->GetRawFunctionImpl(init_agg_fn_id));
-    auto advance_agg_fn = reinterpret_cast<sql::AggregationHashTable::AdvanceAggFn>(
+    auto merge_agg_fn = reinterpret_cast<sql::AggregationHashTable::VectorAdvanceAggFn>(
         module_->GetRawFunctionImpl(merge_agg_fn_id));
-    OpAggregationHashTableProcessBatch(agg_hash_table, vpi, hash_fn, key_eq_fn, init_agg_fn,
-                                       advance_agg_fn, partitioned);
+    OpAggregationHashTableProcessBatch(agg_hash_table, vpi, num_keys, key_cols, init_agg_fn,
+                                       merge_agg_fn, partitioned);
     DISPATCH_NEXT();
   }
 
@@ -1032,6 +1053,31 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
         module_->GetRawFunctionImpl(merge_partition_fn_id));
     OpAggregationHashTableTransferPartitions(agg_hash_table, thread_state_container, agg_ht_offset,
                                              merge_partition_fn);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableBuildAllHashTablePartitions) : {
+    auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *query_state = frame->LocalAt<void *>(READ_LOCAL_ID());
+    OpAggregationHashTableBuildAllHashTablePartitions(agg_hash_table, query_state);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableRepartition) : {
+    auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    OpAggregationHashTableRepartition(agg_hash_table);
+    DISPATCH_NEXT();
+  }
+
+  OP(AggregationHashTableMergePartitions) : {
+    auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *target_agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
+    auto *query_state = frame->LocalAt<void *>(READ_LOCAL_ID());
+    auto merge_partition_fn_id = READ_FUNC_ID();
+    auto merge_partition_fn = reinterpret_cast<sql::AggregationHashTable::MergePartitionFn>(
+        module_->GetRawFunctionImpl(merge_partition_fn_id));
+    OpAggregationHashTableMergePartitions(agg_hash_table, target_agg_hash_table, query_state,
+                                          merge_partition_fn);
     DISPATCH_NEXT();
   }
 
@@ -1299,10 +1345,10 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
   OP(JoinHashTableLookup) : {
-    auto *join_hash_table = frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
-    auto *ht_entry_iter = frame->LocalAt<sql::HashTableEntryIterator *>(READ_LOCAL_ID());
+    auto ht_entry = frame->LocalAt<const sql::HashTableEntry **>(READ_LOCAL_ID());
+    auto join_hash_table = frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
     auto hash_val = frame->LocalAt<hash_t>(READ_LOCAL_ID());
-    OpJoinHashTableLookup(join_hash_table, ht_entry_iter, hash_val);
+    OpJoinHashTableLookup(ht_entry, join_hash_table, hash_val);
     DISPATCH_NEXT();
   }
 
@@ -1312,59 +1358,24 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
-  OP(JoinHashTableVectorProbeInit) : {
-    auto *jht_vector_probe = frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
-    auto *jht = frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
-    OpJoinHashTableVectorProbeInit(jht_vector_probe, jht);
+  OP(HashTableEntryGetHash) : {
+    const auto hash = frame->LocalAt<hash_t *>(READ_LOCAL_ID());
+    auto ht_entry = frame->LocalAt<const sql::HashTableEntry *>(READ_LOCAL_ID());
+    OpHashTableEntryGetHash(hash, ht_entry);
     DISPATCH_NEXT();
   }
 
-  OP(JoinHashTableVectorProbePrepare) : {
-    auto *jht_vector_probe = frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
-    auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    auto hash_fn_id = READ_FUNC_ID();
-
-    auto *hash_fn = reinterpret_cast<sql::JoinHashTableVectorProbe::HashFn>(
-        module_->GetRawFunctionImpl(hash_fn_id));
-    OpJoinHashTableVectorProbePrepare(jht_vector_probe, vpi, hash_fn);
+  OP(HashTableEntryGetRow) : {
+    const auto row = frame->LocalAt<const byte **>(READ_LOCAL_ID());
+    auto ht_entry = frame->LocalAt<const sql::HashTableEntry *>(READ_LOCAL_ID());
+    OpHashTableEntryGetRow(row, ht_entry);
     DISPATCH_NEXT();
   }
 
-  OP(JoinHashTableVectorProbeGetNextOutput) : {
-    auto **result = frame->LocalAt<const byte **>(READ_LOCAL_ID());
-    auto *jht_vector_probe = frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
-    auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID());
-    auto key_eq_fn_id = READ_FUNC_ID();
-
-    auto *key_eq_fn = reinterpret_cast<sql::JoinHashTableVectorProbe::KeyEqFn>(
-        module_->GetRawFunctionImpl(key_eq_fn_id));
-    OpJoinHashTableVectorProbeGetNextOutput(result, jht_vector_probe, vpi, key_eq_fn);
-    DISPATCH_NEXT();
-  }
-
-  OP(JoinHashTableVectorProbeFree) : {
-    auto *jht_vector_probe = frame->LocalAt<sql::JoinHashTableVectorProbe *>(READ_LOCAL_ID());
-    OpJoinHashTableVectorProbeFree(jht_vector_probe);
-    DISPATCH_NEXT();
-  }
-
-  OP(HashTableEntryIteratorHasNext) : {
-    auto *has_next = frame->LocalAt<bool *>(READ_LOCAL_ID());
-    auto *ht_entry_iter = frame->LocalAt<sql::HashTableEntryIterator *>(READ_LOCAL_ID());
-    auto key_eq_fn_id = READ_FUNC_ID();
-    auto *ctx = frame->LocalAt<void *>(READ_LOCAL_ID());
-    auto *probe_tuple = frame->LocalAt<void *>(READ_LOCAL_ID());
-
-    auto key_eq_fn = reinterpret_cast<sql::HashTableEntryIterator::KeyEq>(
-        module_->GetRawFunctionImpl(key_eq_fn_id));
-    OpHashTableEntryIteratorHasNext(has_next, ht_entry_iter, key_eq_fn, ctx, probe_tuple);
-    DISPATCH_NEXT();
-  }
-
-  OP(HashTableEntryIteratorGetRow) : {
-    const auto **row = frame->LocalAt<const byte **>(READ_LOCAL_ID());
-    auto *ht_entry_iter = frame->LocalAt<sql::HashTableEntryIterator *>(READ_LOCAL_ID());
-    OpHashTableEntryIteratorGetRow(row, ht_entry_iter);
+  OP(HashTableEntryGetNext) : {
+    const auto next = frame->LocalAt<const sql::HashTableEntry **>(READ_LOCAL_ID());
+    auto ht_entry = frame->LocalAt<const sql::HashTableEntry *>(READ_LOCAL_ID());
+    OpHashTableEntryGetNext(next, ht_entry);
     DISPATCH_NEXT();
   }
 
@@ -1455,6 +1466,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(SorterIteratorSkipRows) : {
+    auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
+    auto n = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    OpSorterIteratorSkipRows(iter, n);
+    DISPATCH_NEXT();
+  }
+
   OP(SorterIteratorGetRow) : {
     const auto **row = frame->LocalAt<const byte **>(READ_LOCAL_ID());
     auto *iter = frame->LocalAt<sql::SorterIterator *>(READ_LOCAL_ID());
@@ -1482,6 +1500,54 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(ResultBufferFinalize) : {
     auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     OpResultBufferFinalize(exec_ctx);
+    DISPATCH_NEXT();
+  }
+
+  // -------------------------------------------------------
+  // CSV Reader
+  // -------------------------------------------------------
+
+  OP(CSVReaderInit) : {
+    auto *reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    auto *file_name = module_->GetBytecodeModule()->AccessStaticLocalDataRaw(
+        LocalVar::Decode(READ_STATIC_LOCAL_ID()));
+    auto length = READ_UIMM4();
+    OpCSVReaderInit(reader, file_name, length);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderPerformInit) : {
+    auto *result = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    OpCSVReaderPerformInit(result, reader);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderAdvance) : {
+    auto *has_more = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    OpCSVReaderAdvance(has_more, reader);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderGetField) : {
+    auto reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    auto field_index = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    auto field = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    OpCSVReaderGetField(reader, field_index, field);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderGetRecordNumber) : {
+    auto record_num = frame->LocalAt<uint32_t *>(READ_LOCAL_ID());
+    auto reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    OpCSVReaderGetRecordNumber(record_num, reader);
+    DISPATCH_NEXT();
+  }
+
+  OP(CSVReaderClose) : {
+    auto *reader = frame->LocalAt<util::CSVReader *>(READ_LOCAL_ID());
+    OpCSVReaderClose(reader);
     DISPATCH_NEXT();
   }
 
@@ -1560,20 +1626,29 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // String functions
   // -------------------------------------------------------
 
-  OP(Left) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+  OP(Concat) : {
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
+    auto *left = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
+    auto *right = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
+    OpConcat(result, exec_ctx, left, right);
+    DISPATCH_NEXT();
+  }
+
+  OP(Left) : {
+    auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpLeft(exec_ctx, result, input, n);
+    OpLeft(result, exec_ctx, input, n);
     DISPATCH_NEXT();
   }
 
   OP(Length) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpLength(exec_ctx, result, input);
+    OpLength(result, exec_ctx, input);
     DISPATCH_NEXT();
   }
 
@@ -1586,111 +1661,122 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
   OP(Lower) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpLower(exec_ctx, result, input);
+    OpLower(result, exec_ctx, input);
     DISPATCH_NEXT();
   }
 
   OP(LPad) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpLPad(exec_ctx, result, input, n, chars);
+    OpLPad(result, exec_ctx, input, n, chars);
     DISPATCH_NEXT();
   }
 
   OP(LTrim) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpLTrim(exec_ctx, result, input, chars);
+    OpLTrim(result, exec_ctx, input, chars);
     DISPATCH_NEXT();
   }
 
   OP(Repeat) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpRepeat(exec_ctx, result, input, n);
+    OpRepeat(result, exec_ctx, input, n);
     DISPATCH_NEXT();
   }
 
   OP(Reverse) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpReverse(exec_ctx, result, input);
+    OpReverse(result, exec_ctx, input);
     DISPATCH_NEXT();
   }
 
   OP(Right) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpRight(exec_ctx, result, input, n);
+    OpRight(result, exec_ctx, input, n);
     DISPATCH_NEXT();
   }
 
   OP(RPad) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *n = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpRPad(exec_ctx, result, input, n, chars);
+    OpRPad(result, exec_ctx, input, n, chars);
     DISPATCH_NEXT();
   }
 
   OP(RTrim) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *input = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpRTrim(exec_ctx, result, input, chars);
+    OpRTrim(result, exec_ctx, input, chars);
     DISPATCH_NEXT();
   }
 
   OP(SplitPart) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *str = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *delim = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *field = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpSplitPart(exec_ctx, result, str, delim, field);
+    OpSplitPart(result, exec_ctx, str, delim, field);
     DISPATCH_NEXT();
   }
 
   OP(Substring) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *str = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *pos = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
     auto *len = frame->LocalAt<const sql::Integer *>(READ_LOCAL_ID());
-    OpSubstring(exec_ctx, result, str, pos, len);
+    OpSubstring(result, exec_ctx, str, pos, len);
     DISPATCH_NEXT();
   }
 
   OP(Trim) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *str = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
     auto *chars = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpTrim(exec_ctx, result, str, chars);
+    OpTrim(result, exec_ctx, str, chars);
     DISPATCH_NEXT();
   }
 
   OP(Upper) : {
-    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
     auto *str = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpUpper(exec_ctx, result, str);
+    OpUpper(result, exec_ctx, str);
+    DISPATCH_NEXT();
+  }
+
+  // -------------------------------------------------------
+  // Date functions
+  // -------------------------------------------------------
+
+  OP(ExtractYear) : {
+    auto *result = frame->LocalAt<sql::Integer *>(READ_LOCAL_ID());
+    auto *input = frame->LocalAt<sql::DateVal *>(READ_LOCAL_ID());
+    OpExtractYear(result, input);
     DISPATCH_NEXT();
   }
 
@@ -1714,9 +1800,6 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
   if (frame_size > kMaxStackAllocSize) {
     used_heap = true;
     raw_frame = static_cast<uint8_t *>(Memory::MallocAligned(frame_size, alignof(uint64_t)));
-  } else if (frame_size > kSoftMaxStackAllocSize) {
-    // TODO(pmenon): Check stack before allocation
-    raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   } else {
     raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   }

@@ -18,16 +18,20 @@ TypeId BooleanType::GetPrimitiveTypeId() const { return TypeId::Boolean; }
 
 std::string BooleanType::GetName() const {
   std::string str = "Boolean";
-  if (nullable()) {
+  if (IsNullable()) {
     str.append("[NULLABLE]");
   }
   return str;
 }
 
+bool BooleanType::IsIntegral() const { return false; }
+
+bool BooleanType::IsFloatingPoint() const { return false; }
+
 bool BooleanType::IsArithmetic() const { return false; }
 
 bool BooleanType::Equals(const SqlType &that) const {
-  return that.Is<BooleanType>() && nullable() == that.nullable();
+  return that.Is<BooleanType>() && IsNullable() == that.IsNullable();
 }
 
 const BooleanType &BooleanType::InstanceNonNullable() {
@@ -48,14 +52,14 @@ TinyIntType::TinyIntType(bool nullable) : NumberBaseType(SqlTypeId::TinyInt, nul
 
 std::string TinyIntType::GetName() const {
   std::string str = "TinyInt";
-  if (nullable()) {
+  if (IsNullable()) {
     str.append("[NULLABLE]");
   }
   return str;
 }
 
 bool TinyIntType::Equals(const SqlType &that) const {
-  return that.Is<TinyIntType>() && nullable() == that.nullable();
+  return that.Is<TinyIntType>() && IsNullable() == that.IsNullable();
 }
 
 const TinyIntType &TinyIntType::InstanceNonNullable() {
@@ -76,14 +80,14 @@ SmallIntType::SmallIntType(bool nullable) : NumberBaseType(SqlTypeId::SmallInt, 
 
 std::string SmallIntType::GetName() const {
   std::string str = "SmallInt";
-  if (nullable()) {
+  if (IsNullable()) {
     str.append("[NULLABLE]");
   }
   return str;
 }
 
 bool SmallIntType::Equals(const SqlType &that) const {
-  return that.Is<SmallIntType>() && nullable() == that.nullable();
+  return that.Is<SmallIntType>() && IsNullable() == that.IsNullable();
 }
 
 const SmallIntType &SmallIntType::InstanceNonNullable() {
@@ -104,14 +108,14 @@ IntegerType::IntegerType(bool nullable) : NumberBaseType(SqlTypeId::Integer, nul
 
 std::string IntegerType::GetName() const {
   std::string str = "Integer";
-  if (nullable()) {
+  if (IsNullable()) {
     str.append("[NULLABLE]");
   }
   return str;
 }
 
 bool IntegerType::Equals(const SqlType &that) const {
-  return that.Is<IntegerType>() && nullable() == that.nullable();
+  return that.Is<IntegerType>() && IsNullable() == that.IsNullable();
 }
 
 const IntegerType &IntegerType::InstanceNonNullable() {
@@ -132,14 +136,14 @@ BigIntType::BigIntType(bool nullable) : NumberBaseType(SqlTypeId::BigInt, nullab
 
 std::string BigIntType::GetName() const {
   std::string str = "BigInt";
-  if (nullable()) {
+  if (IsNullable()) {
     str.append("[NULLABLE]");
   }
   return str;
 }
 
 bool BigIntType::Equals(const SqlType &that) const {
-  return that.Is<BigIntType>() && nullable() == that.nullable();
+  return that.Is<BigIntType>() && IsNullable() == that.IsNullable();
 }
 
 const BigIntType &BigIntType::InstanceNonNullable() {
@@ -160,14 +164,14 @@ RealType::RealType(bool nullable) : NumberBaseType(SqlTypeId::Real, nullable) {}
 
 std::string RealType::GetName() const {
   std::string str = "Real";
-  if (nullable()) {
+  if (IsNullable()) {
     str.append("[NULLABLE]");
   }
   return str;
 }
 
 bool RealType::Equals(const SqlType &that) const {
-  return that.Is<RealType>() && nullable() == that.nullable();
+  return that.Is<RealType>() && IsNullable() == that.IsNullable();
 }
 
 const RealType &RealType::InstanceNonNullable() {
@@ -188,14 +192,14 @@ DoubleType::DoubleType(bool nullable) : NumberBaseType(SqlTypeId::Double, nullab
 
 std::string DoubleType::GetName() const {
   std::string str = "Double";
-  if (nullable()) {
+  if (IsNullable()) {
     str.append("[NULLABLE]");
   }
   return str;
 }
 
 bool DoubleType::Equals(const SqlType &that) const {
-  return that.Is<DoubleType>() && nullable() == that.nullable();
+  return that.Is<DoubleType>() && IsNullable() == that.IsNullable();
 }
 
 const DoubleType &DoubleType::InstanceNonNullable() {
@@ -219,7 +223,7 @@ TypeId DecimalType::GetPrimitiveTypeId() const { return TypeId::BigInt; }
 
 std::string DecimalType::GetName() const {
   std::string str = "Decimal[" + std::to_string(precision()) + "," + std::to_string(scale());
-  if (nullable()) {
+  if (IsNullable()) {
     str.append(",NULLABLE");
   }
   str.append("]");
@@ -229,10 +233,14 @@ std::string DecimalType::GetName() const {
 bool DecimalType::Equals(const SqlType &that) const {
   if (auto *other_decimal = that.SafeAs<DecimalType>()) {
     return precision() == other_decimal->precision() && scale() == other_decimal->scale() &&
-           nullable() == that.nullable();
+           IsNullable() == that.IsNullable();
   }
   return false;
 }
+
+bool DecimalType::IsIntegral() const { return false; }
+
+bool DecimalType::IsFloatingPoint() const { return true; }
 
 bool DecimalType::IsArithmetic() const { return true; }
 
@@ -280,17 +288,47 @@ TypeId DateType::GetPrimitiveTypeId() const { return TypeId::Date; }
 
 std::string DateType::GetName() const {
   std::string str = "Date";
-  if (nullable()) {
+  if (IsNullable()) {
     str.append("[NULLABLE]");
   }
   return str;
 }
 
 bool DateType::Equals(const SqlType &that) const {
-  return that.Is<DateType>() && nullable() == that.nullable();
+  return that.Is<DateType>() && IsNullable() == that.IsNullable();
 }
 
 DateType::DateType(bool nullable) : SqlType(SqlTypeId::Date, nullable) {}
+
+// ---------------------------------------------------------
+// Timestamp
+// ---------------------------------------------------------
+
+const TimestampType &TimestampType::InstanceNonNullable() {
+  static TimestampType kNonNullableTimestamp(false);
+  return kNonNullableTimestamp;
+}
+
+const TimestampType &TimestampType::InstanceNullable() {
+  static TimestampType kNullableTimestamp(true);
+  return kNullableTimestamp;
+}
+
+TypeId TimestampType::GetPrimitiveTypeId() const { return TypeId::Timestamp; }
+
+std::string TimestampType::GetName() const {
+  std::string str = "Timestamp";
+  if (IsNullable()) {
+    str.append("[NULLABLE]");
+  }
+  return str;
+}
+
+bool TimestampType::Equals(const SqlType &that) const {
+  return that.Is<TimestampType>() && IsNullable() && that.IsNullable();
+}
+
+TimestampType::TimestampType(bool nullable) : SqlType(SqlTypeId::Timestamp, nullable) {}
 
 // ---------------------------------------------------------
 // Fixed-length strings
@@ -318,7 +356,7 @@ TypeId CharType::GetPrimitiveTypeId() const { return TypeId::Varchar; }
 
 std::string CharType::GetName() const {
   std::string str = "Char[" + std::to_string(length());
-  if (nullable()) {
+  if (IsNullable()) {
     str.append(",NULLABLE");
   }
   str.append("]");
@@ -327,7 +365,7 @@ std::string CharType::GetName() const {
 
 bool CharType::Equals(const SqlType &that) const {
   if (auto *other_char = that.SafeAs<CharType>()) {
-    return length() == other_char->length() && nullable() == other_char->nullable();
+    return length() == other_char->length() && IsNullable() == other_char->IsNullable();
   }
   return false;
 }
@@ -365,7 +403,7 @@ TypeId VarcharType::GetPrimitiveTypeId() const { return TypeId::Varchar; }
 
 std::string VarcharType::GetName() const {
   std::string str = "Varchar[" + std::to_string(max_length());
-  if (nullable()) {
+  if (IsNullable()) {
     str.append(",NULLABLE");
   }
   str.append("]");
@@ -374,7 +412,8 @@ std::string VarcharType::GetName() const {
 
 bool VarcharType::Equals(const SqlType &that) const {
   if (auto *other_varchar = that.SafeAs<VarcharType>()) {
-    return max_length() == other_varchar->max_length() && nullable() == other_varchar->nullable();
+    return max_length() == other_varchar->max_length() &&
+           IsNullable() == other_varchar->IsNullable();
   }
   return false;
 }

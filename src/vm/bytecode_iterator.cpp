@@ -41,7 +41,9 @@ int64_t BytecodeIterator::GetImmediateIntegerOperand(uint32_t operand_index) con
       return *reinterpret_cast<const int32_t *>(operand_address);
     case OperandType::Imm8:
       return *reinterpret_cast<const int64_t *>(operand_address);
-    default: { UNREACHABLE("Impossible!"); }
+    default: {
+      UNREACHABLE("Impossible!");
+    }
   }
 }
 
@@ -76,7 +78,9 @@ uint64_t BytecodeIterator::GetUnsignedImmediateIntegerOperand(uint32_t operand_i
       return *reinterpret_cast<const uint16_t *>(operand_address);
     case OperandType::UImm4:
       return *reinterpret_cast<const uint32_t *>(operand_address);
-    default: { UNREACHABLE("Impossible!"); }
+    default: {
+      UNREACHABLE("Impossible!");
+    }
   }
 }
 

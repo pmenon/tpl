@@ -7,8 +7,10 @@
 #include <string>
 #include <utility>
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
-#include "sql/vector_operations/vector_operators.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "util/bit_util.h"
 
 namespace tpl::sql {
@@ -103,14 +105,14 @@ GenericValue Vector::GetValue(const uint64_t index) const {
           reinterpret_cast<const char *>(varlen_str.GetContent()), varlen_str.GetSize()));
     }
     default: {
-      throw NotImplementedException("Cannot read vector value of type '{}'", TypeIdToString(type_));
+      throw NotImplementedException(
+          fmt::format("cannot read vector value of type '{}'", TypeIdToString(type_)));
     }
   }
 }
 
 void Vector::Resize(uint32_t size) {
-  TPL_ASSERT(size <= kDefaultVectorSize, "Size too large");
-
+  TPL_ASSERT(size <= GetCapacity(), "New size exceeds vector capacity.");
   tid_list_ = nullptr;
   count_ = size;
   num_elements_ = size;
@@ -181,8 +183,8 @@ void Vector::SetValue(const uint64_t index, const GenericValue &val) {
       break;
     }
     default: {
-      throw NotImplementedException("Cannot write vector value of type '{}'",
-                                    TypeIdToString(type_));
+      throw NotImplementedException(
+          fmt::format("cannot write vector value of type '{}'", TypeIdToString(type_)));
     }
   }
 }
@@ -250,7 +252,8 @@ void Vector::Reference(GenericValue *value) {
       break;
     }
     default: {
-      throw NotImplementedException("Cannot reference vector of type '{}'", TypeIdToString(type_));
+      throw NotImplementedException(
+          fmt::format("Cannot reference vector of type '{}'", TypeIdToString(type_)));
     }
   }
 }
@@ -273,7 +276,7 @@ void Vector::Reference(byte *data, const uint32_t *null_mask, uint64_t size) {
   }
 }
 
-void Vector::Reference(Vector *other) {
+void Vector::Reference(const Vector *other) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   type_ = other->type_;
   count_ = other->count_;
@@ -281,6 +284,37 @@ void Vector::Reference(Vector *other) {
   data_ = other->data_;
   tid_list_ = other->tid_list_;
   null_mask_ = other->null_mask_;
+}
+
+void Vector::Pack() {
+  if (tid_list_ == nullptr) {
+    return;
+  }
+
+  Vector copy(GetTypeId(), true, false);
+  CopyTo(&copy);
+  copy.MoveTo(this);
+}
+
+void Vector::GetNonNullSelections(TupleIdList *non_null_tids, TupleIdList *null_tids) const {
+  non_null_tids->Resize(GetSize());
+  null_tids->Resize(GetSize());
+
+  // Copy NULLs directly
+  null_tids->GetMutableBits()->Copy(null_mask_);
+
+  // Copy selections
+  if (tid_list_ != nullptr) {
+    non_null_tids->AssignFrom(*tid_list_);
+  } else {
+    non_null_tids->AddAll();
+  }
+
+  // Ensure NULL list only refers to selected TIDs
+  null_tids->GetMutableBits()->Intersect(*non_null_tids->GetMutableBits());
+
+  // Remove NULLs from filtered TIDs
+  non_null_tids->GetMutableBits()->Difference(null_mask_);
 }
 
 void Vector::MoveTo(Vector *other) {
@@ -298,6 +332,29 @@ void Vector::MoveTo(Vector *other) {
   Destroy();
 }
 
+void Vector::Clone(Vector *target) {
+  TPL_ASSERT(target->owned_data_ != nullptr, "Cannot clone into a reference vector");
+  target->Resize(GetSize());
+  target->type_ = type_;
+  target->count_ = count_;
+  target->num_elements_ = num_elements_;
+  target->tid_list_ = tid_list_;
+  target->null_mask_.Copy(null_mask_);
+
+  // Clone data.
+  if (IsTypeFixedSize(type_)) {
+    std::memcpy(target->GetData(), GetData(), GetTypeIdSize(type_) * num_elements_);
+  } else {
+    auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
+    auto target_data = reinterpret_cast<VarlenEntry *>(target->data_);
+    VectorOps::Exec(*this, [&](uint64_t i, uint64_t k) {
+      if (!null_mask_[i]) {
+        target_data[i] = target->varlen_heap_.AddVarlen(src_data[i]);
+      }
+    });
+  }
+}
+
 void Vector::CopyTo(Vector *other, uint64_t offset) {
   TPL_ASSERT(type_ == other->type_,
              "Copying to vector of different type. Did you mean to cast instead?");
@@ -313,15 +370,16 @@ void Vector::CopyTo(Vector *other, uint64_t offset) {
     other->Resize(count_ - offset);
     auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
     auto target_data = reinterpret_cast<VarlenEntry *>(other->data_);
-    VectorOps::Exec(*this,
-                    [&](uint64_t i, uint64_t k) {
-                      if (null_mask_[i]) {
-                        other->null_mask_.Set(k - offset);
-                      } else {
-                        target_data[k - offset] = other->varlen_heap_.AddVarlen(src_data[i]);
-                      }
-                    },
-                    offset);
+    VectorOps::Exec(
+        *this,
+        [&](uint64_t i, uint64_t k) {
+          if (null_mask_[i]) {
+            other->null_mask_.Set(k - offset);
+          } else {
+            target_data[k - offset] = other->varlen_heap_.AddVarlen(src_data[i]);
+          }
+        },
+        offset);
   }
 }
 

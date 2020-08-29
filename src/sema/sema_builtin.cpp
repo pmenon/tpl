@@ -36,7 +36,7 @@ bool AreAllFunctions(const ArgTypes... type) {
 
 }  // namespace
 
-void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
   // Handle this builtin because it's API is different than the other builtins; we expect three
   // 32-bit integer arguments.
   if (builtin == ast::Builtin::DateToSql) {
@@ -44,15 +44,15 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
       return;
     }
     const auto int32_kind = ast::BuiltinType::Int32;
-    if (!call->arguments()[0]->type()->IsSpecificBuiltin(int32_kind) ||
-        !call->arguments()[1]->type()->IsSpecificBuiltin(int32_kind) ||
-        !call->arguments()[2]->type()->IsSpecificBuiltin(int32_kind)) {
-      error_reporter()->Report(call->position(), ErrorMessages::kInvalidCastToSqlDate,
-                               call->arguments()[0]->type(), call->arguments()[1]->type(),
-                               call->arguments()[2]->type());
+    if (!call->Arguments()[0]->GetType()->IsSpecificBuiltin(int32_kind) ||
+        !call->Arguments()[1]->GetType()->IsSpecificBuiltin(int32_kind) ||
+        !call->Arguments()[2]->GetType()->IsSpecificBuiltin(int32_kind)) {
+      error_reporter()->Report(call->Position(), ErrorMessages::kInvalidCastToSqlDate,
+                               call->Arguments()[0]->GetType(), call->Arguments()[1]->GetType(),
+                               call->Arguments()[2]->GetType());
     }
     // All good. Set return type as SQL Date.
-    call->set_type(GetBuiltinType(ast::BuiltinType::Date));
+    call->SetType(GetBuiltinType(ast::BuiltinType::Date));
     return;
   }
 
@@ -60,14 +60,14 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
     return;
   }
 
-  auto input_type = call->arguments()[0]->type();
+  auto input_type = call->Arguments()[0]->GetType();
   switch (builtin) {
     case ast::Builtin::BoolToSql: {
       if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Bool)) {
         ReportIncorrectCallArg(call, 0, "boolean literal");
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Boolean));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Boolean));
       break;
     }
     case ast::Builtin::IntToSql: {
@@ -75,7 +75,7 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
         ReportIncorrectCallArg(call, 0, "integer literal");
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Integer));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
       break;
     }
     case ast::Builtin::FloatToSql: {
@@ -83,28 +83,64 @@ void Sema::CheckBuiltinSqlConversionCall(ast::CallExpr *call, ast::Builtin built
         ReportIncorrectCallArg(call, 0, "floating point number literal");
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Real));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Real));
       break;
     }
     case ast::Builtin::StringToSql: {
-      if (!input_type->IsStringType() || !call->arguments()[0]->IsLitExpr()) {
+      if (!input_type->IsStringType() || !call->Arguments()[0]->IsLitExpr()) {
         ReportIncorrectCallArg(call, 0, "string literal");
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::StringVal));
+      call->SetType(GetBuiltinType(ast::BuiltinType::StringVal));
       break;
     }
     case ast::Builtin::SqlToBool: {
       if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
-        error_reporter()->Report(call->position(), ErrorMessages::kInvalidSqlCastToBool,
+        error_reporter()->Report(call->Position(), ErrorMessages::kInvalidSqlCastToBool,
                                  input_type);
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
-    default: { UNREACHABLE("Impossible SQL conversion call"); }
+
+#define CONVERSION_CASE(Op, InputType, OutputType)                     \
+  case ast::Builtin::Op: {                                             \
+    if (!input_type->IsSpecificBuiltin(ast::BuiltinType::InputType)) { \
+      ReportIncorrectCallArg(call, 0, "SQL " #InputType);              \
+      return;                                                          \
+    }                                                                  \
+    call->SetType(GetBuiltinType(ast::BuiltinType::OutputType));       \
+    break;                                                             \
+  }
+      CONVERSION_CASE(ConvertBoolToInteger, Boolean, Integer);
+      CONVERSION_CASE(ConvertIntegerToReal, Integer, Real);
+      CONVERSION_CASE(ConvertDateToTimestamp, Date, Timestamp);
+      CONVERSION_CASE(ConvertStringToBool, StringVal, Boolean);
+      CONVERSION_CASE(ConvertStringToInt, StringVal, Integer);
+      CONVERSION_CASE(ConvertStringToReal, StringVal, Real);
+      CONVERSION_CASE(ConvertStringToDate, StringVal, Date);
+      CONVERSION_CASE(ConvertStringToTime, StringVal, Timestamp);
+#undef CONVERSION_CASE
+
+    default: {
+      UNREACHABLE("Impossible SQL conversion call");
+    }
   }
 }
+
+void Sema::CheckNullValueCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+  if (!CheckArgCount(call, 1)) {
+    return;
+  }
+  // Input must be a SQL value.
+  if (auto type = call->Arguments()[0]->GetType(); !type->IsSqlValueType()) {
+    ErrorReporter().Report(call->Position(), ErrorMessages::kIsValNullExpectsSqlValue, type);
+    return;
+  }
+  // Returns a primitive boolean.
+  call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+}
+
 void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
   if (!CheckArgCount(call, 2)) {
     return;
@@ -112,17 +148,38 @@ void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
 
   // Both arguments must be SQL strings
   auto str_kind = ast::BuiltinType::StringVal;
-  if (!call->arguments()[0]->type()->IsSpecificBuiltin(str_kind)) {
+  if (!call->Arguments()[0]->GetType()->IsSpecificBuiltin(str_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(str_kind));
     return;
   }
-  if (!call->arguments()[1]->type()->IsSpecificBuiltin(str_kind)) {
+  if (!call->Arguments()[1]->GetType()->IsSpecificBuiltin(str_kind)) {
     ReportIncorrectCallArg(call, 1, GetBuiltinType(str_kind));
     return;
   }
 
   // Returns a SQL boolean
-  call->set_type(GetBuiltinType(ast::BuiltinType::Boolean));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Boolean));
+}
+
+void Sema::CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+  // First arg must be a date.
+  auto date_kind = ast::BuiltinType::Date;
+  if (!call->Arguments()[0]->GetType()->IsSpecificBuiltin(date_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(date_kind));
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::ExtractYear:
+      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+      return;
+    default:
+      // TODO(Amadou): Support other date function.
+      UNREACHABLE("Impossible date function");
+  }
 }
 
 void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -130,10 +187,10 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
 
   const auto agg_ht_kind = ast::BuiltinType::AggregationHashTable;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), agg_ht_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[0]->GetType(), agg_ht_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(agg_ht_kind)->PointerTo());
     return;
   }
@@ -145,18 +202,18 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
       }
       // Second argument is a memory pool pointer
       const auto mem_pool_kind = ast::BuiltinType::MemoryPool;
-      if (!IsPointerToSpecificBuiltin(args[1]->type(), mem_pool_kind)) {
+      if (!IsPointerToSpecificBuiltin(args[1]->GetType(), mem_pool_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(mem_pool_kind)->PointerTo());
         return;
       }
       // Third argument is the payload size, a 32-bit value
       const auto uint_kind = ast::BuiltinType::Uint32;
-      if (!args[2]->type()->IsSpecificBuiltin(uint_kind)) {
+      if (!args[2]->GetType()->IsSpecificBuiltin(uint_kind)) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(uint_kind));
         return;
       }
       // Nil return
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggHashTableInsert: {
@@ -165,18 +222,18 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
       }
       // Second argument is the hash value
       const auto hash_val_kind = ast::BuiltinType::Uint64;
-      if (!args[1]->type()->IsSpecificBuiltin(hash_val_kind)) {
+      if (!args[1]->GetType()->IsSpecificBuiltin(hash_val_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(hash_val_kind));
         return;
       }
       // If there's a third argument indicating regular or partitioned insertion, it must be a bool
-      if (args.size() > 2 &&
-          (!args[2]->IsLitExpr() || !args[2]->type()->IsSpecificBuiltin(ast::BuiltinType::Bool))) {
+      if (args.size() > 2 && (!args[2]->IsLitExpr() ||
+                              !args[2]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Bool))) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Bool));
         return;
       }
       // Return a byte pointer
-      call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
     case ast::Builtin::AggHashTableLinkEntry: {
@@ -185,12 +242,12 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
       }
       // Second argument is a HashTableEntry*
       const auto entry_kind = ast::BuiltinType::HashTableEntry;
-      if (!IsPointerToSpecificBuiltin(args[1]->type(), entry_kind)) {
+      if (!IsPointerToSpecificBuiltin(args[1]->GetType(), entry_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(entry_kind)->PointerTo());
         return;
       }
       // Return nothing
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggHashTableLookup: {
@@ -199,41 +256,46 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
       }
       // Second argument is the hash value
       const auto hash_val_kind = ast::BuiltinType::Uint64;
-      if (!args[1]->type()->IsSpecificBuiltin(hash_val_kind)) {
+      if (!args[1]->GetType()->IsSpecificBuiltin(hash_val_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(hash_val_kind));
         return;
       }
       // Third argument is the key equality function
-      if (!args[2]->type()->IsFunctionType()) {
+      if (!args[2]->GetType()->IsFunctionType()) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(hash_val_kind));
         return;
       }
       // Fourth argument is the probe tuple, but any pointer will do
-      call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
     case ast::Builtin::AggHashTableProcessBatch: {
-      if (!CheckArgCount(call, 7)) {
+      if (!CheckArgCount(call, 6)) {
         return;
       }
-      // Second argument is the VPIs
-      const auto vpi_kind = ast::BuiltinType::Uint64;
-      if (!args[1]->type()->IsPointerType() ||
-          IsPointerToSpecificBuiltin(args[1]->type()->GetPointeeType(), vpi_kind)) {
+      // Second argument is the input VPI.
+      const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
+      if (!IsPointerToSpecificBuiltin(args[1]->GetType(), vpi_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(vpi_kind)->PointerTo());
         return;
       }
-      // Third, fourth, fifth, and sixth are all functions
-      if (!AreAllFunctions(args[2]->type(), args[3]->type(), args[4]->type(), args[5]->type())) {
-        ReportIncorrectCallArg(call, 2, "function");
+      // Third argument is an array of key columns.
+      if (auto array_type = args[2]->GetType()->SafeAs<ast::ArrayType>();
+          array_type == nullptr || !array_type->HasKnownLength()) {
+        ReportIncorrectCallArg(call, 2, "array with known length");
         return;
       }
-      // Last arg must be a boolean
-      if (!args[6]->type()->IsBoolType()) {
-        ReportIncorrectCallArg(call, 6, GetBuiltinType(ast::BuiltinType::Bool));
+      // Fourth and fifth argument is the initialization and advance functions.
+      if (!AreAllFunctions(args[3]->GetType(), args[4]->GetType())) {
+        ReportIncorrectCallArg(call, 3, "function");
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      // Last arg must be a boolean.
+      if (!args[5]->GetType()->IsBoolType()) {
+        ReportIncorrectCallArg(call, 5, GetBuiltinType(ast::BuiltinType::Bool));
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggHashTableMovePartitions: {
@@ -242,23 +304,23 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
       }
       // Second argument is the thread state container pointer
       const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
-      if (!IsPointerToSpecificBuiltin(args[1]->type(), tls_kind)) {
+      if (!IsPointerToSpecificBuiltin(args[1]->GetType(), tls_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(tls_kind)->PointerTo());
         return;
       }
       // Third argument is the offset of the hash table in thread local state
       const auto uint32_kind = ast::BuiltinType::Uint32;
-      if (!args[2]->type()->IsSpecificBuiltin(uint32_kind)) {
+      if (!args[2]->GetType()->IsSpecificBuiltin(uint32_kind)) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(uint32_kind));
         return;
       }
       // Fourth argument is the merging function
-      if (!args[3]->type()->IsFunctionType()) {
+      if (!args[3]->GetType()->IsFunctionType()) {
         ReportIncorrectCallArg(call, 3, GetBuiltinType(uint32_kind));
         return;
       }
 
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggHashTableParallelPartitionedScan: {
@@ -266,30 +328,32 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
         return;
       }
       // Second argument is an opaque context pointer
-      if (!args[1]->type()->IsPointerType()) {
+      if (!args[1]->GetType()->IsPointerType()) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(agg_ht_kind));
         return;
       }
       // Third argument is the thread state container pointer
       const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
-      if (!IsPointerToSpecificBuiltin(args[2]->type(), tls_kind)) {
+      if (!IsPointerToSpecificBuiltin(args[2]->GetType(), tls_kind)) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(tls_kind)->PointerTo());
         return;
       }
       // Fourth argument is the scanning function
-      if (!args[3]->type()->IsFunctionType()) {
+      if (!args[3]->GetType()->IsFunctionType()) {
         ReportIncorrectCallArg(call, 3, GetBuiltinType(tls_kind));
         return;
       }
 
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggHashTableFree: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
-    default: { UNREACHABLE("Impossible aggregation hash table call"); }
+    default: {
+      UNREACHABLE("Impossible aggregation hash table call");
+    }
   }
 }
 
@@ -298,10 +362,10 @@ void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin bu
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
 
   const auto agg_ht_iter_kind = ast::BuiltinType::AHTIterator;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), agg_ht_iter_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[0]->GetType(), agg_ht_iter_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(agg_ht_iter_kind)->PointerTo());
     return;
   }
@@ -312,25 +376,25 @@ void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin bu
         return;
       }
       const auto agg_ht_kind = ast::BuiltinType::AggregationHashTable;
-      if (!IsPointerToSpecificBuiltin(args[1]->type(), agg_ht_kind)) {
+      if (!IsPointerToSpecificBuiltin(args[1]->GetType(), agg_ht_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(agg_ht_kind)->PointerTo());
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggHashTableIterHasNext: {
       if (!CheckArgCount(call, 1)) {
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
     case ast::Builtin::AggHashTableIterNext: {
       if (!CheckArgCount(call, 1)) {
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggHashTableIterGetRow: {
@@ -338,17 +402,19 @@ void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin bu
         return;
       }
       const auto byte_kind = ast::BuiltinType::Uint8;
-      call->set_type(GetBuiltinType(byte_kind)->PointerTo());
+      call->SetType(GetBuiltinType(byte_kind)->PointerTo());
       break;
     }
     case ast::Builtin::AggHashTableIterClose: {
       if (!CheckArgCount(call, 1)) {
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
-    default: { UNREACHABLE("Impossible aggregation hash table iterator call"); }
+    default: {
+      UNREACHABLE("Impossible aggregation hash table iterator call");
+    }
   }
 }
 
@@ -357,54 +423,56 @@ void Sema::CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
 
   const auto part_iter_kind = ast::BuiltinType::AHTOverflowPartitionIterator;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), part_iter_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[0]->GetType(), part_iter_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(part_iter_kind)->PointerTo());
     return;
   }
 
   switch (builtin) {
     case ast::Builtin::AggPartIterHasNext: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
     case ast::Builtin::AggPartIterNext: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggPartIterGetRowEntry: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::HashTableEntry)->PointerTo());
+      call->SetType(GetBuiltinType(ast::BuiltinType::HashTableEntry)->PointerTo());
       break;
     }
     case ast::Builtin::AggPartIterGetRow: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
     case ast::Builtin::AggPartIterGetHash: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Uint64));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint64));
       break;
     }
-    default: { UNREACHABLE("Impossible aggregation partition iterator call"); }
+    default: {
+      UNREACHABLE("Impossible aggregation partition iterator call");
+    }
   }
 }
 
 void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin) {
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
   switch (builtin) {
     case ast::Builtin::AggInit:
     case ast::Builtin::AggReset: {
       // All arguments to @aggInit() or @aggReset() must be SQL aggregators
-      for (uint32_t idx = 0; idx < call->num_args(); idx++) {
-        if (!IsPointerToAggregatorValue(args[idx]->type())) {
-          error_reporter()->Report(call->position(), ErrorMessages::kNotASQLAggregate,
-                                   args[idx]->type());
+      for (uint32_t idx = 0; idx < call->NumArgs(); idx++) {
+        if (!IsPointerToAggregatorValue(args[idx]->GetType())) {
+          error_reporter()->Report(call->Position(), ErrorMessages::kNotASQLAggregate,
+                                   args[idx]->GetType());
           return;
         }
       }
       // Init returns nil
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggAdvance: {
@@ -412,18 +480,18 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin)
         return;
       }
       // First argument to @aggAdvance() must be a SQL aggregator, second must be a SQL value
-      if (!IsPointerToAggregatorValue(args[0]->type())) {
-        error_reporter()->Report(call->position(), ErrorMessages::kNotASQLAggregate,
-                                 args[0]->type());
+      if (!IsPointerToAggregatorValue(args[0]->GetType())) {
+        error_reporter()->Report(call->Position(), ErrorMessages::kNotASQLAggregate,
+                                 args[0]->GetType());
         return;
       }
-      if (!IsPointerToSQLValue(args[1]->type())) {
-        error_reporter()->Report(call->position(), ErrorMessages::kNotASQLAggregate,
-                                 args[1]->type());
+      if (!IsPointerToSQLValue(args[1]->GetType())) {
+        error_reporter()->Report(call->Position(), ErrorMessages::kNotASQLAggregate,
+                                 args[1]->GetType());
         return;
       }
       // Advance returns nil
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggMerge: {
@@ -431,15 +499,15 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin)
         return;
       }
       // Both arguments must be SQL aggregators
-      bool arg0_is_agg = IsPointerToAggregatorValue(args[0]->type());
-      bool arg1_is_agg = IsPointerToAggregatorValue(args[1]->type());
+      bool arg0_is_agg = IsPointerToAggregatorValue(args[0]->GetType());
+      bool arg1_is_agg = IsPointerToAggregatorValue(args[1]->GetType());
       if (!arg0_is_agg || !arg1_is_agg) {
-        error_reporter()->Report(call->position(), ErrorMessages::kNotASQLAggregate,
-                                 (!arg0_is_agg ? args[0]->type() : args[1]->type()));
+        error_reporter()->Report(call->Position(), ErrorMessages::kNotASQLAggregate,
+                                 (!arg0_is_agg ? args[0]->GetType() : args[1]->GetType()));
         return;
       }
       // Merge returns nil
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::AggResult: {
@@ -447,31 +515,33 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin)
         return;
       }
       // Argument must be a SQL aggregator
-      if (!IsPointerToAggregatorValue(args[0]->type())) {
-        error_reporter()->Report(call->position(), ErrorMessages::kNotASQLAggregate,
-                                 args[0]->type());
+      if (!IsPointerToAggregatorValue(args[0]->GetType())) {
+        error_reporter()->Report(call->Position(), ErrorMessages::kNotASQLAggregate,
+                                 args[0]->GetType());
         return;
       }
-      switch (args[0]->type()->GetPointeeType()->As<ast::BuiltinType>()->GetKind()) {
+      switch (args[0]->GetType()->GetPointeeType()->As<ast::BuiltinType>()->GetKind()) {
         case ast::BuiltinType::Kind::CountAggregate:
         case ast::BuiltinType::Kind::CountStarAggregate:
         case ast::BuiltinType::Kind::IntegerMaxAggregate:
         case ast::BuiltinType::Kind::IntegerMinAggregate:
         case ast::BuiltinType::Kind::IntegerSumAggregate:
-          call->set_type(GetBuiltinType(ast::BuiltinType::Integer));
+          call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
           break;
         case ast::BuiltinType::Kind::RealMaxAggregate:
         case ast::BuiltinType::Kind::RealMinAggregate:
         case ast::BuiltinType::Kind::RealSumAggregate:
         case ast::BuiltinType::Kind::AvgAggregate:
-          call->set_type(GetBuiltinType(ast::BuiltinType::Real));
+          call->SetType(GetBuiltinType(ast::BuiltinType::Real));
           break;
         default:
           UNREACHABLE("Impossible aggregate type!");
       }
       break;
     }
-    default: { UNREACHABLE("Impossible aggregator call"); }
+    default: {
+      UNREACHABLE("Impossible aggregator call");
+    }
   }
 }
 
@@ -480,30 +550,30 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
 
   // First argument must be a pointer to a JoinHashTable
   const auto jht_kind = ast::BuiltinType::JoinHashTable;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), jht_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[0]->GetType(), jht_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(jht_kind)->PointerTo());
     return;
   }
 
   // Second argument must be a pointer to a MemoryPool
   const auto region_kind = ast::BuiltinType::MemoryPool;
-  if (!IsPointerToSpecificBuiltin(args[1]->type(), region_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[1]->GetType(), region_kind)) {
     ReportIncorrectCallArg(call, 1, GetBuiltinType(region_kind)->PointerTo());
     return;
   }
 
   // Third and last argument must be a 32-bit number representing the tuple size
-  if (!args[2]->type()->IsIntegerType()) {
+  if (!args[2]->GetType()->IsIntegerType()) {
     ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Uint32));
     return;
   }
 
   // This call returns nothing
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
@@ -511,24 +581,24 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
 
   // First argument is a pointer to a JoinHashTable
   const auto jht_kind = ast::BuiltinType::JoinHashTable;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), jht_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[0]->GetType(), jht_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(jht_kind)->PointerTo());
     return;
   }
 
   // Second argument is a 64-bit unsigned hash value
-  if (!args[1]->type()->IsSpecificBuiltin(ast::BuiltinType::Uint64)) {
+  if (!args[1]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Uint64)) {
     ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Uint64));
     return;
   }
 
   // This call returns a byte pointer
   const auto byte_kind = ast::BuiltinType::Uint8;
-  call->set_type(GetBuiltinType(byte_kind)->PointerTo());
+  call->SetType(GetBuiltinType(byte_kind)->PointerTo());
 }
 
 void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin builtin) {
@@ -536,11 +606,11 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin buil
     return;
   }
 
-  const auto &call_args = call->arguments();
+  const auto &call_args = call->Arguments();
 
   // The first and only argument must be a pointer to a JoinHashTable
   const auto jht_kind = ast::BuiltinType::JoinHashTable;
-  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), jht_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), jht_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(jht_kind)->PointerTo());
     return;
   }
@@ -555,53 +625,46 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin buil
       }
       // Second argument must be a thread state container pointer
       const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
-      if (!IsPointerToSpecificBuiltin(call_args[1]->type(), tls_kind)) {
+      if (!IsPointerToSpecificBuiltin(call_args[1]->GetType(), tls_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(tls_kind)->PointerTo());
         return;
       }
       // Third argument must be a 32-bit integer representing the offset
       const auto uint32_kind = ast::BuiltinType::Uint32;
-      if (!call_args[2]->type()->IsSpecificBuiltin(uint32_kind)) {
+      if (!call_args[2]->GetType()->IsSpecificBuiltin(uint32_kind)) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(uint32_kind));
         return;
       }
       break;
     }
-    default: { UNREACHABLE("Impossible join hash table build call"); }
+    default: {
+      UNREACHABLE("Impossible join hash table build call");
+    }
   }
 
   // This call returns nothing
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinJoinHashTableLookup(ast::CallExpr *call) {
-  if (!CheckArgCount(call, 3)) {
+  if (!CheckArgCount(call, 2)) {
     return;
   }
 
-  const auto &args = call->arguments();
-
   // First argument must be a pointer to a JoinHashTable
   const auto jht_kind = ast::BuiltinType::JoinHashTable;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), jht_kind)) {
+  if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), jht_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(jht_kind)->PointerTo());
     return;
   }
 
-  // Second argument is a HashTableEntryIterator
-  auto iter_kind = ast::BuiltinType::HashTableEntryIterator;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[1]->type(), iter_kind)) {
-    ReportIncorrectCallArg(call, 1, GetBuiltinType(iter_kind)->PointerTo());
+  // Second argument is a 64-bit unsigned hash value
+  if (!call->Arguments()[1]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Uint64)) {
+    ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Uint64));
     return;
   }
 
-  // Third argument is a 64-bit unsigned hash value
-  if (!args[2]->type()->IsSpecificBuiltin(ast::BuiltinType::Uint64)) {
-    ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Uint64));
-    return;
-  }
-
-  call->set_type(GetBuiltinType(ast::BuiltinType::HashTableEntryIterator));
+  call->SetType(GetBuiltinType(ast::BuiltinType::HashTableEntry)->PointerTo());
 }
 
 void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
@@ -609,89 +672,75 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
 
   // The first and only argument must be a pointer to a JoinHashTable
   const auto jht_kind = ast::BuiltinType::JoinHashTable;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), jht_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[0]->GetType(), jht_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(jht_kind)->PointerTo());
     return;
   }
 
   // This call returns nothing
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call, ast::Builtin builtin) {
-  if (!CheckArgCountAtLeast(call, 1)) {
-    return;
-  }
-
-  // First argument must be the hash table entry iterator
-  auto iter_kind = ast::BuiltinType::HashTableEntryIterator;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), iter_kind)) {
-    ReportIncorrectCallArg(call, 0, GetBuiltinType(iter_kind)->PointerTo());
-    return;
-  }
-
-  switch (builtin) {
-    case ast::Builtin::HashTableEntryIterHasNext: {
-      if (!CheckArgCount(call, 4)) {
-        return;
-      }
-
-      const auto &args = call->arguments();
-
-      // Second argument must be key-equality function
-      auto *const key_eq_func_type = args[1]->type()->SafeAs<ast::FunctionType>();
-      if (key_eq_func_type == nullptr || key_eq_func_type->GetNumParams() != 3 ||
-          !key_eq_func_type->GetReturnType()->IsSpecificBuiltin(ast::BuiltinType::Bool) ||
-          !key_eq_func_type->GetParams()[0].type->IsPointerType() ||
-          !key_eq_func_type->GetParams()[1].type->IsPointerType() ||
-          !key_eq_func_type->GetParams()[2].type->IsPointerType()) {
-        error_reporter()->Report(call->position(),
-                                 ErrorMessages::kBadKeyEqualityCheckFunctionForJoinTableLookup,
-                                 args[1]->type());
-        return;
-      }
-
-      // Third and fourth arguments should be pointers
-      const auto byte_kind = ast::BuiltinType::Uint8;
-      if (!args[2]->type()->IsPointerType()) {
-        ReportIncorrectCallArg(call, 2, GetBuiltinType(byte_kind)->PointerTo());
-        return;
-      }
-      if (!args[3]->type()->IsPointerType()) {
-        ReportIncorrectCallArg(call, 3, GetBuiltinType(byte_kind)->PointerTo());
-        return;
-      }
-
-      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
-      break;
-    }
-    case ast::Builtin::HashTableEntryIterGetRow: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
-      break;
-    }
-    default: { UNREACHABLE("Impossible hash table entry iterator call"); }
-  }
-}
-
-void Sema::CheckBuiltinExecutionContextCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+void Sema::CheckBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
 
-  const auto &call_args = call->arguments();
+  // First argument must be the hash table entry iterator
+  if (const auto entry_kind = ast::BuiltinType::HashTableEntry;
+      !IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), entry_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(entry_kind)->PointerTo());
+    return;
+  }
 
+  switch (builtin) {
+    case ast::Builtin::HashTableEntryGetHash: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint64));
+      break;
+    }
+    case ast::Builtin::HashTableEntryGetRow: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
+      break;
+    }
+    case ast::Builtin::HashTableEntryGetNext: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::HashTableEntry)->PointerTo());
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible hash table entry iterator call");
+    }
+  }
+}
+
+void Sema::CheckBuiltinExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCount(call, 1)) {
+    return;
+  }
+
+  // First and only argument should be the execution context
   auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
-  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), exec_ctx_kind)) {
+  if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), exec_ctx_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(exec_ctx_kind)->PointerTo());
     return;
   }
 
-  auto mem_pool_kind = ast::BuiltinType::MemoryPool;
-  call->set_type(GetBuiltinType(mem_pool_kind)->PointerTo());
+  switch (builtin) {
+    case ast::Builtin::ExecutionContextGetMemoryPool: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::MemoryPool)->PointerTo());
+      break;
+    }
+    case ast::Builtin::ExecutionContextGetTLS: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::ThreadStateContainer)->PointerTo());
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible execution context call");
+    }
+  }
 }
 
 void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -699,30 +748,22 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
     return;
   }
 
-  const auto &call_args = call->arguments();
+  const auto &call_args = call->Arguments();
 
   // First argument must be thread state container pointer
   auto tls_kind = ast::BuiltinType::ThreadStateContainer;
-  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), tls_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), tls_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(tls_kind)->PointerTo());
     return;
   }
 
   switch (builtin) {
-    case ast::Builtin::ThreadStateContainerInit: {
-      if (!CheckArgCount(call, 2)) {
-        return;
-      }
-
-      // Second argument is a MemoryPool
-      auto mem_pool_kind = ast::BuiltinType::MemoryPool;
-      if (!IsPointerToSpecificBuiltin(call_args[1]->type(), mem_pool_kind)) {
-        ReportIncorrectCallArg(call, 1, GetBuiltinType(mem_pool_kind)->PointerTo());
-        return;
-      }
+    case ast::Builtin::ThreadStateContainerClear: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
-    case ast::Builtin::ThreadStateContainerFree: {
+    case ast::Builtin::ThreadStateContainerGetState: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
     case ast::Builtin::ThreadStateContainerReset: {
@@ -731,21 +772,22 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
       }
       // Second argument must be an integer size of the state
       const auto uint_kind = ast::BuiltinType::Uint32;
-      if (!call_args[1]->type()->IsSpecificBuiltin(uint_kind)) {
+      if (!call_args[1]->GetType()->IsSpecificBuiltin(uint_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(uint_kind));
         return;
       }
       // Third and fourth arguments must be functions
       // TODO(pmenon): More thorough check
-      if (!call_args[2]->type()->IsFunctionType() || !call_args[3]->type()->IsFunctionType()) {
+      if (!AreAllFunctions(call_args[2]->GetType(), call_args[3]->GetType())) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
       // Fifth argument must be a pointer to something or nil
-      if (!call_args[4]->type()->IsPointerType() && !call_args[4]->type()->IsNilType()) {
+      if (!call_args[4]->GetType()->IsPointerType() && !call_args[4]->GetType()->IsNilType()) {
         ReportIncorrectCallArg(call, 4, GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::ThreadStateContainerIterate: {
@@ -753,29 +795,29 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
         return;
       }
       // Second argument is a pointer to some context
-      if (!call_args[1]->type()->IsPointerType()) {
+      if (!call_args[1]->GetType()->IsPointerType()) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
       // Third argument is the iteration function callback
-      if (!call_args[2]->type()->IsFunctionType()) {
+      if (!call_args[2]->GetType()->IsFunctionType()) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Uint32));
         return;
       }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
-    default: { UNREACHABLE("Impossible table iteration call"); }
+    default: {
+      UNREACHABLE("Impossible table iteration call");
+    }
   }
-
-  // All these calls return nil
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) {
-  const auto &call_args = call->arguments();
+  const auto &call_args = call->Arguments();
 
   const auto tvi_kind = ast::BuiltinType::TableVectorIterator;
-  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), tvi_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), tvi_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(tvi_kind)->PointerTo());
     return;
   }
@@ -787,26 +829,28 @@ void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) 
         ReportIncorrectCallArg(call, 1, ast::StringType::Get(context()));
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::TableIterAdvance: {
       // A single-arg builtin returning a boolean
-      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
     case ast::Builtin::TableIterGetVPI: {
       // A single-arg builtin return a pointer to the current VPI
       const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
-      call->set_type(GetBuiltinType(vpi_kind)->PointerTo());
+      call->SetType(GetBuiltinType(vpi_kind)->PointerTo());
       break;
     }
     case ast::Builtin::TableIterClose: {
       // A single-arg builtin returning void
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
-    default: { UNREACHABLE("Impossible table iteration call"); }
+    default: {
+      UNREACHABLE("Impossible table iteration call");
+    }
   }
 }
 
@@ -815,7 +859,7 @@ void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
     return;
   }
 
-  const auto &call_args = call->arguments();
+  const auto &call_args = call->Arguments();
 
   // First argument is table name as a string literal
   if (!call_args[0]->IsStringLiteral()) {
@@ -825,23 +869,23 @@ void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
 
   // Second argument is an opaque query state. For now, check it's a pointer.
   const auto void_kind = ast::BuiltinType::Nil;
-  if (!call_args[1]->type()->IsPointerType()) {
+  if (!call_args[1]->GetType()->IsPointerType()) {
     ReportIncorrectCallArg(call, 1, GetBuiltinType(void_kind)->PointerTo());
     return;
   }
 
   // Third argument is the thread state container
   const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
-  if (!IsPointerToSpecificBuiltin(call_args[2]->type(), tls_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[2]->GetType(), tls_kind)) {
     ReportIncorrectCallArg(call, 2, GetBuiltinType(tls_kind)->PointerTo());
     return;
   }
 
   // Third argument is scanner function
-  auto *scan_fn_type = call_args[3]->type()->SafeAs<ast::FunctionType>();
+  auto *scan_fn_type = call_args[3]->GetType()->SafeAs<ast::FunctionType>();
   if (scan_fn_type == nullptr) {
-    error_reporter()->Report(call->position(), ErrorMessages::kBadParallelScanFunction,
-                             call_args[3]->type());
+    error_reporter()->Report(call->Position(), ErrorMessages::kBadParallelScanFunction,
+                             call_args[3]->GetType());
     return;
   }
   // Check type
@@ -849,13 +893,13 @@ void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
   const auto &params = scan_fn_type->GetParams();
   if (params.size() != 3 || !params[0].type->IsPointerType() || !params[1].type->IsPointerType() ||
       !IsPointerToSpecificBuiltin(params[2].type, tvi_kind)) {
-    error_reporter()->Report(call->position(), ErrorMessages::kBadParallelScanFunction,
-                             call_args[3]->type());
+    error_reporter()->Report(call->Position(), ErrorMessages::kBadParallelScanFunction,
+                             call_args[3]->GetType());
     return;
   }
 
   // Nil
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -863,11 +907,11 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
     return;
   }
 
-  const auto &call_args = call->arguments();
+  const auto &call_args = call->Arguments();
 
   // The first argument must be a *VPI
   const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
-  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), vpi_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), vpi_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(vpi_kind)->PointerTo());
     return;
   }
@@ -880,7 +924,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
 
       // The second argument must be a *VectorProjection
       const auto vp_kind = ast::BuiltinType::VectorProjection;
-      if (!IsPointerToSpecificBuiltin(call_args[1]->type(), vp_kind)) {
+      if (!IsPointerToSpecificBuiltin(call_args[1]->GetType(), vp_kind)) {
         ReportIncorrectCallArg(call, 0, GetBuiltinType(vp_kind)->PointerTo());
         return;
       }
@@ -888,50 +932,46 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       // The third optional argument must be a *TupleIdList
       const auto tid_list_kind = ast::BuiltinType::TupleIdList;
       if (call_args.size() > 2 &&
-          !IsPointerToSpecificBuiltin(call_args[2]->type(), tid_list_kind)) {
+          !IsPointerToSpecificBuiltin(call_args[2]->GetType(), tid_list_kind)) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(tid_list_kind)->PointerTo());
         return;
       }
 
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::VPIFree: {
       if (!CheckArgCount(call, 1)) {
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIHasNext:
-    case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
-    case ast::Builtin::VPIAdvanceFiltered:
-    case ast::Builtin::VPIReset:
-    case ast::Builtin::VPIResetFiltered: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+    case ast::Builtin::VPIReset: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
     case ast::Builtin::VPIGetSelectedRowCount: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Uint32));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint32));
       break;
     }
     case ast::Builtin ::VPIGetVectorProjection: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::VectorProjection)->PointerTo());
+      call->SetType(GetBuiltinType(ast::BuiltinType::VectorProjection)->PointerTo());
       break;
     }
-    case ast::Builtin::VPISetPosition:
-    case ast::Builtin::VPISetPositionFiltered: {
+    case ast::Builtin::VPISetPosition: {
       if (!CheckArgCount(call, 2)) {
         return;
       }
       auto unsigned_kind = ast::BuiltinType::Uint32;
-      if (!call_args[1]->type()->IsSpecificBuiltin(unsigned_kind)) {
+      if (!call_args[1]->GetType()->IsSpecificBuiltin(unsigned_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(unsigned_kind));
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
     case ast::Builtin::VPIMatch: {
@@ -940,42 +980,63 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       }
       // If the match argument is a SQL boolean, implicitly cast to native
       ast::Expr *match_arg = call_args[1];
-      if (match_arg->type()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+      if (match_arg->GetType()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
         match_arg = ImplCastExprToType(match_arg, GetBuiltinType(ast::BuiltinType::Bool),
                                        ast::CastKind::SqlBoolToBool);
-        call->set_argument(1, match_arg);
+        call->SetArgument(1, match_arg);
       }
       // If the match argument isn't a native boolean , error
-      if (!match_arg->type()->IsBoolType()) {
+      if (!match_arg->GetType()->IsBoolType()) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Bool));
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
+    case ast::Builtin::VPIGetBool: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Boolean));
+      break;
+    }
+    case ast::Builtin::VPIGetTinyInt:
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
-    case ast::Builtin::VPIGetBigInt:
+    case ast::Builtin::VPIGetBigInt: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+      break;
+    }
     case ast::Builtin::VPIGetReal:
-    case ast::Builtin::VPIGetDouble:
-    case ast::Builtin::VPIGetDate:
+    case ast::Builtin::VPIGetDouble: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Real));
+      break;
+    }
+    case ast::Builtin::VPIGetDate: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Date));
+      break;
+    }
     case ast::Builtin::VPIGetString: {
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      // Second argument should be column index
-      const auto int32_kind = ast::BuiltinType::Int32;
-      if (!call_args[1]->type()->IsSpecificBuiltin(int32_kind)) {
-        ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
+      call->SetType(GetBuiltinType(ast::BuiltinType::StringVal));
+      break;
+    }
+    case ast::Builtin::VPIGetPointer: {
+      if (!CheckArgCount(call, 2)) {
         return;
       }
-      call->set_type(builtin == ast::Builtin::VPIGetReal || builtin == ast::Builtin::VPIGetDouble
-                         ? GetBuiltinType(ast::BuiltinType::Real)
-                         : builtin == ast::Builtin::VPIGetDate
-                               ? GetBuiltinType(ast::BuiltinType::Date)
-                               : builtin == ast::Builtin::VPIGetString
-                                     ? GetBuiltinType(ast::BuiltinType::StringVal)
-                                     : GetBuiltinType(ast::BuiltinType::Integer));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
     case ast::Builtin::VPISetSmallInt:
@@ -996,19 +1057,21 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
                      ? ast::BuiltinType::Date
                      : builtin == ast::Builtin::VPISetString ? ast::BuiltinType::StringVal
                                                              : ast::BuiltinType::Integer);
-      if (!call_args[1]->type()->IsSpecificBuiltin(sql_kind)) {
+      if (!call_args[1]->GetType()->IsSpecificBuiltin(sql_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(sql_kind));
         return;
       }
       // Third argument must be an integer
       const auto int32_kind = ast::BuiltinType::Int32;
-      if (!call_args[2]->type()->IsSpecificBuiltin(int32_kind)) {
+      if (!call_args[2]->GetType()->IsSpecificBuiltin(int32_kind)) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(int32_kind));
         return;
       }
       break;
     }
-    default: { UNREACHABLE("Impossible VPI call"); }
+    default: {
+      UNREACHABLE("Impossible VPI call");
+    }
   }
 }
 
@@ -1018,15 +1081,15 @@ void Sema::CheckBuiltinHashCall(ast::CallExpr *call, UNUSED ast::Builtin builtin
   }
 
   // All arguments must be SQL types
-  for (const auto &arg : call->arguments()) {
-    if (!arg->type()->IsSqlValueType()) {
-      error_reporter()->Report(arg->position(), ErrorMessages::kBadHashArg, arg->type());
+  for (const auto &arg : call->Arguments()) {
+    if (!arg->GetType()->IsSqlValueType()) {
+      error_reporter()->Report(arg->Position(), ErrorMessages::kBadHashArg, arg->GetType());
       return;
     }
   }
 
   // Result is a hash value
-  call->set_type(GetBuiltinType(ast::BuiltinType::Uint64));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Uint64));
 }
 
 void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::Builtin builtin) {
@@ -1036,33 +1099,31 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
 
   // The first argument must be a *FilterManagerBuilder
   const auto fm_kind = ast::BuiltinType::FilterManager;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), fm_kind)) {
+  if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), fm_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(fm_kind)->PointerTo());
     return;
   }
 
   switch (builtin) {
     case ast::Builtin::FilterManagerInit:
-    case ast::Builtin::FilterManagerFinalize:
     case ast::Builtin::FilterManagerFree: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::FilterManagerInsertFilter: {
-      for (uint32_t arg_idx = 1; arg_idx < call->num_args(); arg_idx++) {
+      for (uint32_t arg_idx = 1; arg_idx < call->NumArgs(); arg_idx++) {
         const auto vector_proj_kind = ast::BuiltinType::VectorProjection;
         const auto tid_list_kind = ast::BuiltinType::TupleIdList;
-        auto *arg_type = call->arguments()[arg_idx]->type()->SafeAs<ast::FunctionType>();
-        if (arg_type == nullptr || arg_type->GetNumParams() != 2 ||
+        auto *arg_type = call->Arguments()[arg_idx]->GetType()->SafeAs<ast::FunctionType>();
+        if (arg_type == nullptr || arg_type->GetNumParams() != 3 ||
             !IsPointerToSpecificBuiltin(arg_type->GetParams()[0].type, vector_proj_kind) ||
-            !IsPointerToSpecificBuiltin(arg_type->GetParams()[1].type, tid_list_kind)) {
-          error_reporter()->Report(call->position(), ErrorMessages::kIncorrectCallArgType,
-                                   call->GetFuncName(), GetBuiltinType(fm_kind)->PointerTo(),
-                                   arg_idx, call->arguments()[arg_idx]->type());
+            !IsPointerToSpecificBuiltin(arg_type->GetParams()[1].type, tid_list_kind) ||
+            !arg_type->GetParams()[2].type->IsPointerType()) {
+          ReportIncorrectCallArg(call, arg_idx, "(*VectorProjection, *TupleIdList, *uint8)->nil");
           return;
         }
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::FilterManagerRunFilters: {
@@ -1071,14 +1132,16 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
       }
 
       const auto vpi_kind = ast::BuiltinType::VectorProjectionIterator;
-      if (!IsPointerToSpecificBuiltin(call->arguments()[1]->type(), vpi_kind)) {
+      if (!IsPointerToSpecificBuiltin(call->Arguments()[1]->GetType(), vpi_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(vpi_kind)->PointerTo());
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
-    default: { UNREACHABLE("Impossible FilterManager call"); }
+    default: {
+      UNREACHABLE("Impossible FilterManager call");
+    }
   }
 }
 
@@ -1089,50 +1152,50 @@ void Sema::CheckBuiltinVectorFilterCall(ast::CallExpr *call) {
 
   // The first argument must be a *VectorProjection
   const auto vector_proj_kind = ast::BuiltinType::VectorProjection;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), vector_proj_kind)) {
+  if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), vector_proj_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(vector_proj_kind)->PointerTo());
     return;
   }
 
   // Second argument is the column index
-  const auto &call_args = call->arguments();
+  const auto &call_args = call->Arguments();
   const auto int32_kind = ast::BuiltinType::Int32;
   const auto uint32_kind = ast::BuiltinType::Uint32;
-  if (!call_args[1]->type()->IsSpecificBuiltin(int32_kind) &&
-      !call_args[1]->type()->IsSpecificBuiltin(uint32_kind)) {
+  if (!call_args[1]->GetType()->IsSpecificBuiltin(int32_kind) &&
+      !call_args[1]->GetType()->IsSpecificBuiltin(uint32_kind)) {
     ReportIncorrectCallArg(call, 1, GetBuiltinType(int32_kind));
     return;
   }
 
   // Third argument is either an integer or a pointer to a generic value
-  if (!call_args[2]->type()->IsSpecificBuiltin(int32_kind) &&
-      !call_args[2]->type()->IsSqlValueType()) {
+  if (!call_args[2]->GetType()->IsSpecificBuiltin(int32_kind) &&
+      !call_args[2]->GetType()->IsSqlValueType()) {
     ReportIncorrectCallArg(call, 2, GetBuiltinType(int32_kind));
     return;
   }
 
   // Fourth and last argument is the *TupleIdList
   const auto tid_list_kind = ast::BuiltinType::TupleIdList;
-  if (!IsPointerToSpecificBuiltin(call_args[3]->type(), tid_list_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[3]->GetType(), tid_list_kind)) {
     ReportIncorrectCallArg(call, 3, GetBuiltinType(tid_list_kind)->PointerTo());
     return;
   }
 
   // Done
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
   const auto real_kind = ast::BuiltinType::Real;
 
-  const auto &call_args = call->arguments();
+  const auto &call_args = call->Arguments();
   switch (builtin) {
     case ast::Builtin::ATan2: {
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      if (!call_args[0]->type()->IsSpecificBuiltin(real_kind) ||
-          !call_args[1]->type()->IsSpecificBuiltin(real_kind)) {
+      if (!call_args[0]->GetType()->IsSpecificBuiltin(real_kind) ||
+          !call_args[1]->GetType()->IsSpecificBuiltin(real_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(real_kind));
         return;
       }
@@ -1148,17 +1211,19 @@ void Sema::CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
       if (!CheckArgCount(call, 1)) {
         return;
       }
-      if (!call_args[0]->type()->IsSpecificBuiltin(real_kind)) {
+      if (!call_args[0]->GetType()->IsSpecificBuiltin(real_kind)) {
         ReportIncorrectCallArg(call, 0, GetBuiltinType(real_kind));
         return;
       }
       break;
     }
-    default: { UNREACHABLE("Impossible math trig function call"); }
+    default: {
+      UNREACHABLE("Impossible math trig function call");
+    }
   }
 
   // Trig functions return real values
-  call->set_type(GetBuiltinType(real_kind));
+  call->SetType(GetBuiltinType(real_kind));
 }
 
 void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -1167,15 +1232,86 @@ void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 
   const auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), exec_ctx_kind)) {
+  if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), exec_ctx_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(exec_ctx_kind)->PointerTo());
     return;
   }
 
   if (builtin == ast::Builtin::ResultBufferAllocOutRow) {
-    call->set_type(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)->PointerTo());
+    call->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Uint8)->PointerTo());
   } else {
-    call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+    call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+  }
+}
+
+void Sema::CheckCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+
+  const auto &call_args = call->Arguments();
+
+  // First argument must be a *CSVReader.
+  const auto csv_reader = ast::BuiltinType::CSVReader;
+  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), csv_reader)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(csv_reader));
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::CSVReaderInit: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+
+      // Second argument is either a raw string, or a string representing the
+      // name of the CSV file to read. At this stage, we don't care. It just
+      // needs to be a string.
+      if (!call_args[1]->GetType()->IsStringType()) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(csv_reader));
+        return;
+      }
+
+      // Third, fourth, and fifth must be characters.
+
+      // Returns boolean indicating if initialization succeeded.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::CSVReaderAdvance: {
+      // Returns a boolean indicating if there's more data.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::CSVReaderGetField: {
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+      // Second argument must be the index, third is a pointer to a SQL string.
+      if (!call_args[1]->GetType()->IsIntegerType()) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Uint32));
+      }
+      // Second argument must be the index, third is a pointer to a SQL string.
+      const auto string_kind = ast::BuiltinType::StringVal;
+      if (!IsPointerToSpecificBuiltin(call_args[2]->GetType(), string_kind)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(string_kind)->PointerTo());
+      }
+      // Returns nothing.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::CSVReaderGetRecordNumber: {
+      // Returns a 32-bit number indicating the current record number.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint32));
+      break;
+    }
+    case ast::Builtin::CSVReaderClose: {
+      // Returns nothing.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    default:
+      UNREACHABLE("Impossible math trig function call");
   }
 }
 
@@ -1185,7 +1321,7 @@ void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
   }
 
   // This call returns an unsigned 32-bit value for the size of the type
-  call->set_type(GetBuiltinType(ast::BuiltinType::Uint32));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Uint32));
 }
 
 void Sema::CheckBuiltinOffsetOfCall(ast::CallExpr *call) {
@@ -1194,28 +1330,28 @@ void Sema::CheckBuiltinOffsetOfCall(ast::CallExpr *call) {
   }
 
   // First argument must be a resolved composite type
-  auto *type = Resolve(call->arguments()[0]);
+  auto *type = Resolve(call->Arguments()[0]);
   if (type == nullptr || !type->IsStructType()) {
     ReportIncorrectCallArg(call, 0, "composite");
     return;
   }
 
   // Second argument must be an identifier expression
-  auto field = call->arguments()[1]->SafeAs<ast::IdentifierExpr>();
+  auto field = call->Arguments()[1]->SafeAs<ast::IdentifierExpr>();
   if (field == nullptr) {
     ReportIncorrectCallArg(call, 1, "identifier expression");
     return;
   }
 
   // Field with the given name must exist in the composite type
-  if (type->As<ast::StructType>()->LookupFieldByName(field->name()) == nullptr) {
-    error_reporter()->Report(call->position(), ErrorMessages::kFieldObjectDoesNotExist,
-                             field->name(), type);
+  if (type->As<ast::StructType>()->LookupFieldByName(field->Name()) == nullptr) {
+    error_reporter()->Report(call->Position(), ErrorMessages::kFieldObjectDoesNotExist,
+                             field->Name(), type);
     return;
   }
 
   // Returns a 32-bit value for the offset of the type
-  call->set_type(GetBuiltinType(ast::BuiltinType::Uint32));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Uint32));
 }
 
 void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
@@ -1229,18 +1365,18 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
   // get parsed as a dereference expression before a type expression.
   // TODO(pmenon): Fix the above to parse correctly
 
-  auto unary_op = call->arguments()[0]->SafeAs<ast::UnaryOpExpr>();
-  if (unary_op == nullptr || unary_op->op() != parsing::Token::Type::STAR) {
-    error_reporter()->Report(call->position(), ErrorMessages::kBadArgToPtrCast,
-                             call->arguments()[0]->type(), 1);
+  auto unary_op = call->Arguments()[0]->SafeAs<ast::UnaryOpExpr>();
+  if (unary_op == nullptr || unary_op->Op() != parsing::Token::Type::STAR) {
+    error_reporter()->Report(call->Position(), ErrorMessages::kBadArgToPtrCast,
+                             call->Arguments()[0]->GetType(), 1);
     return;
   }
 
   // Replace the unary with a PointerTypeRepr node and resolve it
-  call->set_argument(0, context()->node_factory()->NewPointerType(call->arguments()[0]->position(),
-                                                                  unary_op->expr()));
+  call->SetArgument(0, context()->GetNodeFactory()->NewPointerType(call->Arguments()[0]->Position(),
+                                                                   unary_op->Input()));
 
-  for (auto *arg : call->arguments()) {
+  for (auto *arg : call->Arguments()) {
     auto *resolved_type = Resolve(arg);
     if (resolved_type == nullptr) {
       return;
@@ -1248,15 +1384,15 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
   }
 
   // Both arguments must be pointer types
-  if (!call->arguments()[0]->type()->IsPointerType() ||
-      !call->arguments()[1]->type()->IsPointerType()) {
-    error_reporter()->Report(call->position(), ErrorMessages::kBadArgToPtrCast,
-                             call->arguments()[0]->type(), 1);
+  if (!call->Arguments()[0]->GetType()->IsPointerType() ||
+      !call->Arguments()[1]->GetType()->IsPointerType()) {
+    error_reporter()->Report(call->Position(), ErrorMessages::kBadArgToPtrCast,
+                             call->Arguments()[0]->GetType(), 1);
     return;
   }
 
   // Apply the cast
-  call->set_type(call->arguments()[0]->type());
+  call->SetType(call->Arguments()[0]->GetType());
 }
 
 void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
@@ -1264,42 +1400,42 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
 
   // First argument must be a pointer to a Sorter
   const auto sorter_kind = ast::BuiltinType::Sorter;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), sorter_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[0]->GetType(), sorter_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(sorter_kind)->PointerTo());
     return;
   }
 
   // Second argument must be a pointer to a MemoryPool
   const auto mem_kind = ast::BuiltinType::MemoryPool;
-  if (!IsPointerToSpecificBuiltin(args[1]->type(), mem_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[1]->GetType(), mem_kind)) {
     ReportIncorrectCallArg(call, 1, GetBuiltinType(mem_kind)->PointerTo());
     return;
   }
 
   // Second argument must be a function
-  auto *const cmp_func_type = args[2]->type()->SafeAs<ast::FunctionType>();
+  auto *const cmp_func_type = args[2]->GetType()->SafeAs<ast::FunctionType>();
   if (cmp_func_type == nullptr || cmp_func_type->GetNumParams() != 2 ||
       !cmp_func_type->GetReturnType()->IsSpecificBuiltin(ast::BuiltinType::Int32) ||
       !cmp_func_type->GetParams()[0].type->IsPointerType() ||
       !cmp_func_type->GetParams()[1].type->IsPointerType()) {
-    error_reporter()->Report(call->position(), ErrorMessages::kBadComparisonFunctionForSorter,
-                             args[2]->type());
+    error_reporter()->Report(call->Position(), ErrorMessages::kBadComparisonFunctionForSorter,
+                             args[2]->GetType());
     return;
   }
 
   // Third and last argument must be a 32-bit number representing the tuple size
   const auto uint_kind = ast::BuiltinType::Uint32;
-  if (!args[3]->type()->IsSpecificBuiltin(uint_kind)) {
+  if (!args[3]->GetType()->IsSpecificBuiltin(uint_kind)) {
     ReportIncorrectCallArg(call, 3, GetBuiltinType(uint_kind));
     return;
   }
 
   // This call returns nothing
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin) {
@@ -1309,7 +1445,7 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin) {
 
   // First argument must be a pointer to a Sorter
   const auto sorter_kind = ast::BuiltinType::Sorter;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), sorter_kind)) {
+  if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), sorter_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(sorter_kind)->PointerTo());
     return;
   }
@@ -1317,20 +1453,29 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin) {
   // If it's an insertion for Top-K, the second argument must be an unsigned integer.
   if (builtin == ast::Builtin::SorterInsertTopK ||
       builtin == ast::Builtin::SorterInsertTopKFinish) {
+    if (!CheckArgCount(call, 2)) {
+      return;
+    }
+
     // Error if the top-k argument isn't an integer
     ast::Type *uint_type = GetBuiltinType(ast::BuiltinType::Uint32);
-    if (!call->arguments()[1]->type()->IsIntegerType()) {
+    if (!call->Arguments()[1]->GetType()->IsIntegerType()) {
       ReportIncorrectCallArg(call, 1, uint_type);
       return;
     }
-    if (call->arguments()[1]->type() != uint_type) {
-      call->set_argument(
-          1, ImplCastExprToType(call->arguments()[1], uint_type, ast::CastKind::IntegralCast));
+    if (call->Arguments()[1]->GetType() != uint_type) {
+      call->SetArgument(
+          1, ImplCastExprToType(call->Arguments()[1], uint_type, ast::CastKind::IntegralCast));
+    }
+  } else {
+    // Regular sorter insert, expect one argument.
+    if (!CheckArgCount(call, 1)) {
+      return;
     }
   }
 
   // This call returns a pointer to the allocated tuple
-  call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
 }
 
 void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
@@ -1338,11 +1483,11 @@ void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
     return;
   }
 
-  const auto &call_args = call->arguments();
+  const auto &call_args = call->Arguments();
 
   // First argument must be a pointer to a Sorter
   const auto sorter_kind = ast::BuiltinType::Sorter;
-  if (!IsPointerToSpecificBuiltin(call_args[0]->type(), sorter_kind)) {
+  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), sorter_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(sorter_kind)->PointerTo());
     return;
   }
@@ -1356,40 +1501,47 @@ void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
     }
     case ast::Builtin::SorterSortParallel:
     case ast::Builtin::SorterSortTopKParallel: {
+      // Second argument is the *ThreadStateContainer.
       const auto tls_kind = ast::BuiltinType::ThreadStateContainer;
-      if (!IsPointerToSpecificBuiltin(call_args[1]->type(), tls_kind)) {
+      if (!IsPointerToSpecificBuiltin(call_args[1]->GetType(), tls_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(tls_kind)->PointerTo());
         return;
       }
 
-      // Third argument must be a 32-bit integer representing the offset
+      // Third argument must be a 32-bit integer representing the offset.
       ast::Type *uint_type = GetBuiltinType(ast::BuiltinType::Uint32);
-      if (call_args[2]->type() != uint_type) {
+      if (call_args[2]->GetType() != uint_type) {
         ReportIncorrectCallArg(call, 2, uint_type);
         return;
       }
 
       // If it's for top-k, the last argument must be the top-k value
-      if (builtin == ast::Builtin::SorterSortTopKParallel) {
+      if (builtin == ast::Builtin::SorterSortParallel) {
+        if (!CheckArgCount(call, 3)) {
+          return;
+        }
+      } else {
         if (!CheckArgCount(call, 4)) {
           return;
         }
-        if (!call_args[3]->type()->IsIntegerType()) {
+        if (!call_args[3]->GetType()->IsIntegerType()) {
           ReportIncorrectCallArg(call, 3, uint_type);
           return;
         }
-        if (call_args[3]->type() != uint_type) {
-          call->set_argument(
+        if (call_args[3]->GetType() != uint_type) {
+          call->SetArgument(
               3, ImplCastExprToType(call_args[3], uint_type, ast::CastKind::IntegralCast));
         }
       }
       break;
     }
-    default: { UNREACHABLE("Impossible sorter sort call"); }
+    default: {
+      UNREACHABLE("Impossible sorter sort call");
+    }
   }
 
   // This call returns nothing
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
@@ -1399,13 +1551,13 @@ void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
 
   // First argument must be a pointer to a Sorter
   const auto sorter_kind = ast::BuiltinType::Sorter;
-  if (!IsPointerToSpecificBuiltin(call->arguments()[0]->type(), sorter_kind)) {
+  if (!IsPointerToSpecificBuiltin(call->Arguments()[0]->GetType(), sorter_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(sorter_kind)->PointerTo());
     return;
   }
 
   // This call returns nothing
-  call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -1413,10 +1565,10 @@ void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin)
     return;
   }
 
-  const auto &args = call->arguments();
+  const auto &args = call->Arguments();
 
   const auto sorter_iter_kind = ast::BuiltinType::SorterIterator;
-  if (!IsPointerToSpecificBuiltin(args[0]->type(), sorter_iter_kind)) {
+  if (!IsPointerToSpecificBuiltin(args[0]->GetType(), sorter_iter_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(sorter_iter_kind)->PointerTo());
     return;
   }
@@ -1429,37 +1581,51 @@ void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin)
 
       // The second argument is the sorter instance to iterate over
       const auto sorter_kind = ast::BuiltinType::Sorter;
-      if (!IsPointerToSpecificBuiltin(args[1]->type(), sorter_kind)) {
+      if (!IsPointerToSpecificBuiltin(args[1]->GetType(), sorter_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(sorter_kind)->PointerTo());
         return;
       }
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::SorterIterHasNext: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Bool));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
       break;
     }
     case ast::Builtin::SorterIterNext: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::SorterIterSkipRows: {
+      if (!CheckArgCount(call, 2)) {
+        return;
+      }
+      const auto uint_kind = ast::BuiltinType::Kind::Uint32;
+      if (!args[1]->GetType()->IsIntegerType()) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(uint_kind));
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
     case ast::Builtin::SorterIterGetRow: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
+      call->SetType(GetBuiltinType(ast::BuiltinType::Uint8)->PointerTo());
       break;
     }
     case ast::Builtin::SorterIterClose: {
-      call->set_type(GetBuiltinType(ast::BuiltinType::Nil));
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
-    default: { UNREACHABLE("Impossible table iteration call"); }
+    default: {
+      UNREACHABLE("Impossible table iteration call");
+    }
   }
 }
 
 void Sema::CheckBuiltinCall(ast::CallExpr *call) {
   ast::Builtin builtin;
   if (!context()->IsBuiltinFunction(call->GetFuncName(), &builtin)) {
-    error_reporter()->Report(call->function()->position(), ErrorMessages::kInvalidBuiltinFunction,
+    error_reporter()->Report(call->Function()->Position(), ErrorMessages::kInvalidBuiltinFunction,
                              call->GetFuncName());
     return;
   }
@@ -1475,7 +1641,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
   }
 
   // First, resolve all call arguments. If any fail, exit immediately.
-  for (auto *arg : call->arguments()) {
+  for (auto *arg : call->Arguments()) {
     auto *resolved_type = Resolve(arg);
     if (resolved_type == nullptr) {
       return;
@@ -1488,22 +1654,39 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::FloatToSql:
     case ast::Builtin::DateToSql:
     case ast::Builtin::StringToSql:
-    case ast::Builtin::SqlToBool: {
-      CheckBuiltinSqlConversionCall(call, builtin);
+    case ast::Builtin::SqlToBool:
+    case ast::Builtin::ConvertBoolToInteger:
+    case ast::Builtin::ConvertIntegerToReal:
+    case ast::Builtin::ConvertDateToTimestamp:
+    case ast::Builtin::ConvertStringToBool:
+    case ast::Builtin::ConvertStringToInt:
+    case ast::Builtin::ConvertStringToReal:
+    case ast::Builtin::ConvertStringToDate:
+    case ast::Builtin::ConvertStringToTime: {
+      CheckSqlConversionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::IsValNull: {
+      CheckNullValueCall(call, builtin);
       break;
     }
     case ast::Builtin::Like: {
       CheckBuiltinStringLikeCall(call);
       break;
     }
-    case ast::Builtin::ExecutionContextGetMemoryPool: {
+    case ast::Builtin::ExtractYear: {
+      CheckBuiltinDateFunctionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::ExecutionContextGetMemoryPool:
+    case ast::Builtin::ExecutionContextGetTLS: {
       CheckBuiltinExecutionContextCall(call, builtin);
       break;
     }
-    case ast::Builtin::ThreadStateContainerInit:
     case ast::Builtin::ThreadStateContainerReset:
+    case ast::Builtin::ThreadStateContainerGetState:
     case ast::Builtin::ThreadStateContainerIterate:
-    case ast::Builtin::ThreadStateContainerFree: {
+    case ast::Builtin::ThreadStateContainerClear: {
       CheckBuiltinThreadStateContainerCall(call, builtin);
       break;
     }
@@ -1524,14 +1707,12 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIGetSelectedRowCount:
     case ast::Builtin::VPIGetVectorProjection:
     case ast::Builtin::VPIHasNext:
-    case ast::Builtin::VPIHasNextFiltered:
     case ast::Builtin::VPIAdvance:
-    case ast::Builtin::VPIAdvanceFiltered:
     case ast::Builtin::VPISetPosition:
-    case ast::Builtin::VPISetPositionFiltered:
     case ast::Builtin::VPIMatch:
     case ast::Builtin::VPIReset:
-    case ast::Builtin::VPIResetFiltered:
+    case ast::Builtin::VPIGetBool:
+    case ast::Builtin::VPIGetTinyInt:
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
     case ast::Builtin::VPIGetBigInt:
@@ -1539,6 +1720,9 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPIGetDouble:
     case ast::Builtin::VPIGetDate:
     case ast::Builtin::VPIGetString:
+    case ast::Builtin::VPIGetPointer:
+    case ast::Builtin::VPISetBool:
+    case ast::Builtin::VPISetTinyInt:
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
@@ -1555,7 +1739,6 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::FilterManagerInit:
     case ast::Builtin::FilterManagerInsertFilter:
-    case ast::Builtin::FilterManagerFinalize:
     case ast::Builtin::FilterManagerRunFilters:
     case ast::Builtin::FilterManagerFree: {
       CheckBuiltinFilterManagerCall(call, builtin);
@@ -1626,9 +1809,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckBuiltinJoinHashTableFree(call);
       break;
     }
-    case ast::Builtin::HashTableEntryIterHasNext:
-    case ast::Builtin::HashTableEntryIterGetRow: {
-      CheckBuiltinHashTableEntryIterCall(call, builtin);
+    case ast::Builtin::HashTableEntryGetHash:
+    case ast::Builtin::HashTableEntryGetRow:
+    case ast::Builtin::HashTableEntryGetNext: {
+      CheckBuiltinHashTableEntryCall(call, builtin);
       break;
     }
     case ast::Builtin::SorterInit: {
@@ -1654,6 +1838,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::SorterIterInit:
     case ast::Builtin::SorterIterHasNext:
     case ast::Builtin::SorterIterNext:
+    case ast::Builtin::SorterIterSkipRows:
     case ast::Builtin::SorterIterGetRow:
     case ast::Builtin::SorterIterClose: {
       CheckBuiltinSorterIterCall(call, builtin);
@@ -1662,6 +1847,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::ResultBufferAllocOutRow:
     case ast::Builtin::ResultBufferFinalize: {
       CheckResultBufferCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::CSVReaderInit:
+    case ast::Builtin::CSVReaderAdvance:
+    case ast::Builtin::CSVReaderGetField:
+    case ast::Builtin::CSVReaderGetRecordNumber:
+    case ast::Builtin::CSVReaderClose: {
+      CheckCSVReaderCall(call, builtin);
       break;
     }
     case ast::Builtin::ACos:

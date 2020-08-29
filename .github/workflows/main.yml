@@ -1,37 +1,45 @@
 name: CMake CI
 
-on:
-  push:
-    branches: 
-      - agg
-  pull_request:
-    branches:
-      - agg
-
+on: push
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
-      
-    - name: Install dependencies
-      run: echo y | sudo ./deps.sh
-        
-    - name: Create Build Environment.
-      run: cmake -E make_directory ${{runner.workspace}}/build
-      
-    - name: Configure CMake
-      shell: bash
-      working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-    
-    - name: Build
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: cmake --build . --config $BUILD_TYPE
-      
-    - name: Test
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: ctest -C $BUILD_TYPE
+    - name: Cleanup Environment
+      run: |
+        # Remove previous versions of Clang/LLVM.
+        sudo apt-get remove -y clang-6.0 clang-7 clang-8 clang-9 clang-format-6.0 clang-format-7 clang-format-8 clang-format-9 clang-tidy-8 clang-tidy-9 llvm-6.0 llvm-7 llvm-8 llvm-9
+        sudo apt-get purge
+        sudo apt-get autoremove
+
+    - name: Install Dependencies
+      run: |
+        echo y | sudo ./deps.sh
+
+    - name: Build & Test Debug x64 With Sanitizers
+      env:
+        CC: gcc-10
+        CXX: g++-10
+        LSAN_OPTIONS: "fast_unwind_on_malloc=0,suppressions=${{github.workspace}}/build-support/leaksanitizer.conf"
+      run: |
+        cmake -E remove_directory build
+        cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
+        cd build
+        LSAN_OPTIONS=$LSAN_OPTIONS ninja
+        LSAN_OPTIONS=$LSAN_OPTIONS ninja check
+        # Disable check-tpl because LLVM compilation on VM's is super slow!
+        #LSAN_OPTIONS=$LSAN_OPTIONS ninja check-tpl
+
+    - name: Build & Test Release x64
+      env:
+        CC: gcc-10
+        CXX: g++-10
+        LSAN_OPTIONS: "fast_unwind_on_malloc=0,suppressions=${{github.workspace}}/build-support/leaksanitizer.conf"
+      run: |
+        cmake -E remove_directory build
+        cmake -B build -S . -GNinja -DCMAKE_BUILD_TYPE=Release
+        cd build
+        # Maybe run benchmarks, too?
+        LSAN_OPTIONS=$LSAN_OPTIONS ninja
+        LSAN_OPTIONS=$LSAN_OPTIONS ninja check-tpl

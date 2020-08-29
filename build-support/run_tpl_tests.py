@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import time
 import subprocess
 import sys
 
@@ -11,13 +12,14 @@ JIT_TARGET_STRING = 'JIT main() returned: '
 TARGET_STRINGS = [VM_TARGET_STRING, ADAPTIVE_TARGET_STRING, JIT_TARGET_STRING]
 ERROR_STRS = ['ERROR', 'error', 'fail', 'abort']
 
+
 def run(tpl_bin, tpl_file, is_sql):
     args = [tpl_bin]
     if is_sql:
         args.append("-sql")
     args.append(tpl_file)
-    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     result = []
+    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     for line in reversed(proc.stdout.decode('utf-8').split('\n')):
         if any(s in line for s in ERROR_STRS):
             return []
@@ -30,7 +32,7 @@ def run(tpl_bin, tpl_file, is_sql):
 
 def check(tpl_bin, tpl_folder, tpl_tests_file):
     with open(tpl_tests_file) as tpl_tests:
-        num_tests, failed = 0, set()
+        results, failed = dict(), set()
         print('Tests:')
 
         for line in tpl_tests:
@@ -39,21 +41,28 @@ def check(tpl_bin, tpl_folder, tpl_tests_file):
                 continue
             tpl_file, sql, expected_output = [x.strip() for x in line.split(',')]
             is_sql = sql.lower() == "true"
+            start = time.time()
             res = run(tpl_bin, os.path.join(tpl_folder, tpl_file), is_sql)
-            num_tests += 1
+            end = time.time()
 
             report = 'PASS'
             if not res:
-                report = 'ERR'
+                report = 'ERROR'
                 failed.add(tpl_file)
             elif len(res) != 3 or not all(output == expected_output for output in res):
-                report = 'FAIL [expect: {}, actual: {}]'.format(expected_output,
-                                                                res)
+                report = 'FAIL [expect: {}, actual: {}]'.format(expected_output, res)
                 failed.add(tpl_file)
+            results[tpl_file] = "{:<6} ({:.2f} s)".format(report, end-start)
 
-            print('\t{}: {}'.format(tpl_file, report))
-        print('{}/{} tests passed.'.format(num_tests - len(failed), num_tests))
+        # Print all results.
+        max_test_name = max([len(name) for name in results]) + 8
+        for name, report in results.items():
+            print('\t{:.<{pad}} : {}'.format(name+" ", report, pad=max_test_name))
 
+        # Print final stats.
+        print('{}/{} tests passed.'.format(len(results) - len(failed), len(results)))
+
+        # Print all failing tests.
         if len(failed) > 0:
             print('{} failed:'.format(len(failed)))
             for fail in failed:

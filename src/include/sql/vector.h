@@ -27,13 +27,14 @@ namespace tpl::sql {
  * capacity. Finally, a vector has an <b>active count</b> (see Vector::GetCount()) that represents
  * the number of externally visible elements. Elements may become inactive if they have been
  * filtered out through predicates. The visibility of elements in the vector is controlled through
- * a <b>selection vector</b>.
+ * a <b>tuple ID (TID) list</b>.
  *
- * Vectors can be logically filtered through a <i>tuple ID (TID) list</i>. A TID list is an array
- * containing the indexes of the <i>active</i> vector elements. If a filtered TID list is available,
- * it must be used to access the vector's data since the vector may hold otherwise invalid data in
- * unselected positions (e.g., null pointers). This functionality is provided for you through
- * VectorOps::Exec(), but can be done manually as the below example illustrates:
+ * Vectors can be logically filtered through a TID list. A TID list is an array containing the
+ * indexes of the <i>active</i> vector elements. If a non-NULL filtered TID list is available from
+ * Vector::GetFilteredTupleIdList(), it must be used to access the vector's data since the vector
+ * may hold otherwise invalid data in unselected positions (e.g., null pointers). This functionality
+ * is provided for you through VectorOps::Exec(), but can be done manually as the below example
+ * illustrates:
  *
  * @code
  * Vector vec = ...
@@ -84,10 +85,9 @@ namespace tpl::sql {
  *
  * <h3>Caution:</h3>
  *
- * While there are methods to get/set individual vector elements, this should be used
- * sparingly. If you find yourself invoking this is in a hot-loop, or very often, reconsider your
- * interaction pattern with Vector, and think about writing a new vector primitive to achieve your
- * objective.
+ * While there are methods to get/set individual vector elements, this should be used sparingly. If
+ * you find yourself invoking this is in a hot-loop, or very often, reconsider your interaction
+ * pattern with Vector, and think about writing a new vector primitive to achieve your objective.
  */
 class Vector {
   friend class VectorOps;
@@ -95,6 +95,30 @@ class Vector {
 
  public:
   using NullMask = util::BitVector<uint64_t>;
+
+  /**
+   * Scope object that temporary sets the filter for a vector over the lifetime of the scope. When
+   * the object goes out of scope, the input vector's previous filter status is restored.
+   */
+  class TempFilterScope {
+   public:
+    TempFilterScope(Vector *vector, const TupleIdList *tid_list, const uint64_t count)
+        : vector_(vector),
+          prev_tid_list_(vector->GetFilteredTupleIdList()),
+          prev_count_(vector->GetCount()) {
+      vector_->SetFilteredTupleIdList(tid_list, count);
+    }
+
+    ~TempFilterScope() { vector_->SetFilteredTupleIdList(prev_tid_list_, prev_count_); }
+
+   private:
+    // The vector to filter.
+    Vector *vector_;
+    // The previous filter in the vector. Can be NULL.
+    const TupleIdList *prev_tid_list_;
+    // The previous count of the vector.
+    uint64_t prev_count_;
+  };
 
   /**
    * Create an empty vector.
@@ -279,10 +303,17 @@ class Vector {
   void Append(const Vector &other);
 
   /**
-   * Copies the contents of this vector into another vector. Callers can optionally specify at what
-   * offset to begin copying at, but data is always copied into the start of the destination vector.
-   * The default is 0.
-   *
+   * Create a clone of this vector into the target vector. The clone will have a copy of all data
+   * and will retain the same shape of this vector.
+   * @param[out] target Where the clone is stored.
+   */
+  void Clone(Vector *target);
+
+  /**
+   * Copies the ACTIVE vector elements in this vector into another vector. Vectors storing complex
+   * objects will invoke copy constructors of these objects when creating new instances in the
+   * target vector.Callers can optionally specify at what offset to begin copying at. The default
+   * offset is 0.
    * @param other The vector to copy into.
    * @param offset The offset in this vector to begin copying.
    */
@@ -309,10 +340,24 @@ class Vector {
   void Reference(byte *data, const uint32_t *null_mask, uint64_t size);
 
   /**
-   * Create a vector that references data held (and owned!) by another vector.
+   * Change this vector to reference data held (and potentially owned) by the provided vector.
    * @param other The vector to reference.
    */
-  void Reference(Vector *other);
+  void Reference(const Vector *other);
+
+  /**
+   * Packing (or compressing) a vector rearranges this vector's contents by contiguously storing
+   * all active vector elements, removing any TID filter list.
+   */
+  void Pack();
+
+  /**
+   * Populate the input TID lists with the TIDs of all non-NULL active vector elements and active
+   * NULL vector elements, respectively.
+   * @param[out] non_null_tids The list of non-NULL TIDs in this vector.
+   * @param[out] null_tids The list of NULL TIDs in this vector.
+   */
+  void GetNonNullSelections(TupleIdList *non_null_tids, TupleIdList *null_tids) const;
 
   /**
    * Return a string representation of this vector.

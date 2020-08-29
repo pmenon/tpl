@@ -40,7 +40,7 @@ class AstVisitor {
     DISPATCH(NodeKind);
 
     // Main dispatch switch
-    switch (node->kind()) {
+    switch (node->GetKind()) {
       AST_NODES(GENERATE_VISIT_CASE)
       default:
         UNREACHABLE("Impossible node type");

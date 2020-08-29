@@ -21,7 +21,7 @@ class FunctionInfo;
 class LocalVar;
 
 /**
- * The interface to LLVM to JIT compile TPL bytecode
+ * The interface to LLVM to JIT compile TPL bytecode.
  */
 class LLVMEngine {
  public:
@@ -29,7 +29,7 @@ class LLVMEngine {
   // Helper classes
   // -------------------------------------------------------
 
-  class TPLMemoryManager;
+  class MCMemoryManager;
   class TypeMap;
   class FunctionLocalsMap;
   class CompilerOptions;
@@ -41,19 +41,20 @@ class LLVMEngine {
   // -------------------------------------------------------
 
   /**
-   * Initialize the whole LLVM subsystem
+   * Initialize the whole LLVM subsystem.
    */
   static void Initialize();
 
   /**
-   * Shutdown the whole LLVM subsystem
+   * Shutdown the whole LLVM subsystem.
    */
   static void Shutdown();
 
   /**
-   * JIT compile a TPL bytecode module to native code
-   * @param module The module to compile
-   * @return The JIT compiled module
+   * JIT compile a TPL bytecode module to native code.
+   *
+   * @param module The module to compile.
+   * @return The JIT compiled module.
    */
   static std::unique_ptr<CompiledModule> Compile(const BytecodeModule &module,
                                                  const CompilerOptions &options = {});
@@ -63,33 +64,72 @@ class LLVMEngine {
   // -------------------------------------------------------
 
   /**
-   * Options to provide when compiling
+   * Options to provide when compiling.
    */
   class CompilerOptions {
    public:
+    /**
+     * Create compiler options with default values.
+     */
     CompilerOptions() : debug_(false), write_obj_file_(false), output_file_name_() {}
 
+    /**
+     * Set the debug option to the provided value. If debug is true, JIT code will contain debug
+     * symbols amenable for use within GDB. This increases binary size and slows compilation, but
+     * helps with debugging TPL code. Should not be used in release mode.
+     *
+     * @param debug Flag indicating whether to add debug symbols.
+     * @return The current compiler options.
+     */
     CompilerOptions &SetDebug(bool debug) {
       debug_ = debug;
       return *this;
     }
 
+    /**
+     * @return True if debug symbols will be generated during compilation; false otherwise.
+     */
     bool IsDebug() const { return debug_; }
 
+    /**
+     * Set the flag indicating whether the compiled binary should be persisted as a shared object.
+     * Shared objects can be linked in at a later time, and is portable across machines. However,
+     * this may impact compilation times since the module must be synced to disk before completion.
+     *
+     * @param write_obj_file Flag indicating whether the compiled code should be persisted to disk.
+     * @return The current compiler options.
+     */
     CompilerOptions &SetPersistObjectFile(bool write_obj_file) {
       write_obj_file_ = write_obj_file;
       return *this;
     }
 
+    /**
+     * @return True if the module will be persisted to disk as a shared object file; false
+     * otherwise.
+     */
     bool ShouldPersistObjectFile() const { return write_obj_file_; }
 
+    /**
+     * If the compiled module will be persisted to disk, use the provided name as the file. If no
+     * name is provided, a default name will be used.
+     *
+     * @param name The name of the object file persist.
+     * @return The current compiler options.
+     */
     CompilerOptions &SetOutputObjectFileName(const std::string &name) {
       output_file_name_ = name;
       return *this;
     }
 
+    /**
+     * @return The name that will be used if the compiled module is persisted as a shared object.
+     */
     const std::string &GetOutputObjectFileName() const { return output_file_name_; }
 
+    /**
+     * @return The path where the required bytecode handlers is found.
+     */
     std::string GetBytecodeHandlersBcPath() const { return "./bytecode_handlers_ir.bc"; }
 
    private:
@@ -103,15 +143,15 @@ class LLVMEngine {
   // -------------------------------------------------------
 
   /**
-   * A compiled module corresponds to a single TPL bytecode module that has
-   * been JIT compiled into native code.
+   * A compiled module corresponds to a single TPL bytecode module that has been JIT compiled into
+   * native code.
    */
   class CompiledModule {
    public:
     /**
-     * Construct a module without an in-memory module. Users must call @em
-     * Load() to load in a pre-compiled shared object library for this compiled
-     * module before this module's functions can be invoked.
+     * Construct a module without an in-memory module. Users must call Load() to load in a
+     * pre-compiled shared object library for this compiled module before this module's functions
+     * can be invoked.
      */
     CompiledModule() : CompiledModule(nullptr) {}
 
@@ -143,7 +183,7 @@ class LLVMEngine {
     std::size_t GetModuleObjectCodeSizeInBytes() const { return object_code_->getBufferSize(); }
 
     /**
-     * Load the given module @em module into memory. If this module has already been loaded, it will
+     * Load the given module into memory. If this compiled module has already been loaded, it will
      * not be reloaded.
      */
     void Load(const BytecodeModule &module);
@@ -154,9 +194,13 @@ class LLVMEngine {
     bool IsLoaded() const noexcept { return loaded_; }
 
    private:
+    // Flag indicating if the module is loaded into memory and executable.
     bool loaded_;
+    // The object code.
     std::unique_ptr<llvm::MemoryBuffer> object_code_;
-    std::unique_ptr<TPLMemoryManager> memory_manager_;
+    // The memory manager.
+    std::unique_ptr<MCMemoryManager> memory_manager_;
+    // Function cache.
     std::unordered_map<std::string, void *> functions_;
   };
 };

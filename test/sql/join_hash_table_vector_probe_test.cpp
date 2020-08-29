@@ -1,10 +1,9 @@
-#include <algorithm>
-#include <memory>
 #include <random>
 #include <vector>
 
 #include "sql/join_hash_table.h"
 #include "sql/join_hash_table_vector_probe.h"
+#include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/hash_util.h"
@@ -12,175 +11,113 @@
 
 namespace tpl::sql {
 
-/// This is the tuple we insert into the hash table
-template <uint8_t N>
-struct Tuple {
-  int32_t build_key;
-  uint32_t aux[N];
-
-  auto Hash() { return util::HashUtil::Hash(build_key); }
+struct BuildRow {
+  uint64_t key, val1, val2, val3;
+  // Constructor.
+  explicit BuildRow(uint64_t key) : BuildRow(key, 0, 0, 0) {}
+  // Constructor.
+  BuildRow(uint64_t key, uint64_t val_1, uint64_t val_2, uint64_t val_3)
+      : key(key), val1(val_1), val2(val_2), val3(val_3) {}
+  // Hash.
+  hash_t Hash() const { return util::HashUtil::HashMurmur(key); }
 };
+
+// Build a join hash table over the given input data.
+void BuildJHT(JoinHashTable *table, const std::vector<BuildRow> &data) {
+  for (const auto &row : data) {
+    auto table_row = reinterpret_cast<BuildRow *>(table->AllocInputTuple(row.Hash()));
+    *table_row = row;
+  }
+  table->Build();
+}
 
 class JoinHashTableVectorProbeTest : public TplTest {
  public:
   JoinHashTableVectorProbeTest() : memory_(nullptr) {}
 
-  MemoryPool *memory() { return &memory_; }
-
- protected:
-  template <uint8_t N, typename F>
-  std::unique_ptr<const JoinHashTable> BuildJoinHashTable(bool concise, uint32_t num_tuples,
-                                                          F &&key_gen) {
-    auto jht = std::make_unique<JoinHashTable>(memory(), sizeof(Tuple<N>), concise);
-
-    // Insert
-    for (uint32_t i = 0; i < num_tuples; i++) {
-      auto key = key_gen();
-      auto hash = util::HashUtil::Hash(key);
-      auto *tuple = reinterpret_cast<Tuple<N> *>(jht->AllocInputTuple(hash));
-      tuple->build_key = key;
-    }
-
-    // Build
-    jht->Build();
-
-    // Finish
-    return jht;
-  }
+  MemoryPool *Memory() { return &memory_; }
 
  private:
   MemoryPool memory_;
 };
 
-template <uint8_t N>
-static hash_t HashTupleInVPI(VectorProjectionIterator *vpi) noexcept {
-  const auto *key_ptr = vpi->GetValue<int32_t, false>(0, nullptr);
-  return util::HashUtil::Hash(*key_ptr);
-}
+TEST_F(JoinHashTableVectorProbeTest, EmptyJoinProbe) {
+  JoinHashTable table(Memory(), sizeof(BuildRow));
+  BuildJHT(&table, {});
 
-/// The function to determine whether two tuples have equivalent keys
-template <uint8_t N>
-static bool CmpTupleInVPI(const void *table_tuple, VectorProjectionIterator *vpi) noexcept {
-  auto lhs_key = reinterpret_cast<const Tuple<N> *>(table_tuple)->build_key;
-  auto rhs_key = *vpi->GetValue<int32_t, false>(0, nullptr);
-  return lhs_key == rhs_key;
-}
+  // The input to the probe.
+  VectorProjection input;
+  input.Initialize({TypeId::BigInt});
+  input.Reset(100);
+  VectorOps::Generate(input.GetColumn(0), 1, 1);
 
-// Sequential number functor
-struct Seq {
-  int32_t c;
-  explicit Seq(uint32_t cc) : c(cc) {}
-  int32_t operator()() noexcept { return c++; }
-};
-
-struct Range {
-  std::random_device random;
-  std::uniform_int_distribution<uint32_t> dist;
-  Range(int32_t min, int32_t max) : dist(min, max) {}
-  int32_t operator()() noexcept { return dist(random); }
-};
-
-TEST_F(JoinHashTableVectorProbeTest, SimpleGenericLookupTest) {
-  constexpr const uint8_t N = 1;
-  constexpr const uint32_t num_build = 1000;
-  constexpr const uint32_t num_probe = num_build * 10;
-
-  // Create test JHT
-  auto jht = BuildJoinHashTable<N>(/*concise*/ false, num_build, Seq(0));
-
-  // The vector projection
-  VectorProjection vp;
-  vp.Initialize({TypeId::Integer});
-
-  // The iterator
-  VectorProjectionIterator vpi(&vp);
-
-  // Lookup
-  JoinHashTableVectorProbe lookup(*jht);
-
-  uint32_t count = 0;
-  for (uint32_t i = 0; i < num_probe; i += kDefaultVectorSize) {
-    uint32_t size = std::min(kDefaultVectorSize, num_probe - i);
-
-    // Setup VP
-    vp.Reset(size);
-    auto probe_keys = reinterpret_cast<uint32_t *>(vp.GetColumn(0)->GetData());
-    std::generate(probe_keys, probe_keys + size, Range(0, num_build - 1));
-    vp.CheckIntegrity();
-
-    // Setup VPI
-    vpi.SetVectorProjection(&vp);
-
-    // Lookup
-    lookup.Prepare(&vpi, HashTupleInVPI<N>);
-
-    // Iterate all
-    while (auto *tuple = lookup.GetNextOutput<Tuple<N>>(&vpi, CmpTupleInVPI<N>)) {
-      count++;
-      auto probe_key = *vpi.GetValue<int32_t, false>(0, nullptr);
-      EXPECT_EQ(tuple->build_key, probe_key);
-    }
+  // Test: create an INNER-join probe. No tuples should find matches since the
+  //       hash table is empty.
+  {
+    JoinHashTableVectorProbe probe(table, planner::LogicalJoinType::INNER, {0});
+    probe.Init(&input);
+    EXPECT_FALSE(probe.Next(&input)) << "Empty join table should not find matches for inner join";
   }
 
-  EXPECT_EQ(num_probe, count);
+  // Test: create an ANTI-join probe. All tuples should find matches since the
+  //       hash table is empty.
+  {
+    JoinHashTableVectorProbe probe(table, planner::LogicalJoinType::ANTI, {0});
+    probe.Init(&input);
+    EXPECT_TRUE(probe.Next(&input));
+    EXPECT_EQ(input.GetTotalTupleCount(), probe.GetMatches()->GetCount());
+  }
+
+  // Test: create a SEMI-join probe. No tuples should find matches since the
+  //       hash table is empty.
+  {
+    JoinHashTableVectorProbe probe(table, planner::LogicalJoinType::SEMI, {0});
+    probe.Init(&input);
+    EXPECT_FALSE(probe.Next(&input));
+  }
 }
 
-#if 0
-TEST_F(JoinHashTableVectorProbeTest, DISABLED_PerfLookupTest) {
-  auto bench = [this](bool concise) {
-    constexpr const uint8_t N = 1;
-    constexpr const uint32_t num_build = 5000000;
-    constexpr const uint32_t num_probe = num_build * 10;
+TEST_F(JoinHashTableVectorProbeTest, SimpleJoinProbe) {
+  const uint32_t num_44_dups = 10;
 
-    // Create test JHT
-    auto jht = BuildJoinHashTable<N>(concise, num_build, Seq(0));
+  // Insert rows whose keys are in the range [0,100] in increments of 2.
+  std::vector<BuildRow> rows;
+  for (uint32_t i = 0; i < 100; i += 2) rows.emplace_back(i);
 
-    // Create test probe input
-    auto probe_keys = std::vector<uint32_t>(num_probe);
-    std::generate(probe_keys.begin(), probe_keys.end(), Range(0, num_build - 1));
+  // Key 44 has 10 duplicates. There's already one from the previous insertion
+  // so insert num_44_dups-1 now.
+  for (uint32_t i = 0; i < num_44_dups - 1; i++) rows.emplace_back(44);
 
-    Schema schema({{"probeKey", IntegerType::InstanceNonNullable()}});
+  // Build table.
+  JoinHashTable table(Memory(), sizeof(BuildRow));
+  BuildJHT(&table, rows);
 
-    VectorProjection vp;
-    vp.InitializeEmpty({schema.GetColumnInfo(0)});
+  // The input to the probe.
+  VectorProjection input;
+  input.Initialize({TypeId::BigInt});
+  input.Reset(100);
+  VectorOps::Generate(input.GetColumn(0), 0, 1);
 
-    VectorProjectionIterator vpi(&vp);
+  // Test: INNER-join should find all matches.
+  {
+    uint32_t num_iters = 0;
+    JoinHashTableVectorProbe probe(table, planner::LogicalJoinType::INNER, {0});
+    for (probe.Init(&input); probe.Next(&input); num_iters++) {
+      auto probe_keys = input.GetColumn(0);
+      auto matches = probe.GetMatches();
+      auto match_filter = matches->GetFilteredTupleIdList();
+      input.SetFilteredSelections(*match_filter);
 
-    // Lookup
-    JoinHashTableVectorProbe lookup(*jht);
-
-    util::Timer<std::milli> timer;
-    timer.Start();
-
-    // Loop over all matches
-    uint32_t count = 0;
-    for (uint32_t i = 0; i < num_probe; i += kDefaultVectorSize) {
-      uint32_t size = std::min(kDefaultVectorSize, num_probe - i);
-
-      // Setup VP
-      vp.GetColumn(0)->Reference(reinterpret_cast<byte *>(&probe_keys[i]), nullptr, size);
-      vpi.SetVectorProjection(&vp);
-
-      // Lookup
-      lookup.Prepare(&vpi, HashTupleInVPI<N>);
-
-      // Iterate all
-      while (const auto *entry = lookup.GetNextOutput(&vpi, CmpTupleInVPI<N>)) {
-        (void)entry;
-        count++;
-      }
+      // Check matching keys.
+      match_filter->ForEach([&](uint64_t i) {
+        auto probe_key = reinterpret_cast<uint64_t *>(probe_keys->GetData())[i];
+        auto build_key =
+            reinterpret_cast<HashTableEntry **>(matches->GetData())[i]->PayloadAs<BuildRow>()->key;
+        EXPECT_EQ(probe_key, build_key);
+      });
     }
-
-    timer.Stop();
-    auto mtps = (num_probe / timer.GetElapsed()) / 1000.0;
-    LOG_INFO("========== {} ==========", concise ? "Concise" : "Generic");
-    LOG_INFO("# Probes    : {}", num_probe)
-    LOG_INFO("Probe Time  : {} ms ({:.2f} Mtps)", timer.GetElapsed(), mtps);
-  };
-
-  bench(false);
-  bench(true);
+    EXPECT_EQ(num_44_dups, num_iters);
+  }
 }
-#endif
 
 }  // namespace tpl::sql

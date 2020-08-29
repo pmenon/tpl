@@ -19,6 +19,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -52,11 +53,18 @@ bool FunctionHasDirectReturn(const ast::FunctionType *func_type) {
 }  // namespace
 
 // ---------------------------------------------------------
-// TPL's Jit Memory Manager
+// Memory Manager for JIT machine code
 // ---------------------------------------------------------
 
-class LLVMEngine::TPLMemoryManager : public llvm::SectionMemoryManager {
+class LLVMEngine::MCMemoryManager : public llvm::SectionMemoryManager {
  public:
+  // Destructor. Just free-up the exception frames.
+  ~MCMemoryManager() { llvm::RTDyldMemoryManager::deregisterEHFrames(); }
+
+  // De-register exception handling frames.
+  void deregisterEHFrames() override { llvm::RTDyldMemoryManager::deregisterEHFrames(); }
+
+  // Find a symbol during JIT linking. Rely on cache before calling into dlopen().
   llvm::JITSymbol findSymbol(const std::string &name) override {
     LOG_TRACE("Resolving symbol '{}' ...", name);
 
@@ -68,13 +76,19 @@ class LLVMEngine::TPLMemoryManager : public llvm::SectionMemoryManager {
     LOG_TRACE("Symbol '{}' not found in cache, checking process ...", name);
 
     llvm::JITSymbol symbol = llvm::SectionMemoryManager::findSymbol(name);
-    TPL_ASSERT(symbol.getAddress(), "Resolved symbol has no address!");
-    symbols_[name] = {symbol.getAddress().get(), symbol.getFlags()};
+    llvm::Expected<llvm::JITTargetAddress> address_or_error = symbol.getAddress();
+#ifndef NDEBUG
+    if (auto error = address_or_error.takeError()) {
+      LOG_ERROR("Unable to resolve address for target '{}'.", name);
+      return llvm::JITSymbol(std::move(error));
+    }
+#endif
+    symbols_[name] = llvm::JITEvaluatedSymbol(*address_or_error, symbol.getFlags());
     return symbol;
   }
 
  private:
-  std::unordered_map<std::string, llvm::JITEvaluatedSymbol> symbols_;
+  llvm::StringMap<llvm::JITEvaluatedSymbol> symbols_;
 };
 
 // ---------------------------------------------------------
@@ -297,6 +311,7 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
 
   const auto &func_locals = func_info.GetLocals();
 
+  // Make an allocation for the return value, if it's direct.
   if (const ast::FunctionType *func_type = func_info.GetFuncType();
       FunctionHasDirectReturn(func_type)) {
     llvm::Type *ret_type = type_map->GetLLVMType(func_type->GetReturnType());
@@ -305,12 +320,14 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info,
     local_idx++;
   }
 
+  // Cache parameters.
   for (auto arg_iter = func->arg_begin(); local_idx < func_info.GetParamsCount();
        ++local_idx, ++arg_iter) {
     const LocalInfo &param = func_locals[local_idx];
     params_[param.GetOffset()] = &*arg_iter;
   }
 
+  // Allocate all local variables up front.
   for (; local_idx < func_info.GetLocals().size(); local_idx++) {
     const LocalInfo &local_info = func_locals[local_idx];
     llvm::Type *llvm_type = type_map->GetLLVMType(local_info.GetType());
@@ -512,7 +529,6 @@ void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
         *llvm_module_, string_constant->getType(), true, llvm::GlobalValue::PrivateLinkage,
         string_constant, local_info.GetName(), nullptr, llvm::GlobalVariable::NotThreadLocal);
     global_var->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    global_var->setAlignment(1);
 
     // Convert the global variable into an i8*
     llvm::Constant *zero = llvm::ConstantInt::get(type_map_->Int32Type(), 0);
@@ -557,7 +573,7 @@ void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(
   // We use this vector as a stack for DFS traversal
   llvm::SmallVector<std::size_t, 16> bb_begin_positions = {0};
 
-  for (auto iter = tpl_module_.BytecodeForFunction(func_info); !bb_begin_positions.empty();) {
+  for (auto iter = tpl_module_.GetBytecodeForFunction(func_info); !bb_begin_positions.empty();) {
     std::size_t begin_pos = bb_begin_positions.back();
     bb_begin_positions.pop_back();
 
@@ -618,13 +634,14 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
                                                        llvm::IRBuilder<> *ir_builder) {
   llvm::LLVMContext &ctx = ir_builder->getContext();
   llvm::Function *func = llvm_module_->getFunction(func_info.GetName());
-  llvm::BasicBlock *entry_bb = llvm::BasicBlock::Create(ctx, "EntryBB", func);
+  llvm::BasicBlock *first_bb = llvm::BasicBlock::Create(ctx, "BB0", func);
+  llvm::BasicBlock *entry_bb = llvm::BasicBlock::Create(ctx, "EntryBB", func, first_bb);
 
   // First, construct a simple CFG for the function. The CFG contains entries for the start of every
   // basic block in the function, and the bytecode position of the first instruction in the block.
   // The CFG is ordered by bytecode position in ascending order.
 
-  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, entry_bb}};
+  std::map<std::size_t, llvm::BasicBlock *> blocks = {{0, first_bb}};
   BuildSimpleCFG(func_info, blocks);
 
   {
@@ -656,7 +673,11 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
 
   FunctionLocalsMap locals_map(func_info, func, type_map_.get(), ir_builder);
 
-  for (auto iter = tpl_module_.BytecodeForFunction(func_info); !iter.Done(); iter.Advance()) {
+  // Jump to the first block, after all local allocations have been made.
+  ir_builder->CreateBr(first_bb);
+  ir_builder->SetInsertPoint(first_bb);
+
+  for (auto iter = tpl_module_.GetBytecodeForFunction(func_info); !iter.Done(); iter.Advance()) {
     Bytecode bytecode = iter.CurrentBytecode();
 
     // Collect arguments
@@ -834,10 +855,11 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
       }
 
       case Bytecode::Lea: {
-        TPL_ASSERT(args[1]->getType()->isPointerTy(), "First argument must be a pointer");
+        TPL_ASSERT(args[0]->getType()->isPointerTy(), "Target of LEA must be a pointer.");
+        TPL_ASSERT(args[1]->getType()->isPointerTy(), "Source of LEA must be a pointer.");
         const llvm::DataLayout &dl = llvm_module_->getDataLayout();
         llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
-        int64_t offset = llvm::cast<llvm::ConstantInt>(args[2])->getSExtValue();
+        const int64_t offset = llvm::cast<llvm::ConstantInt>(args[2])->getSExtValue();
         if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
           const uint32_t elem_index =
               dl.getStructLayout(struct_type)->getElementContainingOffset(offset);
@@ -845,10 +867,9 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           ir_builder->CreateStore(addr, args[0]);
         } else {
           llvm::SmallVector<llvm::Value *, 2> gep_args;
-          uint32_t elem_size = dl.getTypeSizeInBits(pointee_type);
-          if (llvm::isa<llvm::ArrayType>(pointee_type)) {
-            llvm::Type *const arr_type = pointee_type->getArrayElementType();
-            elem_size = dl.getTypeSizeInBits(arr_type) / kBitsPerByte;
+          llvm::TypeSize elem_size = dl.getTypeSizeInBits(pointee_type);
+          if (auto arr_type = llvm::dyn_cast<llvm::ArrayType>(pointee_type)) {
+            elem_size = dl.getTypeSizeInBits(arr_type->getArrayElementType()) / kBitsPerByte;
             gep_args.push_back(llvm::ConstantInt::get(type_map_->Int64Type(), 0));
           }
           gep_args.push_back(llvm::ConstantInt::get(type_map_->Int64Type(), offset / elem_size));
@@ -860,10 +881,10 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
       }
 
       case Bytecode::LeaScaled: {
-        TPL_ASSERT(args[1]->getType()->isPointerTy(), "First argument must be a pointer");
-        // For any LeaScaled, the scale is handled by LLVM's GEP. If it's an
-        // array of structures, we need to handle the final offset/displacement
-        // into the struct as the last GEP index.
+        TPL_ASSERT(args[1]->getType()->isPointerTy(), "Source of LEA_SCALED must be a pointer");
+        // The scale is handled automatically by LLVM's GEP instruction. If it's
+        // an array of structures, we need to handle the final displacement into
+        // the struct as the last GEP index.
         llvm::Type *pointee_type = args[1]->getType()->getPointerElementType();
         if (auto struct_type = llvm::dyn_cast<llvm::StructType>(pointee_type)) {
           llvm::Value *addr = ir_builder->CreateInBoundsGEP(args[1], {args[2]});
@@ -1043,8 +1064,7 @@ std::string LLVMEngine::CompiledModuleBuilder::DumpModuleAsm() {
   pass_manager.add(
       llvm::createTargetTransformInfoWrapperPass(target_machine_->getTargetIRAnalysis()));
   target_machine_->Options.MCOptions.AsmVerbose = true;
-  target_machine_->addPassesToEmitFile(pass_manager, ostream, nullptr,
-                                       llvm::TargetMachine::CGFT_AssemblyFile);
+  target_machine_->addPassesToEmitFile(pass_manager, ostream, nullptr, llvm::CGFT_AssemblyFile);
   pass_manager.run(*llvm_module_);
   target_machine_->Options.MCOptions.AsmVerbose = false;
 
@@ -1058,7 +1078,7 @@ std::string LLVMEngine::CompiledModuleBuilder::DumpModuleAsm() {
 LLVMEngine::CompiledModule::CompiledModule(std::unique_ptr<llvm::MemoryBuffer> object_code)
     : loaded_(false),
       object_code_(std::move(object_code)),
-      memory_manager_(std::make_unique<LLVMEngine::TPLMemoryManager>()) {}
+      memory_manager_(std::make_unique<LLVMEngine::MCMemoryManager>()) {}
 
 // This destructor is needed because we have a unique_ptr to a forward-declared
 // TPLMemoryManager class.

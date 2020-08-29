@@ -3,40 +3,13 @@
 #include <memory>
 #include <mutex>  // NOLINT
 #include <string>
+#include <thread>
 #include <utility>
-
-#include <tbb/task.h>  // NOLINT
 
 #define XBYAK_NO_OP_NAMES
 #include "xbyak/xbyak.h"
 
 namespace tpl::vm {
-
-// ---------------------------------------------------------
-// Async Compile Task
-// ---------------------------------------------------------
-
-// This class encapsulates the ability to asynchronously JIT compile a module.
-class Module::AsyncCompileTask : public tbb::task {
- public:
-  // Construct an asynchronous compilation task to compile the the module
-  explicit AsyncCompileTask(Module *module) : module_(module) {}
-
-  // Execute
-  tbb::task *execute() override {
-    // This simply invokes Module::CompileToMachineCode() asynchronously.
-    module_->CompileToMachineCode();
-    // Done. There's no next task, so return null.
-    return nullptr;
-  }
-
- private:
-  Module *module_;
-};
-
-// ---------------------------------------------------------
-// Module
-// ---------------------------------------------------------
 
 Module::Module(std::unique_ptr<BytecodeModule> bytecode_module)
     : Module(std::move(bytecode_module), nullptr) {}
@@ -57,7 +30,7 @@ Module::Module(std::unique_ptr<BytecodeModule> bytecode_module,
   if (jit_module_ == nullptr) {
     const auto num_functions = bytecode_module_->GetFunctionCount();
     for (uint32_t idx = 0; idx < num_functions; idx++) {
-      functions_[idx] = bytecode_trampolines_[idx].code();
+      functions_[idx] = bytecode_trampolines_[idx].GetCode();
     }
   } else {
     const auto num_functions = bytecode_module_->GetFunctionCount();
@@ -171,21 +144,15 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
     uint32_t displacement = 0;
     uint32_t local_idx = 0;
 
-    //
     // The first argument to the TBC function is a pointer to the return value.
     // If the function returns a non-void value, insert the pointer now.
-    //
-
     if (const ast::Type *return_type = func_type->GetReturnType(); !return_type->IsNilType()) {
       displacement = util::MathUtil::AlignTo(return_type->GetSize(), sizeof(intptr_t));
       mov(ptr[rsp + displacement], rsp);
       local_idx++;
     }
 
-    //
-    // Now comes all the input arguments
-    //
-
+    // Now push all input arguments.
     for (uint32_t idx = 0; idx < func_type->GetNumParams(); idx++, local_idx++) {
       const auto &local_info = func_.GetLocals()[local_idx];
       auto use_64bit_reg = static_cast<uint32_t>(local_info.GetSize() > sizeof(uint32_t));
@@ -228,61 +195,64 @@ class TrampolineGenerator : public Xbyak::CodeGenerator {
 
 }  // namespace
 
-void Module::CreateFunctionTrampoline(const FunctionInfo &func, Trampoline &trampoline) {
-  // Allocate memory
+void Module::CreateFunctionTrampoline(const FunctionInfo &func, Trampoline *trampoline) {
+  // TODO(pmenon): Is 4KB too large? Should it be dynamic?
+  static constexpr std::size_t kDefaultCodeSize = 4 * KB;
+
+  // Allocate memory for the trampoline.
   std::error_code error;
-  uint32_t flags =
-      llvm::sys::Memory::ProtectionFlags::MF_READ | llvm::sys::Memory::ProtectionFlags::MF_WRITE;
-  llvm::sys::MemoryBlock mem =
-      llvm::sys::Memory::allocateMappedMemory(1 << 12, nullptr, flags, error);
+  const int32_t rw_flags = llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE;
+  llvm::sys::MemoryBlock memory =
+      llvm::sys::Memory::allocateMappedMemory(kDefaultCodeSize, nullptr, rw_flags, error);
   if (error) {
     LOG_ERROR("There was an error allocating executable memory {}", error.message());
     return;
   }
 
-  // Generate code
-  TrampolineGenerator generator(*this, func, mem.base());
+  // Generate code!
+  TrampolineGenerator generator(*this, func, memory.base());
   generator.Generate();
 
   // Now that the code's been generated and finalized, let's remove write
   // protections and just make is read+exec.
-  llvm::sys::Memory::protectMappedMemory(mem, llvm::sys::Memory::ProtectionFlags::MF_READ |
-                                                  llvm::sys::Memory::ProtectionFlags::MF_EXEC);
+  const int32_t rx_flags = llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_EXEC;
+  llvm::sys::Memory::protectMappedMemory(memory, rx_flags);
 
-  // Done
-  trampoline = Trampoline(llvm::sys::OwningMemoryBlock(mem));
+  // Done.
+  *trampoline = Trampoline(llvm::sys::OwningMemoryBlock(memory));
 }
 
 void Module::CreateFunctionTrampoline(FunctionId func_id) {
-  // If a trampoline has already been setup, don't bother
-  if (bytecode_trampolines_[func_id].code() != nullptr) {
+  // If a trampoline has already been setup, don't bother.
+  if (bytecode_trampolines_[func_id].GetCode() != nullptr) {
     LOG_DEBUG("Function {} has a trampoline; will not recreate", func_id);
     return;
   }
 
-  // Lookup the function
-  const auto *func_info = GetFuncInfoById(func_id);
-
-  // Create the trampoline for the function
+  // Create the trampoline for the function.
   Trampoline trampoline;
-  CreateFunctionTrampoline(*func_info, trampoline);
+  const auto *func_info = GetFuncInfoById(func_id);
+  CreateFunctionTrampoline(*func_info, &trampoline);
 
-  // Mark available
+  // Mark available.
   bytecode_trampolines_[func_id] = std::move(trampoline);
 }
 
 void Module::CompileToMachineCode() {
   std::call_once(compiled_flag_, [this]() {
-    // If the module has already been compiled, nothing to do.
+    // Exit if the module has already been compiled. This might happen if
+    // requested to execute in adaptive mode by concurrent threads.
     if (jit_module_ != nullptr) {
       return;
     }
 
-    // JIT
+    // JIT the module.
     LLVMEngine::CompilerOptions options;
     jit_module_ = LLVMEngine::Compile(*bytecode_module_, options);
 
-    // Setup function pointers
+    // JIT completed successfully. For each function in the module, pull out its
+    // compiled implementation into the function cache, atomically replacing any
+    // previous implementation.
     for (const auto &func_info : bytecode_module_->GetFunctionsInfo()) {
       auto *jit_function = jit_module_->GetFunctionPointer(func_info.GetName());
       TPL_ASSERT(jit_function != nullptr, "Missing function in compiled module!");
@@ -292,8 +262,7 @@ void Module::CompileToMachineCode() {
 }
 
 void Module::CompileToMachineCodeAsync() {
-  auto *compile_task = new (tbb::task::allocate_root()) AsyncCompileTask(this);
-  tbb::task::enqueue(*compile_task);
+  std::thread([this]() { CompileToMachineCode(); }).detach();
 }
 
 }  // namespace tpl::vm

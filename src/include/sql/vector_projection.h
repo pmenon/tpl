@@ -90,7 +90,19 @@ class VectorProjection {
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(VectorProjection);
+  DISALLOW_COPY(VectorProjection);
+
+  /**
+   * Move constructor.
+   */
+  VectorProjection(VectorProjection &&other) = default;
+
+  /**
+   * Move assignment.
+   * @param other The vector projection whose contents to move into this instance.
+   * @return This vector projection instance.
+   */
+  VectorProjection &operator=(VectorProjection &&other) = default;
 
   /**
    * Initialize a vector projection with column vectors of the provided types. This will create one
@@ -135,6 +147,12 @@ class VectorProjection {
   void SetFilteredSelections(const TupleIdList &tid_list);
 
   /**
+   * Copy the full list of active TIDs in this projection into the provided TID list.
+   * @param[out] tid_list The list where active TIDs in this projection are written to.
+   */
+  void CopySelectionsTo(TupleIdList *tid_list) const;
+
+  /**
    * @return The metadata for the column at index @em col_idx in the projection.
    */
   TypeId GetColumnType(const uint32_t col_idx) const {
@@ -159,10 +177,39 @@ class VectorProjection {
   }
 
   /**
-   * Reset this vector projection to the state after initialization. This will set the counts to 0,
-   * and reset each child vector to point to data owned by this projection (if it owns any).
+   * Reset the count of each child vector to @em num_tuples and reset the data pointer of each child
+   * vector to point to their data chunk in this projection, if it owns any.
    */
   void Reset(uint64_t num_tuples);
+
+  /**
+   * Packing (or compressing) a projection rearranges contained vector data by contiguously storing
+   * only active vector elements, removing any filtered TID list.
+   */
+  void Pack();
+
+  /**
+   * Project in the columns whose indexes are in the provided input vector into the provided result
+   * vector projection. The output result projection is guaranteed to have the same shape (size and
+   * filter status) as this projection, but all column vectors are **references** to this vector
+   * projection. Any existing data in the output vector projection is cleaned up.
+   * @param cols The indexes of the columns to project into the output projection.
+   * @param[out] result The output vector projection.
+   */
+  void ProjectColumns(const std::vector<uint32_t> &cols, VectorProjection *result) const;
+
+  /**
+   * Hash the columns whose indexes are in @em cols and store the result in @em result.
+   * @param cols The indexes of the columns to hash.
+   * @param[out] result The output vector containing the result of the hash computation.
+   */
+  void Hash(const std::vector<uint32_t> &cols, Vector *result) const;
+
+  /**
+   * Hash all column data storing the result in @em result.
+   * @param[out] result The output vector containing the result of the hash computation.
+   */
+  void Hash(Vector *result) const;
 
   /**
    * @return The number of columns in the projection.

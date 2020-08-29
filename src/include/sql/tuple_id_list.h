@@ -82,13 +82,26 @@ class TupleIdList {
    */
   class ConstIterator {
    public:
+    /**
+     * @return The TID the iterator is currently positioned at in the list.
+     */
     uint32_t operator*() const noexcept { return current_position_; }
 
+    /**
+     * Advance the iterator to the next TID in the list.
+     * @return This updated iterator.
+     */
     ConstIterator &operator++() noexcept {
       current_position_ = bv_.FindNext(current_position_);
       return *this;
     }
 
+    /**
+     * Advance the iterator by @em n elements, positioned at the end of such an advancement would
+     * exhaust the iterator.
+     * @param n The number of elements to skip.
+     * @return This updated iterator.
+     */
     ConstIterator &operator+=(uint32_t n) noexcept {
       while (n-- > 0) {
         ++(*this);
@@ -96,16 +109,28 @@ class TupleIdList {
       return *this;
     }
 
+    /**
+     * Return a new iterator positioned @em n elements ahead of this iterator.
+     * @param n The number of elements to skip over.
+     * @return A new iterator @em n elements ahead in the list.
+     */
     ConstIterator operator+(const uint32_t n) const noexcept {
       ConstIterator iter = *this;
       iter += n;
       return iter;
     }
 
+    /**
+     * @return True if this iterator is contextually equivalent to the provided iterator. In this
+     *         case, equivalency is defined as pointing to the same TID in the same TID list.
+     */
     bool operator==(const ConstIterator &that) const noexcept {
       return &bv_ == &that.bv_ && current_position_ == that.current_position_;
     }
 
+    /**
+     * @return True if this iterator is not contextually equivalent to the provided iterator.
+     */
     bool operator!=(const ConstIterator &that) const noexcept { return !(*this == that); }
 
    private:
@@ -122,19 +147,31 @@ class TupleIdList {
   };
 
   /**
-   * Construct a list capable of storing at least @em num_tuples tuple IDs.
+   * Construct an empty list capable of storing at least @em num_tuples tuple IDs.
    * @param num_tuples The maximum number of tuples in the list.
    */
   explicit TupleIdList(uint32_t num_tuples) : bit_vector_(num_tuples) {}
 
   /**
-   * This class cannot be copied or moved.
+   * This class cannot be copied (but can be moved).
    */
-  DISALLOW_COPY_AND_MOVE(TupleIdList);
+  DISALLOW_COPY(TupleIdList);
+
+  /**
+   * Move constructor.
+   */
+  TupleIdList(TupleIdList &&other) = default;
+
+  /**
+   * Move assignment.
+   * @param other The TID list whose contents to move into this instance.
+   * @return This TID list instance.
+   */
+  TupleIdList &operator=(TupleIdList &&other) = default;
 
   /**
    * Resize the list to be able to store at least @em num_tuples tuple IDs. If growing the list, the
-   * contents of the list remain unchanged. If shrinking the list, tuples whose IDs are less than
+   * contents of the list remain unchanged. If shrinking the list, tuples whose IDs are greater than
    * the new capacity are removed.
    *
    * @code
@@ -166,9 +203,7 @@ class TupleIdList {
 
   /**
    * Add the tuple ID @em tid to this list.
-   *
    * @pre The given TID must be in the range [0, capacity) of this list.
-   *
    * @param tid The ID of the tuple.
    */
   void Add(const uint32_t tid) { bit_vector_.Set(tid); }
@@ -232,13 +267,17 @@ class TupleIdList {
 
   /**
    * Filter the TIDs in this list based on the given unary filtering function.
-   * @tparam F A unary functor that accepts a 32-bit tuple ID and returns true if the tuple ID
+   * @tparam P A unary functor that accepts a 32-bit tuple ID and returns true if the tuple ID
    *           remains in the list, and false if the tuple should be removed from the list.
-   * @param f The filtering function.
+   * @param p The filtering function.
    */
-  template <typename F>
-  void Filter(F &&f) {
-    bit_vector_.UpdateSetBits(f);
+  template <typename P>
+  void Filter(P p) {
+    if (IsFull()) {
+      bit_vector_.UpdateFull(p);
+    } else {
+      bit_vector_.UpdateSetBits(p);
+    }
   }
 
   /**
@@ -267,6 +306,11 @@ class TupleIdList {
   void Clear() { bit_vector_.Reset(); }
 
   /**
+   * @return The internal bit vector representation of the list.
+   */
+  BitVectorType *GetMutableBits() { return &bit_vector_; }
+
+  /**
    * @return The number of active tuples in the list.
    */
   uint32_t GetTupleCount() const { return bit_vector_.CountOnes(); }
@@ -279,7 +323,7 @@ class TupleIdList {
   /**
    * @return The selectivity of the list as a fraction in the range [0.0, 1.0].
    */
-  float ComputeSelectivity() const { return static_cast<float>(GetTupleCount()) / GetCapacity(); }
+  float ComputeSelectivity() const { return bit_vector_.ComputeDensity(); }
 
   /**
    * Convert this tuple ID list into a dense selection index vector.
@@ -294,8 +338,14 @@ class TupleIdList {
    * @param f The callback to invoke for each TID in the list.
    */
   template <typename F>
-  void ForEach(F &&f) const {
-    bit_vector_.IterateSetBits(f);
+  void ForEach(F f) const {
+    if (IsFull()) {
+      for (uint32_t i = 0, n = GetCapacity(); i < n; i++) {
+        f(i);
+      }
+    } else {
+      bit_vector_.IterateSetBits(f);
+    }
   }
 
   /**
@@ -309,13 +359,13 @@ class TupleIdList {
    */
   void Dump(std::ostream &stream) const;
 
-  /**
-   * @return The internal bit vector representation of the list.
-   */
-  BitVectorType *GetMutableBits() { return &bit_vector_; }
+  // -------------------------------------------------------
+  // C++ operator overloads.
+  // -------------------------------------------------------
 
   /**
-   * Access an element in the list by it's index in the total order.
+   * Access the TID at the provided index in this list.
+   * @warning No bounds checking is performed.
    * @param i The index of the element to select.
    * @return The value of the element at the given index.
    */
@@ -326,9 +376,7 @@ class TupleIdList {
 
   /**
    * Assign the TIDs in @em tids to this list. Any previous contents are cleared out.
-   *
-   * NOTE: THIS IS ONLY FOR TESTING. DO NOT USE OTHERWISE!
-   *
+   * @warning THIS IS ONLY FOR TESTING. DO NOT USE OTHERWISE!
    * @param tids TIDs to add to the list.
    * @return This list.
    */
@@ -344,6 +392,10 @@ class TupleIdList {
 
     return *this;
   }
+
+  // -------------------------------------------------------
+  // STL iterators.
+  // -------------------------------------------------------
 
   /**
    * @return An iterator positioned at the first element in the TID list.

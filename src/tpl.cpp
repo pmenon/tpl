@@ -7,13 +7,12 @@
 #include <string>
 #include <utility>
 
-#include "tbb/task_scheduler_init.h"
-
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
 #include "ast/ast_dump.h"
+#include "ast/ast_pretty_print.h"
 #include "common/cpu_info.h"
 #include "logging/logger.h"
 #include "parsing/parser.h"
@@ -22,6 +21,7 @@
 #include "sema/sema.h"
 #include "sql/catalog.h"
 #include "sql/execution_context.h"
+#include "sql/printing_consumer.h"
 #include "sql/tablegen/table_generator.h"
 #include "tpl.h"  // NOLINT
 #include "util/timer.h"
@@ -39,13 +39,12 @@
 llvm::cl::OptionCategory kTplOptionsCategory("TPL Compiler Options","Options for controlling the TPL compilation process."); // NOLINT
 llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
+llvm::cl::opt<bool> kPrettyPrint("pretty-print", llvm::cl::desc("Pretty-print the source from the parsed AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kIsSQL("sql", llvm::cl::desc("Is the input a SQL query?"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kTpch("tpch", llvm::cl::desc("Should the TPCH database be loaded? Requires '-schema' and '-data' directories."), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<std::string> kDataDir("data", llvm::cl::desc("Where to find data files of tables to load"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
-
-tbb::task_scheduler_init scheduler;  // NOLINT
 
 namespace tpl {
 
@@ -64,10 +63,10 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
 
-  sql::NoOpResultConsumer consumer;
   sql::tablegen::TPCHOutputSchemas schemas;
-  const sql::Schema *schema = schemas.GetSchema(
+  const sql::planner::OutputSchema *schema = schemas.GetSchema(
       llvm::sys::path::filename(name).take_until([](char x) { return x == '.'; }));
+  sql::PrintingConsumer consumer(std::cout, schema);
 
   double parse_ms = 0.0,       // Time to parse the source
       typecheck_ms = 0.0,      // Time to perform semantic analysis
@@ -111,6 +110,11 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
   // Dump AST
   if (kPrintAst) {
     ast::AstDump::Dump(root);
+  }
+
+  // Pretty-print AST
+  if (kPrettyPrint) {
+    ast::AstPrettyPrint::Dump(std::cout, root);
   }
 
   //
@@ -257,13 +261,12 @@ static void RunRepl() {
     // Run file?
     if (llvm::StringRef line_ref(line); line_ref.startswith_lower(".run")) {
       auto [_, filename] = line_ref.split(' ');
-      (void)_;
       RunFile(filename);
       continue;
     }
 
     // Code ...
-    std::string input = line;
+    std::string input;
     while (!line.empty()) {
       input.append(line).append("\n");
       line = prompt_and_read_line();
@@ -301,8 +304,6 @@ void ShutdownTPL() {
   tpl::vm::LLVMEngine::Shutdown();
 
   tpl::logging::ShutdownLogger();
-
-  scheduler.terminate();
 
   LOG_INFO("TPL cleanly shutdown ...");
 }

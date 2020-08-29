@@ -11,25 +11,25 @@ namespace tpl::util {
 class HashTest : public TplTest {};
 
 // Check an input value using a given hashing method
-#define CHECK_HASH_METHOD_ON_INPUT(METHOD, INPUT)         \
-  {                                                       \
-    auto hash_val1 = HashUtil::Hash<METHOD>(INPUT);       \
-    auto hash_val2 = HashUtil::Hash<METHOD>(INPUT);       \
-    EXPECT_EQ(hash_val1, hash_val2);                      \
-  }                                                       \
-  {                                                       \
-    auto seed = random_seed();                            \
-    auto hash_val1 = HashUtil::Hash<METHOD>(INPUT, seed); \
-    auto hash_val2 = HashUtil::Hash<METHOD>(INPUT, seed); \
-    EXPECT_EQ(hash_val1, hash_val2);                      \
+#define CHECK_HASH_METHOD_ON_INPUT(METHOD, INPUT)   \
+  {                                                 \
+    auto hash_val1 = HashUtil::METHOD(INPUT);       \
+    auto hash_val2 = HashUtil::METHOD(INPUT);       \
+    EXPECT_EQ(hash_val1, hash_val2);                \
+  }                                                 \
+  {                                                 \
+    auto seed = random_seed();                      \
+    auto hash_val1 = HashUtil::METHOD(INPUT, seed); \
+    auto hash_val2 = HashUtil::METHOD(INPUT, seed); \
+    EXPECT_EQ(hash_val1, hash_val2);                \
   }
 
 // Check an input value against all possible hashing methods
-#define CHECK_HASH_ON_INPUT(INPUT)                          \
-  {                                                         \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Crc, INPUT);     \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Murmur2, INPUT); \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::xxHash3, INPUT); \
+#define CHECK_HASH_ON_INPUT(INPUT)                 \
+  {                                                \
+    CHECK_HASH_METHOD_ON_INPUT(HashCrc, INPUT);    \
+    CHECK_HASH_METHOD_ON_INPUT(HashMurmur, INPUT); \
+    CHECK_HASH_METHOD_ON_INPUT(HashXXH3, INPUT);   \
   }
 
 TEST_F(HashTest, IntegerHash) {
@@ -65,19 +65,11 @@ TEST_F(HashTest, StringHash) {
     large_input += small_input;
   }
 
-#define CHECK_HASH_METHOD_ON_INPUT(METHOD, INPUT)   \
-  {                                                 \
-    auto hash_val1 = HashUtil::Hash<METHOD>(INPUT); \
-    auto hash_val2 = HashUtil::Hash<METHOD>(INPUT); \
-    EXPECT_EQ(hash_val1, hash_val2);                \
-  }
-
-  // Check an input value against all possible hashing methods
-#define CHECK_HASH_ON_INPUT(INPUT)                          \
-  {                                                         \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Crc, INPUT);     \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::Murmur2, INPUT); \
-    CHECK_HASH_METHOD_ON_INPUT(HashMethod::xxHash3, INPUT); \
+#define CHECK_HASH_ON_INPUT(INPUT)              \
+  {                                             \
+    auto hash_val1 = HashUtil::HashXXH3(INPUT); \
+    auto hash_val2 = HashUtil::HashXXH3(INPUT); \
+    EXPECT_EQ(hash_val1, hash_val2);            \
   }
 
   CHECK_HASH_ON_INPUT("Fixed input");
@@ -85,7 +77,6 @@ TEST_F(HashTest, StringHash) {
   CHECK_HASH_ON_INPUT(large_input);
 
 #undef CHECK_HASH_ON_INPUT
-#undef CHECK_HASH_METHOD_ON_INPUT
 }
 
 }  // namespace tpl::util

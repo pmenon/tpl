@@ -4,8 +4,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "tbb/tbb.h"
-
 #include "sql/aggregation_hash_table.h"
 #include "sql/execution_context.h"
 #include "sql/schema.h"
@@ -25,7 +23,7 @@ struct InputTuple {
 
   explicit InputTuple(uint64_t key, uint64_t col_a) : key(key), col_a(col_a) {}
 
-  hash_t Hash() const noexcept { return util::HashUtil::Hash(key); }
+  hash_t Hash() const noexcept { return util::HashUtil::HashMurmur(key); }
 };
 
 /**
@@ -188,58 +186,79 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
 }
 
 TEST_F(AggregationHashTableTest, BatchProcessTest) {
-  constexpr uint32_t num_groups = 400;
+  constexpr uint32_t num_groups = 512;
+  constexpr uint32_t num_group_updates_per_batch = kDefaultVectorSize / num_groups;
+  constexpr uint32_t count1_scale = 1;
+  constexpr uint32_t count2_scale = 2;
+  constexpr uint32_t count3_scale = 3;
   constexpr uint32_t num_batches = 10;
 
-  // Insert 'num_batches' of 'kDefaultVectorSize' (i.e., 2048) tuples into an aggregation table to
-  // force the creation of 'num_groups' unique groups.
-
-  const auto hash_fn = [](void *x) {
-    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
-    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
-    return util::HashUtil::Hash(*key);
-  };
-
-  const auto key_eq = [](const void *agg, const void *x) {
-    auto agg_tuple = reinterpret_cast<const AggTuple *>(agg);
-    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
-    auto vpi_key = vpi->GetValue<int32_t, false>(0, nullptr);
-    return agg_tuple->key == *vpi_key;
-  };
-
-  const auto init_agg = [](void *agg, void *x) {
-    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
-    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
-    auto val = vpi->GetValue<int32_t, false>(1, nullptr);
-    new (agg) AggTuple(InputTuple(*key, *val));
-  };
-
-  const auto advance_agg = [](void *agg, void *x) {
-    auto vpi = reinterpret_cast<const VectorProjectionIterator *>(x);
-    auto agg_tuple = reinterpret_cast<AggTuple *>(agg);
-    auto key = vpi->GetValue<int32_t, false>(0, nullptr);
-    auto val = vpi->GetValue<int32_t, false>(1, nullptr);
-    agg_tuple->Advance(InputTuple(*key, *val));
-  };
+  // We'll try to create an aggregation table with 511 groups. To do this, we'll
+  // create create a batch (2048) of tuples that rotate keys between [0,511],
+  // but apply the filter: key != 511, thus having the 511 unique keys in the
+  // range [0,510]. Each group will receive 2048/512 updates per batch. We'll
+  // issue 10 updates.
 
   VectorProjection vector_projection;
   vector_projection.Initialize({TypeId::Integer, TypeId::Integer});
   vector_projection.Reset(kDefaultVectorSize);
 
   for (uint32_t run = 0; run < num_batches; run++) {
-    // Setup projection's key and value
-    std::random_device random;
-    for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
-      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData())[i] = i % num_groups;
-      reinterpret_cast<uint32_t *>(vector_projection.GetColumn(1)->GetData())[i] = 1;
+    {
+      auto keys = reinterpret_cast<uint32_t *>(vector_projection.GetColumn(0)->GetData());
+      auto values = reinterpret_cast<uint32_t *>(vector_projection.GetColumn(1)->GetData());
+      for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
+        keys[i] = i % num_groups;
+        values[i] = 1;
+      }
+
+      // Shuffle keys.
+      std::shuffle(keys, keys + kDefaultVectorSize, std::random_device());
+
+      // Filter out ONLY the last grouping key.
+      TupleIdList tids(kDefaultVectorSize);
+      for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
+        tids.Enable(i, keys[i] != num_groups - 1);
+      }
+      EXPECT_FALSE(tids.IsFull());  // Some keys have been filtered.
+      vector_projection.SetFilteredSelections(tids);
     }
 
     // Process
     VectorProjectionIterator vpi(&vector_projection);
-    AggTable()->ProcessBatch(&vpi, hash_fn, key_eq, init_agg, advance_agg, false);
+    AggTable()->ProcessBatch(
+        &vpi,  // Input batch
+        {0},   // Key indexes
+        // Aggregate initialization function
+        [](VectorProjectionIterator *new_aggs, VectorProjectionIterator *input) {
+          VectorProjectionIterator::SynchronizedForEach({new_aggs, input}, [&]() {
+            auto *e = *new_aggs->GetValue<sql::HashTableEntry *, false>(1, nullptr);
+            auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
+            agg->key = *input->GetValue<uint32_t, false>(0, nullptr);
+            agg->count1 = agg->count2 = agg->count3 = 0;
+          });
+        },
+        // Aggregate update function
+        [](VectorProjectionIterator *aggs, VectorProjectionIterator *input) {
+          VectorProjectionIterator::SynchronizedForEach({aggs, input}, [&]() {
+            auto *e = *aggs->GetValue<sql::HashTableEntry *, false>(1, nullptr);
+            auto agg = const_cast<AggTuple *>(e->PayloadAs<AggTuple>());
+            agg->count1 += count1_scale;
+            agg->count2 += count2_scale;
+            agg->count3 += count3_scale;
+          });
+        },
+        false  // Partitioned?
+    );
   }
 
-  EXPECT_EQ(num_groups, AggTable()->GetTupleCount());
+  EXPECT_EQ(num_groups - 1, AggTable()->GetTupleCount());
+  for (auto iter = AHTIterator(*AggTable()); iter.HasNext(); iter.Next()) {
+    auto agg = reinterpret_cast<const AggTuple *>(iter.GetCurrentAggregateRow());
+    EXPECT_EQ(num_group_updates_per_batch * num_batches * count1_scale, agg->count1);
+    EXPECT_EQ(num_group_updates_per_batch * num_batches * count2_scale, agg->count2);
+    EXPECT_EQ(num_group_updates_per_batch * num_batches * count3_scale, agg->count3);
+  }
 }
 
 TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
@@ -261,10 +280,8 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
   std::array<HashTableEntry *, nparts> partitions{};
   partitions.fill(nullptr);
 
-  //
+  // -------------------------------------------------------
   // Test: check iteration over an empty partitions array
-  //
-
   {
     uint32_t count = 0;
     AHTOverflowPartitionIterator iter(partitions.begin(), partitions.end());
@@ -274,10 +291,8 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
     EXPECT_EQ(0u, count);
   }
 
-  //
+  // -------------------------------------------------------
   // Test: insert one entry in the middle partition and ensure we find it
-  //
-
   {
     std::vector<std::unique_ptr<TestEntry>> entries;
     entries.emplace_back(std::make_unique<TestEntry>(100, 200));
@@ -300,11 +315,9 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
 
   partitions.fill(nullptr);
 
-  //
+  // -------------------------------------------------------
   // Test: create a list of nparts partitions and vary the number of entries in
   //       each partition from [0, nentries_per_part). Ensure the counts match.
-  //
-
   {
     std::vector<std::unique_ptr<TestEntry>> entries;
 
@@ -336,25 +349,36 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
 }
 
 TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
-  tbb::task_scheduler_init sched;
-
-  // Thread-local state initialization function:
-  // Creates the aggregation table
-  const auto init_ht = [](void *ctx, void *aht) {
-    auto exec_ctx = reinterpret_cast<ExecutionContext *>(ctx);
-    new (aht) AggregationHashTable(exec_ctx->GetMemoryPool(), sizeof(AggTuple));
+  // The whole-query state.
+  struct QueryState {
+    std::atomic<uint32_t> row_count;
   };
 
-  // Thread-local state destruction function:
-  // Destroys the aggregation hash table
-  const auto destroy_ht = [](void *ctx, void *aht) {
-    std::destroy_at(reinterpret_cast<AggregationHashTable *>(aht));
-  };
+  QueryState query_state{0};
+  MemoryPool memory(nullptr);
+  ExecutionContext ctx(&memory);
+  ThreadStateContainer container(&memory);
 
-  // Function to build one aggregation hash table. Inserts random data to ensure 'num_aggs'
-  // unique aggregates in final table.
+  // -------------------------------------------------------
+  // Step 1: thread-local container contains only an aggregation hash table.
+  container.Reset(
+      sizeof(AggregationHashTable),
+      // Init function.
+      [](void *ctx, void *aht) {
+        auto exec_ctx = reinterpret_cast<ExecutionContext *>(ctx);
+        new (aht) AggregationHashTable(exec_ctx->GetMemoryPool(), sizeof(AggTuple));
+      },
+      // Tear-down function.
+      [](void *ctx, void *aht) { std::destroy_at(reinterpret_cast<AggregationHashTable *>(aht)); },
+      &ctx);
+
+  // -------------------------------------------------------
+  // Step 2: build 4 thread-local aggregation hash tables.
   constexpr uint32_t num_aggs = 100;
-  const auto build_agg_table = [&](AggregationHashTable *agg_table) {
+  LaunchParallel(4, [&](auto tid) {
+    // The thread-local table.
+    auto agg_table = container.AccessCurrentThreadStateAs<AggregationHashTable>();
+
     std::mt19937 generator;
     std::uniform_int_distribution<uint64_t> distribution(0, num_aggs - 1);
 
@@ -369,51 +393,39 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
         new (new_agg) AggTuple(input);
       }
     }
-  };
-
-  // Merging function to merge overflow partition data
-  auto merge = [](void *ctx, AggregationHashTable *table, AHTOverflowPartitionIterator *iter) {
-    for (; iter->HasNext(); iter->Next()) {
-      auto *partial_agg = iter->GetRowAs<AggTuple>();
-      auto *existing =
-          reinterpret_cast<AggTuple *>(table->Lookup(iter->GetRowHash(), AggAggKeyEq, partial_agg));
-      if (existing != nullptr) {
-        existing->Merge(*partial_agg);
-      } else {
-        table->Insert(iter->GetEntryForRow());
-      }
-    }
-  };
-
-  struct QueryState {
-    std::atomic<uint32_t> row_count;
-  };
-
-  auto scan = [](void *query_state, void *thread_state, const AggregationHashTable *agg_table) {
-    auto *qs = reinterpret_cast<QueryState *>(query_state);
-    qs->row_count += agg_table->GetTupleCount();
-  };
-
-  QueryState query_state{0};
-  MemoryPool memory(nullptr);
-  ExecutionContext ctx(&memory);
-  ThreadStateContainer container(&memory);
-
-  // Build 4 thread-local aggregation hash tables
-  container.Reset(sizeof(AggregationHashTable), init_ht, destroy_ht, &ctx);
-  LaunchParallel(4, [&](auto tid) {
-    build_agg_table(container.AccessCurrentThreadStateAs<AggregationHashTable>());
   });
 
-  // The main table that merges all thread-local tables
+  // -------------------------------------------------------
+  // Step 2: Transfer thread-local memory into global/main hash table.
   AggregationHashTable main_table(&memory, sizeof(AggTuple));
-  main_table.TransferMemoryAndPartitions(&container, 0, merge);
+  main_table.TransferMemoryAndPartitions(
+      &container, 0,
+      // Merging function merges a set of overflow partitions into the provided
+      // table.
+      [](void *ctx, AggregationHashTable *table, AHTOverflowPartitionIterator *iter) {
+        for (; iter->HasNext(); iter->Next()) {
+          auto *partial_agg = iter->GetRowAs<AggTuple>();
+          auto *existing = reinterpret_cast<AggTuple *>(
+              table->Lookup(iter->GetRowHash(), AggAggKeyEq, partial_agg));
+          if (existing != nullptr) {
+            existing->Merge(*partial_agg);
+          } else {
+            table->Insert(iter->GetEntryForRow());
+          }
+        }
+      });
 
   // Clear thread-local container to ensure all memory has been moved
   container.Clear();
 
-  // Scan main table and ensure all data exists.
-  main_table.ExecuteParallelPartitionedScan(&query_state, &container, scan);
+  // -------------------------------------------------------
+  // Step 3: scan main table and ensure all data exists.
+  main_table.ExecuteParallelPartitionedScan(
+      &query_state, &container,
+      [](void *query_state, void *thread_state, const AggregationHashTable *agg_table) {
+        auto *qs = reinterpret_cast<QueryState *>(query_state);
+        qs->row_count += agg_table->GetTupleCount();
+      });
 
   // Check
   EXPECT_EQ(num_aggs, query_state.row_count.load(std::memory_order_seq_cst));

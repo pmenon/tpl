@@ -10,18 +10,18 @@ namespace tpl::sql {
 class IsNullPredicate : public AllStatic {
  public:
   /**
-   * Determine if the input value @em val is NULL, setting the result to true if so.
-   * @param[out] result Result of the NULL check. True if @em val is NULL; false otherwise.
+   * Determine if the input value is a SQL NULL.
    * @param val The input value to check.
+   * @return True if input is a SQL NULL; false otherwise.
    */
-  static void IsNull(BoolVal *result, const Val &val) { *result = BoolVal(val.is_null); }
+  static bool IsNull(const Val &val) { return val.is_null; }
 
   /**
-   * Determine if the input value @em val is not NULL, setting the result to true if so.
-   * @param[out] result Result of the NULL check. True if @em val is not NULL; false otherwise.
+   * Determine if the input value is NOT a SQL NULL.
    * @param val The input value to check.
+   * @return True if input is not a SQL NULL; false otherwise.
    */
-  static void IsNotNull(BoolVal *result, const Val &val) { *result = BoolVal(!val.is_null); }
+  static bool IsNotNull(const Val &val) { return !val.is_null; }
 };
 
 }  // namespace tpl::sql

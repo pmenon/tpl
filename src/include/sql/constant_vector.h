@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "sql/vector.h"
 
 namespace tpl::sql {
@@ -9,11 +11,10 @@ namespace tpl::sql {
  */
 class ConstantVector : public Vector {
  public:
-  explicit ConstantVector(const GenericValue &value) : Vector(value.GetTypeId()), value_(value) {
+  explicit ConstantVector(GenericValue value)
+      : Vector(value.GetTypeId()), value_(std::move(value)) {
     Reference(&value_);
   }
-
-  const GenericValue &GetConstantValue() const { return value_; }
 
  private:
   GenericValue value_;

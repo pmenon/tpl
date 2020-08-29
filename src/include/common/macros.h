@@ -74,3 +74,4 @@ NORETURN void tpl_unreachable(const char *msg, const char *file, unsigned int li
 #endif
 
 #define FRIEND_TEST(test_case_name, test_name) friend class test_case_name##_##test_name##_Test
+#define FRIEND_BENCHMARK(bench_name, bench) friend class bench_name##_##bench##_Benchmark

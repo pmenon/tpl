@@ -36,6 +36,14 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
    */
   DISALLOW_COPY_AND_MOVE(BytecodeGenerator);
 
+  /**
+   * Main entry point to convert a valid (i.e., parsed and type-checked) AST into a bytecode module.
+   * @param root The root of the AST.
+   * @param name The (optional) name of the program.
+   * @return A compiled bytecode module.
+   */
+  static std::unique_ptr<BytecodeModule> Compile(ast::AstNode *root, const std::string &name);
+
   // Declare all node visit methods here
 #define DECLARE_VISIT_METHOD(type) void Visit##type(ast::type *node);
   AST_NODES(DECLARE_VISIT_METHOD)
@@ -45,14 +53,6 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
    * @return The emitter used by this generator to write bytecode.
    */
   BytecodeEmitter *GetEmitter() { return &emitter_; }
-
-  /**
-   * Convert a parse and type-checked TPL AST into a TBC unit.
-   * @param root The root of the AST.
-   * @param name The (optional) name of the program.
-   * @return A compiled TBC unit.
-   */
-  static std::unique_ptr<BytecodeModule> Compile(ast::AstNode *root, const std::string &name);
 
  private:
   // Private constructor to force users to call Compile()
@@ -69,7 +69,9 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   // Dispatched from VisitBuiltinCallExpr() to handle the various builtin
   // functions, including filtering, hash table interaction, sorting etc.
   void VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitNullValueCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitSqlStringLikeCall(ast::CallExpr *call);
+  void VisitBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinTableIterParallelCall(ast::CallExpr *call);
   void VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
@@ -81,10 +83,11 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   void VisitBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinJoinHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinHashTableEntryIteratorCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSorterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitResultBufferCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSizeOfCall(ast::CallExpr *call);

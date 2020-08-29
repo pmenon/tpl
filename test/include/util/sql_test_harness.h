@@ -55,6 +55,7 @@ MAKE_VEC_TYPE(Float, float)
 MAKE_VEC_TYPE(Double, double)
 MAKE_VEC_TYPE(Date, sql::Date)
 MAKE_VEC_TYPE(Varchar, std::string_view)
+MAKE_VEC_TYPE(Pointer, uintptr_t);
 
 #undef MAKE_VEC_TYPE
 #undef MAKE_VEC_TYPE_IMPL

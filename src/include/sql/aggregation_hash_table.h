@@ -5,11 +5,12 @@
 #include <utility>
 #include <vector>
 
-#include "sql/generic_hash_table.h"
+#include "sql/chaining_hash_table.h"
 #include "sql/memory_pool.h"
 #include "sql/schema.h"
+#include "sql/vector.h"
+#include "sql/vector_projection.h"
 #include "util/chunked_vector.h"
-#include "util/fixed_length_buffer.h"
 
 namespace libcount {
 class HLL;
@@ -18,13 +19,18 @@ class HLL;
 namespace tpl::sql {
 
 class ThreadStateContainer;
-class VectorProjection;
 class VectorProjectionIterator;
 
 // Forward declare
 class AHTIterator;
 class AHTVectorIterator;
 class AHTOverflowPartitionIterator;
+
+//===----------------------------------------------------------------------===//
+//
+// Aggregation Hash Table
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * The hash table used when performing aggregations.
@@ -55,23 +61,18 @@ class AggregationHashTable {
   using KeyEqFn = bool (*)(const void *, const void *);
 
   /**
-   * Function that takes an input element and computes a hash value.
-   */
-  using HashFn = hash_t (*)(void *);
-
-  /**
    * Function to initialize a new aggregate.
    * Convention: First argument is the aggregate to initialize, second argument is the input tuple
    *             to initialize the aggregate with.
    */
-  using InitAggFn = void (*)(void *, void *);
+  using VectorInitAggFn = void (*)(VectorProjectionIterator *, VectorProjectionIterator *);
 
   /**
    * Function to advance an existing aggregate with a new input value.
    * Convention: First argument is the existing aggregate to update, second argument is the input
    *             tuple to update the aggregate with.
    */
-  using AdvanceAggFn = void (*)(void *, void *);
+  using VectorAdvanceAggFn = void (*)(VectorProjectionIterator *, VectorProjectionIterator *);
 
   /**
    * Function to merge a set of overflow partitions into the given aggregation hash table.
@@ -144,9 +145,8 @@ class AggregationHashTable {
   byte *AllocInputTuplePartitioned(hash_t hash);
 
   /**
-   * Insert and link in the given fully-constructed tuple contained within @em entry payload into
-   * this aggregation table. This is used during partitioned-build when pre-allocated tuples need to
-   * be linked into the hash table without allocating new tuple data.
+   * Insert and link in an entry containing a fully-constructed tuple into this aggregation table.
+   * The entry is inserted assuming non-concurrent insertions!
    * @param entry The entry to insert into the hash table.
    */
   void Insert(HashTableEntry *entry) { hash_table_.Insert<false>(entry); }
@@ -163,19 +163,19 @@ class AggregationHashTable {
 
   /**
    * Ingest and process a batch of input into the aggregation table.
-   * @param vpi The vector projection to process.
-   * @param hash_fn Function to compute a hash of an input element.
-   * @param key_eq_fn Function to check key equality of an input element and an existing aggregate.
+   * @param input_batch The vector projection to process.
+   * @param key_indexes The ordered list of key indexes in the input batch.
    * @param init_agg_fn Function to initialize a new aggregate.
    * @param advance_agg_fn Function to advance an existing aggregate.
-   * @param partitioned Whether to perform insertions in partitioned mode.
+   * @param partitioned_aggregation Whether to perform insertions in partitioned mode.
    */
-  void ProcessBatch(VectorProjectionIterator *vpi, HashFn hash_fn, KeyEqFn key_eq_fn,
-                    InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn, bool partitioned);
+  void ProcessBatch(VectorProjectionIterator *input_batch, const std::vector<uint32_t> &key_indexes,
+                    VectorInitAggFn init_agg_fn, VectorAdvanceAggFn advance_agg_fn,
+                    bool partitioned_aggregation);
 
   /**
-   * Transfer all entries and overflow partitions stored in each thread-local aggregation hash table
-   * (in the thread state container) into this table.
+   * Transfer all data and entries in each thread-local aggregation hash table (in the thread state
+   * container) into this hash table.
    *
    * This function only moves memory around, no aggregation hash tables are built. It is used at the
    * end of the build-portion of a parallel aggregation before the thread state container is reset
@@ -188,26 +188,59 @@ class AggregationHashTable {
                                    MergePartitionFn merge_partition_fn);
 
   /**
-   * Execute a parallel scan over this partitioned hash table. It is assumed that this aggregation
-   * table was constructed in a partitioned manner. This function will build a new aggregation hash
-   * table for any non-empty overflow partition, merge the contents of the partition (using the
-   * merging function provided to the call to @em TransferMemoryAndPartitions()), and invoke the
-   * scan callback function to scan the newly built table. The building and scanning of the table
-   * will be performed entirely in parallel; hence, the callback function should be thread-safe.
+   * Execute a serial scan over this hash table. It is assumed that the hash table was constructed
+   * in a partitioned manner, otherwise use a simple tpl::sql::AHTITerator. This function builds a
+   * hash table for any non-empty  overflow partition (if one doesn't exist), merges the contents of
+   * the partition (using the merging function provided to the call to
+   * @em TransferMemoryAndPartitions()), and invokes the scan callback function.
+   *
+   * @param query_state The (opaque) query state.
+   * @param scan_fn The callback scan function, called once for each overflow partition hash table.
+   */
+  void ExecutePartitionedScan(void *query_state, ScanPartitionFn scan_fn);
+
+  /**
+   * Execute a parallel scan over this hash table. It is assumed that this aggregation table was
+   * constructed in a partitioned manner. This function builds a hash table for any non-empty
+   * overflow partition (if one doesn't exist), merges the contents of the partition (using the
+   * merging function provided to the call to @em TransferMemoryAndPartitions()), and invokes the
+   * scan callback function. All steps are performed in parallel; hence, the callback function
+   * must be thread-safe.
    *
    * The thread states container is assumed to already have been configured prior to this scan call.
    *
-   * The callback scan function accepts two opaque state objects: an query state and a thread state.
-   * The query state is provided as a function argument. The thread state will be pulled from the
-   * provided ThreadStateContainer object.
+   * The callback scan function accepts three arguments of which the first two are opaque state
+   * objects: a query state and a thread state. The query state is provided by the user here. The
+   * thread state is pulled from the provided ThreadStateContainer object for the thread.
    *
    * @param query_state The (opaque) query state.
    * @param thread_states The container holding all thread states.
-   * @param scan_fn The callback scan function that will scan one partition of the partitioned
-   *                aggregation hash table.
+   * @param scan_fn The callback scan function, called once for each overflow partition hash table.
    */
   void ExecuteParallelPartitionedScan(void *query_state, ThreadStateContainer *thread_states,
                                       ScanPartitionFn scan_fn);
+
+  /**
+   * Construct a new aggregation hash table instance for each non-empty overflow partition.
+   * @param query_state An opaque state object pointer
+   */
+  void BuildAllPartitions(void *query_state);
+
+  /**
+   * Repartition all data stored in this partitioned hash table.
+   */
+  void Repartition();
+
+  /**
+   * Merge data stored in this aggregation hash table's overflow partitions into the provided
+   * target aggregation hash table. Both source and target aggregation hash tables must already be
+   * partitioned and must use the same partitioning key!
+   * @param target The target hash table we merge our overflow partitions into.
+   * @param query_state An opaque state object pointer.
+   * @param merge_func The function we use to merge entries from our hash table into the target.
+   */
+  void MergePartitions(AggregationHashTable *target, void *query_state,
+                       MergePartitionFn merge_func);
 
   /**
    * @return The total number of tuples in this table.
@@ -219,67 +252,107 @@ class AggregationHashTable {
    */
   const Stats *GetStatistics() const { return &stats_; }
 
+  // Specialized hash table mapping hash values to group IDs
+  class HashToGroupIdMap;
+
  private:
   friend class AHTIterator;
   friend class AHTVectorIterator;
 
   // Does the hash table need to grow?
-  bool NeedsToGrow() const { return hash_table_.GetElementCount() >= max_fill_; }
+  bool NeedsToGrow() const noexcept { return hash_table_.GetElementCount() >= max_fill_; }
 
   // Grow the hash table
   void Grow();
+
+  // Internal entry allocation + hash table linkage. Does not resize!
+  HashTableEntry *AllocateEntryInternal(hash_t hash);
 
   // Lookup a hash table entry internally
   HashTableEntry *LookupEntryInternal(hash_t hash, KeyEqFn key_eq_fn,
                                       const void *probe_tuple) const;
 
-  // Flush all entries currently stored in the hash table into the overflow partitions
+  // Should we flush entries from the main table into the overflow partitions?
+  bool NeedsToFlushToOverflowPartitions() const noexcept {
+    return hash_table_.GetElementCount() >= flush_threshold_;
+  }
+
+  // Flush all entries currently stored in the main hash table into the overflow
+  // partitions.
   void FlushToOverflowPartitions();
 
   // Allocate all overflow partition information if unallocated
   void AllocateOverflowPartitions();
 
-  // Compute the hash value and perform the table lookup for all elements in the input vector
-  // projections.
-  template <bool VPIIsFiltered>
-  void ProcessBatchImpl(VectorProjectionIterator *vpi, HashFn hash_fn, KeyEqFn key_eq_fn,
-                        InitAggFn init_agg_fn, AdvanceAggFn advance_agg_fn, bool partitioned);
+  // Called from ProcessBatch() to compute hash values for tuples in batch.
+  void ComputeHash(VectorProjectionIterator *input_batch, const std::vector<uint32_t> &key_indexes);
 
-  // Dispatched from ProcessBatchImpl() to compute the hash values for all input tuples. Hashes are
-  // stored in the 'hashes' array in the batch state.
-  template <bool VPIIsFiltered>
-  void ComputeHash(VectorProjectionIterator *vpi, HashFn hash_fn);
+  // Called from ProcessBatch() to find candidate groups for tuples in batch.
+  void FindGroups(VectorProjectionIterator *input_batch, const std::vector<uint32_t> &key_indexes);
 
-  // Called from ProcessBatchImpl() to find matching groups for all tuples in the input vector
-  // projection. This function returns the number of groups that were found.
-  template <bool VPIIsFiltered>
-  uint32_t FindGroups(VectorProjectionIterator *vpi, KeyEqFn key_eq_fn);
-
-  // Called from FindGroups() to lookup initial entries from the hash table for all input tuples.
-  uint32_t LookupInitial(uint32_t num_elems);
-
-  // Specialization of LookupInitial() to control prefetching.
-  template <bool Prefetch>
-  uint32_t LookupInitialImpl(uint32_t num_elems);
+  // Called from FindGroups() to lookup initial candidate aggregate entries for
+  // tuples in batch.
+  void LookupInitial();
 
   // Called from FindGroups() to check the equality of keys.
-  template <bool VPIIsFiltered>
-  uint32_t CheckKeyEquality(VectorProjectionIterator *vpi, uint32_t num_elems, KeyEqFn key_eq_fn);
+  void CheckKeyEquality(VectorProjectionIterator *input_batch,
+                        const std::vector<uint32_t> &key_indexes);
 
   // Called from FindGroups() to follow the entry chain of candidate groups.
-  uint32_t FollowNext();
+  void FollowNext();
 
-  // Called from ProcessBatch() to create missing groups
-  template <bool VPIIsFiltered, bool Partitioned>
-  void CreateMissingGroups(VectorProjectionIterator *vpi, KeyEqFn key_eq_fn, InitAggFn init_agg_fn);
+  // Called from ProcessBatch() to create and initialize new aggregates for
+  // tuples that did not find a matching group.
+  void CreateMissingGroups(VectorProjectionIterator *input_batch,
+                           const std::vector<uint32_t> &key_indexes, VectorInitAggFn init_agg_fn);
 
-  // Called from ProcessBatch() to update only the valid entries in the input vector
-  template <bool VPIIsFiltered>
-  void AdvanceGroups(VectorProjectionIterator *vpi, uint32_t num_groups,
-                     AdvanceAggFn advance_agg_fn);
+  // Called from ProcessBatch() to update aggregates with tuples from batch that
+  // found matching group.
+  void AdvanceGroups(VectorProjectionIterator *input_batch, VectorAdvanceAggFn advance_agg_fn);
 
-  // Called during partitioned scan to build an aggregation hash table over a single partition.
-  AggregationHashTable *BuildTableOverPartition(void *query_state, uint32_t partition_idx);
+  // Called during partitioned (parallel) scan to build an aggregation hash
+  // table over a single partition.
+  AggregationHashTable *GetOrBuildTableOverPartition(void *query_state, uint32_t partition_idx);
+
+ private:
+  // A helper class containing various data structures used during batch processing.
+  class BatchProcessState {
+   public:
+    // Constructor
+    explicit BatchProcessState(std::unique_ptr<libcount::HLL> estimator,
+                               std::unique_ptr<HashToGroupIdMap> hash_to_group_map);
+
+    // Destructor
+    ~BatchProcessState();
+
+    // Reset state in preparation for processing the next batch.
+    void Reset(VectorProjectionIterator *input_batch);
+
+    libcount::HLL *HLL() { return hll_estimator.get(); }
+    VectorProjection *Projection() { return &hash_and_entries; }
+    Vector *Hashes() { return hash_and_entries.GetColumn(0); }
+    Vector *Entries() { return hash_and_entries.GetColumn(1); }
+    TupleIdList *GroupsFound() { return &groups_found; }
+    TupleIdList *GroupsNotFound() { return &groups_not_found; }
+    TupleIdList *KeyNotEqual() { return &key_not_equal; }
+    TupleIdList *KeyEqual() { return &key_equal; }
+    HashToGroupIdMap *HashToGroupMap() { return hash_to_group_map.get(); }
+
+   private:
+    // Unique hash estimator
+    std::unique_ptr<libcount::HLL> hll_estimator;
+    // Specialized structure mapping hashes to group IDs
+    std::unique_ptr<HashToGroupIdMap> hash_to_group_map;
+    // Projection containing hashes and entries
+    VectorProjection hash_and_entries;
+    // List of tuples that do not have a matching group
+    TupleIdList groups_not_found;
+    // List of tuples that have found a matching group
+    TupleIdList groups_found;
+    // The list of groups that have unmatched keys
+    TupleIdList key_not_equal;
+    TupleIdList key_equal;
+  };
 
  private:
   // Memory allocator.
@@ -295,31 +368,9 @@ class AggregationHashTable {
   MemPoolVector<decltype(entries_)> owned_entries_;
 
   // The hash index.
-  UntaggedGenericHashTable hash_table_;
+  UntaggedChainingHashTable hash_table_;
 
-  // A struct we use to track various metadata during batch processing
-  struct BatchProcessState {
-    // Unique hash estimator
-    std::unique_ptr<libcount::HLL> hll_estimator;
-    // The array of computed hash values
-    hash_t hashes[kDefaultVectorSize];
-    // Buffer containing entry pointers after lookup and key equality checks
-    HashTableEntry *entries[kDefaultVectorSize];
-    // Buffer containing indexes of tuples that found a matching group
-    sel_t groups_found[kDefaultVectorSize];
-    // Buffer containing indexes of tuples that did not find a matching group
-    util::FixedLengthBuffer<sel_t, kDefaultVectorSize> groups_not_found;
-    // Buffer containing indexes of tuples that didn't match keys
-    util::FixedLengthBuffer<sel_t, kDefaultVectorSize> key_not_eq;
-
-    // Constructor
-    explicit BatchProcessState(std::unique_ptr<libcount::HLL> estimator);
-
-    // Destructor
-    ~BatchProcessState();
-  };
-
-  // State required when processing batches of input. Allocated on first use.
+  // State used during batch processing.
   MemPoolPtr<BatchProcessState> batch_state_;
 
   // -------------------------------------------------------
@@ -328,21 +379,24 @@ class AggregationHashTable {
 
   // The function to merge a set of overflow partitions into one table.
   MergePartitionFn merge_partition_fn_;
-  // The head and tail arrays over the overflow partition. These arrays and each element in them are
-  // allocated from the pool, so they don't need to be explicitly deleted.
+  // The head and tail arrays over the overflow partition. These arrays and each
+  // element in them are allocated from the pool, so they don't need to be
+  // explicitly deleted.
   HashTableEntry **partition_heads_;
   HashTableEntry **partition_tails_;
-  // The HyperLogLog++ estimated for each overflow partition. The array is allocated from the pool,
-  // but each element is allocated from libcount. Thus, we need to delete manually before freeing
-  // the array.
+  // The HyperLogLog++ estimated for each overflow partition. The array is
+  // allocated from the pool, but each element is allocated from libcount. Thus,
+  // we need to delete manually before freeing the array.
   libcount::HLL **partition_estimates_;
-  // The aggregation hash table over each partition. The array and each element is allocated from
-  // the pool, so they don't need to be explicitly deleted.
+  // The aggregation hash table over each partition. The array and each element
+  // is allocated from the pool, so they don't need to be explicitly deleted.
   AggregationHashTable **partition_tables_;
-  // The number of elements that can be inserted into the main hash table before we flush into the
-  // overflow partitions. We size this so that the entries are roughly L2-sized.
+  // The number of elements that can be inserted into the main hash table before
+  // we flush into the overflow partitions. We size this so that the entries are
+  // roughly L2-sized.
   uint64_t flush_threshold_;
-  // The number of bits to shift the hash value to determine its overflow partition.
+  // The number of bits to shift the hash value to determine the overflow
+  // partition an entry is linked into.
   uint64_t partition_shift_bits_;
 
   // Runtime stats.
@@ -374,9 +428,11 @@ inline byte *AggregationHashTable::Lookup(hash_t hash, AggregationHashTable::Key
   return (entry == nullptr ? nullptr : entry->payload);
 }
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * A tuple-at-a-time iterator over the contents of an aggregation hash table.
@@ -390,7 +446,6 @@ class AHTIterator {
   explicit AHTIterator(const AggregationHashTable &agg_table) : iter_(agg_table.hash_table_) {}
 
   /**
-   * Does this iterator have more data?
    * @return True if the iterator has more data; false otherwise
    */
   bool HasNext() const { return iter_.HasNext(); }
@@ -401,7 +456,8 @@ class AHTIterator {
   void Next() { iter_.Next(); }
 
   /**
-   * Return a pointer to the current row. It's assumed the called has checked the iterator is valid.
+   * @return A pointer to the current row. This assumes a previous call to HasNext() indicated there
+   *         is more data.
    */
   const byte *GetCurrentAggregateRow() const {
     auto *ht_entry = iter_.GetCurrentEntry();
@@ -410,12 +466,14 @@ class AHTIterator {
 
  private:
   // The iterator over the aggregation hash table
-  GenericHashTableIterator<false> iter_;
+  ChainingHashTableIterator<false> iter_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Vector Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * A vectorized iterator over the contents of an aggregation hash table. This exists so that users
@@ -473,7 +531,7 @@ class AHTVectorIterator {
   MemoryPool *memory_;
 
   // The vectorized iterate over the hash table
-  GenericHashTableVectorIterator<false> iter_;
+  ChainingHashTableVectorIterator<false> iter_;
 
   // The vector projection containing aggregate data stored column-wise
   std::unique_ptr<VectorProjection> vector_projection_;
@@ -482,9 +540,11 @@ class AHTVectorIterator {
   std::unique_ptr<VectorProjectionIterator> vector_projection_iterator_;
 };
 
-// ---------------------------------------------------------
+//===----------------------------------------------------------------------===//
+//
 // Aggregation Hash Table Overflow Partitions Iterator
-// ---------------------------------------------------------
+//
+//===----------------------------------------------------------------------===//
 
 /**
  * An iterator over a range of overflow partition entries in an aggregation hash table. The range is

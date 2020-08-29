@@ -28,7 +28,22 @@ namespace tpl {
    * platforms and data types. Thus, we derive the threshold at database startup                   \
    * once using the given function.                                                                \
    */                                                                                              \
-  COMPUTED(SelectOptThreshold, double, DeriveOptimalFullSelectionThreshold)                        \
+  COMPUTED(FullSelectOptThreshold, double, DeriveOptimalFullSelectionThreshold)                    \
+                                                                                                   \
+  /*                                                                                               \
+   * As with the full-selection setting above, it may be advantageous to perform                   \
+   * a full select-between (i.e., x < y < z). This setting controls the                            \
+   * selectivity threshold to decide when the optimization can be applied.                         \
+   */                                                                                              \
+  COMPUTED(FullSelectBetweenOptThreshold, double, DeriveOptimalFullSelectionBetweenThreshold)      \
+                                                                                                   \
+  /*                                                                                               \
+   * Setting to determine selectivity threshold above which we perform a full                      \
+   * hash computation. We're assuming here the hashing function is SIMD-able.                      \
+   * At the time of writing, we're using the finalizer from Murmur, or something                   \
+   * similar that does xor-right-shift + multiply.                                                 \
+   */                                                                                              \
+  COMPUTED(FullHashOptThreshold, double, DeriveOptimalFullHashThreshold)                           \
                                                                                                    \
   /*                                                                                               \
    * When performing arithmetic operations on vectors, this setting determines                     \
@@ -53,7 +68,12 @@ namespace tpl {
    * The minimum bit vector density before using a SIMD decoding algorithm.                        \
    */                                                                                              \
   COMPUTED(BitDensityThresholdForAVXIndexDecode, float,                                            \
-           DeriveMinBitDensityThresholdForAvxIndexDecode)
+           DeriveMinBitDensityThresholdForAvxIndexDecode)                                          \
+                                                                                                   \
+  /*                                                                                               \
+   * Flag indicating if parallel execution is supported.                                           \
+   */                                                                                              \
+  CONST(ParallelQueryExecution, bool, true)
 
 class Settings {
  public:
@@ -134,6 +154,14 @@ class Settings {
     TPL_ASSERT(name < Name::Last, "Invalid setting");
     return std::get<std::string>(settings_[static_cast<uint32_t>(name)]);
   }
+
+  /**
+   * Set the value of the given setting to the provided value.
+   * @warning This is not thread-safe.
+   * @param name The name of the setting to set.
+   * @param val The value to set.
+   */
+  void SetDouble(Name name, const double val) { settings_[static_cast<uint32_t>(name)] = val; }
 
  private:
   // Private to force singleton access

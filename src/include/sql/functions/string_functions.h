@@ -14,60 +14,63 @@ class ExecutionContext;
  */
 class StringFunctions : public AllStatic {
  public:
-  static void CharLength(ExecutionContext *ctx, Integer *result, const StringVal &str) {
-    Length(ctx, result, str);
+  static void CharLength(Integer *result, ExecutionContext *ctx, const StringVal &str) {
+    Length(result, ctx, str);
   }
 
-  static void Left(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Concat(StringVal *result, ExecutionContext *ctx, const StringVal &left,
+                     const StringVal &right);
+
+  static void Left(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                    const Integer &n);
 
-  static void Length(ExecutionContext *ctx, Integer *result, const StringVal &str);
+  static void Length(Integer *result, ExecutionContext *ctx, const StringVal &str);
 
-  static void Lower(ExecutionContext *ctx, StringVal *result, const StringVal &str);
+  static void Lower(StringVal *result, ExecutionContext *ctx, const StringVal &str);
 
-  static void Lpad(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Lpad(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                    const Integer &len, const StringVal &pad);
 
-  static void Ltrim(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Ltrim(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                     const StringVal &chars);
 
-  static void Ltrim(ExecutionContext *ctx, StringVal *result, const StringVal &str);
+  static void Ltrim(StringVal *result, ExecutionContext *ctx, const StringVal &str);
 
-  static void Repeat(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Repeat(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                      const Integer &n);
 
-  static void Reverse(ExecutionContext *ctx, StringVal *result, const StringVal &str);
+  static void Reverse(StringVal *result, ExecutionContext *ctx, const StringVal &str);
 
-  static void Right(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Right(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                     const Integer &n);
 
-  static void Rpad(ExecutionContext *ctx, StringVal *result, const StringVal &str, const Integer &n,
+  static void Rpad(StringVal *result, ExecutionContext *ctx, const StringVal &str, const Integer &n,
                    const StringVal &pad);
 
-  static void Rtrim(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Rtrim(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                     const StringVal &chars);
 
-  static void Rtrim(ExecutionContext *ctx, StringVal *result, const StringVal &str);
+  static void Rtrim(StringVal *result, ExecutionContext *ctx, const StringVal &str);
 
-  static void SplitPart(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void SplitPart(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                         const StringVal &delim, const Integer &field);
 
-  static void Substring(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Substring(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                         const Integer &pos, const Integer &len);
 
-  static void Substring(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Substring(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                         const Integer &pos) {
-    Substring(ctx, result, str, pos, Integer(std::numeric_limits<int64_t>::max()));
+    Substring(result, ctx, str, pos, Integer(std::numeric_limits<int64_t>::max()));
   }
 
-  static void Trim(ExecutionContext *ctx, StringVal *result, const StringVal &str,
+  static void Trim(StringVal *result, ExecutionContext *ctx, const StringVal &str,
                    const StringVal &chars);
 
-  static void Trim(ExecutionContext *ctx, StringVal *result, const StringVal &str);
+  static void Trim(StringVal *result, ExecutionContext *ctx, const StringVal &str);
 
-  static void Upper(ExecutionContext *ctx, StringVal *result, const StringVal &str);
+  static void Upper(StringVal *result, ExecutionContext *ctx, const StringVal &str);
 
-  static void Like(ExecutionContext *ctx, BoolVal *result, const StringVal &string,
+  static void Like(BoolVal *result, ExecutionContext *ctx, const StringVal &string,
                    const StringVal &pattern);
 };
 

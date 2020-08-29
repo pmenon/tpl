@@ -39,7 +39,7 @@ class ConciseHashTable {
   // The number of CHT slots that belong to one group. This value should either
   // be 32 or 64 for (1) making computation simpler by bit-shifting and (2) to
   // ensure at most one cache-line read/write per insert/lookup.
-  static constexpr const uint64_t kLogSlotsPerGroup = 6;
+  static constexpr const uint64_t kLogSlotsPerGroup = 5;
   static constexpr const uint64_t kSlotsPerGroup = 1u << kLogSlotsPerGroup;
   static constexpr const uint64_t kGroupBitMask = kSlotsPerGroup - 1;
 
@@ -142,15 +142,17 @@ class ConciseHashTable {
    * @em bits field. @em count is a count of occupied slots in all slot groups up to and including
    * this group, or in other words, a prefix count of the number of filled slots up to this group.
    */
-  struct alignas(CACHELINE_SIZE) SlotGroup {
+  struct SlotGroup {
     // The bitmap indicating whether the slots are occupied or free
-    uint64_t bits;
+    uint32_t bits;
     // The prefix population count
     uint32_t count;
 
     static_assert(sizeof(bits) * kBitsPerByte == kSlotsPerGroup,
-                  "Number of slots in group and configured constant are out of sync");
-  } PACKED;
+                  "# of slots in group and configured constant are out of sync!");
+  };
+
+  static_assert(sizeof(SlotGroup) == sizeof(uint64_t), "SlotGroup expected to be 64-bits");
 
   // Given a hash value, return its initial candidate slot index in the logical slot array
   uint64_t SlotIndex(hash_t hash) const noexcept { return hash & slot_mask_; }
@@ -199,8 +201,8 @@ inline void ConciseHashTable::Insert(HashTableEntry *entry) {
   const uint64_t num_bits_to_group = group_idx * kSlotsPerGroup;
   auto *group_bits = reinterpret_cast<uint32_t *>(&slot_groups_[group_idx].bits);
 
-  auto bit_idx = static_cast<uint32_t>(GroupSlotIndex(slot_idx));
-  const auto max_bit_idx = std::min(63u, bit_idx + probe_limit_);
+  uint64_t bit_idx = static_cast<uint32_t>(GroupSlotIndex(slot_idx));
+  const uint64_t max_bit_idx = std::min(kSlotsPerGroup - 1, bit_idx + probe_limit_);
   do {
     if (!util::BitUtil::Test(group_bits, bit_idx)) {
       util::BitUtil::Set(group_bits, bit_idx);

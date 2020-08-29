@@ -20,7 +20,13 @@ template <typename BitVectorType, typename F>
   return ::testing::AssertionSuccess();
 }
 
-// Verify that only specific bits are set
+/**
+ * Verify that only bits at indexes contained in @em idxs are set within the bit vector @em bv.
+ * @tparam BitVectorType The type of bit vector.
+ * @param bv The input bit vector to check.
+ * @param idxs The indexes of the positions in the bit vector where '1's are expected.
+ * @return True if only specific bits are set; false otherwise.
+ */
 template <typename BitVectorType>
 ::testing::AssertionResult Verify(const BitVectorType &bv, std::initializer_list<uint32_t> idxs) {
   std::unordered_set<uint32_t> positions(idxs);
@@ -457,6 +463,16 @@ TEST(BitVectorTest, Difference) {
   BitVector<> bv2 = Make({0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0});
   bv1.Difference(bv2);
   EXPECT_TRUE(Verify(bv1, {2, 8}));
+}
+
+TEST(BitVectorTest, XOR) {
+  BitVector<> bv1 = Make({0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0});
+  BitVector<> bv2 = Make({0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0});
+  bv1.Xor(bv2);
+  EXPECT_TRUE(Verify(bv1, {1, 2, 8}));
+
+  auto bv3 = bv1 ^ bv1;  // XORing same inputs is zero.
+  EXPECT_TRUE(Verify(bv3, {}));
 }
 
 TEST(BitVectorTest, ResizeSmaller) {
