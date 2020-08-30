@@ -148,11 +148,11 @@ BENCHMARK_DEFINE_F(JoinManagerBenchmark, StaticOrder)(benchmark::State &state) {
         auto a_val = *vpi->GetValue<int32_t, false>(0, nullptr);
         auto b_val = *vpi->GetValue<int32_t, false>(1, nullptr);
         auto a_hash_val = util::HashUtil::Hash(a_val);
-        for (auto iter1 = query_state.jht1->Lookup<false>(a_hash_val); iter1.HasNext();) {
-          if (auto *jr1 = iter1.GetMatch()->PayloadAs<JoinRow>(); jr1->key == a_val) {
+        for (auto e1 = query_state.jht1->Lookup<false>(a_hash_val); e1; e1 = e1->next) {
+          if (auto *jr1 = e1->PayloadAs<JoinRow>(); jr1->key == a_val) {
             auto b_hash_val = util::HashUtil::Hash(b_val);
-            for (auto iter2 = query_state.jht2->Lookup<false>(b_hash_val); iter2.HasNext();) {
-              if (auto *jr2 = iter2.GetMatch()->PayloadAs<JoinRow>(); jr2->key == b_val) {
+            for (auto e2 = query_state.jht2->Lookup<false>(b_hash_val); e2; e2 = e2->next) {
+              if (auto *jr2 = e2->PayloadAs<JoinRow>(); jr2->key == b_val) {
                 count++;
               }
             }
