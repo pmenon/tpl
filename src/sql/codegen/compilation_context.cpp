@@ -107,7 +107,7 @@ void CompilationContext::EstablishPipelineDependencies() {
   }
 }
 
-void CompilationContext::DeclareStructsAndFunctions() {
+void CompilationContext::DeclareCommonStructsAndFunctions() {
   // Let each operator declare helper elements.
   for (const auto &kv : operators_) {
     kv.second->DefineStructsAndFunctions();
@@ -116,27 +116,8 @@ void CompilationContext::DeclareStructsAndFunctions() {
   query_state_.ConstructFinalType(&codegen_);
 }
 
-void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
-  // Common state.
-  DeclareCommonQueryState();
-
-  // The graph of all pipelines.
-  PipelineGraph pipeline_graph;
-
-  // The main pipeline.
-  Pipeline main_pipeline(this, &pipeline_graph);
-
-  // Recursively prepare all translators for the query.
-  PrepareOut(plan, &main_pipeline);
-
-  // Give all registered operators the opportunity to declare their pipeline
-  // dependencies now.
-  EstablishPipelineDependencies();
-
-  // Declare helper elements. These are query-level and are available to all
-  // pipeline functions.
-  DeclareStructsAndFunctions();
-
+void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
+                                            const Pipeline &main_pipeline) {
   // Now we're ready to generate some code.
   // First, generate the query state initialization and tear-down logic.
   ast::FunctionDecl *init_fn = GenerateInitFunction();
@@ -184,6 +165,31 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
                 tear_down_fn->Name().ToString(),  // The teardown() function.
                 ExecutionPlan(std::move(steps)),  // The generated plan.
                 query_state_.GetSize());
+}
+
+void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
+  // Common state.
+  DeclareCommonQueryState();
+
+  // The graph of all pipelines.
+  PipelineGraph pipeline_graph;
+
+  // The main pipeline.
+  Pipeline main_pipeline(this, &pipeline_graph);
+
+  // Recursively prepare all translators for the query.
+  PrepareOut(plan, &main_pipeline);
+
+  // Let operators declare dependencies between their pipelines.
+  // Some operators have complex pipeline relationships.
+  EstablishPipelineDependencies();
+
+  // Let operators declare helper structs and functions.
+  // These are query-level and available to all pipeline functions.
+  DeclareCommonStructsAndFunctions();
+
+  // Generate all query logic. This includes pipelines.
+  GenerateQueryLogic(pipeline_graph, main_pipeline);
 }
 
 // static

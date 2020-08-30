@@ -114,7 +114,10 @@ class CompilationContext {
   void EstablishPipelineDependencies();
 
   // Declare all query-level structure and functions.
-  void DeclareStructsAndFunctions();
+  void DeclareCommonStructsAndFunctions();
+
+  // Generate all query logic.
+  void GenerateQueryLogic(const PipelineGraph &pipeline_graph, const Pipeline &main_pipeline);
 
   // Create a new container.
   CompilationUnit *MakeContainer();
