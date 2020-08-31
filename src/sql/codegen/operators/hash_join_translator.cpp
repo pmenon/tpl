@@ -1,5 +1,7 @@
 #include "sql/codegen/operators/hash_join_translator.h"
 
+#include <algorithm>
+
 #include "ast/type.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
@@ -153,6 +155,15 @@ void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *context,
   FillBuildRow(context, function, codegen_->MakeExpr(build_row_var_));
 }
 
+bool HashJoinTranslator::ShouldValidateHashOnProbe() const {
+  // Validate hash value on probe if one of the keys is considered "complex".
+  // For now, only string keys are the only complex type.
+  // Modify 'is_complex()' as more complex types are supported.
+  const auto &keys = GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys();
+  const auto is_complex = [](auto key) { return key->GetReturnValueType() == TypeId::Varchar; };
+  return std::any_of(keys.begin(), keys.end(), is_complex);
+}
+
 void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const {
   const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
 
@@ -171,6 +182,9 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
 
   // entry = @htEntryGetNext(entry)
   auto next_call = codegen_->Assign(entry(), codegen_->HTEntryGetNext(entry()));
+
+  // TODO(pmenon): Only check/validate hash collisions if using complex keys.
+  //               Use HashJoinTranslator::ShouldValidateHashOnProbe()
 
   // The probe depends on the join type
   if (join_plan.RequiresRightMark()) {

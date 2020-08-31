@@ -136,6 +136,11 @@ class HashJoinTranslator : public OperatorTranslator {
   // Check the join predicate.
   void CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilder *function) const;
 
+  // When probing the hash table, should we compare hash values?
+  // This is useful to speed up probes when complex keys are present
+  // as it can perform early termination.
+  bool ShouldValidateHashOnProbe() const;
+
  private:
   // The name of the materialized row when inserting or probing into join hash
   // table.
