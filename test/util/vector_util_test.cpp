@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <random>
+#include <unordered_set>
 #include <vector>
 
 #include "util/bit_vector.h"
@@ -123,75 +125,46 @@ TEST_F(VectorUtilTest, DiffSelectedWithScratchPad) {
 }
 
 TEST_F(VectorUtilTest, IntersectSelectionVectors) {
-  sel_t a[] = {2, 3, 5, 7, 9};
-  sel_t b[] = {1, 2, 4, 7, 8, 9, 10, 11};
-  sel_t out[kDefaultVectorSize];
+  std::mt19937 gen(std::random_device{}());
+  std::uniform_int_distribution<sel_t> dist(0, kDefaultVectorSize - 1);
+  // Test intersection of multiple vector sizes.
+  for (unsigned a_size = 1; a_size <= kDefaultVectorSize; a_size <<= 1) {
+    // Test for different ratios between list lengths.
+    // Try between [1,32] inclusive, i.e., b_len = a_len / scale.
+    for (unsigned scale = 1; scale < 32; scale <<= 1) {
+      const auto b_size = a_size / scale;
 
-  auto out_count =
-      VectorUtil::IntersectSelected(a, sizeof(a) / sizeof(a[0]), b, sizeof(b) / sizeof(b[0]), out);
-  EXPECT_EQ(3u, out_count);
-  EXPECT_EQ(2u, out[0]);
-  EXPECT_EQ(7u, out[1]);
-  EXPECT_EQ(9u, out[2]);
+      // The test inputs and output.
+      std::array<sel_t, kDefaultVectorSize> a, b, out;
 
-  // Reverse arguments, should still work
-  out_count =
-      VectorUtil::IntersectSelected(b, sizeof(b) / sizeof(b[0]), a, sizeof(a) / sizeof(a[0]), out);
-  EXPECT_EQ(3u, out_count);
-  EXPECT_EQ(2u, out[0]);
-  EXPECT_EQ(7u, out[1]);
-  EXPECT_EQ(9u, out[2]);
+      // Generate random data selection indexes into a validation set.
+      // Target a given size.
+      std::set<sel_t> validation_a, validation_b;
+      while (validation_a.size() != a_size) validation_a.insert(dist(gen));
+      while (validation_b.size() != b_size) validation_b.insert(dist(gen));
 
-  // Empty arguments should work
-  out_count = VectorUtil::IntersectSelected(nullptr, 0, b, sizeof(b) / sizeof(b[0]), out);
-  EXPECT_EQ(0u, out_count);
+      // Populate the inputs with the results of the validation set.
+      std::copy(validation_a.begin(), validation_a.end(), a.begin());
+      std::copy(validation_b.begin(), validation_b.end(), b.begin());
 
-  out_count = VectorUtil::IntersectSelected(b, sizeof(b) / sizeof(b[0]),
-                                            static_cast<sel_t *>(nullptr), 0, out);
-  EXPECT_EQ(0u, out_count);
+      // Perform intersection.
+      auto out_count =
+          VectorUtil::IntersectSelected(a.data(), a_size, b.data(), b_size, out.data());
+
+      // Get the correct results of the intersection.
+      std::vector<sel_t> validation_result(kDefaultVectorSize * 2);
+      auto iter = std::set_intersection(a.begin(), a.begin() + a_size, b.begin(),
+                                        b.begin() + b_size, validation_result.begin());
+      auto validation_result_size = iter - validation_result.begin();
+
+      // Check size and contents.
+      EXPECT_EQ(validation_result_size, out_count);
+      EXPECT_TRUE(std::equal(out.begin(), out.begin() + out_count, validation_result.begin()));
+    }
+  }
 }
 
 #if 0
-TEST_F(VectorUtilTest, DISABLED_PerfSelect) {
-  constexpr uint32_t num_elems = 128 * 1024u * 1024u;
-  constexpr const uint32_t chunk_size = 4096;
-
-  std::vector<int32_t> arr(num_elems);
-
-  double load_time = 0.0;
-  {
-    ScopedTimer<std::milli> timer(&load_time);
-
-    std::mt19937 gen;
-    std::uniform_int_distribution<uint32_t> dist(0, 100);
-    for (uint32_t i = 0; i < num_elems; i++) {
-      arr[i] = dist(gen);
-    }
-  }
-
-  std::cout << "Load time: " << load_time << " ms" << std::endl;
-
-  alignas(CACHELINE_SIZE) sel_t out[chunk_size] = {0};
-
-  for (int32_t sel : {1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99}) {
-    uint32_t count = 0;
-    double time = 0.0;
-
-    {
-      ScopedTimer<std::milli> timer(&time);
-      for (uint32_t offset = 0; offset < num_elems; offset += chunk_size) {
-        auto size = std::min(chunk_size, num_elems - offset);
-        auto found = VectorUtil::FilterLt(&arr[offset], size, sel, out);
-        count += found;
-      }
-    }
-
-    std::cout << "Sel: " << (static_cast<double>(sel) / 100)
-              << ", count: " << count << ", time: " << time << " ms"
-              << std::endl;
-  }
-}
-
 TEST_F(VectorUtilTest, DISABLED_PerfInvertSel) {
   LOG_INFO("Sel., Scalar (ms), Vector (ms)");
 
