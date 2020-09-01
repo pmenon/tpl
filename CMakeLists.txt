@@ -9,13 +9,21 @@ set(TPL_VERSION_MINOR 5)
 # For external projects
 include(CMakeParseArguments)
 include(ExternalProject)
+include(FindPkgConfig)
 
 # Let CMake know where all the modules are (i.e., in ./cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 # Checks from terrier require these
 set(BUILD_SUPPORT_DIR "${CMAKE_SOURCE_DIR}/build-support")
+
+# LLVM and Clang versions
+set(TPL_LLVM_VERSIONS "10" "9" "8" "7")
+set(TPL_CLANG_TOOLS_VERSIONS "10" "9" "8" "7")
+list(GET TPL_LLVM_VERSIONS 0 TPL_LLVM_VERSION)
+list(GET TPL_CLANG_TOOLS_VERSIONS 0 TPL_CLANG_TOOLS_VERSION)
 find_package(ClangTools)
+
 if ("$ENV{CMAKE_EXPORT_COMPILE_COMMANDS}" STREQUAL "1" OR CLANG_TIDY_FOUND)
   set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 endif ()
@@ -45,6 +53,16 @@ option(TPL_BUILD_BENCHMARKS "Build TPL benchmarks" ON)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(MACOSX TRUE)
 endif()
+
+# Use the first Python installation on PATH, not the newest one
+set(Python3_FIND_STRATEGY "LOCATION")
+# On Windows, use registry last, not first
+set(Python3_FIND_REGISTRY "LAST")
+# On macOS, use framework last, not first
+set(Python3_FIND_FRAMEWORK "LAST")
+
+find_package(Python3)
+set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
 
 ############################################################
 #
@@ -146,7 +164,9 @@ string(CONCAT FORMAT_DIRS
         )
 
 # runs clang format and updates files in place.
-add_custom_target(format ${BUILD_SUPPORT_DIR}/run_clang_format.py
+add_custom_target(format
+        ${PYTHON_EXECUTABLE}
+        ${BUILD_SUPPORT_DIR}/run_clang_format.py
         ${CLANG_FORMAT_BIN}
         ${BUILD_SUPPORT_DIR}/clang_format_exclusions.txt
         --source_dirs ${FORMAT_DIRS}
@@ -154,7 +174,9 @@ add_custom_target(format ${BUILD_SUPPORT_DIR}/run_clang_format.py
         )
 
 # runs clang format and exits with a non-zero exit code if any files need to be reformatted
-add_custom_target(check-format ${BUILD_SUPPORT_DIR}/run_clang_format.py
+add_custom_target(check-format
+        ${PYTHON_EXECUTABLE}
+        ${BUILD_SUPPORT_DIR}/run_clang_format.py
         ${CLANG_FORMAT_BIN}
         ${BUILD_SUPPORT_DIR}/clang_format_exclusions.txt
         --source_dirs ${FORMAT_DIRS}
