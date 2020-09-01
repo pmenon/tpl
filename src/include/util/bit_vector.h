@@ -552,7 +552,7 @@ class BitVector {
    * @param f Callback functor applied on the index of each set bit in this bit vector.
    */
   template <typename F>
-  void IterateSetBits(F f) const {
+  void ForEachSet(F f) const {
     static_assert(std::is_invocable_v<F, uint32_t>,
                   "Callback must be a single-argument functor accepting an unsigned 32-bit index");
 

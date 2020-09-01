@@ -340,11 +340,11 @@ class TupleIdList {
   template <typename F>
   void ForEach(F f) const {
     if (IsFull()) {
-      for (uint32_t i = 0, n = GetCapacity(); i < n; i++) {
+      for (std::size_t i = 0, n = GetCapacity(); i < n; i++) {
         f(i);
       }
     } else {
-      bit_vector_.IterateSetBits(f);
+      bit_vector_.ForEachSet(f);
     }
   }
 

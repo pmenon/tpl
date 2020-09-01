@@ -545,14 +545,14 @@ TEST(BitVectorTest, Iterate) {
   // Simple
   {
     BitVector<> bv(100);
-    bv.IterateSetBits(
+    bv.ForEachSet(
         [](UNUSED auto idx) { FAIL() << "Empty bit vectors shouldn't have any set bits"; });
 
     bv.Set(99);
-    bv.IterateSetBits([](auto idx) { EXPECT_EQ(99u, idx); });
+    bv.ForEachSet([](auto idx) { EXPECT_EQ(99u, idx); });
 
     bv.Set(64);
-    bv.IterateSetBits([](auto idx) { EXPECT_TRUE(idx == 64 || idx == 99); });
+    bv.ForEachSet([](auto idx) { EXPECT_TRUE(idx == 64 || idx == 99); });
   }
 
   // Complex 1
@@ -566,11 +566,11 @@ TEST(BitVectorTest, Iterate) {
     }
 
     // Check
-    bv.IterateSetBits([](auto idx) { EXPECT_EQ(0u, idx % 2); });
+    bv.ForEachSet([](auto idx) { EXPECT_EQ(0u, idx % 2); });
 
     // Flip and check again
     bv.FlipAll();
-    bv.IterateSetBits([](auto idx) { EXPECT_NE(0u, idx % 2); });
+    bv.ForEachSet([](auto idx) { EXPECT_NE(0u, idx % 2); });
   }
 }
 

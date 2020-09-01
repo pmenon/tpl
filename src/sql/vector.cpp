@@ -341,7 +341,6 @@ void Vector::Clone(Vector *target) {
   target->tid_list_ = tid_list_;
   target->null_mask_.Copy(null_mask_);
 
-  // Clone data.
   if (IsTypeFixedSize(type_)) {
     std::memcpy(target->GetData(), GetData(), GetTypeIdSize(type_) * num_elements_);
   } else {
@@ -358,33 +357,11 @@ void Vector::Clone(Vector *target) {
 void Vector::CopyTo(Vector *other) {
   TPL_ASSERT(type_ == other->type_, "Vector type mismatch in CopyTo(). Did you mean to Cast()?");
   TPL_ASSERT(other->tid_list_ == nullptr, "Cannot copy into a filtered vector.");
-
-//  other->GetMutableNullMask()->Reset();
-
-//  if (IsTypeFixedSize(type_)) {
-    VectorOps::Copy(*this, other);
-//  } else {
-//    TPL_ASSERT(type_ == TypeId::Varchar, "Wrong type for copy");
-//    other->Resize(count_ - offset);
-//    auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
-//    auto target_data = reinterpret_cast<VarlenEntry *>(other->data_);
-//    VectorOps::Exec(
-//        *this,
-//        [&](uint64_t i, uint64_t k) {
-//          if (null_mask_[i]) {
-//            other->null_mask_.Set(k - offset);
-//          } else {
-//            target_data[k - offset] = other->varlen_heap_.AddVarlen(src_data[i]);
-//          }
-//        },
-//        offset);
-//  }
+  VectorOps::Copy(*this, other);
 }
 
 void Vector::Cast(TypeId new_type) {
-  if (type_ == new_type) {
-    return;
-  }
+  if (type_ == new_type) return;
 
   Vector new_vector(new_type, true, false);
   VectorOps::Cast(*this, &new_vector);
