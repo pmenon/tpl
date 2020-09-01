@@ -127,7 +127,7 @@ bool JoinHashTableVectorProbe::NextSemiOrAntiJoin(VectorProjection *input) {
   // one call to Next(). For every pointer, we chase bucket chain pointers doing
   // comparisons, stopping either when we find the first match (for SEMI), or
   // exhaust the chain (for ANTI).
-  
+
   if (const auto input_filter = input->GetFilteredTupleIdList()) {
     // Filter out TIDs from the non-null entries list. This can happen if the
     // input batch was filtered after the call to Init().

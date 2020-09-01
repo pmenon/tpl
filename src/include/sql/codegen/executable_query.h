@@ -54,8 +54,8 @@ class ExecutableQuery {
    *                         represented in bytes.
    */
   void Setup(std::vector<std::unique_ptr<vm::Module>> &&modules, vm::Module *main_module,
-             std::string init_fn, std::string tear_down_fn,
-             ExecutionPlan &&execution_plan, std::size_t query_state_size);
+             std::string init_fn, std::string tear_down_fn, ExecutionPlan &&execution_plan,
+             std::size_t query_state_size);
 
   /**
    * Execute the query.
