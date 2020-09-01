@@ -249,7 +249,7 @@ void HashJoinTranslator::CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilde
   const auto &join_plan = GetPlanAs<planner::HashJoinPlanNode>();
 
   auto cond = ctx->DeriveValue(*join_plan.GetJoinPredicate(), this);
-  if (join_plan.RequiresLeftMark()) {
+  if (join_plan.GetLogicalJoinType() == planner::LogicalJoinType::LEFT_SEMI) {
     // For left-semi joins, we also need to make sure the build-side tuple
     // has not already found an earlier join partner. We enforce the check
     // by modifying the join predicate.
