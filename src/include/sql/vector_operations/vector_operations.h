@@ -16,24 +16,14 @@ class TupleIdList;
 class VectorOps : public AllStatic {
  public:
   /**
-   * Copy @em element_count elements from @em source starting at offset @em offset into the (opaque)
-   * array @em target.
+   * Copy only **active** elements from the source (@em source) into the target (@em target). After
+   * this call, the source and target counts and NULL indication masks will be equal.
    * @param source The source vector to copy from.
    * @param target The target vector to copy into.
    * @param offset The index into the source vector to begin copying from.
    * @param element_count The number of elements to copy.
    */
-  static void Copy(const Vector &source, void *target, uint64_t offset = 0,
-                   uint64_t element_count = 0);
-
-  /**
-   * Copy all elements from @em source to the target vector @em target, starting at offset
-   * @em offset in the source vector.
-   * @param source The vector to copy from.
-   * @param target The vector to copy into.
-   * @param offset The offset in the source vector to begin reading.
-   */
-  static void Copy(const Vector &source, Vector *target, uint64_t offset = 0);
+  static void Copy(const Vector &source, Vector *target);
 
   /**
    * Cast all elements in the source vector @em source into elements of the type the target vector
@@ -417,6 +407,24 @@ class VectorOps : public AllStatic {
   // -------------------------------------------------------
 
   /**
+   * Apply a function to all TIDs in the input vector, bypassing any filtered TID list.
+   *
+   * The callback function receives two arguments:
+   * i = the current index from the selection vector.
+   * k = position in TID list.
+   *
+   * @tparam F Functor accepting two integer arguments.
+   * @param vector The vector to iterate.
+   * @param f The function to call on each element.
+   */
+  template <typename F>
+  static void ExecIgnoreFilter(const Vector &vector, F &&f) {
+    for (uint32_t i = 0, n = vector.GetSize(); i < n; i++) {
+      f(i, i);
+    }
+  }
+
+  /**
    * Apply a function to active elements in the input vector @em vector. If the vector has a
    * filtered TID list, the callback @em f is only applied to TIDs in this list, but in the range
    * [offset,count). For example, if the TID list is [0,2,4,6,8,10], offset is 2, and count is 5,
@@ -437,55 +445,11 @@ class VectorOps : public AllStatic {
    *              implies scanning to end of the vector.
    */
   template <typename F>
-  static void Exec(const Vector &vector, F &&f, uint64_t offset = 0, uint64_t count = 0) {
-    if (count == 0) {
-      count = vector.GetCount();
+  static void Exec(const Vector &vector, F &&f) {
+    if (const TupleIdList *tid_list = vector.GetFilteredTupleIdList()) {
+      tid_list->ForEach([&, k = uint32_t(0)](uint32_t i) mutable { f(i, k++); });
     } else {
-      count += offset;
-    }
-
-    const TupleIdList *tid_list = vector.GetFilteredTupleIdList();
-
-    if (tid_list != nullptr) {
-      // If we're scanning all TIDs in the list, it's faster to use ForEach().
-      // If we're scanning only a subset range of TIDs in the list, we convert
-      // the list into a selection vector.
-      // TODO(pmenon): Pull optimization into TupleIdList ?
-
-      if (offset == 0 && count == vector.GetCount()) {
-        uint64_t k = 0;
-        tid_list->ForEach([&](const uint64_t i) { f(i, k++); });
-      } else {
-        TPL_ASSERT(tid_list->GetCapacity() <= kDefaultVectorSize, "TID list too large");
-        alignas(CACHELINE_SIZE) sel_t sel_vector[kDefaultVectorSize];
-        UNUSED uint64_t size = tid_list->ToSelectionVector(sel_vector);
-        for (uint64_t i = offset; i < count; i++) {
-          f(sel_vector[i], i);
-        }
-      }
-    } else {
-      for (uint64_t i = offset; i < count; i++) {
-        f(i, i);
-      }
-    }
-  }
-
-  /**
-   * Apply a function to all TIDs in the input vector, bypassing any filtered TID list.
-   *
-   * The callback function receives two arguments:
-   * i = the current index from the selection vector.
-   * k = position in TID list.
-   *
-   * @tparam F Functor accepting two integer arguments.
-   * @param vector The vector to iterate.
-   * @param f The function to call on each element.
-   */
-  template <typename F>
-  static void ExecIgnoreFilter(const Vector &vector, F &&f) {
-    const uint64_t count = vector.GetSize();
-    for (uint64_t i = 0; i < count; i++) {
-      f(i, i);
+      ExecIgnoreFilter(vector, std::forward<F>(f));
     }
   }
 
@@ -506,7 +470,7 @@ class VectorOps : public AllStatic {
   template <typename T, typename F>
   static void ExecTyped(const Vector &vector, F &&f) {
     const auto *RESTRICT data = reinterpret_cast<const T *>(vector.GetData());
-    Exec(vector, [&](const uint64_t i, const uint64_t k) { f(data[i], i, k); });
+    Exec(vector, [&](uint32_t i, uint32_t k) { f(data[i], i, k); });
   }
 };
 

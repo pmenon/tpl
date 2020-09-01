@@ -297,12 +297,6 @@ class Vector {
   void Cast(TypeId new_type);
 
   /**
-   * Append the contents of the provided vector @em other into this vector.
-   * @param other The vector whose contents will be copied and appended to the end of this vector.
-   */
-  void Append(const Vector &other);
-
-  /**
    * Create a clone of this vector into the target vector. The clone will have a copy of all data
    * and will retain the same shape of this vector.
    * @param[out] target Where the clone is stored.
@@ -315,9 +309,8 @@ class Vector {
    * target vector.Callers can optionally specify at what offset to begin copying at. The default
    * offset is 0.
    * @param other The vector to copy into.
-   * @param offset The offset in this vector to begin copying.
    */
-  void CopyTo(Vector *other, uint64_t offset = 0);
+  void CopyTo(Vector *other);
 
   /**
    * Move the data from this vector into another vector, and empty initialize this vector.

@@ -9,82 +9,77 @@ namespace tpl::sql {
 namespace {
 
 template <typename T>
-void TemplatedCopyOperation(const Vector &source, void *target, uint64_t offset, uint64_t count) {
-  auto *src_data = reinterpret_cast<T *>(source.GetData());
-  auto *target_data = reinterpret_cast<T *>(target);
-  VectorOps::Exec(
-      source, [&](uint64_t i, uint64_t k) { target_data[k - offset] = src_data[i]; }, offset,
-      count);
+void TemplatedCopyOperation(const Vector &source, Vector *target) {
+  auto *RESTRICT src_data = reinterpret_cast<T *>(source.GetData());
+  auto *RESTRICT target_data = reinterpret_cast<T *>(target->GetData());
+  VectorOps::Exec(source, [&](uint64_t i, uint64_t k) { target_data[k] = src_data[i]; });
 }
 
-void GenericCopyOperation(const Vector &source, void *target, uint64_t offset,
-                          uint64_t element_count) {
-  if (source.GetCount() == 0) {
-    return;
-  }
+void StringCopyOperation(const Vector &source, Vector *target) {
+  TPL_ASSERT(source.GetTypeId() == TypeId::Varchar, "Expected string vector type for COPY()");
+  TPL_ASSERT(target->GetTypeId() == TypeId::Varchar, "Expected string vector type for COPY()");
 
+  auto *RESTRICT src_data = reinterpret_cast<const VarlenEntry *>(source.GetData());
+  auto *RESTRICT target_data = reinterpret_cast<VarlenEntry *>(target->GetData());
+  VectorOps::Exec(source, [&](uint64_t i, uint64_t k) {
+    if (!source.GetNullMask()[i]) {
+      target_data[k] = target->GetMutableStringHeap()->AddVarlen(src_data[i]);
+    }
+  });
+}
+
+}  // namespace
+
+void VectorOps::Copy(const Vector &source, Vector *target) {
+  // If nothing is selected, there is nothing to copy.
+  if (source.GetCount() == 0) return;
+
+  // Resize the target to the count of the source.
+  target->Resize(source.GetCount());
+  // Copy NULLs.
+  Exec(source, [&](uint64_t i, uint64_t k) { target->null_mask_[k] = source.null_mask_[i]; });
+  // Copy data.
   switch (source.GetTypeId()) {
     case TypeId::Boolean:
-      TemplatedCopyOperation<bool>(source, target, offset, element_count);
+      TemplatedCopyOperation<bool>(source, target);
       break;
     case TypeId::TinyInt:
-      TemplatedCopyOperation<int8_t>(source, target, offset, element_count);
+      TemplatedCopyOperation<int8_t>(source, target);
       break;
     case TypeId::SmallInt:
-      TemplatedCopyOperation<int16_t>(source, target, offset, element_count);
+      TemplatedCopyOperation<int16_t>(source, target);
       break;
     case TypeId::Integer:
-      TemplatedCopyOperation<int32_t>(source, target, offset, element_count);
+      TemplatedCopyOperation<int32_t>(source, target);
       break;
     case TypeId::BigInt:
-      TemplatedCopyOperation<int64_t>(source, target, offset, element_count);
+      TemplatedCopyOperation<int64_t>(source, target);
       break;
     case TypeId::Hash:
-      TemplatedCopyOperation<hash_t>(source, target, offset, element_count);
+      TemplatedCopyOperation<hash_t>(source, target);
       break;
     case TypeId::Pointer:
-      TemplatedCopyOperation<uintptr_t>(source, target, offset, element_count);
+      TemplatedCopyOperation<uintptr_t>(source, target);
       break;
     case TypeId::Float:
-      TemplatedCopyOperation<float>(source, target, offset, element_count);
+      TemplatedCopyOperation<float>(source, target);
       break;
     case TypeId::Double:
-      TemplatedCopyOperation<double>(source, target, offset, element_count);
+      TemplatedCopyOperation<double>(source, target);
       break;
     case TypeId::Date:
-      TemplatedCopyOperation<Date>(source, target, offset, element_count);
+      TemplatedCopyOperation<Date>(source, target);
       break;
     case TypeId::Timestamp:
-      TemplatedCopyOperation<Timestamp>(source, target, offset, element_count);
+      TemplatedCopyOperation<Timestamp>(source, target);
+      break;
+    case TypeId::Varchar:
+      StringCopyOperation(source, target);
       break;
     default:
       throw NotImplementedException(fmt::format("copying vector of type '{}' not supported",
                                                 TypeIdToString(source.GetTypeId())));
   }
-}
-
-}  // namespace
-
-void VectorOps::Copy(const Vector &source, void *target, uint64_t offset, uint64_t element_count) {
-  TPL_ASSERT(IsTypeFixedSize(source.type_), "Copy should only be used for fixed-length types");
-  GenericCopyOperation(source, target, offset, element_count);
-}
-
-void VectorOps::Copy(const Vector &source, Vector *target, uint64_t offset) {
-  TPL_ASSERT(offset < source.count_, "Out-of-bounds offset");
-  TPL_ASSERT(target->GetFilteredTupleIdList() == nullptr, "Cannot copy into filtered vector");
-
-  // Resize the target vector to accommodate count-offset elements from the source vector
-  target->Resize(source.GetCount() - offset);
-
-  // Copy NULLs
-  Exec(
-      source,
-      [&](uint64_t i, uint64_t k) { target->null_mask_[k - offset] = source.null_mask_[i]; },
-      offset);
-
-  // Copy data
-  Copy(source, target->GetData(), offset, target->GetCount());
-}
+}  // namespace tpl::sql
 
 }  // namespace tpl::sql

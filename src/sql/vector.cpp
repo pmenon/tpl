@@ -355,32 +355,30 @@ void Vector::Clone(Vector *target) {
   }
 }
 
-void Vector::CopyTo(Vector *other, uint64_t offset) {
-  TPL_ASSERT(type_ == other->type_,
-             "Copying to vector of different type. Did you mean to cast instead?");
-  TPL_ASSERT(other->tid_list_ == nullptr,
-             "Copying to a vector with a selection vector isn't supported");
+void Vector::CopyTo(Vector *other) {
+  TPL_ASSERT(type_ == other->type_, "Vector type mismatch in CopyTo(). Did you mean to Cast()?");
+  TPL_ASSERT(other->tid_list_ == nullptr, "Cannot copy into a filtered vector.");
 
-  other->GetMutableNullMask()->Reset();
+//  other->GetMutableNullMask()->Reset();
 
-  if (IsTypeFixedSize(type_)) {
-    VectorOps::Copy(*this, other, offset);
-  } else {
-    TPL_ASSERT(type_ == TypeId::Varchar, "Wrong type for copy");
-    other->Resize(count_ - offset);
-    auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
-    auto target_data = reinterpret_cast<VarlenEntry *>(other->data_);
-    VectorOps::Exec(
-        *this,
-        [&](uint64_t i, uint64_t k) {
-          if (null_mask_[i]) {
-            other->null_mask_.Set(k - offset);
-          } else {
-            target_data[k - offset] = other->varlen_heap_.AddVarlen(src_data[i]);
-          }
-        },
-        offset);
-  }
+//  if (IsTypeFixedSize(type_)) {
+    VectorOps::Copy(*this, other);
+//  } else {
+//    TPL_ASSERT(type_ == TypeId::Varchar, "Wrong type for copy");
+//    other->Resize(count_ - offset);
+//    auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
+//    auto target_data = reinterpret_cast<VarlenEntry *>(other->data_);
+//    VectorOps::Exec(
+//        *this,
+//        [&](uint64_t i, uint64_t k) {
+//          if (null_mask_[i]) {
+//            other->null_mask_.Set(k - offset);
+//          } else {
+//            target_data[k - offset] = other->varlen_heap_.AddVarlen(src_data[i]);
+//          }
+//        },
+//        offset);
+//  }
 }
 
 void Vector::Cast(TypeId new_type) {
@@ -391,40 +389,6 @@ void Vector::Cast(TypeId new_type) {
   Vector new_vector(new_type, true, false);
   VectorOps::Cast(*this, &new_vector);
   new_vector.MoveTo(this);
-}
-
-void Vector::Append(const Vector &other) {
-  TPL_ASSERT(tid_list_ == nullptr, "Appending to vector with selection vector not supported");
-  TPL_ASSERT(type_ == other.type_, "Can only append vector of same type");
-
-  if (GetSize() + other.GetCount() > kDefaultVectorSize) {
-    throw std::out_of_range("Cannot append to vector: vector is too large");
-  }
-
-  uint64_t old_size = count_;
-  num_elements_ += other.GetCount();
-  count_ += other.GetCount();
-
-  // Since the vector's size has changed, we need to also resize the NULL bit mask.
-  null_mask_.Resize(num_elements_);
-
-  // merge NULL mask
-  VectorOps::Exec(other,
-                  [&](uint64_t i, uint64_t k) { null_mask_[old_size + k] = other.null_mask_[i]; });
-
-  if (IsTypeFixedSize(type_)) {
-    VectorOps::Copy(other, data_ + old_size * GetTypeIdSize(type_));
-  } else {
-    TPL_ASSERT(type_ == TypeId::Varchar, "Append on varchars");
-    auto src_data = reinterpret_cast<const VarlenEntry *>(other.data_);
-    auto target_data = reinterpret_cast<VarlenEntry *>(data_);
-    VectorOps::Exec(other, [&](uint64_t i, uint64_t k) {
-      if (other.null_mask_[i]) {
-      } else {
-        target_data[old_size + k] = varlen_heap_.AddVarlen(src_data[i]);
-      }
-    });
-  }
 }
 
 std::string Vector::ToString() const {

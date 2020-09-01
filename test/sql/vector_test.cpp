@@ -251,36 +251,6 @@ TEST_F(VectorTest, Copy) {
   }
 }
 
-TEST_F(VectorTest, CopyWithOffset) {
-  // vec = [0, 1, 2, 3, NULL, 5, 6, 7, NULL, 9]
-  auto vec = MakeIntegerVector(10);
-  for (uint64_t i = 0; i < vec->GetSize(); i++) {
-    vec->SetValue(i, GenericValue::CreateInteger(i));
-  }
-  vec->SetNull(4, true);
-  vec->SetNull(8, true);
-
-  // Filtered vec = [0, 2, NULL, 6, NULL]
-  auto filter = TupleIdList(vec->GetCount());
-  filter = {0, 2, 4, 6, 8};
-  vec->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
-
-  // We copy all elements [2, 5). Then target = [NULL, 6 NULL]
-  const uint32_t offset = 2;
-  auto target = MakeIntegerVector(vec->GetSize());
-  vec->CopyTo(target.get(), offset);
-
-  // Copying is a "densifying" operation; the count and size should match, and
-  // there shouldn't be a selection vector present in the target.
-  EXPECT_EQ(3u, target->GetSize());
-  EXPECT_EQ(3u, target->GetCount());
-  EXPECT_EQ(nullptr, target->GetFilteredTupleIdList());
-
-  EXPECT_TRUE(target->IsNull(0));
-  EXPECT_EQ(GenericValue::CreateInteger(6), target->GetValue(1));
-  EXPECT_TRUE(target->IsNull(2));
-}
-
 TEST_F(VectorTest, CopyStringVector) {
   // vec = ['val-0','val-1','val-2','val-3','val-4','val-5','val-6','val-7','val-8','val-9']
   auto vec = MakeVarcharVector(10);
@@ -310,62 +280,6 @@ TEST_F(VectorTest, CopyStringVector) {
   EXPECT_EQ(GenericValue::CreateVarchar("val-4"), target->GetValue(2));
   EXPECT_EQ(GenericValue::CreateVarchar("val-6"), target->GetValue(3));
   EXPECT_EQ(GenericValue::CreateVarchar("val-8"), target->GetValue(4));
-}
-
-TEST_F(VectorTest, Append) {
-  // vec1 = [1.0, NULL, 3.0]
-  auto vec1 = MakeDoubleVector(3);
-  vec1->SetValue(0, GenericValue::CreateDouble(1.0));
-  vec1->SetNull(1, true);
-  vec1->SetValue(2, GenericValue::CreateDouble(3.0));
-
-  // vec2 = [10.0, 11.0]
-  auto vec2 = MakeDoubleVector(2);
-  vec2->SetValue(0, GenericValue::CreateDouble(10.0));
-  vec2->SetValue(1, GenericValue::CreateDouble(11.0));
-
-  // vec2 = [10.0, 11.0, 1.0, NULL, 3.0]
-  vec2->Append(*vec1);
-
-  EXPECT_EQ(5u, vec2->GetSize());
-  EXPECT_EQ(5u, vec2->GetCount());
-  EXPECT_EQ(nullptr, vec2->GetFilteredTupleIdList());
-
-  EXPECT_EQ(GenericValue::CreateDouble(10.0), vec2->GetValue(0));
-  EXPECT_EQ(GenericValue::CreateDouble(11.0), vec2->GetValue(1));
-  EXPECT_EQ(GenericValue::CreateDouble(1.0), vec2->GetValue(2));
-  EXPECT_TRUE(vec2->IsNull(3));
-  EXPECT_EQ(GenericValue::CreateDouble(3.0), vec2->GetValue(4));
-}
-
-TEST_F(VectorTest, AppendWithSelectionVector) {
-  // vec1 = [1.0, NULL, 3.0]
-  auto vec1 = MakeFloatVector(3);
-  vec1->SetValue(0, GenericValue::CreateFloat(1.0));
-  vec1->SetNull(1, true);
-  vec1->SetValue(2, GenericValue::CreateFloat(3.0));
-
-  // Filtered vec1 = [NULL, 3.0]
-  auto filter = TupleIdList(vec1->GetCount());
-  filter = {1, 2};
-  vec1->SetFilteredTupleIdList(&filter, filter.GetTupleCount());
-
-  // vec2 = [10.0, 11.0]
-  auto vec2 = MakeFloatVector(2);
-  vec2->SetValue(0, GenericValue::CreateFloat(10.0));
-  vec2->SetValue(1, GenericValue::CreateFloat(11.0));
-
-  // vec2 = [10.0, 11.0, NULL, 3.0]
-  vec2->Append(*vec1);
-
-  EXPECT_EQ(4u, vec2->GetSize());
-  EXPECT_EQ(4u, vec2->GetCount());
-  EXPECT_EQ(nullptr, vec2->GetFilteredTupleIdList());
-
-  EXPECT_EQ(GenericValue::CreateFloat(10.0), vec2->GetValue(0));
-  EXPECT_EQ(GenericValue::CreateFloat(11.0), vec2->GetValue(1));
-  EXPECT_TRUE(vec2->IsNull(2));
-  EXPECT_EQ(GenericValue::CreateFloat(3.0), vec2->GetValue(3));
 }
 
 TEST_F(VectorTest, Pack) {
