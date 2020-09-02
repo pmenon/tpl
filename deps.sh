@@ -96,7 +96,8 @@ install_linux() {
       llvm-10          \
       libjemalloc-dev  \
       libtbb-dev       \
-      ninja-build
+      ninja-build      \
+      lcov
 }
 
 main "$@"
