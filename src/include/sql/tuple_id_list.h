@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iosfwd>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 
