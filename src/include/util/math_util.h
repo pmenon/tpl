@@ -47,6 +47,16 @@ class MathUtil : public AllStatic {
   static uint64_t PowerOf2Floor(uint64_t val) { return llvm::PowerOf2Floor(val); }
 
   /**
+   * @return The base-two logarithm of the provided input value.
+   */
+  static uint64_t Log2(uint32_t val) noexcept { return llvm::Log2_32(val); }
+
+  /**
+   * @return The base-two logarithm of the provided input value.
+   */
+  static uint64_t Log2Ceil(uint32_t val) noexcept { return llvm::Log2_32_Ceil(val); }
+
+  /**
    * Returns whether @em value is aligned to @em alignment. The desired
    * alignment is required to be a power of two.
    *
@@ -65,26 +75,6 @@ class MathUtil : public AllStatic {
   static constexpr bool IsAligned(uint64_t value, uint64_t alignment) {
     TPL_ASSERT(alignment != 0u && IsPowerOf2(alignment), "Align must be a non-zero power of two.");
     return (value & (alignment - 1)) == 0;
-  }
-
-  /**
-   * A generic version of alignment checking where @em alignment can be any
-   * positive integer.
-   *
-   * Examples:
-   * @code
-   * IsAligned(5, 5) = true
-   * IsAligned(21, 7) = true
-   * IsAligned(24, 5) = false;
-   * @endcode
-   *
-   * @param value
-   * @param alignment
-   * @return
-   */
-  static constexpr bool IsAlignedGeneric(uint64_t value, uint64_t alignment) {
-    TPL_ASSERT(alignment != 0u, "Align must be non-zero.");
-    return (value % alignment) == 0;
   }
 
   /**
@@ -127,19 +117,6 @@ class MathUtil : public AllStatic {
    */
   static constexpr uintptr_t AlignmentAdjustment(uintptr_t addr, std::size_t alignment) {
     return MathUtil::AlignAddress(addr, alignment) - addr;
-  }
-
-  /**
-   * Compute the factorial of a given number @em num.
-   * @param num The input number.
-   * @return !num
-   */
-  static uint64_t Factorial(uint64_t num) {
-    uint64_t result = 1;
-    for (uint64_t i = 1; i <= num; i++) {
-      result *= i;
-    }
-    return result;
   }
 
   /**

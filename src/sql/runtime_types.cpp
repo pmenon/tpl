@@ -5,10 +5,17 @@
 #include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
+#include "sql/sql.h"
+#include "util/number_util.h"
 
 namespace tpl::sql {
 
 namespace {
+
+// TODO(pmenon): Should be configurable.
+constexpr DateOrderFormat kDateOrder = DateOrderFormat::MDY;
+
+constexpr std::size_t kMaxDateTimeLen = 128;
 
 constexpr int64_t kMonthsPerYear = 12;
 constexpr int32_t kDaysPerMonth[2][12] = {{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
@@ -16,11 +23,7 @@ constexpr int32_t kDaysPerMonth[2][12] = {{31, 28, 31, 30, 31, 30, 31, 31, 30, 3
 constexpr const char *const kMonthNames[] = {"January",   "February", "March",    "April",
                                              "May",       "June",     "July",     "August",
                                              "September", "October",  "November", "December"};
-constexpr const char *const kShortMonthNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 constexpr const char *const kDayNames[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-constexpr const char *const kShortDayNames[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
-                                                "Thursday", "Friday", "Saturday"};
 
 constexpr int64_t kHoursPerDay = 24;
 constexpr int64_t kMinutesPerHour = 60;
@@ -41,10 +44,10 @@ constexpr int64_t kSecondsPerMinute = 60;
 
 constexpr int64_t kJulianMinYear = -4713;
 constexpr int64_t kJulianMinMonth = 11;
-constexpr int64_t kJulianMinDay = 24;
+// constexpr int64_t kJulianMinDay = 24;
 constexpr int64_t kJulianMaxYear = 5874898;
 constexpr int64_t kJulianMaxMonth = 6;
-constexpr int64_t kJulianMaxDay = 3;
+// constexpr int64_t kJulianMaxDay = 3;
 
 // Is the provided year a leap year?
 bool IsLeapYear(int32_t year) { return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0); }
@@ -106,6 +109,17 @@ void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_t *day) {
   *month = (quad + 10) % kMonthsPerYear + 1;
 }
 
+// Based on j2day()
+int32_t JulianDateToDay(int32_t date) {
+  date += 1;
+  date %= 7;
+
+  // Cope if division truncates towards zero, as it probably does.
+  if (date < 0) date += 7;
+
+  return date;
+}
+
 // Split a Julian time (i.e., Julian date in microseconds) into a time and date
 // component.
 void StripTime(int64_t jd, int64_t *date, int64_t *time) {
@@ -132,6 +146,130 @@ void SplitTime(int64_t jd, int32_t *hour, int32_t *min, int32_t *sec, double *fs
   *fsec = time - (*sec * kMicroSecondsPerSecond);
 }
 
+// Encode date as local time.
+void EncodeDateOnly(int32_t year, int32_t month, int32_t day, DateTimeFormat style, char *str) {
+  TPL_ASSERT(month >= 1 && month <= kMonthsPerYear, "Invalid month");
+
+  switch (style) {
+    case DateTimeFormat::ISO:
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, year > 0 ? year : -(year - 1), 4);
+      *str++ = '-';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, month, 2);
+      *str++ = '-';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, day, 2);
+      break;
+    case DateTimeFormat::SQL:
+    case DateTimeFormat::Postgres: {
+      const auto sep = style == DateTimeFormat::SQL ? '/' : '-';
+      if (kDateOrder == DateOrderFormat::DMY) {
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, day, 2);
+        *str++ = sep;
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, month, 2);
+      } else {
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, month, 2);
+        *str++ = sep;
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, day, 2);
+      }
+      *str++ = sep;
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, year > 0 ? year : -(year - 1), 4);
+      break;
+    }
+  }
+
+  if (year <= 0) {
+    std::memcpy(str, " BC", 3);
+    str += 3;
+  }
+
+  *str = '\0';
+}
+
+char *AppendTimestampSeconds(char *str, int32_t sec, int32_t fsec) { return str; }
+
+// Encode date and time interpreted as local time.
+// Supported date styles:
+//  Postgres - day mon hh:mm:ss yyyy tz
+//  SQL - mm/dd/yyyy hh:mm:ss.ss tz
+//  ISO - yyyy-mm-dd hh:mm:ss+/-tz
+void EncodeDateTime(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t min,
+                    int32_t sec, int32_t fsec, DateTimeFormat style, char *str) {
+  TPL_ASSERT(month >= 1 && month <= kMonthsPerYear, "Invalid month.");
+
+  switch (style) {
+    case DateTimeFormat::ISO:
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, year > 0 ? year : -(year - 1), 4);
+      *str++ = '-';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, month, 2);
+      *str++ = '-';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, day, 2);
+      *str++ = ' ';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, hour, 2);
+      *str++ = ':';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, min, 2);
+      *str++ = ':';
+      str = AppendTimestampSeconds(str, sec, fsec);
+      // TODO(pmenon): Time-zone.
+      break;
+
+    case DateTimeFormat::SQL:
+      if (kDateOrder == DateOrderFormat::DMY) {
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, day, 2);
+        *str++ = '/';
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, month, 2);
+      } else {
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, month, 2);
+        *str++ = '/';
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, day, 2);
+      }
+      *str++ = '/';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, year > 0 ? year : -(year - 1), 4);
+      *str++ = ' ';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, hour, 2);
+      *str++ = ':';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, min, 2);
+      *str++ = ':';
+      str = AppendTimestampSeconds(str, sec, fsec);
+      // TODO(pmenon): Time-zone.
+      break;
+
+    case DateTimeFormat::Postgres: {
+      const int32_t julian_date = BuildJulianDate(year, month, day);
+      const int32_t day_of_week = JulianDateToDay(julian_date);
+      std::memcpy(str, kDayNames[day_of_week], 3);
+      str += 3;
+      *str++ = ' ';
+      if (kDateOrder == DateOrderFormat::DMY) {
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, day, 2);
+        *str++ = ' ';
+        std::memcpy(str, kMonthNames[month - 1], 3);
+        str += 3;
+      } else {
+        std::memcpy(str, kMonthNames[month - 1], 3);
+        str += 3;
+        *str++ = ' ';
+        str = util::NumberUtil::NumberToStringWithZeroPad(str, day, 2);
+      }
+      *str++ = ' ';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, hour, 2);
+      *str++ = ':';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, min, 2);
+      *str++ = ':';
+      str = AppendTimestampSeconds(str, sec, fsec);
+      *str++ = ' ';
+      str = util::NumberUtil::NumberToStringWithZeroPad(str, year > 0 ? year : -(year - 1), 4);
+      // TODO(pmenon): Time-zone.
+      break;
+    }
+  }
+
+  if (year <= 0) {
+    std::memcpy(str, " BC", 3);
+    str += 3;
+  }
+
+  *str = '\0';
+}
+
 }  // namespace
 
 //===----------------------------------------------------------------------===//
@@ -143,7 +281,10 @@ void SplitTime(int64_t jd, int32_t *hour, int32_t *min, int32_t *sec, double *fs
 std::string Date::ToString() const {
   int32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
-  return fmt::format("{}-{:02}-{:02}", year, month, day);
+
+  char buf[kMaxDateTimeLen + 1];
+  EncodeDateOnly(year, month, day, DateTimeFormat::ISO, buf);
+  return std::string(buf);
 }
 
 int32_t Date::ExtractYear() const {
@@ -395,7 +536,9 @@ std::string Timestamp::ToString() const {
   double fsec;
   SplitTime(time, &hour, &min, &sec, &fsec);
 
-  return fmt::format("{}-{:02}-{:02} {:02}:{:02}:{:02}", year, month, day, hour, min, sec);
+  char buf[kMaxDateTimeLen + 1];
+  EncodeDateTime(year, month, day, hour, min, sec, std::lroundl(fsec), DateTimeFormat::ISO, buf);
+  return std::string(buf);
 }
 
 Timestamp Timestamp::FromString(const char *str, std::size_t len) {

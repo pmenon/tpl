@@ -60,9 +60,14 @@ enum class ColumnEncoding : uint8_t {
 };
 
 /**
- * All possible JOIN types.
+ * All possible date/timestamp formatting types.
  */
-enum class JoinType : uint8_t { Inner, Outer, Left, Right, Anti, Semi };
+enum class DateTimeFormat : uint8_t { Postgres, SQL, ISO };
+
+/**
+ * All possible date orderings.
+ */
+enum class DateOrderFormat : uint8_t { YMD, DMY, MDY };
 
 /**
  * @return The simplest SQL type for primitive type ID @em type.
