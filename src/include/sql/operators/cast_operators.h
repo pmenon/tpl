@@ -265,13 +265,25 @@ struct TryCast<InType, Date, std::enable_if_t<detail::is_integer_type_v<InType>>
 };
 
 /**
- * Boolean or numeric value to string.
- * @tparam InType The input type. Either a number or a boolean.
+ * Boolean to string.
+ */
+template <>
+struct TryCast<bool, std::string> {
+  bool operator()(const bool input, std::string *output) const {
+    static constexpr std::string_view kTrue = "true";
+    static constexpr std::string_view kFalse = "false";
+    *output = input ? kTrue : kFalse;
+    return true;
+  }
+};
+
+/**
+ * Integer to string.
+ * @tparam InType The numeric input type.
  */
 template <typename InType>
-struct TryCast<InType, std::string,
-               std::enable_if_t<detail::is_number_type_v<InType> || std::is_same_v<InType, bool>>> {
-  bool operator()(const InType input, std::string *output) const noexcept {
+struct TryCast<InType, std::string, std::enable_if_t<detail::is_number_type_v<InType>>> {
+  bool operator()(const InType input, std::string *output) const {
     *output = std::to_string(input);
     return true;
   }
