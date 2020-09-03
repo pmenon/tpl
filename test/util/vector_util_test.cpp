@@ -34,7 +34,7 @@ TEST_F(VectorUtilTest, BitToByteVector) {
   constexpr uint32_t num_bits = 97;
 
   // The input bit vector output byte vector
-  BitVector bv(num_bits);
+  BitVector<> bv(num_bits);
   uint8_t bytes[num_bits];
 
   // Set some random bits
@@ -55,7 +55,7 @@ TEST_F(VectorUtilTest, BitToByteVector) {
 TEST_F(VectorUtilTest, BitToSelectionVector) {
   // 126-bit vector and the output selection vector
   constexpr uint32_t num_bits = 126;
-  BitVector bv(num_bits);
+  BitVector<> bv(num_bits);
   sel_t sel[kDefaultVectorSize];
 
   // Set even bits
@@ -78,7 +78,7 @@ TEST_F(VectorUtilTest, BitToSelectionVector) {
 TEST_F(VectorUtilTest, BitToSelectionVector_Sparse_vs_Dense) {
   for (uint32_t density : {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100}) {
     // Create a bit vector with specific density
-    BitVector bv(kDefaultVectorSize);
+    BitVector<> bv(kDefaultVectorSize);
     std::random_device r;
     for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
       if (r() % 100 < density) {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "common/macros.h"
 
 namespace tpl::sql {
