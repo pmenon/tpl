@@ -38,9 +38,7 @@ struct Abs {
 template <typename T>
 struct Acos {
   constexpr double operator()(T input) const {
-    if (input < -1 || input > 1) {
-      throw std::runtime_error("ACos is undefined outside [-1,1]");
-    }
+    TPL_ASSERT(input >= -1 && input <= 1, "Invalid input to acos()");
     return std::acos(input);
   }
 };
@@ -48,9 +46,7 @@ struct Acos {
 template <typename T>
 struct Asin {
   constexpr double operator()(T input) const {
-    if (input < -1 || input > 1) {
-      throw std::runtime_error("ASin is undefined outside [-1,1]");
-    }
+    TPL_ASSERT(input >= -1 && input <= 1, "Invalid input to asin()");
     return std::asin(input);
   }
 };

@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "common/exception.h"
 #include "sql/operators/numeric_binary_operators.h"
 #include "sql/operators/numeric_operators.h"
 #include "sql/value.h"
@@ -126,9 +127,7 @@ inline void ArithmeticFunctions::E(Real *result) { *result = Real(M_E); }
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Abs, Integer, Integer);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Abs, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Sin, Real, Real);
-UNARY_MATH_EXPENSIVE_HIDE_NULL(Asin, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Cos, Real, Real);
-UNARY_MATH_EXPENSIVE_HIDE_NULL(Acos, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Tan, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Cot, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Atan, Real, Real);
@@ -148,6 +147,28 @@ UNARY_MATH_EXPENSIVE_HIDE_NULL(Sign, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Radians, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Degrees, Real, Real);
 UNARY_MATH_EXPENSIVE_HIDE_NULL(Round, Real, Real);
+
+inline void ArithmeticFunctions::Asin(Real *result, const Real &v) {
+  if (v.is_null) {
+    *result = Real::Null();
+    return;
+  }
+  if (v.val < -1 || v.val > 1) {
+    throw Exception(ExceptionType::Execution, "asin() is undefined outside [-1,1]");
+  }
+  *result = Real(tpl::sql::Asin<double>{}(v.val));
+}
+
+inline void ArithmeticFunctions::Acos(Real *result, const Real &v) {
+  if (v.is_null) {
+    *result = Real::Null();
+    return;
+  }
+  if (v.val < -1 || v.val > 1) {
+    throw Exception(ExceptionType::Execution, "acos() is undefined outside [-1,1]");
+  }
+  *result = Real(tpl::sql::Acos<double>{}(v.val));
+}
 
 inline void ArithmeticFunctions::Atan2(Real *result, const Real &a, const Real &b) {
   if (a.is_null || b.is_null) {

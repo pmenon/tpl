@@ -208,6 +208,22 @@ TEST_F(ArithmeticFunctionsTests, TrigFunctions) {
     CHECK_SQL_FUNC(Atan, std::atan);
   }
 
+  // Check some invalid arc inputs.
+  {
+    Real arg(-11.0);
+    Real ret(0.0);
+    EXPECT_THROW(ArithmeticFunctions::Acos(&ret, arg), Exception);
+
+    arg = Real(123.1);
+    EXPECT_THROW(ArithmeticFunctions::Acos(&ret, arg), Exception);
+
+    arg = Real(-44.1);
+    EXPECT_THROW(ArithmeticFunctions::Asin(&ret, arg), Exception);
+
+    arg = Real(844.0123);
+    EXPECT_THROW(ArithmeticFunctions::Acos(&ret, arg), Exception);
+  }
+
 #undef CHECK_SQL_FUNC
 #undef CHECK_HANDLES_NONNULL
 #undef CHECK_HANDLES_NULL
