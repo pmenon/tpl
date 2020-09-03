@@ -9,6 +9,8 @@ ExpressionTranslator::ExpressionTranslator(const planner::AbstractExpression &ex
                                            CompilationContext *compilation_context)
     : expr_(expr),
       compilation_context_(compilation_context),
-      codegen_(compilation_context->GetCodeGen()) {}
+      codegen_(compilation_context->GetCodeGen()) {
+  (void)compilation_context_;
+}
 
 }  // namespace tpl::sql::codegen
