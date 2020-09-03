@@ -6,6 +6,12 @@ namespace tpl::util {
 
 class NumberUtil : public AllStatic {
  public:
+  /** Maximum length of an 8-byte (64-bit) number, including sign. */
+  static constexpr std::size_t kMaxInt8Len = 20;
+
+  /** Maximum length of a 4-byte (32-bit) number, including sign. */
+  static constexpr std::size_t kMaxInt4Len = 11;
+  
   /**
    * @return The length of the string required to store the given 32-bit value @em value.
    */
