@@ -84,34 +84,50 @@ class InPlaceOperationExecutor : public AllStatic {
     // Ensure operator has correct interface.
     static_assert(std::is_invocable_v<Op, ResultType *, InputType>,
                   "In-place operation has invalid interface for given template arguments.");
+    if (input.IsConstant()) {
+      ExecuteImpl_Vector_Constant<ResultType, InputType, Op>(result, input, op);
+    } else {
+      ExecuteImpl_Vector_Vector<ResultType, InputType, Op>(result, input, op);
+    }
+  }
+
+ private:
+  // Vector-with-constant implementation.
+  template <typename ResultType, typename InputType, class Op>
+  static void ExecuteImpl_Vector_Constant(Vector *result, const Vector &input, Op op) {
+    auto *RESTRICT input_data = reinterpret_cast<InputType *>(input.GetData());
+    auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->GetData());
+
+    if (input.IsNull(0)) {
+      result->GetMutableNullMask()->SetAll();
+      return;
+    }
+
+    const auto &const_input = input_data[0];
+
+    if (traits::ShouldPerformFullCompute<Op>()(result->GetFilteredTupleIdList())) {
+      VectorOps::ExecIgnoreFilter(
+          *result, [&](uint64_t i, uint64_t k) { op(&result_data[i], const_input); });
+    } else {
+      VectorOps::Exec(*result, [&](uint64_t i, uint64_t k) { op(&result_data[i], const_input); });
+    }
+  }
+
+  // Vector-with-vector implementation.
+  template <typename ResultType, typename InputType, class Op>
+  static void ExecuteImpl_Vector_Vector(Vector *result, const Vector &input, Op op) {
+    TPL_ASSERT(result->GetFilteredTupleIdList() == input.GetFilteredTupleIdList(),
+               "Filter list of inputs to in-place operation do not match");
 
     auto *RESTRICT input_data = reinterpret_cast<InputType *>(input.GetData());
     auto *RESTRICT result_data = reinterpret_cast<ResultType *>(result->GetData());
 
-    if (input.IsConstant()) {
-      if (input.IsNull(0)) {
-        result->GetMutableNullMask()->SetAll();
-      } else {
-        if (traits::ShouldPerformFullCompute<Op>()(result->GetFilteredTupleIdList())) {
-          VectorOps::ExecIgnoreFilter(
-              *result, [&](uint64_t i, uint64_t k) { op(&result_data[i], input_data[0]); });
-        } else {
-          VectorOps::Exec(*result,
-                          [&](uint64_t i, uint64_t k) { op(&result_data[i], input_data[0]); });
-        }
-      }
+    result->GetMutableNullMask()->Union(input.GetNullMask());
+    if (traits::ShouldPerformFullCompute<Op>()(result->GetFilteredTupleIdList())) {
+      VectorOps::ExecIgnoreFilter(
+          *result, [&](uint64_t i, uint64_t k) { op(&result_data[i], input_data[i]); });
     } else {
-      TPL_ASSERT(result->GetFilteredTupleIdList() == input.GetFilteredTupleIdList(),
-                 "Filter list of inputs to in-place operation do not match");
-
-      result->GetMutableNullMask()->Union(input.GetNullMask());
-      if (traits::ShouldPerformFullCompute<Op>()(result->GetFilteredTupleIdList())) {
-        VectorOps::ExecIgnoreFilter(
-            *result, [&](uint64_t i, uint64_t k) { op(&result_data[i], input_data[i]); });
-      } else {
-        VectorOps::Exec(*result,
-                        [&](uint64_t i, uint64_t k) { op(&result_data[i], input_data[i]); });
-      }
+      VectorOps::Exec(*result, [&](uint64_t i, uint64_t k) { op(&result_data[i], input_data[i]); });
     }
   }
 };
