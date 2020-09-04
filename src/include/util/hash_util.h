@@ -197,7 +197,7 @@ class HashUtil : public AllStatic {
    * @return The Murmur3 hash of the input.
    */
   template <typename T>
-  static auto HashMurmur(T val, hash_t seed) -> std::enable_if_t<std::is_arithmetic_v<T>, hash_t> {
+  static auto HashMurmur(T val, hash_t seed) -> std::enable_if_t<std::is_fundamental_v<T>, hash_t> {
     auto k = static_cast<uint64_t>(val);
     k ^= k >> 33;
     k *= 0xff51afd7ed558ccdLLU;

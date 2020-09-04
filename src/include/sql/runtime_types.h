@@ -514,10 +514,7 @@ class VarlenEntry {
    * @param seed The value to seed the hash with.
    * @return The hash value for this string instance.
    */
-  hash_t Hash(hash_t seed) const {
-    return util::HashUtil::HashXXH3(reinterpret_cast<const uint8_t *>(GetContent()), GetSize(),
-                                    seed);
-  }
+  hash_t Hash(hash_t seed) const;
 
   /**
    * @return The hash value of this variable-length string.
