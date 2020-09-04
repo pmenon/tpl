@@ -2208,14 +2208,39 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
     p_seq_scan_out.AddOutput("p_container", p_container);
     p_seq_scan_out.AddOutput("p_partkey", p_partkey);
     p_seq_scan_out.AddOutput("p_size", p_size);
-    auto schema = p_seq_scan_out.MakeSchema();
+
+    // Generate predicate clause.
+    auto gen_predicate_clause = [&](int32_t lo_size, int32_t hi_size, const std::string &brand,
+                                    const std::vector<std::string> &containers) {
+      auto size_comp =
+          expr_maker.ConjunctionAnd(expr_maker.CompareGe(p_size, expr_maker.Constant(lo_size)),
+                                    expr_maker.CompareLe(p_size, expr_maker.Constant(hi_size)));
+      auto brand_comp = expr_maker.CompareEq(p_brand, expr_maker.Constant(brand));
+      auto container_comp = expr_maker.ConjunctionOr(
+          expr_maker.CompareEq(p_container, expr_maker.Constant(containers[0])),
+          expr_maker.ConjunctionOr(
+              expr_maker.CompareEq(p_container, expr_maker.Constant(containers[1])),
+              expr_maker.ConjunctionOr(
+                  expr_maker.CompareEq(p_container, expr_maker.Constant(containers[2])),
+                  expr_maker.CompareEq(p_container, expr_maker.Constant(containers[3])))));
+      return expr_maker.ConjunctionAnd(brand_comp,
+                                       expr_maker.ConjunctionAnd(container_comp, size_comp));
+    };
+
+    auto predicate = expr_maker.ConjunctionOr(
+        gen_predicate_clause(1, 5, "Brand#12", {"SM CASE", "SM BOX", "SM PACK", "SM PKG"}),
+        expr_maker.ConjunctionOr(
+            gen_predicate_clause(1, 10, "Brand#23", {"MED BAG", "MED BOX", "MED PKG", "MED PACK"}),
+            gen_predicate_clause(1, 15, "Brand#34", {"LG CASE", "LG BOX", "LG PACK", "LG PKG"})));
+
     // Build
-    planner::SeqScanPlanNode::Builder builder;
-    p_seq_scan = builder.SetOutputSchema(std::move(schema))
-                     .SetScanPredicate(nullptr)
+    p_seq_scan = planner::SeqScanPlanNode::Builder{}
+                     .SetOutputSchema(p_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
                      .SetTableOid(p_table->GetId())
                      .Build();
   }
+
   // Hash Join 1
   std::unique_ptr<planner::AbstractPlanNode> hash_join1;
   planner::OutputSchemaHelper hash_join_out1{&expr_maker, 0};
