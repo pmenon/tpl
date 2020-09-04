@@ -166,4 +166,24 @@ TEST_F(VectorCastTest, CastStringToFloat) {
   EXPECT_EQ(GenericValue::CreateFloat(910), a->GetValue(5));
 }
 
+TEST_F(VectorCastTest, CastNumericToString) {
+  // int16 -> string
+  {
+    // a = [NULL, -123, 44, NULL, 999, NULL, 13]
+    auto a = MakeSmallIntVector({0, -123, 44, 0, 999, 0, 13},
+                                {true, false, false, true, false, true, false});
+
+    EXPECT_NO_THROW(a->Cast(TypeId::Varchar));
+
+    EXPECT_EQ(TypeId::Varchar, a->GetTypeId());
+    EXPECT_TRUE(a->IsNull(0));
+    EXPECT_EQ(GenericValue::CreateVarchar("-123"), a->GetValue(1));
+    EXPECT_EQ(GenericValue::CreateVarchar("44"), a->GetValue(2));
+    EXPECT_TRUE(a->IsNull(3));
+    EXPECT_EQ(GenericValue::CreateVarchar("999"), a->GetValue(4));
+    EXPECT_TRUE(a->IsNull(5));
+    EXPECT_EQ(GenericValue::CreateVarchar("13"), a->GetValue(6));
+  }
+}
+
 }  // namespace tpl::sql

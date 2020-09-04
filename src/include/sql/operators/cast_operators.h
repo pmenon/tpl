@@ -282,8 +282,27 @@ struct TryCast<bool, std::string> {
  * @tparam InType The numeric input type.
  */
 template <typename InType>
-struct TryCast<InType, std::string, std::enable_if_t<detail::is_number_type_v<InType>>> {
+struct TryCast<InType, std::string, std::enable_if_t<detail::is_integer_type_v<InType>>> {
   bool operator()(const InType input, std::string *output) const {
+    static constexpr std::size_t kMaxDecimalDigitLen = std::numeric_limits<InType>::digits10;
+    std::array<char, kMaxDecimalDigitLen> buf;
+    auto [ptr, err] = std::to_chars(buf.begin(), buf.end(), input);
+    TPL_ASSERT(err == std::errc(), "We've guaranteed a sufficiently large buffer, but failed!");
+    const auto len = ptr - buf.data();
+    *output = std::string(buf.data(), len);
+    return true;
+  }
+};
+
+/**
+ * Floating-point to string.
+ * @tparam InType The numeric input type.
+ */
+template <typename InType>
+struct TryCast<InType, std::string, std::enable_if_t<detail::is_floating_type_v<InType>>> {
+  bool operator()(const InType input, std::string *output) const {
+    // TODO(pmenon): Merge with the regular integer-to-string implementation when we get
+    //               std::to_chars() for floating point numbers!
     *output = std::to_string(input);
     return true;
   }
