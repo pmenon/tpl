@@ -137,7 +137,26 @@ include_directories(SYSTEM "${THIRD_PARTY_DIR}/ips4o")
 # SPD Log - The logging library
 ############################################################
 
-include_directories(SYSTEM "${THIRD_PARTY_DIR}/spdlog/include")
+if (DEFINED ENV{TPL_SPDLOG_URL})
+    set(SPDLOG_SOURCE_URL "$ENV{TPL_SPDLOG_URL}")
+else ()
+    set(SPDLOG_SOURCE_URL "https://github.com/gabime/spdlog/archive/v${SPDLOG_VERSION}.tar.gz")
+endif ()
+
+add_definitions(-DSPDLOG_COMPILED_LIB)
+if ("${SPDLOG_HOME}" STREQUAL "")
+    FetchContent_Declare(SPDLOG URL ${SPDLOG_SOURCE_URL})
+    FetchContent_MakeAvailable(SPDLOG)
+    include_directories(SYSTEM "${spdlog_SOURCE_DIR}/include")
+    #set_property(TARGET spdlog PROPERTY POSITION_INDEPENDENT_CODE ON)
+    if (APPLE)
+        set_property(TARGET spdlog PROPERTY CXX_VISIBILITY_PRESET hidden)
+    endif ()
+else ()
+    set(SPDLOG_VENDORED 0)
+    find_package(spdlog REQUIRED)
+endif ()
+list(APPEND TPL_LINK_LIBS spdlog::spdlog)
 
 ############################################################
 # XByak

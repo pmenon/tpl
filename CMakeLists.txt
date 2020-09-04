@@ -10,6 +10,7 @@ set(TPL_VERSION_MINOR 5)
 include(CMakeParseArguments)
 include(ExternalProject)
 include(FindPkgConfig)
+include(FetchContent)
 
 # Let CMake know where all the modules are (i.e., in ./cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
