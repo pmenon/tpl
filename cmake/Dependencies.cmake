@@ -131,7 +131,12 @@ endif ()
 # IPS4O - The sorting library
 ############################################################
 
-include_directories(SYSTEM "${THIRD_PARTY_DIR}/ips4o")
+FetchContent_Declare(IPS4O GIT_REPOSITORY https://github.com/SaschaWitt/ips4o)
+FetchContent_MakeAvailable(IPS4O)
+include_directories(SYSTEM "${ips4o_SOURCE_DIR}")
+if (APPLE)
+    set_property(TARGET spdlog PROPERTY CXX_VISIBILITY_PRESET hidden)
+endif ()
 
 ############################################################
 # SPD Log - The logging library
