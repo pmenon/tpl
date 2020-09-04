@@ -131,12 +131,10 @@ endif ()
 # IPS4O - The sorting library
 ############################################################
 
-FetchContent_Declare(IPS4O GIT_REPOSITORY https://github.com/SaschaWitt/ips4o)
-FetchContent_MakeAvailable(IPS4O)
+FetchContent_Declare(ips4o GIT_REPOSITORY https://github.com/SaschaWitt/ips4o)
+FetchContent_MakeAvailable(ips4o)
 include_directories(SYSTEM "${ips4o_SOURCE_DIR}")
-if (APPLE)
-    set_property(TARGET spdlog PROPERTY CXX_VISIBILITY_PRESET hidden)
-endif ()
+message(STATUS "IPS4O include dir: ${ips4o_SOURCE_DIR}")
 
 ############################################################
 # SPD Log - The logging library
@@ -161,13 +159,24 @@ else ()
     set(SPDLOG_VENDORED 0)
     find_package(spdlog REQUIRED)
 endif ()
+message(STATUS "SpdLog include dir: ${spdlog_SOURCE_DIR}/include")
 list(APPEND TPL_LINK_LIBS spdlog::spdlog)
 
 ############################################################
 # XByak
 ############################################################
 
-include_directories(SYSTEM "${THIRD_PARTY_DIR}/xbyak")
+#include_directories(SYSTEM "${THIRD_PARTY_DIR}/xbyak")
+if (DEFINED ENV{TPL_XBYAK_URL})
+    set(XBYAK_SOURCE_URL "$ENV{TPL_XBYAK_URL}")
+else ()
+    set(XBYAK_SOURCE_URL "https://github.com/herumi/xbyak/archive/v${XBYAK_VERSION}.tar.gz")
+endif ()
+
+FetchContent_Declare(xbyak URL ${XBYAK_SOURCE_URL})
+FetchContent_MakeAvailable(xbyak)
+include_directories(SYSTEM "${xbyak_SOURCE_DIR}")
+message(STATUS "Xbyak include dir: ${xbyak_SOURCE_DIR}")
 
 ############################################################
 # CSV Parser
