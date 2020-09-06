@@ -93,7 +93,7 @@ bool CSVFile::Fill() {
 
 double CSVReader::CSVCell::AsDouble() const {
   double output = 0;
-  fast_double_parser::parse_number(this->ptr, &output);
+  fast_double_parser::parse_number(s.data(), &output);
   return output;
 }
 
@@ -107,8 +107,7 @@ CSVReader::CSVReader(std::unique_ptr<CSVSource> source, char delimiter, char quo
   // Assume 8 columns for now. We'll discover as we go along.
   row_.cells.resize(8);
   for (CSVCell &cell : row_.cells) {
-    cell.ptr = nullptr;
-    cell.len = 0;
+    cell.s = std::string_view{};
     cell.escape_char = escape_char_;
   }
 }
@@ -143,13 +142,9 @@ CSVReader::ParseResult CSVReader::TryParse() {
     return ParseResult::NeedMoreData; \
   }
 
-#define FINISH_CELL()     \
-  cell->ptr = cell_start; \
-  cell->len = ptr - cell_start;
+#define FINISH_CELL() cell->s = std::string_view(cell_start, ptr - cell_start)
 
-#define FINISH_QUOTED_CELL() \
-  cell->ptr = cell_start;    \
-  cell->len = ptr - cell_start - 1;
+#define FINISH_QUOTED_CELL() cell->s = std::string_view(cell_start, ptr - cell_start - 1)
 
 #define NEXT_CELL()                        \
   cell++;                                  \

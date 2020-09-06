@@ -135,4 +135,37 @@ TEST_F(CSVReaderTest, CheckUnquoted) {
   EXPECT_FALSE(reader.Advance());
 }
 
+TEST_F(CSVReaderTest, CheckLargeCSV) {
+  const uint32_t num_rows = 50000;
+  const uint32_t num_cols = 4;
+
+  // CSV schema: [int,string,int,string]
+
+  const auto make_string_col = [](auto v) { return "പ്രശാന്ത് --- " + std::to_string(v); };
+
+  std::string csv;
+  for (unsigned i = 0; i < num_rows; i++) {
+    for (unsigned j = 0; j < num_cols; j++) {
+      if (j != 0) csv += ",";
+      if (j == 1 || j == 3) {
+        csv += make_string_col(i + j);
+      } else {
+        csv += std::to_string(i + j);
+      }
+    }
+    csv += "\n";
+  }
+
+  CSVReader reader(MakeSource(csv));
+  ASSERT_TRUE(reader.Initialize());
+
+  uint32_t row_count = 0;
+  while (reader.Advance()) {
+    EXPECT_EQ(row_count + 0, reader.GetRow()->cells[0].AsInteger());
+    EXPECT_EQ(make_string_col(row_count + 1), reader.GetRow()->cells[1].AsString());
+    row_count++;
+  }
+  EXPECT_EQ(num_rows, row_count);
+}
+
 }  // namespace tpl::util

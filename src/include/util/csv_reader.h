@@ -3,6 +3,7 @@
 #include <charconv>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "common/common.h"
@@ -205,19 +206,14 @@ class CSVReader {
    * A cell in a row in the CSV.
    */
   struct CSVCell {
-    // Pointer to the cell's data
-    const char *ptr;
-    // Length of the data in bytes
-    std::size_t len;
-    // Does this cell contain escaped data?
-    bool escaped;
-    // The escaping character
-    char escape_char;
+    std::string_view s;  // The view over the cell's contents.
+    bool escaped;        // Does this cell contain escaped data?
+    char escape_char;    // The escaping character.
 
     /**
      * @return True if the cell is empty; false otherwise.
      */
-    bool IsEmpty() const noexcept { return len == 0; }
+    bool IsEmpty() const noexcept { return s.empty(); }
 
     /**
      * @return This cell's value converted into a 64-bit signed integer.
@@ -225,7 +221,8 @@ class CSVReader {
     int64_t AsInteger() const {
       TPL_ASSERT(!escaped, "Integer data cannot contain be escaped");
       int64_t n = 0;
-      std::from_chars(ptr, ptr + len, n);
+      UNUSED auto [ptr, ec] = std::from_chars(s.begin(), s.end(), n);
+      TPL_ASSERT(ec == std::errc(), "Invalid integer.");
       return n;
     }
 
@@ -238,10 +235,10 @@ class CSVReader {
      * @return This cell's value as a string.
      */
     std::string AsString() const {
-      std::string result(ptr, len);
+      std::string result(s);
       if (escaped) {
         std::size_t new_len = 0;
-        for (std::size_t i = 0; i < len; i++) {
+        for (std::size_t i = 0; i < s.length(); i++) {
           if (result[i] == escape_char) {
             i++;
           }
