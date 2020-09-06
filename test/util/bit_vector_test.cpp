@@ -387,7 +387,7 @@ TEST(BitVectorTest, SetFromBytes) {
     BitVector<> bv(vec_size);
 
     // Set even indexes
-    std::random_device r;
+    std::random_device r = RandomDevice();
     alignas(16) uint8_t bytes[vec_size] = {0};
     uint32_t num_set = 0;
     for (auto &byte : bytes) {

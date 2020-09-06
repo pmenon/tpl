@@ -213,7 +213,7 @@ TEST_F(AggregationHashTableTest, BatchProcessTest) {
       }
 
       // Shuffle keys.
-      std::shuffle(keys, keys + kDefaultVectorSize, std::random_device());
+      std::shuffle(keys, keys + kDefaultVectorSize, RandomDevice());
 
       // Filter out ONLY the last grouping key.
       TupleIdList tids(kDefaultVectorSize);
@@ -322,7 +322,7 @@ TEST_F(AggregationHashTableTest, OverflowPartitonIteratorTest) {
     std::vector<std::unique_ptr<TestEntry>> entries;
 
     // Populate each partition
-    std::random_device random;
+    std::random_device random = RandomDevice();
     uint32_t num_entries = 0;
     for (uint32_t part_idx = 0; part_idx < nparts; part_idx++) {
       const uint32_t nentries = (random() % nentries_per_part);

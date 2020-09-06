@@ -16,7 +16,7 @@ TEST_F(VectorHashTest, NumericHashes) {
     auto input = Make##TYPE_ID##Vector(257);                         \
     auto hashes = Vector(TypeId::Hash, true, false);                 \
     /* Fill input */                                                 \
-    std::random_device r;                                            \
+    std::random_device r = RandomDevice();                           \
     for (uint64_t i = 0; i < input->GetSize(); i++) {                \
       input->SetValue(i, GenericValue::Create##TYPE_ID(r()));        \
     }                                                                \

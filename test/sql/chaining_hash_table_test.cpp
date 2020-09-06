@@ -116,7 +116,7 @@ TEST_F(ChainingHashTableTest, ConcurrentInsertion) {
         entries.emplace_back(i, tid);
       }
 
-      std::random_device r;
+      std::random_device r = RandomDevice();
       auto range_begin = entries.begin() + (tid * num_entries);
       auto range_end = range_begin + num_entries;
       std::shuffle(range_begin, range_end, r);
@@ -240,18 +240,22 @@ TEST_F(ChainingHashTableTest, SimpleIteration) {
 
   const uint32_t num_inserts = 500;
 
-  std::random_device random;
-
+  // The test entries.
+  std::vector<TestEntry> entries;
+  // The reference validation set.
   std::unordered_map<Key, TestEntry> reference;
 
-  // The entries
-  std::vector<TestEntry> entries;
-  for (uint32_t idx = 0; idx < num_inserts; idx++) {
-    TestEntry entry(random(), 20);
-    entry.hash = entry.Hash();
+  // Make test entries.
+  {
+    std::mt19937 gen(RandomDevice()());
+    std::uniform_int_distribution<decltype(TestEntry::key)> dist;
+    for (uint32_t idx = 0; idx < num_inserts; idx++) {
+      TestEntry entry(dist(gen), 20);
+      entry.hash = entry.Hash();
 
-    reference[entry.key] = entry;
-    entries.emplace_back(entry);
+      reference[entry.key] = entry;
+      entries.emplace_back(entry);
+    }
   }
 
   // The table
@@ -401,12 +405,15 @@ TEST_F(ChainingHashTableTest, DISABLED_PerfIteration) {
   // The entries
   std::vector<TestEntry> entries;
 
-  std::random_device random;
-  for (uint32_t idx = 0; idx < num_inserts; idx++) {
-    TestEntry entry(random(), 20);
-    entry.hash = entry.Hash();
+  {
+    std::mt19937 gen(RandomDevice()());
+    std::uniform_int_distribution<decltype(TestEntry::key)> dist;
+    for (uint32_t idx = 0; idx < num_inserts; idx++) {
+      TestEntry entry(dist(gen), 20);
+      entry.hash = entry.Hash();
 
-    entries.emplace_back(entry);
+      entries.emplace_back(entry);
+    }
   }
 
   // The table

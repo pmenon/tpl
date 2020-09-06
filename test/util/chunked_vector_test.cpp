@@ -45,7 +45,7 @@ TEST_F(ChunkedVectorTest, RandomLookupTest) {
   }
 
   // Do a bunch of random lookup
-  std::random_device random;
+  std::random_device random = RandomDevice();
   for (uint32_t i = 0; i < 1000; i++) {
     auto idx = random() % num_elems;
     EXPECT_EQ(idx, vec[idx]);

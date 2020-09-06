@@ -12,7 +12,7 @@ namespace tpl::sql {
 class VarlenEntryTest : public TplTest {};
 
 TEST_F(VarlenEntryTest, Basic) {
-  std::default_random_engine gen(std::random_device{}());
+  std::default_random_engine gen(RandomDevice()());
   std::uniform_int_distribution<uint8_t> dist(0, std::numeric_limits<uint8_t>::max());
 
   const uint32_t large_size = 40;

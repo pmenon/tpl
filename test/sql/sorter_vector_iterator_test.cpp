@@ -26,7 +26,7 @@ struct Tuple {
  * @param num_tuples The number of tuple to insert.
  */
 void PopulateSorter(Sorter *sorter, uint32_t num_tuples = kDefaultVectorSize + 7) {
-  std::random_device r;
+  std::random_device r = RandomDevice();
   for (uint32_t i = 0; i < num_tuples; i++) {
     auto tuple = reinterpret_cast<Tuple *>(sorter->AllocInputTuple());
     tuple->key = r() % num_tuples;

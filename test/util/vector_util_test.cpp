@@ -79,7 +79,7 @@ TEST_F(VectorUtilTest, BitToSelectionVector_Sparse_vs_Dense) {
   for (uint32_t density : {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100}) {
     // Create a bit vector with specific density
     BitVector<> bv(kDefaultVectorSize);
-    std::random_device r;
+    std::random_device r = RandomDevice();
     for (uint32_t i = 0; i < kDefaultVectorSize; i++) {
       if (r() % 100 < density) {
         bv[i] = true;
@@ -125,7 +125,7 @@ TEST_F(VectorUtilTest, DiffSelectedWithScratchPad) {
 }
 
 TEST_F(VectorUtilTest, IntersectSelectionVectors) {
-  std::mt19937 gen(std::random_device{}());
+  std::mt19937 gen(RandomDevice()());
   std::uniform_int_distribution<sel_t> dist(0, kDefaultVectorSize - 1);
   // Test intersection of multiple vector sizes.
   for (unsigned a_size = 1; a_size <= kDefaultVectorSize; a_size <<= 1) {

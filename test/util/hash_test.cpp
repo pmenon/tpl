@@ -18,7 +18,7 @@ class HashTest : public TplTest {};
     EXPECT_EQ(hash_val1, hash_val2);                \
   }                                                 \
   {                                                 \
-    auto seed = random_seed();                      \
+    auto seed = RandomDevice()();                   \
     auto hash_val1 = HashUtil::METHOD(INPUT, seed); \
     auto hash_val2 = HashUtil::METHOD(INPUT, seed); \
     EXPECT_EQ(hash_val1, hash_val2);                \
@@ -33,8 +33,6 @@ class HashTest : public TplTest {};
   }
 
 TEST_F(HashTest, IntegerHash) {
-  std::random_device random_seed;
-
   CHECK_HASH_ON_INPUT(int8_t{-1});
   CHECK_HASH_ON_INPUT(int16_t{-22});
   CHECK_HASH_ON_INPUT(int32_t{-333});
@@ -46,8 +44,6 @@ TEST_F(HashTest, IntegerHash) {
 }
 
 TEST_F(HashTest, FloatingPointHash) {
-  std::random_device random_seed;
-
   CHECK_HASH_ON_INPUT(float{0});
   CHECK_HASH_ON_INPUT(float{-213.89});
   CHECK_HASH_ON_INPUT(double{0});

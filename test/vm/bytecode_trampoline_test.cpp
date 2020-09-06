@@ -154,7 +154,7 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
   {
     const uint32_t nelems = 100;
     std::vector<int32_t> numbers(nelems);
-    std::random_device random;
+    std::random_device random = RandomDevice();
     std::generate(numbers.begin(), numbers.end(), [&random]() { return random() % 100; });
 
     // Generate the comparison function that sorts ascending
@@ -192,7 +192,7 @@ TEST_F(BytecodeTrampolineTest, CodeGenComparisonFunctionSorterTest) {
 
     const uint32_t nelems = 100;
     std::vector<S> elems;
-    std::random_device random;
+    std::random_device random = RandomDevice();
     for (uint32_t i = 0; i < nelems; i++) {
       elems.emplace_back(random() % 5, random() % 10, random() % 100, random() % 1000);
     }
@@ -272,7 +272,6 @@ TEST_F(BytecodeTrampolineTest, DISABLED_PerfGenComparisonForSortTest) {
   const uint32_t nelems = 10000000;
   std::vector<int32_t> numbers(nelems);
   int32_t x = 0;
-  UNUSED std::random_device random;
   std::generate(numbers.begin(), numbers.end(), [&x]() { return x++; });
 
   auto num2 = numbers;
