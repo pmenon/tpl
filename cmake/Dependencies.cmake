@@ -166,7 +166,6 @@ list(APPEND TPL_LINK_LIBS spdlog::spdlog)
 # XByak
 ############################################################
 
-#include_directories(SYSTEM "${THIRD_PARTY_DIR}/xbyak")
 if (DEFINED ENV{TPL_XBYAK_URL})
     set(XBYAK_SOURCE_URL "$ENV{TPL_XBYAK_URL}")
 else ()
@@ -183,6 +182,21 @@ message(STATUS "Xbyak include dir: ${xbyak_SOURCE_DIR}")
 ############################################################
 
 include_directories(SYSTEM "${THIRD_PARTY_DIR}/csv-parser")
+
+############################################################
+# TLX
+############################################################
+
+if (DEFINED ENV{TPL_TLX_URL})
+    set(TLX_SOURCE_URL "$ENV{TPL_TLX_URL}")
+else ()
+    set(TLX_SOURCE_URL "https://github.com/tlx/tlx/archive/v${TLX_VERSION}.zip")
+endif ()
+
+FetchContent_Declare(tlx URL ${TLX_SOURCE_URL})
+FetchContent_MakeAvailable(tlx)
+include_directories(SYSTEM "${tlx_SOURCE_DIR}")
+message(STATUS "TLX include dir: ${tlx_SOURCE_DIR}")
 
 ############################################################
 # Google Test
