@@ -6,6 +6,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
+    - name: Get latest CMake
+      uses: lukka/get-cmake@latest
+
     - name: Cleanup Environment
       run: |
         # Remove previous versions of Clang/LLVM.
