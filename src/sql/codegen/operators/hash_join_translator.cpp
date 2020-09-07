@@ -156,12 +156,14 @@ void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *context,
 }
 
 bool HashJoinTranslator::ShouldValidateHashOnProbe() const {
-  // Validate hash value on probe if one of the keys is considered "complex".
+  // Validate hash value on probe if:
+  // 1. There is more than one probe key that cannot be packed.
+  // 2. One of the keys is considered "complex".
   // For now, only string keys are the only complex type.
   // Modify 'is_complex()' as more complex types are supported.
   const auto &keys = GetPlanAs<planner::HashJoinPlanNode>().GetRightHashKeys();
   const auto is_complex = [](auto key) { return key->GetReturnValueType() == TypeId::Varchar; };
-  return std::any_of(keys.begin(), keys.end(), is_complex);
+  return keys.size() > 1 || std::any_of(keys.begin(), keys.end(), is_complex);
 }
 
 void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const {
