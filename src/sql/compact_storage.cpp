@@ -1,6 +1,5 @@
 #include "sql/compact_storage.h"
 
-#include <algorithm>
 #include <numeric>
 
 #include "util/math_util.h"
@@ -8,21 +7,19 @@
 namespace tpl::sql {
 
 CompactStorage::CompactStorage(const std::vector<TypeId> &schema) {
-  // Create a reordered vector of indexes.
-  std::vector<uint32_t> reordered;
-  reordered.resize(schema.size());
+  std::vector<uint32_t> reordered(schema.size()), reordered_offsets(schema.size());
   std::iota(reordered.begin(), reordered.end(), 0u);
-  // Order it by decreasing size to minimize padding due to alignment.
+
+  // Re-order attributes by decreasing size to minimize padding.
   std::sort(reordered.begin(), reordered.end(), [&](auto left_idx, auto right_idx) {
     return GetTypeIdSize(schema[left_idx]) > GetTypeIdSize(schema[right_idx]);
   });
 
-  // Calculate the byte offset of each element using an exclusive prefix sum.
-  std::vector<std::size_t> reordered_offsets;
-  reordered_offsets.resize(schema.size());
-  std::transform_exclusive_scan(reordered.begin(), reordered.end(), reordered_offsets.begin(),
-                                std::size_t{0}, std::plus<std::size_t>{},
-                                [&](auto idx) { return GetTypeIdSize(schema[idx]); });
+  // Calculate the byte offset of each element in the reordered attribute list.
+  for (std::size_t i = 0, offset = 0; i < schema.size(); i++) {
+    reordered_offsets[i] = offset;
+    offset += GetTypeIdSize(schema[reordered[i]]);
+  }
 
   // The preferred alignment for the storage is the preferred alignment of the
   // largest element in the schema. This happens to be the first element in the
@@ -32,13 +29,13 @@ CompactStorage::CompactStorage(const std::vector<TypeId> &schema) {
   // For each element in the schema, create an element in the offsets vector
   // containing its byte offset from the start it is stored at.
   offsets_.resize(schema.size());
-  for (uint32_t i = 0; i < reordered.size(); i++) {
+  for (std::size_t i = 0; i < reordered.size(); i++) {
     offsets_[reordered[i]] = reordered_offsets[i];
   }
 
 #ifndef NDEBUG
   // Validate.
-  for (uint32_t i = 0; i < schema.size(); i++) {
+  for (std::size_t i = 0; i < schema.size(); i++) {
     TPL_ASSERT(util::MathUtil::IsAligned(offsets_[i], GetTypeIdAlignment(schema[i])),
                "Type is not aligned correctly!");
   }
