@@ -148,12 +148,6 @@ class FilterManager {
   void InsertClauseTerm(MatchFn term);
 
   /**
-   * Insert a list of terms in the currently active clause in the filter.
-   * @param terms The terms of the clause.
-   */
-  void InsertClauseTerms(std::initializer_list<MatchFn> terms);
-
-  /**
    * Insert a vector of terms in the currently active clause in the filter.
    * @param terms The terms of the clause.
    */

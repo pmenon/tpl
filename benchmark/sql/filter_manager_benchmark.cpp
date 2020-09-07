@@ -339,7 +339,7 @@ class FilterManagerBenchmark : public benchmark::Fixture {
       // Create tables.
       InitTestTables();
       // Disabled some optimizations.
-      Settings::Instance()->SetDouble(Settings::Name::SelectOptThreshold, 7.00);
+      Settings::Instance()->SetDouble(Settings::Name::FullSelectOptThreshold, 7.00);
     });
   }
 };

@@ -12,11 +12,11 @@
 
 namespace tpl::sql {
 
-//===----------------------------------------------------------------------===//
-//
-// Filter Manager Clause
-//
-//===----------------------------------------------------------------------===//
+///========----------------------------------------------------------------------========///
+///
+/// Filter Manager Clause
+///
+///========----------------------------------------------------------------------========///
 
 FilterManager::Clause::Clause(void *opaque_context, double stat_sample_freq)
     : opaque_context_(opaque_context),
@@ -31,7 +31,7 @@ FilterManager::Clause::Clause(void *opaque_context, double stat_sample_freq)
 #else
       gen_(std::random_device()()),
 #endif
-      dist_(0, 1) {
+      dist_(0.0, 1.0) {
   terms_.reserve(4);
 }
 
@@ -155,22 +155,17 @@ void FilterManager::StartNewClause() {
 }
 
 void FilterManager::InsertClauseTerm(const FilterManager::MatchFn term) {
-  TPL_ASSERT(!finalized_, "Cannot modify filter manager after finalization");
-  TPL_ASSERT(!clauses_.empty(), "Inserting flavor without clause");
+  if (clauses_.empty()) StartNewClause();
   clauses_.back()->AddTerm(term);
 }
 
-void FilterManager::InsertClauseTerms(std::initializer_list<MatchFn> terms) {
-  for (auto term : terms) InsertClauseTerm(term);
-}
-
 void FilterManager::InsertClauseTerms(const std::vector<MatchFn> &terms) {
-  for (auto term : terms) InsertClauseTerm(term);
+  for (auto term : terms) {
+    InsertClauseTerm(term);
+  }
 }
 
 void FilterManager::RunFilters(VectorProjection *input_batch) {
-  TPL_ASSERT(IsFinalized(), "Must finalize the filter before it can be used");
-
   // Initialize the input, output, and temporary tuple ID lists for processing
   // this projection. This check just ensures they're all the same shape.
   if (const uint32_t projection_size = input_batch->GetTotalTupleCount();
