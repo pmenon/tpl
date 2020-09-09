@@ -120,6 +120,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckNullValueCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinStringLikeCall(ast::CallExpr *call);
   void CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinConcat(ast::CallExpr *call);
   void CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin);

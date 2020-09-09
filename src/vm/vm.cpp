@@ -1629,9 +1629,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(Concat) : {
     auto *result = frame->LocalAt<sql::StringVal *>(READ_LOCAL_ID());
     auto *exec_ctx = frame->LocalAt<sql::ExecutionContext *>(READ_LOCAL_ID());
-    auto *left = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    auto *right = frame->LocalAt<const sql::StringVal *>(READ_LOCAL_ID());
-    OpConcat(result, exec_ctx, left, right);
+    auto **inputs = frame->LocalAt<const sql::StringVal **>(READ_LOCAL_ID());
+    auto num_inputs = READ_UIMM4();
+    OpConcat(result, exec_ctx, inputs, num_inputs);
     DISPATCH_NEXT();
   }
 

@@ -177,9 +177,34 @@ void Sema::CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builti
       call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
       return;
     default:
-      // TODO(Amadou): Support other date function.
       UNREACHABLE("Impossible date function");
   }
+}
+
+void Sema::CheckBuiltinConcat(ast::CallExpr *call) {
+  if (!CheckArgCountAtLeast(call, 3)) {
+    return;
+  }
+
+  // First argument is an execution context.
+  if (const auto ctx_kind = ast::BuiltinType::Kind::ExecutionContext;
+      call->Arguments()[0]->GetType()->IsSpecificBuiltin(ctx_kind)) {
+    return;
+  }
+
+  const auto string_val = ast::BuiltinType::Kind::StringVal;
+
+  // All arguments must be SQL strings.
+  for (unsigned i = 1; i < call->Arguments().size(); i++) {
+    const auto arg = call->Arguments()[i];
+    if (!arg->GetType()->IsSpecificBuiltin(ast::BuiltinType::Kind::StringVal)) {
+      error_reporter()->Report(arg->Position(), ErrorMessages::kBadHashArg, arg->GetType());
+      return;
+    }
+  }
+
+  // Result is a string
+  call->SetType(GetBuiltinType(string_val));
 }
 
 void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -1676,6 +1701,10 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     }
     case ast::Builtin::ExtractYear: {
       CheckBuiltinDateFunctionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::Concat: {
+      CheckBuiltinConcat(call);
       break;
     }
     case ast::Builtin::ExecutionContextGetMemoryPool:

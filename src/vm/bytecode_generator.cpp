@@ -586,6 +586,28 @@ void BytecodeGenerator::VisitBuiltinDateFunctionCall(ast::CallExpr *call, ast::B
   GetExecutionResult()->SetDestination(dest);
 }
 
+void BytecodeGenerator::VisitBuiltinConcatCall(ast::CallExpr *call) {
+  auto dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  auto exec_ctx = VisitExpressionForRValue(call->Arguments()[0]);
+
+  // Make array.
+  const auto num_strings = call->Arguments().size() - 1;
+  const auto string_type =
+      ast::BuiltinType::Get(call->GetType()->GetContext(), ast::BuiltinType::Kind::StringVal);
+  auto strings_arr =
+      GetCurrentFunction()->NewLocal(ast::ArrayType::Get(num_strings, string_type->PointerTo()));
+
+  // Populate array.
+  auto elem = GetCurrentFunction()->NewLocal(string_type->PointerTo()->PointerTo());
+  for (unsigned i = 0; i < num_strings; i++) {
+    GetEmitter()->EmitLea(elem, strings_arr, i * 8);
+    GetEmitter()->EmitAssign(Bytecode::Assign8, elem.ValueOf(),
+                             VisitExpressionForLValue(call->Arguments()[i + 1]));
+  }
+
+  GetEmitter()->EmitConcat(dest, exec_ctx, strings_arr, num_strings);
+}
+
 void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) {
   // The first argument to all calls is a pointer to the TVI
   LocalVar iter = VisitExpressionForRValue(call->Arguments()[0]);
@@ -1624,6 +1646,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     }
     case ast::Builtin::ExtractYear: {
       VisitBuiltinDateFunctionCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::Concat: {
+      VisitBuiltinConcatCall(call);
       break;
     }
     case ast::Builtin::ExecutionContextGetMemoryPool:

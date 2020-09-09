@@ -343,4 +343,9 @@ void BytecodeEmitter::EmitCSVReaderInit(LocalVar reader, LocalVar file_name,
   EmitAll(Bytecode::CSVReaderInit, reader, file_name, file_name_len);
 }
 
+void BytecodeEmitter::EmitConcat(LocalVar result, LocalVar exec_ctx, LocalVar strings,
+                                 uint32_t num_strings) {
+  EmitAll(Bytecode::Concat, result, exec_ctx, strings, num_strings);
+}
+
 }  // namespace tpl::vm

@@ -39,3 +39,9 @@ struct-nested-2.tpl,false,10
 struct-pointer.tpl,false,440
 test.tpl,false,356405
 while.tpl,false,10
+
+################################################################################
+# TPL SQL tests
+################################################################################
+
+sql-concat.tpl,true,0

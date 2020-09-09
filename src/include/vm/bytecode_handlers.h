@@ -1357,8 +1357,8 @@ VM_OP_WARM void OpCharLength(tpl::sql::Integer *result, tpl::sql::ExecutionConte
 }
 
 VM_OP_WARM void OpConcat(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,
-                         const tpl::sql::StringVal *left, const tpl::sql::StringVal *right) {
-  tpl::sql::StringFunctions::Concat(result, ctx, *left, *right);
+                         const tpl::sql::StringVal **inputs, const uint32_t num_inputs) {
+  tpl::sql::StringFunctions::Concat(result, ctx, inputs, num_inputs);
 }
 
 VM_OP_WARM void OpLeft(tpl::sql::StringVal *result, tpl::sql::ExecutionContext *ctx,

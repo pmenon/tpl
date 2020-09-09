@@ -29,6 +29,7 @@ namespace tpl::ast {
   /* SQL Functions */                                           \
   F(Like, like)                                                 \
   F(ExtractYear, extractYear)                                   \
+  F(Concat, concat)                                             \
                                                                 \
   /* Thread State Container */                                  \
   F(ExecutionContextGetMemoryPool, execCtxGetMem)               \

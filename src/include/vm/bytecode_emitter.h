@@ -155,6 +155,9 @@ class BytecodeEmitter {
   // Initialize a CSV reader.
   void EmitCSVReaderInit(LocalVar creader, LocalVar static_local_string, uint32_t string_len);
 
+  // Invoke CONCAT(...).
+  void EmitConcat(LocalVar result, LocalVar exec_ctx, LocalVar strings, uint32_t num_strings);
+
  private:
   // Copy a scalar immediate value into the bytecode stream
   template <typename T>

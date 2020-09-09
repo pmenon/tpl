@@ -9,19 +9,31 @@
 
 namespace tpl::sql {
 
-void StringFunctions::Concat(StringVal *result, ExecutionContext *ctx, const StringVal &left,
-                             const StringVal &right) {
-  if (left.is_null || right.is_null) {
-    *result = StringVal::Null();
+void StringFunctions::Concat(StringVal *result, ExecutionContext *ctx, const StringVal **inputs,
+                             uint32_t num_inputs) {
+  std::size_t length = 0;
+  for (uint32_t i = 0; i < num_inputs; i++) {
+    if (!inputs[i]->is_null) {
+      length += inputs[i]->GetLength();
+    }
+  }
+
+  if (length == 0) {
+    *result = StringVal("", 0);
     return;
   }
 
-  const std::size_t length = left.GetLength() + right.GetLength();
-  char *const ptr = ctx->GetStringHeap()->PreAllocate(length);
+  auto const ptr = ctx->GetStringHeap()->PreAllocate(length);
+  auto p = ptr;
 
-  // Copy contents into result.
-  std::memcpy(ptr, left.GetContent(), left.GetLength());
-  std::memcpy(ptr + left.GetLength(), right.GetContent(), right.GetLength());
+  for (uint32_t i = 0; i < num_inputs; i++) {
+    if (!inputs[i]->is_null) {
+      const std::size_t len = inputs[i]->GetLength();
+      std::memcpy(p, inputs[i]->GetContent(), len);
+      p += len;
+    }
+  }
+
   *result = StringVal(ptr, length);
 }
 

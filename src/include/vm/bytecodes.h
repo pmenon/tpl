@@ -457,7 +457,7 @@ namespace tpl::vm {
   F(Pow, OperandType::Local, OperandType::Local, OperandType::Local)                                                   \
                                                                                                                        \
   /* String functions */                                                                                               \
-  F(Concat, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                            \
+  F(Concat, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::UImm4)                            \
   F(Left, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(Length, OperandType::Local, OperandType::Local, OperandType::Local)                                                \
   F(Like, OperandType::Local, OperandType::Local, OperandType::Local)                                                  \
