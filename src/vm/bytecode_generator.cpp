@@ -587,6 +587,7 @@ void BytecodeGenerator::VisitBuiltinDateFunctionCall(ast::CallExpr *call, ast::B
 }
 
 void BytecodeGenerator::VisitBuiltinConcatCall(ast::CallExpr *call) {
+  // TODO(pmenon): Should this be done earlier through an AST rewrite?
   auto dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
   auto exec_ctx = VisitExpressionForRValue(call->Arguments()[0]);
 
