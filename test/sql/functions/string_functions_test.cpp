@@ -29,25 +29,58 @@ class StringFunctionsTests : public TplTest {
 TEST_F(StringFunctionsTests, Concat) {
   // Nulls
   {
+    auto null = StringVal::Null();
     auto result = StringVal("");
-    StringFunctions::Concat(&result, ctx(), StringVal::Null(), StringVal::Null());
-    EXPECT_TRUE(result.is_null);
-
-    StringFunctions::Concat(&result, ctx(), StringVal::Null(), StringVal("xy"));
-    EXPECT_TRUE(result.is_null);
-
-    StringFunctions::Concat(&result, ctx(), StringVal("xy"), StringVal::Null());
-    EXPECT_TRUE(result.is_null);
+    const StringVal *inputs[] = {&null, &null};
+    StringFunctions::Concat(&result, ctx(), inputs, sizeof(inputs) / sizeof(inputs[0]));
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(0u, result.GetLength());
   }
 
-  // Simple Case
   {
+    auto null = StringVal::Null();
+    auto xy = StringVal("xy");
     auto result = StringVal("");
-    auto x = StringVal("xyz");
-    auto a = StringVal("abc");
 
-    StringFunctions::Concat(&result, ctx(), x, a);
+    const StringVal *inputs[] = {&null, &xy};
+    StringFunctions::Concat(&result, ctx(), inputs, sizeof(inputs) / sizeof(inputs[0]));
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(xy, result);
+  }
+
+  {
+    auto null = StringVal::Null();
+    auto xy = StringVal("xy");
+    auto result = StringVal("");
+
+    const StringVal *inputs[] = {&xy, &null};
+    StringFunctions::Concat(&result, ctx(), inputs, sizeof(inputs) / sizeof(inputs[0]));
+    EXPECT_FALSE(result.is_null);
+    EXPECT_EQ(xy, result);
+  }
+
+  // Simple Cases
+  auto result = StringVal("");
+  auto x = StringVal("xyz");
+  auto a = StringVal("abc");
+  auto null = StringVal::Null();
+
+  {
+    const StringVal *inputs[] = {&x, &a};
+    StringFunctions::Concat(&result, ctx(), inputs, sizeof(inputs) / sizeof(inputs[0]));
     EXPECT_TRUE(StringVal("xyzabc") == result);
+  }
+
+  {
+    const StringVal *inputs[] = {&x, &null, &a};
+    StringFunctions::Concat(&result, ctx(), inputs, sizeof(inputs) / sizeof(inputs[0]));
+    EXPECT_TRUE(StringVal("xyzabc") == result);
+  }
+
+  {
+    const StringVal *inputs[] = {&a, &x, &null};
+    StringFunctions::Concat(&result, ctx(), inputs, sizeof(inputs) / sizeof(inputs[0]));
+    EXPECT_TRUE(StringVal("abcxyz") == result);
   }
 }
 
