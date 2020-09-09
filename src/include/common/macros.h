@@ -6,17 +6,12 @@
 #define CACHELINE_SIZE 64
 
 #define RESTRICT __restrict__
-#define UNUSED __attribute__((unused))
+#define UNUSED [[maybe_unused]]
 #define ALWAYS_INLINE __attribute__((always_inline))
 #define NEVER_INLINE __attribute__((noinline))
 #define PACKED __attribute__((packed))
 #define FALLTHROUGH [[fallthrough]]
-#define NORETURN __attribute((noreturn))
-
-// ---------------------------------------------------------
-// Macros to force classes to be non-copyable, non-movable,
-// or both
-// ---------------------------------------------------------
+#define NORETURN [[noreturn]]
 
 // ---------------------------------------------------------
 // Macros to force classes to be non-copyable, non-movable,
