@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "sql/chaining_hash_table.h"
+#include "sql/compact_storage.h"
 #include "sql/concise_hash_table.h"
 #include "sql/memory_pool.h"
 #include "util/chunked_vector.h"
@@ -174,6 +175,10 @@ class JoinHashTable {
     return reinterpret_cast<const HashTableEntry *>(entries_[idx]);
   }
 
+  // Dispatched from Build() to attempt to compress the data before building
+  // the physical hash index.
+  void TryCompress();
+
   // Dispatched from Build() to build either a chaining or concise hash table.
   void BuildChainingHashTable();
   void BuildConciseHashTable();
@@ -201,26 +206,21 @@ class JoinHashTable {
  private:
   // The vector where we store the build-side input.
   util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
-
   // To protect concurrent access to 'owned_entries_'.
   mutable util::SpinLatch owned_latch_;
-
   // List of entries this hash table has taken ownership of.
   // Protected by 'owned_latch_'.
   MemPoolVector<decltype(entries_)> owned_;
-
+  // Data storage helper.
+  CompactStorage storage_helper_;
   // The chaining hash table.
   TaggedChainingHashTable chaining_hash_table_;
-
   // The concise hash table.
   ConciseHashTable concise_hash_table_;
-
   // Estimator of unique elements.
   std::unique_ptr<libcount::HLL> hll_estimator_;
-
   // Has the hash table been built?
   bool built_;
-
   // Should we use a concise hash table?
   bool use_concise_ht_;
 };

@@ -47,6 +47,11 @@ class CompactStorage {
 
  public:
   /**
+   * Empty.
+   */
+  CompactStorage() = default;
+
+  /**
    * Create an instance for a row with the provided schema.
    * @param schema The schema of the row to be stored.
    */
@@ -104,6 +109,12 @@ class CompactStorage {
   void SetNullIndicator(byte *null_bitmap, uint32_t index, bool null) const;
   // Read the NULL indication bit at the given index.
   bool GetNullIndicator(const byte *null_bitmap, uint32_t index) const;
+  // What block does the element with the given index belong to?
+  static std::size_t NullBlockIndex(std::size_t pos) noexcept { return pos / 8; }
+  // What bit position in a block does the element with the index belong to?
+  static std::size_t NullBitIndex(std::size_t pos) noexcept { return pos % 8; }
+  // The one-hot block mask for the element at the given position.
+  static byte NullMask(std::size_t pos) noexcept { return byte{1} << NullBitIndex(pos); }
 
  private:
   // Preferred alignment.
@@ -136,29 +147,34 @@ struct CompactStorage::StorageHelper<
                         std::is_same_v<T, Decimal64> || std::is_same_v<T, Decimal128> ||
                         std::is_same_v<T, VarlenEntry>>> {
   // Write a fundamental type.
-  static void Write(byte *p, T val) { *reinterpret_cast<T *>(p) = val; }
+  static constexpr void Write(byte *p, T val, UNUSED bool null) noexcept {
+    *reinterpret_cast<T *>(p) = val;
+  }
+
   // Read a fundamental type.
-  static void Read(const byte *p, T *val) { *val = *reinterpret_cast<const T *>(p); }
+  static constexpr void Read(const byte *p, T *val, UNUSED bool null) noexcept {
+    *val = *reinterpret_cast<const T *>(p);
+  }
 };
 
 inline void CompactStorage::SetNullIndicator(byte *null_bitmap, uint32_t index, bool null) const {
-  null_bitmap[index / 8] |= static_cast<byte>(null) << (index % 8);
+  null_bitmap[NullBlockIndex(index)] |= byte{null} << (NullBitIndex(index));
 }
 
 inline bool CompactStorage::GetNullIndicator(const byte *null_bitmap, uint32_t index) const {
-  return static_cast<bool>(null_bitmap[index / 8] & (byte{1} << (index % 8)));
+  return (null_bitmap[NullBlockIndex(index)] & NullMask(index)) != byte{0};
 }
 
 template <typename T, bool Nullable>
 inline void CompactStorage::Write(uint32_t index, byte *ptr, const T &val, bool null) const {
   if constexpr (Nullable) SetNullIndicator(ptr + null_bitmap_offset_, index, null);
-  StorageHelper<T>::Write(ptr + offsets_[index], val);
+  StorageHelper<T>::Write(&ptr[offsets_[index]], val, null);
 }
 
 template <typename T, bool Nullable>
 inline void CompactStorage::Read(uint32_t index, const byte *ptr, T *val, bool *null) const {
   if constexpr (Nullable) *null = GetNullIndicator(ptr + null_bitmap_offset_, index);
-  StorageHelper<T>::Read(ptr + offsets_[index], val);
+  StorageHelper<T>::Read(&ptr[offsets_[index]], val, null);
 }
 
 }  // namespace tpl::sql

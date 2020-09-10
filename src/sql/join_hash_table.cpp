@@ -44,6 +44,8 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   return entry->payload;
 }
 
+void JoinHashTable::TryCompress() {}
+
 void JoinHashTable::BuildChainingHashTable() {
   // Perfectly size the generic hash table in preparation for bulk-load.
   chaining_hash_table_.SetSize(GetTupleCount());
@@ -498,7 +500,10 @@ void JoinHashTable::Build() {
   util::Timer<> timer;
   timer.Start();
 
-  // Build
+  // Try to compress the data.
+  TryCompress();
+
+  // Build the physical hash index.
   if (UsingConciseHashTable()) {
     BuildConciseHashTable();
   } else {
