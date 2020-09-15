@@ -22,8 +22,10 @@
 
 namespace tpl::sql {
 
-JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht)
-    : entries_(HashTableEntry::ComputeEntrySize(tuple_size), MemoryPoolAllocator<byte>(memory)),
+JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, AnalysisPass analysis_pass,
+                             bool use_concise_ht)
+    : analysis_pass_(analysis_pass),
+      entries_(HashTableEntry::ComputeEntrySize(tuple_size), MemoryPoolAllocator<byte>(memory)),
       owned_(memory),
       concise_hash_table_(0),
       hll_estimator_(libcount::HLL::Create(kDefaultHLLPrecision)),
@@ -44,7 +46,15 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   return entry->payload;
 }
 
-void JoinHashTable::TryCompress() {}
+void JoinHashTable::TryCompress() {
+  if (!ShouldTryCompress()) {
+    return;
+  }
+
+  JoinHashTableVectorIterator iter(*this);
+  AnalysisStats stats;
+  analysis_pass_(&iter, &stats);
+}
 
 void JoinHashTable::BuildChainingHashTable() {
   // Perfectly size the generic hash table in preparation for bulk-load.

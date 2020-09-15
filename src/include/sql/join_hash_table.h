@@ -65,6 +65,12 @@ class JoinHashTable {
   // Minimum number of expected elements to merge before triggering a parallel merge
   static constexpr uint32_t kDefaultMinSizeForParallelMerge = 1024;
 
+  struct AnalysisStats {};
+
+  using AnalysisPass = void (*)(JoinHashTableVectorIterator *, AnalysisStats *);
+
+  using CompressPass = void (*)(JoinHashTableVectorIterator *);
+
   /**
    * Construct a join hash table. All memory allocations are sourced from the injected @em memory,
    * and thus, are ephemeral.
@@ -72,7 +78,8 @@ class JoinHashTable {
    * @param tuple_size The size of the tuple stored in this join hash table.
    * @param use_concise_ht Whether to use a concise or fatter chaining join index.
    */
-  explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht = false);
+  explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size,
+                         AnalysisPass analysis_pass = nullptr, bool use_concise_ht = false);
 
   /**
    * This class cannot be copied or moved.
@@ -160,6 +167,11 @@ class JoinHashTable {
   bool IsBuilt() const { return built_; }
 
   /**
+   * @return True if a compression phase should be run; false otherwise.
+   */
+  bool ShouldTryCompress() const { return analysis_pass_ != nullptr; }
+
+  /**
    * @return True if this join hash table uses a concise table under the hood.
    */
   bool UsingConciseHashTable() const { return use_concise_ht_; }
@@ -206,6 +218,8 @@ class JoinHashTable {
   void MergeIncomplete(JoinHashTable *source);
 
  private:
+  // The optional analysis pass.
+  AnalysisPass analysis_pass_;
   // The vector where we store the build-side input.
   util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
   // To protect concurrent access to 'owned_entries_'.
