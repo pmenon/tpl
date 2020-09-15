@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "sql/chaining_hash_table.h"
-#include "sql/compact_storage.h"
 #include "sql/concise_hash_table.h"
 #include "sql/memory_pool.h"
 #include "util/chunked_vector.h"
@@ -16,8 +15,11 @@ class HLL;
 
 namespace tpl::sql {
 
+class JoinHashTableIterator;        // Declared at end.
+class JoinHashTableVectorIterator;  // Declared at end.
 class ThreadStateContainer;
 class Vector;
+class VectorProjection;
 
 /**
  * General:
@@ -211,8 +213,6 @@ class JoinHashTable {
   // List of entries this hash table has taken ownership of.
   // Protected by 'owned_latch_'.
   MemPoolVector<decltype(entries_)> owned_;
-  // Data storage helper.
-  CompactStorage storage_helper_;
   // The chaining hash table.
   TaggedChainingHashTable chaining_hash_table_;
   // The concise hash table.
@@ -278,8 +278,6 @@ inline uint64_t JoinHashTable::GetTupleCount() const {
  *   auto row = iter.GetCurrentRowAs<MyFancyAssType>();
  *   ...
  * }
- *
- * // TODO(pmenon): Vectorized version, too.
  */
 class JoinHashTableIterator {
  public:
@@ -340,6 +338,65 @@ class JoinHashTableIterator {
   EntryListIterator entry_list_iter_, entry_list_end_;
   // An iterator over the entries in a single entry list.
   EntryIterator entry_iter_, entry_end_;
+};
+
+/**
+ * A vector-at-a-time iterator over the contents of a join hash table. The table must be fully
+ * built either through JoinHashTable::Build(), or have been merged in parallel from other hash
+ * tables through JoinHashTable::MergeParallel().
+ *
+ * Users use the OOP-ish iteration API:
+ * for (JoinHashTableVectorIterator iter(table); iter.HasNext(); iter.Next()) {
+ *   auto payloads = iter.GetEntries(); // A vector of rows.
+ *   ...
+ * }
+ *
+ * The vectors produced in each iteration contain pointers to payload rows.
+ *
+ * TODO(pmenon): Performance.
+ */
+class JoinHashTableVectorIterator {
+ public:
+  /**
+   * Create a new vector iterator.
+   * @param table The table to iterate over.
+   */
+  explicit JoinHashTableVectorIterator(const JoinHashTable &table);
+
+  /**
+   * This class cannot be copied or moved.
+   */
+  DISALLOW_COPY_AND_MOVE(JoinHashTableVectorIterator);
+
+  /**
+   * Destructor.
+   */
+  ~JoinHashTableVectorIterator();
+
+  /**
+   * @return True if there is more data; false otherwise.
+   */
+  bool HasNext() const noexcept;
+
+  /**
+   * Advance to the next batch of data.
+   */
+  void Next() noexcept;
+
+  /**
+   * @return The current vector of entries.
+   */
+  Vector *GetEntries() const;
+
+ private:
+  // Refill the projection with new data.
+  void FillProjection();
+
+ private:
+  // The tuple-at-a-time iterator.
+  JoinHashTableIterator iter_;
+  // The generated projection of entries.
+  std::unique_ptr<VectorProjection> data_;
 };
 
 }  // namespace tpl::sql
