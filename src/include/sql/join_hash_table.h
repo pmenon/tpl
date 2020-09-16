@@ -65,7 +65,9 @@ class JoinHashTable {
   // Minimum number of expected elements to merge before triggering a parallel merge
   static constexpr uint32_t kDefaultMinSizeForParallelMerge = 1024;
 
-  struct AnalysisStats {};
+  struct AnalysisStats {
+    std::vector<uint64_t> stats;
+  };
 
   using AnalysisPass = void (*)(JoinHashTableVectorIterator *, AnalysisStats *);
 
@@ -78,8 +80,19 @@ class JoinHashTable {
    * @param tuple_size The size of the tuple stored in this join hash table.
    * @param use_concise_ht Whether to use a concise or fatter chaining join index.
    */
-  explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size,
-                         AnalysisPass analysis_pass = nullptr, bool use_concise_ht = false);
+  explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht = false);
+
+  /**
+   * Construct a join hash table. All memory allocations are sourced from the injected @em memory,
+   * and thus, are ephemeral.
+   * @param memory The memory pool to allocate memory from.
+   * @param tuple_size The size of the tuple stored in this join hash table.
+   * @param use_concise_ht Whether to use a concise or fatter chaining join index.
+   * @param analysis_pass An optional analysis pass to analyze the hash table contents after all
+   *                      data has been materialized.
+   */
+  explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht,
+                         AnalysisPass analysis_pass);
 
   /**
    * This class cannot be copied or moved.
@@ -178,7 +191,6 @@ class JoinHashTable {
 
  private:
   FRIEND_TEST(JoinHashTableTest, LazyInsertionTest);
-  FRIEND_TEST(JoinHashTableTest, PerfTest);
 
   // Access a stored entry by index
   HashTableEntry *EntryAt(const uint64_t idx) {

@@ -22,8 +22,11 @@
 
 namespace tpl::sql {
 
-JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, AnalysisPass analysis_pass,
-                             bool use_concise_ht)
+JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht)
+    : JoinHashTable(memory, tuple_size, use_concise_ht, nullptr) {}
+
+JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht,
+                             JoinHashTable::AnalysisPass analysis_pass)
     : analysis_pass_(analysis_pass),
       entries_(HashTableEntry::ComputeEntrySize(tuple_size), MemoryPoolAllocator<byte>(memory)),
       owned_(memory),
