@@ -65,9 +65,7 @@ class JoinHashTable {
   // Minimum number of expected elements to merge before triggering a parallel merge
   static constexpr uint32_t kDefaultMinSizeForParallelMerge = 1024;
 
-  struct AnalysisStats {
-    std::vector<uint64_t> stats;
-  };
+  struct AnalysisStats {};
 
   using AnalysisPass = void (*)(JoinHashTableVectorIterator *, AnalysisStats *);
 

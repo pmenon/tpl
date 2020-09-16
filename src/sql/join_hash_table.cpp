@@ -559,12 +559,16 @@ void JoinHashTable::LookupBatch(const Vector &hashes, Vector *results) const {
 template <bool Concurrent>
 void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
   // TODO(pmenon): Support merging build of concise tables
+  TPL_ASSERT(source != nullptr, "Source table is null");
   TPL_ASSERT(!source->UsingConciseHashTable(), "Merging incomplete concise tables not supported");
 
-  // First, bulk-load all entries in the source table into our hash table
+  // Attempt to compress.
+  source->TryCompress();
+
+  // Bulk-load all entries in the source table into our hash table.
   chaining_hash_table_.InsertBatch<Concurrent>(&source->entries_);
 
-  // Next, take ownership of source table's memory
+  // Next, take ownership of source table's memory.
   util::SpinLatch::ScopedSpinLatch latch(&owned_latch_);
   owned_.emplace_back(std::move(source->entries_));
 }
