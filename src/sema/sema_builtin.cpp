@@ -1444,7 +1444,7 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
   // Second argument must be a function
   auto *const cmp_func_type = args[2]->GetType()->SafeAs<ast::FunctionType>();
   if (cmp_func_type == nullptr || cmp_func_type->GetNumParams() != 2 ||
-      !cmp_func_type->GetReturnType()->IsSpecificBuiltin(ast::BuiltinType::Int32) ||
+      !cmp_func_type->GetReturnType()->IsSpecificBuiltin(ast::BuiltinType::Bool) ||
       !cmp_func_type->GetParams()[0].type->IsPointerType() ||
       !cmp_func_type->GetParams()[1].type->IsPointerType()) {
     error_reporter()->Report(call->Position(), ErrorMessages::kBadComparisonFunctionForSorter,

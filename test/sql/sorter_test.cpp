@@ -48,10 +48,10 @@ void TestSortRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
   // something that we can sizeof(). Limiting ourselves to IntType should be
   // fine.
   constexpr const auto tuple_size = sizeof(IntType);
-  const auto cmp_fn = [](const void *a, const void *b) -> int32_t {
+  const auto cmp_fn = [](const void *a, const void *b) -> bool {
     const auto val_a = *reinterpret_cast<const IntType *>(a);
     const auto val_b = *reinterpret_cast<const IntType *>(b);
-    return val_a < val_b ? -1 : (val_a == val_b ? 0 : 1);
+    return val_a < val_b;
   };
 
   for (uint32_t curr_iter = 0; curr_iter < num_iters; curr_iter++) {
@@ -102,10 +102,10 @@ void TestTopKRandomTupleSize(const uint32_t num_iters, const uint32_t max_elems,
   // something that we can sizeof(). Limiting ourselves to IntType should be
   // fine.
   const auto tuple_size = sizeof(IntType);
-  auto cmp_fn = [](const void *a, const void *b) -> int {
+  auto cmp_fn = [](const void *a, const void *b) -> bool {
     const auto val_a = *reinterpret_cast<const IntType *>(a);
     const auto val_b = *reinterpret_cast<const IntType *>(b);
-    return val_a < val_b ? -1 : (val_a == val_b ? 0 : 1);
+    return val_a < val_b;
   };
 
   for (uint32_t curr_iter = 0; curr_iter < num_iters; curr_iter++) {
@@ -164,7 +164,7 @@ struct TestTuple {
   uint32_t key;
   uint32_t data[N];
 
-  int32_t Compare(const TestTuple<N> &other) const { return key - other.key; }
+  bool Compare(const TestTuple<N> &other) const { return key < other.key; }
 };
 
 // Generic function to perform a parallel sort. The input parameter indicates the sizes of each
@@ -224,7 +224,7 @@ void TestParallelSort(const std::vector<uint32_t> &sorter_sizes) {
     auto *curr = iter.GetRowAs<TestTuple<N>>();
     EXPECT_TRUE(curr != nullptr);
     if (prev != nullptr) {
-      EXPECT_LE(cmp_fn(prev, curr), 0);
+      EXPECT_TRUE(!cmp_fn(curr, prev));
     }
     prev = curr;
   }
