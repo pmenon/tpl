@@ -79,7 +79,7 @@ class Sorter {
   /**
    * The comparison function used to sort tuples in a Sorter.
    */
-  using ComparisonFunction = int32_t (*)(const void *lhs, const void *rhs);
+  using ComparisonFunction = bool (*)(const void *lhs, const void *rhs);
 
   /**
    * Construct a sorter using @em memory as the memory allocator, storing tuples @em tuple_size

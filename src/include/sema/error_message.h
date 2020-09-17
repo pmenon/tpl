@@ -80,7 +80,7 @@ namespace sema {
   F(MissingReturn, "missing return at end of function", ())                                        \
   F(InvalidDeclaration, "non-declaration outside function", ())                                    \
   F(BadComparisonFunctionForSorter,                                                                \
-    "sorterInit requires a comparison function of type (*,*)->int32. received type '%0'",          \
+    "sorterInit requires a comparison function of type (*,*)->bool. received type '%0'",           \
     (ast::Type *))                                                                                 \
   F(BadArgToPtrCast,                                                                               \
     "ptrCast() expects (compile-time *Type, Expr) arguments. received type '%0' in position %1",   \

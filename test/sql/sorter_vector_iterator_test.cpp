@@ -40,7 +40,7 @@ void PopulateSorter(Sorter *sorter, uint32_t num_tuples = kDefaultVectorSize + 7
  * @param rhs The second tuple.
  * @return < 0 if lhs < rhs, 0 if lhs = rhs, > 0 if lhs > rhs.
  */
-int32_t CompareTuple(const Tuple &lhs, const Tuple &rhs) { return lhs.key - rhs.key; }
+bool CompareTuple(const Tuple &lhs, const Tuple &rhs) { return lhs.key < rhs.key; }
 
 /**
  * Convert row-oriented data in the rows vector to columnar format in the given

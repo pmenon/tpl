@@ -63,7 +63,7 @@ void Sorter::AllocInputTupleTopKFinish(const uint64_t top_k) {
 
   const byte *heap_top = tuples_.front();
 
-  if (cmp_fn_(last_insert, heap_top) <= 0) {
+  if (cmp_fn_(last_insert, heap_top)) {
     // The last insertion belongs in the top-k. Swap it with the current maximum
     // and sift it down.
     tuples_.front() = last_insert;
@@ -71,12 +71,7 @@ void Sorter::AllocInputTupleTopKFinish(const uint64_t top_k) {
   }
 }
 
-void Sorter::BuildHeap() {
-  const auto compare = [this](const byte *left, const byte *right) {
-    return cmp_fn_(left, right) < 0;
-  };
-  std::make_heap(tuples_.begin(), tuples_.end(), compare);
-}
+void Sorter::BuildHeap() { std::make_heap(tuples_.begin(), tuples_.end(), cmp_fn_); }
 
 void Sorter::HeapSiftDown() {
   const uint64_t size = tuples_.size();
@@ -91,11 +86,11 @@ void Sorter::HeapSiftDown() {
       break;
     }
 
-    if (child + 1 < size && cmp_fn_(tuples_[child], tuples_[child + 1]) < 0) {
+    if (child + 1 < size && cmp_fn_(tuples_[child], tuples_[child + 1])) {
       child++;
     }
 
-    if (cmp_fn_(top, tuples_[child]) >= 0) {
+    if (!cmp_fn_(top, tuples_[child])) {
       break;
     }
 
@@ -122,10 +117,7 @@ void Sorter::Sort() {
   timer.Start();
 
   // Sort the sucker
-  const auto compare = [this](const byte *left, const byte *right) {
-    return cmp_fn_(left, right) < 0;
-  };
-  ips4o::sort(tuples_.begin(), tuples_.end(), compare);
+  ips4o::sort(tuples_.begin(), tuples_.end(), cmp_fn_);
 
   timer.Stop();
 
@@ -154,10 +146,6 @@ struct MergeWork {
 
 void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
                           const std::size_t sorter_offset) {
-  const auto comp = [this](const byte *left, const byte *right) {
-    return cmp_fn_(left, right) < 0;
-  };
-
   // -------------------------------------------------------
   // First, collect all non-empty thread-local sorters
   // -------------------------------------------------------
@@ -279,7 +267,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
     for (uint64_t idx = 0; idx < splitters.size(); idx++) {
       // Sort the local separators and choose the median
-      ips4o::sort(splitters[idx].begin(), splitters[idx].end(), comp);
+      ips4o::sort(splitters[idx].begin(), splitters[idx].end(), cmp_fn_);
 
       // Find the median-of-medians splitter key
       const byte *splitter = splitters[idx][tl_sorters.size() / 2];
@@ -294,7 +282,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
         auto start = (idx == 0 ? sorter->tuples_.begin() : next_start[sorter_idx]);
         auto end = sorter->tuples_.end();
         if (idx < splitters.size() - 1) {
-          end = std::upper_bound(start, end, splitter, comp);
+          end = std::upper_bound(start, end, splitter, cmp_fn_);
         }
 
         // If the the range [start, end) is non-empty, push it in as work
@@ -323,7 +311,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
   timer.EnterStage("Parallel Merge");
 
   auto heap_cmp = [this](const MergeWorkType::Range &l, const MergeWorkType::Range &r) {
-    return cmp_fn_(*l.first, *r.first) >= 0;
+    return !cmp_fn_(*l.first, *r.first);
   };
 
   tbb::parallel_for_each(merge_work, [&heap_cmp](const MergeWork<SeqTypeIter> &work) {

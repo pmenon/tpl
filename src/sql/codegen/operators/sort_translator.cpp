@@ -56,27 +56,37 @@ void SortTranslator::GenerateComparisonLogic(FunctionBuilder *function) {
 
   // For each sorting key, generate:
   //
-  // if (left.key < right.key) return -1;
-  // if (left.key > right.key) return 1;
-  // else return 0
+  // return left.key < right.key;
   //
-  // For multi-key sorting, we chain together checks through the else-clause.
+  // For multi-key sorting, we chain together checks through the else-clause:
+  //
+  // if (left.key1 != right.key1) return left.key1 < right.key1
+  // if (left.key2 != right.key2) return left.key2 < right.key2
+  // ...
+  // return left.keyN < right.keyN
+  //
   // The return value is controlled through the sort order for the key.
 
-  for (const auto &[expr, sort_order] : GetPlanAs<planner::OrderByPlanNode>().GetSortKeys()) {
-    int32_t ret_value = sort_order == planner::OrderByOrderingType::ASC ? -1 : 1;
-    for (const auto tok : {parsing::Token::Type::LESS, parsing::Token::Type::GREATER}) {
-      current_row_ = CurrentRow::Lhs;
-      ast::Expr *lhs = context.DeriveValue(*expr, this);
-      current_row_ = CurrentRow::Rhs;
-      ast::Expr *rhs = context.DeriveValue(*expr, this);
-      // Generate the if-condition and return the appropriate value.
-      If check_comparison(function, codegen_->Compare(tok, lhs, rhs));
-      function->Append(codegen_->Return(codegen_->Const32(ret_value)));
-      check_comparison.EndIf();
-      ret_value = -ret_value;
+  const auto &sort_keys = GetPlanAs<planner::OrderByPlanNode>().GetSortKeys();
+  for (std::size_t idx = 0; idx < sort_keys.size(); idx++) {
+    const auto &[expr, sort_order] = sort_keys[idx];
+    current_row_ = CurrentRow::Lhs;
+    ast::Expr *lhs = context.DeriveValue(*expr, this);
+    current_row_ = CurrentRow::Rhs;
+    ast::Expr *rhs = context.DeriveValue(*expr, this);
+    const auto comparison_type = sort_order == planner::OrderByOrderingType::ASC
+                                     ? parsing::Token::Type::LESS
+                                     : parsing::Token::Type::GREATER;
+    if (idx != sort_keys.size() - 1) {
+      If check_comparison(function, codegen_->Compare(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
+      ast::Expr *result = codegen_->Compare(comparison_type, lhs, rhs);
+      function->Append(codegen_->Return(result));
+    } else {
+      ast::Expr *result = codegen_->Compare(comparison_type, lhs, rhs);
+      function->Append(codegen_->Return(result));
     }
   }
+
   current_row_ = CurrentRow::Child;
 }
 
@@ -91,7 +101,7 @@ ast::FunctionDecl *SortTranslator::GenerateComparisonFunction() {
       codegen_->MakeField(lhs_row_, codegen_->PointerType(sort_row_type_)),
       codegen_->MakeField(rhs_row_, codegen_->PointerType(sort_row_type_)),
   });
-  FunctionBuilder builder(codegen_, compare_func_, std::move(params), codegen_->Int32Type());
+  FunctionBuilder builder(codegen_, compare_func_, std::move(params), codegen_->BoolType());
   {  //
     GenerateComparisonLogic(&builder);
   }
