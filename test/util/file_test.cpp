@@ -1,5 +1,5 @@
 #include "util/file.h"
-#include "util/fast_rand.h"
+#include "util/sfc_gen.h"
 #include "util/test_harness.h"
 
 namespace tpl::util {
@@ -29,7 +29,7 @@ TEST_F(FileTest, CreateTemporaryFile) {
 }
 
 TEST_F(FileTest, Create) {
-  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(FastRand().Next()));
+  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(SFC32{}()));
 
   {
     // Empty file
@@ -89,7 +89,7 @@ TEST_F(FileTest, Create) {
 }
 
 TEST_F(FileTest, ReadAndWrite) {
-  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(FastRand().Next()));
+  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(SFC32{}()));
 
   File file(path, File::FLAG_OPEN_ALWAYS | File::FLAG_READ | File::FLAG_WRITE |
                       File::FLAG_DELETE_ON_CLOSE);
@@ -112,7 +112,7 @@ TEST_F(FileTest, ReadAndWrite) {
 }
 
 TEST_F(FileTest, Write) {
-  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(FastRand().Next()));
+  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(SFC32{}()));
 
   File file(path, File::FLAG_OPEN_ALWAYS | File::FLAG_READ | File::FLAG_WRITE |
                       File::FLAG_DELETE_ON_CLOSE);
@@ -140,7 +140,7 @@ TEST_F(FileTest, Write) {
 }
 
 TEST_F(FileTest, Seek) {
-  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(FastRand().Next()));
+  auto path = std::filesystem::path("/tmp/tpl.TEMP." + std::to_string(SFC32{}()));
 
   File file(path, File::FLAG_OPEN_ALWAYS | File::FLAG_READ | File::FLAG_WRITE |
                       File::FLAG_DELETE_ON_CLOSE);
