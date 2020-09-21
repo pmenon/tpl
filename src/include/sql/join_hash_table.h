@@ -65,11 +65,11 @@ class JoinHashTable {
   // Minimum number of expected elements to merge before triggering a parallel merge
   static constexpr uint32_t kDefaultMinSizeForParallelMerge = 1024;
 
-  struct AnalysisStats {};
+  struct AnalysisStats { };
 
-  using AnalysisPass = void (*)(JoinHashTableVectorIterator *, AnalysisStats *);
+  using AnalysisPass = void (*)(uint32_t, const byte **RESTRICT, AnalysisStats *);
 
-  using CompressPass = void (*)(JoinHashTableVectorIterator *);
+  using CompressPass = void (*)(uint32_t, const byte **RESTRICT);
 
   /**
    * Construct a join hash table. All memory allocations are sourced from the injected @em memory,
@@ -202,6 +202,7 @@ class JoinHashTable {
   // Dispatched from Build() to attempt to compress the data before building
   // the physical hash index.
   void TryCompress();
+  void CollectRandomSample(std::vector<const byte *> *sample) const;
 
   // Dispatched from Build() to build either a chaining or concise hash table.
   void BuildChainingHashTable();

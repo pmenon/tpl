@@ -73,7 +73,12 @@ namespace tpl {
   /*                                                                                               \
    * Flag indicating if parallel execution is supported.                                           \
    */                                                                                              \
-  CONST(ParallelQueryExecution, bool, true)
+  CONST(ParallelQueryExecution, bool, true)                                                        \
+                                                                                                   \
+  /*                                                                                               \
+   * The degree of oversampling when selecting random samples from an input.                       \
+   */                                                                                              \
+  CONST(OversamplingRate, uint32_t, 16)
 
 class Settings {
  public:
@@ -170,6 +175,6 @@ class Settings {
  private:
   // Container for all settings
   std::array<Value, kNumSettings> settings_;
-};
+};  // namespace tpl
 
 }  // namespace tpl

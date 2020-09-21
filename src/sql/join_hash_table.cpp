@@ -1,23 +1,25 @@
 #include "sql/join_hash_table.h"
 
-#include <algorithm>
 #include <limits>
+#include <random>
 #include <utility>
 #include <vector>
 
+// For HLL unique key estimations.
 #include "count/hll.h"
 
-#include "llvm/ADT/STLExtras.h"
-
+// For tbb::parallel_for. Needed for parallel build.
 #include "tbb/parallel_for_each.h"
 
 #include "common/cpu_info.h"
 #include "common/memory.h"
+#include "common/settings.h"
 #include "logging/logger.h"
 #include "sql/memory_pool.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/unary_operation_executor.h"
+#include "util/sfc_gen.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
@@ -49,14 +51,50 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   return entry->payload;
 }
 
+// Collect a set of random tuples from the underlying entries.
+void JoinHashTable::CollectRandomSample(std::vector<const byte *> *sample) const {
+  // For now, we select O(logN) tuples with reuse. It's dumb, but fast.
+  // We're only looking for a rough estimate.
+  // NOTE: std::sample() is robust, but very slow!
+  const auto oversample_rate = Settings::Instance()->GetInt(Settings::Name::OversamplingRate);
+  const auto sample_size = oversample_rate * util::MathUtil::Log2Ceil(GetTupleCount());
+  LOG_DEBUG("Choosing {} random samples to test compress-ability", sample_size);
+
+  // Resize now since we know how many samples we'll collect.
+  sample->resize(sample_size);
+
+  util::SFC32 gen(std::random_device{}());
+  std::uniform_int_distribution<uint32_t> dist(0, entries_.size() - 1);
+  for (uint32_t i = 0; i < sample_size; i++) {
+    (*sample)[i] = reinterpret_cast<const HashTableEntry *>(entries_[dist(gen)])->payload;
+  }
+}
+
 void JoinHashTable::TryCompress() {
   if (!ShouldTryCompress()) {
     return;
   }
 
-  JoinHashTableVectorIterator iter(*this);
+  // We need to quickly determine (1) whether the buffered data is considered
+  // "compress-able" and (2) whether compression would yield a "significant"
+  // space/compute savings. If we can find a compression algorithm such that
+  // D_c/D_r < 1, where D_c is the size of the compressed data, and D_r is the
+  // size of the raw input, then the input is considered compressed. Of course,
+  // we would like compression to be as large as possible. This is where the
+  // second point enters. We're striving for two
+  // goals: first we want the the **TOTAL** buffer size to compress into the
+  // at least the CPU's L3 cache; second, we want the key columns to compress
+  // into as few words as possible, even packing multiple keys into a single
+  // word.
+
   AnalysisStats stats;
-  analysis_pass_(&iter, &stats);
+  std::vector<const byte *> sample;
+
+  // Collect a random sample and analyze it.
+  CollectRandomSample(&sample);
+  analysis_pass_(sample.size(), sample.data(), &stats);
+
+  // Check analysis stats to determine compress-ability.
 }
 
 void JoinHashTable::BuildChainingHashTable() {
@@ -601,7 +639,9 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
     // TODO(pmenon): Switch to parallel-mode if estimate is wrong.
     LOG_DEBUG("JHT: Estimated {} elements < {} element parallel threshold. Using serial merge.",
               num_elem_estimate, kDefaultMinSizeForParallelMerge);
-    llvm::for_each(tl_join_tables, [this](auto *source) { MergeIncomplete<false>(source); });
+    for (auto source : tl_join_tables) {
+      MergeIncomplete<false>(source);
+    }
   } else {
     LOG_DEBUG("JHT: Estimated {} elements >= {} element parallel threshold. Using parallel merge.",
               num_elem_estimate, kDefaultMinSizeForParallelMerge);
