@@ -65,7 +65,9 @@ class JoinHashTable {
   // Minimum number of expected elements to merge before triggering a parallel merge
   static constexpr uint32_t kDefaultMinSizeForParallelMerge = 1024;
 
-  struct AnalysisStats { };
+  struct AnalysisStats {
+    std::vector<uint8_t> required_bits;
+  };
 
   using AnalysisPass = void (*)(uint32_t, const byte **RESTRICT, AnalysisStats *);
 
@@ -88,9 +90,10 @@ class JoinHashTable {
    * @param use_concise_ht Whether to use a concise or fatter chaining join index.
    * @param analysis_pass An optional analysis pass to analyze the hash table contents after all
    *                      data has been materialized.
+   * @param compress_pass An optional compression pass to perform compression given a packing plan.
    */
   explicit JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht,
-                         AnalysisPass analysis_pass);
+                         AnalysisPass analysis_pass, CompressPass compress_pass);
 
   /**
    * This class cannot be copied or moved.
@@ -203,6 +206,7 @@ class JoinHashTable {
   // the physical hash index.
   void TryCompress();
   void CollectRandomSample(std::vector<const byte *> *sample) const;
+  void GeneratePackingPlan(const AnalysisStats &stats);
 
   // Dispatched from Build() to build either a chaining or concise hash table.
   void BuildChainingHashTable();
@@ -231,6 +235,8 @@ class JoinHashTable {
  private:
   // The optional analysis pass.
   AnalysisPass analysis_pass_;
+  // The optional compression pass.
+  CompressPass compress_pass_;
   // The vector where we store the build-side input.
   util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
   // To protect concurrent access to 'owned_entries_'.

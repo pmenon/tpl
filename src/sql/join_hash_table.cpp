@@ -1,6 +1,7 @@
 #include "sql/join_hash_table.h"
 
 #include <limits>
+#include <queue>
 #include <random>
 #include <utility>
 #include <vector>
@@ -25,11 +26,13 @@
 namespace tpl::sql {
 
 JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht)
-    : JoinHashTable(memory, tuple_size, use_concise_ht, nullptr) {}
+    : JoinHashTable(memory, tuple_size, use_concise_ht, nullptr, nullptr) {}
 
 JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_concise_ht,
-                             JoinHashTable::AnalysisPass analysis_pass)
+                             const JoinHashTable::AnalysisPass analysis_pass,
+                             const JoinHashTable::CompressPass compress_pass)
     : analysis_pass_(analysis_pass),
+      compress_pass_(compress_pass),
       entries_(HashTableEntry::ComputeEntrySize(tuple_size), MemoryPoolAllocator<byte>(memory)),
       owned_(memory),
       concise_hash_table_(0),
@@ -57,17 +60,32 @@ void JoinHashTable::CollectRandomSample(std::vector<const byte *> *sample) const
   // We're only looking for a rough estimate.
   // NOTE: std::sample() is robust, but very slow!
   const auto oversample_rate = Settings::Instance()->GetInt(Settings::Name::OversamplingRate);
-  const auto sample_size = oversample_rate * util::MathUtil::Log2Ceil(GetTupleCount());
+  const auto sample_size = oversample_rate * util::MathUtil::Log2Ceil(entries_.size());
   LOG_DEBUG("Choosing {} random samples to test compress-ability", sample_size);
 
   // Resize now since we know how many samples we'll collect.
   sample->resize(sample_size);
 
+#ifndef NDEBUG
+  util::SFC32 gen;
+#else
   util::SFC32 gen(std::random_device{}());
+#endif
   std::uniform_int_distribution<uint32_t> dist(0, entries_.size() - 1);
   for (uint32_t i = 0; i < sample_size; i++) {
-    (*sample)[i] = reinterpret_cast<const HashTableEntry *>(entries_[dist(gen)])->payload;
+    const uint32_t random_index = dist(gen);
+    (*sample)[i] = reinterpret_cast<const HashTableEntry *>(entries_[random_index])->payload;
   }
+}
+
+void JoinHashTable::GeneratePackingPlan(const JoinHashTable::AnalysisStats &stats) {
+  std::vector<std::pair<uint32_t, uint8_t>> column_sizes;
+  column_sizes.reserve(stats.required_bits.size());
+  for (uint32_t i = 0, n = stats.required_bits.size(); i < n; i++) {
+    column_sizes.emplace_back(i, stats.required_bits[i]);
+  }
+  std::sort(column_sizes.begin(), column_sizes.end(),
+            [](auto &l, auto &r) { return l.second < r.second; });
 }
 
 void JoinHashTable::TryCompress() {
@@ -81,20 +99,22 @@ void JoinHashTable::TryCompress() {
   // D_c/D_r < 1, where D_c is the size of the compressed data, and D_r is the
   // size of the raw input, then the input is considered compressed. Of course,
   // we would like compression to be as large as possible. This is where the
-  // second point enters. We're striving for two
-  // goals: first we want the the **TOTAL** buffer size to compress into the
-  // at least the CPU's L3 cache; second, we want the key columns to compress
-  // into as few words as possible, even packing multiple keys into a single
-  // word.
+  // second point enters. We have two goals: first we want the the **TOTAL**
+  // buffer size to compress into the at least the CPU's L3 cache; second, we
+  // want the key columns to compress into as few words as possible, even
+  // packing multiple keys into a single word.
 
   AnalysisStats stats;
-  std::vector<const byte *> sample;
 
   // Collect a random sample and analyze it.
+  std::vector<const byte *> sample;
   CollectRandomSample(&sample);
   analysis_pass_(sample.size(), sample.data(), &stats);
 
-  // Check analysis stats to determine compress-ability.
+  // Generate the packing plan.
+  GeneratePackingPlan(stats);
+
+  // Compress.
 }
 
 void JoinHashTable::BuildChainingHashTable() {
