@@ -34,13 +34,17 @@ namespace tpl::util {
  * or when you do not know the number of insertions into the vector apriori. In fact, when the
  * number of insertions is unknown, a chunked vector will be roughly 2x faster than a std::vector.
  */
-template <typename Alloc = std::allocator<byte>>
+template <typename Allocator = std::allocator<byte>>
 class ChunkedVector {
  public:
   // By default, we store 256 elements in each chunk of the vector.
-  static constexpr const uint32_t kLogNumElementsPerChunk = 8;
-  static constexpr const uint32_t kNumElementsPerChunk = (1u << kLogNumElementsPerChunk);
-  static constexpr const uint32_t kChunkPositionMask = kNumElementsPerChunk - 1;
+  static constexpr uint32_t kLogNumElementsPerChunk = 8;
+  static constexpr uint32_t kNumElementsPerChunk = (1u << kLogNumElementsPerChunk);
+  static constexpr uint32_t kChunkPositionMask = kNumElementsPerChunk - 1;
+
+  // Typedefs.
+  using allocator_type = Allocator;
+  using size_type = std::size_t;
 
   /**
    * Construct a chunked vector whose elements have size @em element_size in bytes using the
@@ -48,7 +52,7 @@ class ChunkedVector {
    * @param element_size The size of each vector element.
    * @param allocator The allocator to use for all chunk allocations.
    */
-  explicit ChunkedVector(std::size_t element_size, Alloc allocator = {}) noexcept
+  explicit ChunkedVector(std::size_t element_size, allocator_type allocator = {})
       : allocator_(allocator),
         active_chunk_idx_(0),
         position_(nullptr),
@@ -515,25 +519,30 @@ class ChunkedVector {
   /**
    * @reutrn The number of elements currently in the vector.
    */
-  std::size_t size() const noexcept { return num_elements_; }
+  size_type size() const noexcept { return num_elements_; }
 
   /**
    * @return The size of the elements (in bytes) this vector stores.
    */
-  std::size_t element_size() const noexcept { return element_size_; }
+  size_type element_size() const noexcept { return element_size_; }
+
+  /**
+   * @return The allocator use for all memory allocations made by this vector.
+   */
+  allocator_type get_allocator() const noexcept { return allocator_type(allocator_); }
 
   /**
    * @return The size (in bytes) of memory chunks allocated by the vector that make up a chunked
    *         vector, given the size (in bytes) of the elements the vector stores.
    */
-  static constexpr std::size_t chunk_alloc_size(std::size_t element_size) {
+  static constexpr size_type chunk_alloc_size(size_type element_size) {
     return kNumElementsPerChunk * element_size;
   }
 
  private:
-  // Allocate a new chunk
+  // Allocate a new chunk, append to chunk list, and activate it.
   void allocate_chunk() {
-    const std::size_t alloc_size = chunk_alloc_size(element_size());
+    const size_type alloc_size = chunk_alloc_size(element_size());
     byte *new_chunk = static_cast<byte *>(allocator_.allocate(alloc_size));
     chunks_.push_back(new_chunk);
     active_chunk_idx_ = chunks_.size() - 1;
@@ -541,9 +550,10 @@ class ChunkedVector {
     end_ = new_chunk + alloc_size;
   }
 
+  // Deallocate all chunks.
   void deallocate_all_chunks() {
-    const std::size_t chunk_size = chunk_alloc_size(element_size());
-    for (auto *chunk : chunks_) {
+    const size_type chunk_size = chunk_alloc_size(element_size());
+    for (auto chunk : chunks_) {
       allocator_.deallocate(chunk, chunk_size);
     }
     chunks_.clear();
@@ -553,16 +563,16 @@ class ChunkedVector {
 
  private:
   // The memory allocator we use to acquire memory chunks.
-  Alloc allocator_;
+  allocator_type allocator_;
   // The list all chunks.
   std::vector<byte *> chunks_;
   // The current position in the last chunk and the position of the end.
-  std::size_t active_chunk_idx_;
+  size_type active_chunk_idx_;
   byte *position_;
   byte *end_;
   // The size of the elements this vector stores.
-  std::size_t element_size_;
-  std::size_t num_elements_;
+  size_type element_size_;
+  size_type num_elements_;
 };
 
 /**
