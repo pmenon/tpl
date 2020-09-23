@@ -194,6 +194,7 @@ if (${CLANG_TIDY_FOUND})
   # runs clang-tidy and exits with a non-zero exit code if any errors are found.
   # note that clang-tidy automatically looks for a .clang-tidy file in parent directories
   add_custom_target(check-clang-tidy
+          ${PYTHON_EXECUTABLE}
           ${BUILD_SUPPORT_DIR}/run-clang-tidy.py                            # run LLVM's clang-tidy script
           -clang-tidy-binary ${CLANG_TIDY_BIN}                              # using our clang-tidy binary
           -p ${CMAKE_BINARY_DIR}                                            # using cmake's generated compile commands
