@@ -21,6 +21,16 @@ jobs:
       run: |
         echo y | sudo ./deps.sh
 
+    - name: Check Formatting
+        env:
+          CC: gcc-10
+          CXX: g++-10
+        run: |
+          cmake -E remove_directory build
+          cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
+          cd build
+          ninja check-format
+
     - name: Build & Test Debug x64 With Sanitizers
       env:
         CC: gcc-10
@@ -30,7 +40,6 @@ jobs:
         cmake -E remove_directory build
         cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On
         cd build
-        LSAN_OPTIONS=$LSAN_OPTIONS ninja check-format
         LSAN_OPTIONS=$LSAN_OPTIONS ninja
         LSAN_OPTIONS=$LSAN_OPTIONS ninja check
         # Disable check-tpl because LLVM compilation on VM's is super slow!
