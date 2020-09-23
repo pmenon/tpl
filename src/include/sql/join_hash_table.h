@@ -236,7 +236,6 @@ class JoinHashTable {
   void TryCompress();
   bool ShouldCompress(const AnalysisStats &stats) const;
   std::vector<const byte *> CollectRandomSample() const;
-  void GeneratePackingPlan(const AnalysisStats &stats);
 
   // Dispatched from Build() to build either a chaining or concise hash table.
   void BuildChainingHashTable();
@@ -423,11 +422,6 @@ class JoinHashTableVectorIterator {
    * @param table The table to iterate over.
    */
   explicit JoinHashTableVectorIterator(const JoinHashTable &table);
-
-  /**
-   * This class cannot be copied or moved.
-   */
-  DISALLOW_COPY_AND_MOVE(JoinHashTableVectorIterator);
 
   /**
    * Destructor.

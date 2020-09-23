@@ -94,8 +94,6 @@ std::vector<const byte *> JoinHashTable::CollectRandomSample() const {
   return sample;
 }
 
-void JoinHashTable::GeneratePackingPlan(const JoinHashTable::AnalysisStats &stats) {}
-
 void JoinHashTable::TryCompress() {
   if (!CompressionSupported()) {
     return;
@@ -115,20 +113,21 @@ void JoinHashTable::TryCompress() {
   // TODO(pmenon): Parallelize.
   AnalysisStats global_stats;
   for (JoinHashTableVectorIterator iter(*this); iter.HasNext(); iter.Next()) {
+    // Analyze block.
     AnalysisStats block_stats;
     auto num_rows = iter.GetEntries()->GetSize();
     auto rows = reinterpret_cast<const byte **>(iter.GetEntries()->GetData());
     analysis_pass_(num_rows, rows, &block_stats);
+    // Check if we should continue.
+    if (!ShouldCompress(block_stats)) {
+      return;
+    }
+    // Update global stats with block-local stats.
+    if (TPL_UNLIKELY(global_stats.NumCols() == 0)) {
+      global_stats.SetNumCols(block_stats.NumCols());
+    }
     global_stats.Merge(block_stats);
   }
-
-  // Bail-out if global stats indicates poor compress-ability.
-  if (!ShouldCompress(global_stats)) {
-    return;
-  }
-
-  // We're definitely going to Generate packing plan.
-  GeneratePackingPlan(global_stats);
 
   // Compress.
 }
