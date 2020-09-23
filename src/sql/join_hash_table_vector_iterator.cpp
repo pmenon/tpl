@@ -21,8 +21,9 @@ void JoinHashTableVectorIterator::Next() noexcept { FillProjection(); }
 
 void JoinHashTableVectorIterator::FillProjection() {
   std::size_t idx = 0;
+  const std::size_t capacity = data_->GetTupleCapacity();
   auto entries = reinterpret_cast<const byte **>(data_->GetColumn(0)->GetData());
-  for (; iter_.HasNext() && idx < kDefaultVectorSize; iter_.Next()) {
+  for (; iter_.HasNext() && idx < capacity; iter_.Next()) {
     entries[idx++] = iter_.GetCurrentRow();
   }
   data_->Reset(idx);
