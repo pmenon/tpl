@@ -58,8 +58,18 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   return entry->payload;
 }
 
+bool JoinHashTable::ShouldCompress(const JoinHashTable::AnalysisStats &stats) const {
+  std::size_t compressed_tuple_size = util::MathUtil::DivRoundUp(stats.TotalNumBits(), 8);
+  std::size_t raw_tuple_size = entries_.element_size();
+  float compression_factor = static_cast<float>(raw_tuple_size) / compressed_tuple_size;
+  TPL_ASSERT(compression_factor >= 1.0f, "Compression rate cannot be less than 1.0");
+  float min_compression_rate =
+      Settings::Instance()->GetDouble(Settings::Name::MinCompressionThresholdForTempStructures);
+  return compression_factor >= min_compression_rate;
+}
+
 // Collect a set of random tuples from the underlying entries.
-void JoinHashTable::CollectRandomSample(std::vector<const byte *> *sample) const {
+std::vector<const byte *> JoinHashTable::CollectRandomSample() const {
   // For now, we select O(logN) tuples with reuse. It's dumb, but fast.
   // We're only looking for a rough estimate.
   // NOTE: std::sample() is robust, but very slow!
@@ -67,8 +77,8 @@ void JoinHashTable::CollectRandomSample(std::vector<const byte *> *sample) const
   const auto sample_size = oversample_rate * util::MathUtil::Log2Ceil(entries_.size());
   LOG_DEBUG("Choosing {} random samples to test compress-ability", sample_size);
 
-  // Resize now since we know how many samples we'll collect.
-  sample->resize(sample_size);
+  // Size now since we know how many samples we'll collect.
+  std::vector<const byte *> sample(sample_size);
 
 #ifndef NDEBUG
   util::SFC32 gen;
@@ -78,37 +88,46 @@ void JoinHashTable::CollectRandomSample(std::vector<const byte *> *sample) const
   std::uniform_int_distribution<uint32_t> dist(0, entries_.size() - 1);
   for (uint32_t i = 0; i < sample_size; i++) {
     const uint32_t random_index = dist(gen);
-    (*sample)[i] = reinterpret_cast<const HashTableEntry *>(entries_[random_index])->payload;
+    sample[i] = reinterpret_cast<const HashTableEntry *>(entries_[random_index])->payload;
   }
+  return sample;
 }
 
-void JoinHashTable::GeneratePackingPlan(UNUSED const JoinHashTable::AnalysisStats &stats) {}
+void JoinHashTable::GeneratePackingPlan(const JoinHashTable::AnalysisStats &stats) {}
 
 void JoinHashTable::TryCompress() {
-  if (!ShouldTryCompress()) {
+  if (!CompressionSupported()) {
     return;
   }
 
-  // First, run a quick-and-dirty analysis on a small random sample of tuples
-  // to determine "compress-ability".
-  std::vector<const byte *> sample;
+  // Run a quick-and-dirty analysis on a small sample of tuples.
   AnalysisStats sample_stats;
-  CollectRandomSample(&sample);
+  std::vector<const byte *> sample = CollectRandomSample();
   analysis_pass_(sample.size(), sample.data(), &sample_stats);
+  sample.get_allocator();
+  // Bail-out if sample indicates poor compress-ability.
+  if (!ShouldCompress(sample_stats)) {
+    return;
+  }
 
-  // Check if we should continue.
-
-  // Compression looks promising. Let's do the full thing.
+  // Statistics indicate promising results. Let's analyze all data.
+  // TODO(pmenon): Parallelize.
   AnalysisStats global_stats(sample_stats.NumCols());
   for (JoinHashTableVectorIterator iter(*this); iter.HasNext(); iter.Next()) {
     AnalysisStats block_stats(sample_stats.NumCols());
-    const auto num_rows = iter.GetEntries()->GetSize();
-    const auto rows = reinterpret_cast<const byte **>(iter.GetEntries()->GetData());
+    uint64_t num_rows = iter.GetEntries()->GetSize();
+    auto rows = reinterpret_cast<const byte **>(iter.GetEntries()->GetData());
     analysis_pass_(num_rows, rows, &block_stats);
     global_stats.Merge(block_stats);
   }
 
-  // Generate packing plan.
+  // Bail-out if global stats indicates poor compress-ability.
+  if (!ShouldCompress(global_stats)) {
+    return;
+  }
+
+  // We're definitely going to Generate packing plan.
+  GeneratePackingPlan(global_stats);
 
   // Compress.
 }

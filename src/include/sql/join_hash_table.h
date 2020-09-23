@@ -80,12 +80,17 @@ class JoinHashTable {
     std::size_t NumCols() const noexcept { return required_bits_.size(); }
     // Return the (current) number of bits required for the column at the given index.
     uint8_t BitsForCol(std::size_t idx) const noexcept { return required_bits_[idx]; }
+    // Set the bits for a given column.
+    void SetBitsForCol(std::size_t idx, uint8_t b) noexcept { required_bits_[idx] = b; }
     // Merge the given stats structure with this.
     void Merge(const AnalysisStats &other) {
       TPL_ASSERT(NumCols() == other.NumCols(), "Mismatched columns!");
-      for (uint32_t i = 0, n = NumCols(); i < n; i++) {
-        required_bits_[i] = std::max(required_bits_[i], other.required_bits_[i]);
+      for (uint32_t idx = 0, n = NumCols(); idx < n; idx++) {
+        required_bits_[idx] = std::max(required_bits_[idx], other.required_bits_[idx]);
       }
+    }
+    uint32_t TotalNumBits() const noexcept {
+      return std::accumulate(required_bits_.begin(), required_bits_.end(), 0u);
     }
 
    private:
@@ -207,7 +212,7 @@ class JoinHashTable {
   /**
    * @return True if a compression phase should be run; false otherwise.
    */
-  bool ShouldTryCompress() const { return analysis_pass_ != nullptr; }
+  bool CompressionSupported() const { return analysis_pass_ != nullptr; }
 
   /**
    * @return True if this join hash table uses a concise table under the hood.
@@ -229,7 +234,8 @@ class JoinHashTable {
   // Dispatched from Build() to attempt to compress the data before building
   // the physical hash index.
   void TryCompress();
-  void CollectRandomSample(std::vector<const byte *> *sample) const;
+  bool ShouldCompress(const AnalysisStats &stats) const;
+  std::vector<const byte *> CollectRandomSample() const;
   void GeneratePackingPlan(const AnalysisStats &stats);
 
   // Dispatched from Build() to build either a chaining or concise hash table.

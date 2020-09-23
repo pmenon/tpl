@@ -78,7 +78,13 @@ namespace tpl {
   /*                                                                                               \
    * The degree of oversampling when selecting random samples from an input.                       \
    */                                                                                              \
-  CONST(OversamplingRate, uint32_t, 16)
+  CONST(OversamplingRate, uint32_t, 16)                                                            \
+                                                                                                   \
+  /*                                                                                               \
+   * The minimum predicated compression rate to trigger an actual compression.                     \
+   * This setting is used when attempting to compress intermediate data structures.                \
+   */                                                                                              \
+  CONST(MinCompressionThresholdForTempStructures, float, 2.0)
 
 class Settings {
  public:
