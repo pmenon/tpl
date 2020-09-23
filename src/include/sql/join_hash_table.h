@@ -6,6 +6,7 @@
 #include "sql/chaining_hash_table.h"
 #include "sql/concise_hash_table.h"
 #include "sql/memory_pool.h"
+#include "sql/packing_plan.h"
 #include "util/chunked_vector.h"
 #include "util/spin_latch.h"
 
@@ -65,8 +66,32 @@ class JoinHashTable {
   // Minimum number of expected elements to merge before triggering a parallel merge
   static constexpr uint32_t kDefaultMinSizeForParallelMerge = 1024;
 
-  struct AnalysisStats {
-    std::vector<uint8_t> required_bits;
+  /**
+   * Statistics structure used to capture information during compression.
+   */
+  class AnalysisStats {
+   public:
+    // Default constructor.
+    AnalysisStats() = default;
+    // Constructor with specified column count.
+    AnalysisStats(std::size_t num_cols) : required_bits_(num_cols, 0) {}
+    // Explicitly set column counts.
+    void SetNumCols(std::size_t num_cols) { required_bits_.resize(num_cols); }
+    // Return the number of columns.
+    std::size_t NumCols() const noexcept { return required_bits_.size(); }
+    // Return the (current) number of bits required for the column at the given index.
+    uint8_t BitsForCol(std::size_t idx) const noexcept { return required_bits_[idx]; }
+    // Merge the given stats structure with this.
+    void Merge(const AnalysisStats &other) {
+      TPL_ASSERT(NumCols() == other.NumCols(), "Mismatched columns!");
+      for (uint32_t i = 0, n = NumCols(); i < n; i++) {
+        required_bits_[i] = std::max(required_bits_[i], other.required_bits_[i]);
+      }
+    }
+
+   private:
+    // The number of required bits for each column.
+    std::vector<uint8_t> required_bits_;
   };
 
   using AnalysisPass = void (*)(uint32_t, const byte **RESTRICT, AnalysisStats *);

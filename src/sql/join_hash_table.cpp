@@ -38,7 +38,11 @@ JoinHashTable::JoinHashTable(MemoryPool *memory, uint32_t tuple_size, bool use_c
       concise_hash_table_(0),
       hll_estimator_(libcount::HLL::Create(kDefaultHLLPrecision)),
       built_(false),
-      use_concise_ht_(use_concise_ht) {}
+      use_concise_ht_(use_concise_ht) {
+  TPL_ASSERT(
+      (analysis_pass_ == nullptr) == (compress_pass_ == nullptr),
+      "Both analysis and compression functions must be provided, or neither should be provided.");
+}
 
 // Needed because we forward-declared HLL from libcount
 JoinHashTable::~JoinHashTable() = default;
@@ -78,41 +82,33 @@ void JoinHashTable::CollectRandomSample(std::vector<const byte *> *sample) const
   }
 }
 
-void JoinHashTable::GeneratePackingPlan(const JoinHashTable::AnalysisStats &stats) {
-  std::vector<std::pair<uint32_t, uint8_t>> column_sizes;
-  column_sizes.reserve(stats.required_bits.size());
-  for (uint32_t i = 0, n = stats.required_bits.size(); i < n; i++) {
-    column_sizes.emplace_back(i, stats.required_bits[i]);
-  }
-  std::sort(column_sizes.begin(), column_sizes.end(),
-            [](auto &l, auto &r) { return l.second < r.second; });
-}
+void JoinHashTable::GeneratePackingPlan(UNUSED const JoinHashTable::AnalysisStats &stats) {}
 
 void JoinHashTable::TryCompress() {
   if (!ShouldTryCompress()) {
     return;
   }
 
-  // We need to quickly determine (1) whether the buffered data is considered
-  // "compress-able" and (2) whether compression would yield a "significant"
-  // space/compute savings. If we can find a compression algorithm such that
-  // D_c/D_r < 1, where D_c is the size of the compressed data, and D_r is the
-  // size of the raw input, then the input is considered compressed. Of course,
-  // we would like compression to be as large as possible. This is where the
-  // second point enters. We have two goals: first we want the the **TOTAL**
-  // buffer size to compress into the at least the CPU's L3 cache; second, we
-  // want the key columns to compress into as few words as possible, even
-  // packing multiple keys into a single word.
-
-  AnalysisStats stats;
-
-  // Collect a random sample and analyze it.
+  // First, run a quick-and-dirty analysis on a small random sample of tuples
+  // to determine "compress-ability".
   std::vector<const byte *> sample;
+  AnalysisStats sample_stats;
   CollectRandomSample(&sample);
-  analysis_pass_(sample.size(), sample.data(), &stats);
+  analysis_pass_(sample.size(), sample.data(), &sample_stats);
 
-  // Generate the packing plan.
-  GeneratePackingPlan(stats);
+  // Check if we should continue.
+
+  // Compression looks promising. Let's do the full thing.
+  AnalysisStats global_stats(sample_stats.NumCols());
+  for (JoinHashTableVectorIterator iter(*this); iter.HasNext(); iter.Next()) {
+    AnalysisStats block_stats(sample_stats.NumCols());
+    const auto num_rows = iter.GetEntries()->GetSize();
+    const auto rows = reinterpret_cast<const byte **>(iter.GetEntries()->GetData());
+    analysis_pass_(num_rows, rows, &block_stats);
+    global_stats.Merge(block_stats);
+  }
+
+  // Generate packing plan.
 
   // Compress.
 }
