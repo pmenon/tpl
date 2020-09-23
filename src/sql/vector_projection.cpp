@@ -45,7 +45,7 @@ void VectorProjection::Initialize(const std::vector<TypeId> &col_types) {
 
   // Setup the vector's to reference our data chunk
   byte *ptr = owned_buffer_.get();
-  for (uint64_t i = 0; i < col_types.size(); i++) {
+  for (std::size_t i = 0; i < col_types.size(); i++) {
     columns_[i]->Reference(ptr, nullptr, 0);
     ptr += GetTypeIdSize(col_types[i]) * kDefaultVectorSize;
   }
@@ -87,7 +87,7 @@ void VectorProjection::CopySelectionsTo(TupleIdList *tid_list) const {
   tid_list->AssignFrom(owned_tid_list_);
 }
 
-void VectorProjection::Reset(uint64_t num_tuples) {
+void VectorProjection::Reset(uint32_t num_tuples) {
   // Reset the cached TID list to NULL indicating all TIDs are active
   filter_ = nullptr;
 

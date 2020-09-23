@@ -61,7 +61,7 @@ void Vector::Destroy() {
   null_mask_.Reset();
 }
 
-GenericValue Vector::GetValue(const uint64_t index) const {
+GenericValue Vector::GetValue(const uint32_t index) const {
   TPL_ASSERT(index < count_, "Out-of-bounds vector access");
   if (IsNull(index)) {
     return GenericValue::CreateNull(type_);
@@ -119,11 +119,11 @@ void Vector::Resize(uint32_t size) {
   null_mask_.Resize(num_elements_);
 }
 
-void Vector::SetValue(const uint64_t index, const GenericValue &val) {
+void Vector::SetValue(const uint32_t index, const GenericValue &val) {
   TPL_ASSERT(index < count_, "Out-of-bounds vector access");
   TPL_ASSERT(type_ == val.GetTypeId(), "Mismatched types");
   SetNull(index, val.IsNull());
-  const uint64_t actual_index = tid_list_ != nullptr ? (*tid_list_)[index] : index;
+  const uint32_t actual_index = tid_list_ != nullptr ? (*tid_list_)[index] : index;
   switch (type_) {
     case TypeId::Boolean: {
       const auto new_boolean = val.IsNull() ? false : val.value_.boolean;
@@ -258,7 +258,7 @@ void Vector::Reference(GenericValue *value) {
   }
 }
 
-void Vector::Reference(byte *data, const uint32_t *null_mask, uint64_t size) {
+void Vector::Reference(byte *data, const uint32_t *null_mask, uint32_t size) {
   TPL_ASSERT(owned_data_ == nullptr, "Cannot reference a vector if owning data");
   count_ = size;
   num_elements_ = size;
@@ -270,7 +270,7 @@ void Vector::Reference(byte *data, const uint32_t *null_mask, uint64_t size) {
   if (null_mask == nullptr) {
     null_mask_.Reset();
   } else {
-    for (uint64_t i = 0; i < size; i++) {
+    for (uint32_t i = 0; i < size; i++) {
       null_mask_[i] = util::BitUtil::Test(null_mask, i);
     }
   }
@@ -346,7 +346,7 @@ void Vector::Clone(Vector *target) {
   } else {
     auto src_data = reinterpret_cast<const VarlenEntry *>(data_);
     auto target_data = reinterpret_cast<VarlenEntry *>(target->data_);
-    VectorOps::Exec(*this, [&](uint64_t i, uint64_t k) {
+    VectorOps::Exec(*this, [&](auto i, auto k) {
       if (!null_mask_[i]) {
         target_data[i] = target->varlen_heap_.AddVarlen(src_data[i]);
       }
@@ -371,7 +371,7 @@ void Vector::Cast(TypeId new_type) {
 std::string Vector::ToString() const {
   std::string result = TypeIdToString(type_) + "=[";
   bool first = true;
-  for (uint64_t i = 0; i < GetCount(); i++) {
+  for (uint32_t i = 0; i < GetCount(); i++) {
     if (!first) result += ",";
     first = false;
     result += GetValue(i).ToString();
@@ -401,12 +401,11 @@ void Vector::CheckIntegrity() const {
 
   // Check the strings in the vector, if it's a string vector
   if (type_ == TypeId::Varchar) {
-    VectorOps::ExecTyped<const VarlenEntry>(
-        *this, [&](const VarlenEntry &varlen, uint64_t i, uint64_t k) {
-          if (!null_mask_[i]) {
-            TPL_ASSERT(varlen.GetContent() != nullptr, "NULL pointer in non-null vector slot");
-          }
-        });
+    VectorOps::ExecTyped<const VarlenEntry>(*this, [&](const auto &varlen, auto i, auto k) {
+      if (!null_mask_[i]) {
+        TPL_ASSERT(varlen.GetContent() != nullptr, "NULL pointer in non-null vector slot");
+      }
+    });
   }
 #endif
 }

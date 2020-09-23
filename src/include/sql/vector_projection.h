@@ -180,7 +180,7 @@ class VectorProjection {
    * Reset the count of each child vector to @em num_tuples and reset the data pointer of each child
    * vector to point to their data chunk in this projection, if it owns any.
    */
-  void Reset(uint64_t num_tuples);
+  void Reset(uint32_t num_tuples);
 
   /**
    * Packing (or compressing) a projection rearranges contained vector data by contiguously storing
@@ -220,20 +220,20 @@ class VectorProjection {
    * @return The number of active, i.e., externally visible, tuples in this projection. The selected
    *         tuple count is always <= the total tuple count.
    */
-  uint64_t GetSelectedTupleCount() const { return columns_.empty() ? 0 : columns_[0]->GetCount(); }
+  uint32_t GetSelectedTupleCount() const { return columns_.empty() ? 0 : columns_[0]->GetCount(); }
 
   /**
    * @return The total number of tuples in the projection, including those that may have been
    *         filtered out by a selection vector, if one exists. The total tuple count is >= the
    *         selected tuple count.
    */
-  uint64_t GetTotalTupleCount() const { return columns_.empty() ? 0 : columns_[0]->GetSize(); }
+  uint32_t GetTotalTupleCount() const { return columns_.empty() ? 0 : columns_[0]->GetSize(); }
 
   /**
    * @return The maximum capacity of this projection. In other words, the maximum number of tuples
    *         the vectors constituting this projection can store.
    */
-  uint64_t GetTupleCapacity() const { return columns_.empty() ? 0 : columns_[0]->GetCapacity(); }
+  uint32_t GetTupleCapacity() const { return columns_.empty() ? 0 : columns_[0]->GetCapacity(); }
 
   /**
    * @return The selectivity of this projection, i.e., the fraction of **total** tuples that have

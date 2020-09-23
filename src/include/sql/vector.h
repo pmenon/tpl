@@ -102,7 +102,7 @@ class Vector {
    */
   class TempFilterScope {
    public:
-    TempFilterScope(Vector *vector, const TupleIdList *tid_list, const uint64_t count)
+    TempFilterScope(Vector *vector, const TupleIdList *tid_list, const uint32_t count)
         : vector_(vector),
           prev_tid_list_(vector->GetFilteredTupleIdList()),
           prev_count_(vector->GetCount()) {
@@ -117,7 +117,7 @@ class Vector {
     // The previous filter in the vector. Can be NULL.
     const TupleIdList *prev_tid_list_;
     // The previous count of the vector.
-    uint64_t prev_count_;
+    uint32_t prev_count_;
   };
 
   /**
@@ -156,19 +156,19 @@ class Vector {
    *         are those that have survived any filters in the selection vector. The count of a vector
    *         is guaranteed to be <= the size of the vector.
    */
-  uint64_t GetCount() const noexcept { return count_; }
+  uint32_t GetCount() const noexcept { return count_; }
 
   /**
    * @return The total number of tuples currently in the vector, including those that may have been
    *         filtered out by the selection vector, if one exists. The size of a vector is always
    *         greater than or equal to the selected count.
    */
-  uint64_t GetSize() const noexcept { return num_elements_; }
+  uint32_t GetSize() const noexcept { return num_elements_; }
 
   /**
    * @return The maximum capacity of this vector.
    */
-  uint64_t GetCapacity() const noexcept { return kDefaultVectorSize; }
+  uint32_t GetCapacity() const noexcept { return kDefaultVectorSize; }
 
   /**
    * @return The raw untyped data pointer.
@@ -213,7 +213,7 @@ class Vector {
    * @param tid_list The list of active TIDs in the vector.
    * @param count The number of elements in the selection vector.
    */
-  void SetFilteredTupleIdList(const TupleIdList *tid_list, const uint64_t count) {
+  void SetFilteredTupleIdList(const TupleIdList *tid_list, const uint32_t count) {
     TPL_ASSERT(tid_list == nullptr || tid_list->GetCapacity() == num_elements_,
                "TID list too small to capture all vector elements");
     TPL_ASSERT(tid_list == nullptr || tid_list->GetTupleCount() == count,
@@ -244,7 +244,7 @@ class Vector {
   /**
    * @return True if the value at index @em index is NULL; false otherwise.
    */
-  bool IsNull(const uint64_t index) const {
+  bool IsNull(const uint32_t index) const {
     return null_mask_[tid_list_ != nullptr ? (*tid_list_)[index] : index];
   }
 
@@ -253,7 +253,7 @@ class Vector {
    * @param index The index of the element to modify.
    * @param null Whether the element is NULL.
    */
-  void SetNull(const uint64_t index, const bool null) {
+  void SetNull(const uint32_t index, const bool null) {
     null_mask_[tid_list_ != nullptr ? (*tid_list_)[index] : index] = null;
   }
 
@@ -266,7 +266,7 @@ class Vector {
    * @param index The position in the vector to read.
    * @return The element at the specified position.
    */
-  GenericValue GetValue(uint64_t index) const;
+  GenericValue GetValue(uint32_t index) const;
 
   /**
    * Set the value at position @em index in the vector to the value @em value.
@@ -277,7 +277,7 @@ class Vector {
    * @param index The (zero-based) index in the element to modify.
    * @param val The value to set the element to.
    */
-  void SetValue(uint64_t index, const GenericValue &val);
+  void SetValue(uint32_t index, const GenericValue &val);
 
   /**
    * Resize the vector to the given size. Resizing REMOVES any existing selection vector, reverts
@@ -330,7 +330,7 @@ class Vector {
    * @param null_mask The NULL bitmap.
    * @param size The number of elements in the array.
    */
-  void Reference(byte *data, const uint32_t *null_mask, uint64_t size);
+  void Reference(byte *data, const uint32_t *null_mask, uint32_t size);
 
   /**
    * Change this vector to reference data held (and potentially owned) by the provided vector.
@@ -379,26 +379,19 @@ class Vector {
  private:
   // The type of the elements stored in the vector.
   TypeId type_;
-
   // The number of elements in the vector.
-  uint64_t count_;
-
+  uint32_t count_;
   // The number of physically contiguous elements in the vector.
-  uint64_t num_elements_;
-
+  uint32_t num_elements_;
   // A pointer to the data.
   byte *data_;
-
   // The list of active tuple IDs in the vector. If all TIDs are active, the
   // list is NOT used and will be NULL.
   const TupleIdList *tid_list_;
-
   // The null mask used to indicate if an element in the vector is NULL.
   NullMask null_mask_;
-
   // Heap container for strings owned by this vector.
   VarlenHeap varlen_heap_;
-
   // If the vector holds allocated data, this field manages it.
   std::unique_ptr<byte[]> owned_data_;
 };
