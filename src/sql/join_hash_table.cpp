@@ -63,6 +63,7 @@ bool JoinHashTable::ShouldCompress(const JoinHashTable::AnalysisStats &stats) co
   std::size_t raw_tuple_size = entries_.element_size();
   float compression_factor = static_cast<float>(raw_tuple_size) / compressed_tuple_size;
   TPL_ASSERT(compression_factor >= 1.0f, "Compression rate cannot be less than 1.0");
+  LOG_DEBUG("Expected compression factor: {:.2f}", compression_factor);
   float min_compression_rate =
       Settings::Instance()->GetDouble(Settings::Name::MinCompressionThresholdForTempStructures);
   return compression_factor >= min_compression_rate;
@@ -104,7 +105,7 @@ void JoinHashTable::TryCompress() {
   AnalysisStats sample_stats;
   std::vector<const byte *> sample = CollectRandomSample();
   analysis_pass_(sample.size(), sample.data(), &sample_stats);
-  sample.get_allocator();
+
   // Bail-out if sample indicates poor compress-ability.
   if (!ShouldCompress(sample_stats)) {
     return;
@@ -112,10 +113,10 @@ void JoinHashTable::TryCompress() {
 
   // Statistics indicate promising results. Let's analyze all data.
   // TODO(pmenon): Parallelize.
-  AnalysisStats global_stats(sample_stats.NumCols());
+  AnalysisStats global_stats;
   for (JoinHashTableVectorIterator iter(*this); iter.HasNext(); iter.Next()) {
-    AnalysisStats block_stats(sample_stats.NumCols());
-    uint64_t num_rows = iter.GetEntries()->GetSize();
+    AnalysisStats block_stats;
+    auto num_rows = iter.GetEntries()->GetSize();
     auto rows = reinterpret_cast<const byte **>(iter.GetEntries()->GetData());
     analysis_pass_(num_rows, rows, &block_stats);
     global_stats.Merge(block_stats);
