@@ -6,7 +6,6 @@
 #include "sql/chaining_hash_table.h"
 #include "sql/concise_hash_table.h"
 #include "sql/memory_pool.h"
-#include "sql/packing_plan.h"
 #include "util/chunked_vector.h"
 #include "util/spin_latch.h"
 
