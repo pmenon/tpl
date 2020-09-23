@@ -45,6 +45,12 @@ class ChunkedVector {
   // Typedefs.
   using allocator_type = Allocator;
   using size_type = std::size_t;
+  using chunk_pointer = byte *;
+  using chunk_list_allocator_type =
+      typename std::allocator_traits<allocator_type>::template rebind_alloc<chunk_pointer>;
+  using chunk_list_type = std::vector<chunk_pointer, chunk_list_allocator_type>;
+  using chunk_list_iterator = typename chunk_list_type::iterator;
+  using chunk_list_const_iterator = typename chunk_list_type::const_iterator;
 
   /**
    * Construct a chunked vector whose elements have size @em element_size in bytes using the
@@ -54,6 +60,7 @@ class ChunkedVector {
    */
   explicit ChunkedVector(std::size_t element_size, allocator_type allocator = {})
       : allocator_(allocator),
+        chunks_(chunk_list_allocator_type(allocator_)),
         active_chunk_idx_(0),
         position_(nullptr),
         end_(nullptr),
@@ -272,9 +279,8 @@ class ChunkedVector {
     }
 
    private:
-    _iterator(std::vector<byte *>::const_iterator chunk_iter,
-              std::vector<byte *>::const_iterator chunk_start,
-              std::vector<byte *>::const_iterator chunk_finish, byte *position,
+    _iterator(chunk_list_const_iterator chunk_iter, chunk_list_const_iterator chunk_start,
+              chunk_list_const_iterator chunk_finish, byte *position,
               std::size_t element_size) noexcept
         : curr_(position),
           first_(*chunk_iter),
@@ -284,7 +290,7 @@ class ChunkedVector {
           chunk_end_(chunk_finish),
           element_size_(element_size) {}
 
-    void set_chunk(std::vector<byte *>::const_iterator chunk) {
+    void set_chunk(chunk_list_const_iterator chunk) {
       chunk_iter_ = chunk;
       first_ = *chunk;
       last_ = first_ + chunk_alloc_size(element_size_);
@@ -294,9 +300,9 @@ class ChunkedVector {
     byte *curr_;
     byte *first_;
     byte *last_;
-    std::vector<byte *>::const_iterator chunk_iter_;
-    std::vector<byte *>::const_iterator chunk_start_;
-    std::vector<byte *>::const_iterator chunk_end_;
+    chunk_list_const_iterator chunk_iter_;
+    chunk_list_const_iterator chunk_start_;
+    chunk_list_const_iterator chunk_end_;
     std::size_t element_size_;
   };
 
@@ -565,7 +571,7 @@ class ChunkedVector {
   // The memory allocator we use to acquire memory chunks.
   allocator_type allocator_;
   // The list all chunks.
-  std::vector<byte *> chunks_;
+  chunk_list_type chunks_;
   // The current position in the last chunk and the position of the end.
   size_type active_chunk_idx_;
   byte *position_;
