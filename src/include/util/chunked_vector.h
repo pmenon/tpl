@@ -586,24 +586,26 @@ class ChunkedVector {
  */
 template <typename T, typename Alloc = std::allocator<T>>
 class ChunkedVectorT {
-  // Type when we rebind the templated allocator to one needed by ChunkedVector.
-  using ReboundAlloc = typename std::allocator_traits<Alloc>::template rebind_alloc<byte>;
+  // We need to rebind the templated allocator to one needed by the generic vector.
+  using rebound_allocator_type = typename std::allocator_traits<Alloc>::template rebind_alloc<byte>;
+  using vector_type = ChunkedVector<rebound_allocator_type>;
 
  public:
+  using allocator_type = Alloc;
   using value_type = T;
   using size_type = std::size_t;
 
   /**
    * Construct a vector using the given allocator.
    */
-  explicit ChunkedVectorT(Alloc allocator = {}) noexcept
-      : vec_(sizeof(T), ReboundAlloc(allocator)) {}
+  explicit ChunkedVectorT(allocator_type allocator = {})
+      : vec_(sizeof(T), rebound_allocator_type(allocator)) {}
 
   /**
    * Move constructor.
    * @param that The vector to move into this instance.
    */
-  ChunkedVectorT(ChunkedVectorT &&that) noexcept : vec_(std::move(that.vec_)) {}
+  ChunkedVectorT(ChunkedVectorT &&that) : vec_(std::move(that.vec_)) {}
 
   /**
    * Copy not supported yet.
@@ -633,6 +635,7 @@ class ChunkedVectorT {
     friend class ChunkedVectorT;
 
    public:
+    using size_type = typename BaseIterator::size_type;
     using difference_type = typename BaseIterator::difference_type;
     using value_type = U;
     using iterator_category = std::random_access_iterator_tag;
@@ -701,12 +704,12 @@ class ChunkedVectorT {
   /**
    * A read-write iterator.
    */
-  using iterator = _iterator<T, typename ChunkedVector<ReboundAlloc>::iterator>;
+  using iterator = _iterator<T, typename vector_type::iterator>;
 
   /**
    * A read-only iterator.
    */
-  using const_iterator = _iterator<const T, typename ChunkedVector<ReboundAlloc>::const_iterator>;
+  using const_iterator = _iterator<const T, typename vector_type::const_iterator>;
 
   /**
    * A read-write reverse iterator.
@@ -862,8 +865,7 @@ class ChunkedVectorT {
   }
 
  private:
-  // The generic vector
-  ChunkedVector<ReboundAlloc> vec_;
+  vector_type vec_;  // The generic backing vector.
 };
 
 }  // namespace tpl::util
