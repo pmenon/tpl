@@ -58,7 +58,7 @@ class ChunkedVector {
    * @param element_size The size of each vector element.
    * @param allocator The allocator to use for all chunk allocations.
    */
-  explicit ChunkedVector(std::size_t element_size, allocator_type allocator = {})
+  explicit ChunkedVector(size_type element_size, allocator_type allocator = {})
       : allocator_(allocator),
         chunks_(chunk_list_allocator_type(allocator_)),
         active_chunk_idx_(0),
@@ -281,7 +281,7 @@ class ChunkedVector {
    private:
     _iterator(chunk_list_const_iterator chunk_iter, chunk_list_const_iterator chunk_start,
               chunk_list_const_iterator chunk_finish, byte *position,
-              std::size_t element_size) noexcept
+              size_type element_size) noexcept
         : curr_(position),
           first_(*chunk_iter),
           last_(*chunk_iter + chunk_alloc_size(element_size)),
@@ -303,7 +303,7 @@ class ChunkedVector {
     chunk_list_const_iterator chunk_iter_;
     chunk_list_const_iterator chunk_start_;
     chunk_list_const_iterator chunk_end_;
-    std::size_t element_size_;
+    size_type element_size_;
   };
 
   /**
@@ -393,7 +393,7 @@ class ChunkedVector {
   /**
    * @return The element at index @em index. This method performs a bounds-check.
    */
-  byte *at(std::size_t idx) {
+  byte *at(size_type idx) {
     if (idx > size()) {
       throw std::out_of_range("Out-of-range access");
     }
@@ -403,7 +403,7 @@ class ChunkedVector {
   /**
    * @return The element at index @em index. This method performs a bounds-check.
    */
-  const byte *at(std::size_t idx) const {
+  const byte *at(size_type idx) const {
     if (idx > size()) {
       throw std::out_of_range("Out-of-range access");
     }
@@ -413,7 +413,7 @@ class ChunkedVector {
   /**
    * @return The element at index @em index. This method DOES NOT perform a bounds check.
    */
-  byte *operator[](std::size_t idx) noexcept {
+  byte *operator[](size_type idx) noexcept {
     const std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
     const std::size_t chunk_pos = idx & kChunkPositionMask;
     return chunks_[chunk_idx] + (element_size() * chunk_pos);
@@ -422,7 +422,7 @@ class ChunkedVector {
   /**
    * @return The element at index @em index. This method DOES NOT perform a bounds check.
    */
-  const byte *operator[](std::size_t idx) const noexcept {
+  const byte *operator[](size_type idx) const noexcept {
     const std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
     const std::size_t chunk_pos = idx & kChunkPositionMask;
     return chunks_[chunk_idx] + (element_size() * chunk_pos);
