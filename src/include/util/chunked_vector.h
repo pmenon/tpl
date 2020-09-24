@@ -164,7 +164,7 @@ class ChunkedVector {
 
       // The total number of bytes between the new and current position
       const difference_type byte_offset =
-          offset * static_cast<difference_type>(element_size_) + (curr_ - *chunk_iter_);
+          offset * static_cast<difference_type>(element_size_) + (curr_ - first_);
 
       // Offset of the new chunk relative to the current chunk
       difference_type chunk_offset;
@@ -644,7 +644,7 @@ class ChunkedVectorT {
 
     _iterator() : iter_() {}
 
-    reference operator*() const noexcept { return *reinterpret_cast<T *>(*iter_); }
+    reference operator*() const noexcept { return *reinterpret_cast<pointer>(*iter_); }
 
     _iterator &operator+=(difference_type offset) noexcept {
       iter_ += offset;
