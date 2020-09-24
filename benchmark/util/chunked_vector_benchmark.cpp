@@ -3,163 +3,124 @@
 #include <random>
 #include <vector>
 
+#include "ips4o.hpp"
+
 #include "benchmark/benchmark.h"
 #include "util/chunked_vector.h"
+#include "util/sfc_gen.h"
 
 namespace tpl::util {
 
-class ChunkedVectorBenchmark : public benchmark::Fixture {
- protected:
-  template <typename T>
-  void FillSequential(T &container, uint32_t size) {
-    for (uint32_t i = 0; i < size; i++) {
-      container.push_back(i);
+namespace {
+
+template <typename T>
+void FillSequential(T &container, uint32_t size) {
+  for (uint32_t i = 0; i < size; i++) {
+    container.push_back(i);
+  }
+}
+
+template <typename T>
+void FillRandom(T &container, uint32_t size) {
+  util::SFC32 gen;
+  std::uniform_int_distribution<uint32_t> dist;
+  for (uint32_t i = 0; i < size; i++) {
+    container.push_back(dist(gen));
+  }
+}
+
+std::vector<uint32_t> CreateRandomIndexes(uint32_t min, uint32_t max,
+                                          uint32_t num_indexes = 10000000) {
+  std::default_random_engine generator;
+  std::uniform_int_distribution<uint32_t> rng(min, max);
+  std::vector<uint32_t> random_indexes(num_indexes);
+  for (uint32_t i = 0; i < num_indexes; i++) {
+    random_indexes[i] = rng(generator);
+  }
+
+  return random_indexes;
+}
+
+}  // namespace
+
+template <typename VectorType>
+static void BM_InsertAppend(benchmark::State &state) {
+  using ValueType = typename VectorType::value_type;
+  for (auto _ : state) {
+    VectorType v;
+    for (int32_t i = state.range(0); i--;) {
+      v.push_back(ValueType(i));
     }
   }
-
-  std::vector<uint32_t> CreateRandomIndexes(uint32_t min, uint32_t max,
-                                            uint32_t num_indexes = 10000000) {
-    std::default_random_engine generator;
-    std::uniform_int_distribution<uint32_t> rng(min, max);
-    std::vector<uint32_t> random_indexes(num_indexes);
-    for (uint32_t i = 0; i < num_indexes; i++) {
-      random_indexes[i] = rng(generator);
-    }
-
-    return random_indexes;
-  }
-};
-
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_InsertAppend)
-(benchmark::State &state) {
-  const std::size_t size = state.range(0);
-  for (auto _ : state) {
-    std::vector<uint32_t> v;
-    FillSequential(v, size);
-  }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_InsertAppend)
-(benchmark::State &state) {
-  const std::size_t size = state.range(0);
-  for (auto _ : state) {
-    std::deque<uint32_t> v;
-    FillSequential(v, size);
-  }
-}
+template <typename VectorType>
+static void BM_Scan(benchmark::State &state) {
+  using ValueType = typename VectorType::value_type;
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_InsertAppend)
-(benchmark::State &state) {
-  const std::size_t size = state.range(0);
-  for (auto _ : state) {
-    ChunkedVectorT<uint32_t> v;
-    FillSequential(v, size);
+  VectorType v;
+  for (int32_t i = state.range(0); i--;) {
+    v.push_back(ValueType(i));
   }
-}
-
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_Scan)
-(benchmark::State &state) {
-  // Fill
-  const std::size_t size = state.range(0);
-  std::vector<uint32_t> v;
-  FillSequential(v, size);
 
   for (auto _ : state) {
     uint32_t c = 0;
     for (auto x : v) {
-      benchmark::DoNotOptimize(c += x);
+      c += x;
     }
-    benchmark::ClobberMemory();
+    benchmark::DoNotOptimize(c);
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_Scan)
-(benchmark::State &state) {
-  // Fill
-  const std::size_t size = state.range(0);
-  std::deque<uint32_t> v;
-  FillSequential(v, size);
+template <typename VectorType>
+static void BM_RandomAccess(benchmark::State &state) {
+  using ValueType = typename VectorType::value_type;
 
-  for (auto _ : state) {
-    uint32_t c = 0;
-    for (auto x : v) {
-      benchmark::DoNotOptimize(c += x);
-    }
-    benchmark::ClobberMemory();
+  VectorType v;
+  for (int32_t i = state.range(0); i--;) {
+    v.push_back(ValueType(i));
   }
-}
-
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_Scan)
-(benchmark::State &state) {
-  // Fill
-  const std::size_t size = state.range(0);
-  ChunkedVectorT<uint32_t> v;
-  FillSequential(v, size);
-
-  for (auto _ : state) {
-    uint32_t c = 0;
-    for (auto x : v) {
-      benchmark::DoNotOptimize(c += x);
-    }
-    benchmark::ClobberMemory();
-  }
-}
-
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Vector_RandomAccess)
-(benchmark::State &state) {
-  // Fill
-  const std::size_t size = state.range(0);
-  std::vector<uint32_t> v;
-  FillSequential(v, size);
 
   // Indexes
-  std::vector<uint32_t> random_indexes = CreateRandomIndexes(0, size);
+  std::vector<uint32_t> random_indexes = CreateRandomIndexes(0, state.range(0));
 
   // Run
   for (auto _ : state) {
     uint32_t c = 0;
     for (auto idx : random_indexes) {
-      benchmark::DoNotOptimize(c += v[idx]);
+      c += v[idx];
     }
-    benchmark::ClobberMemory();
+    benchmark::DoNotOptimize(c);
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, STL_Deque_RandomAccess)
-(benchmark::State &state) {
-  // Fill
-  const std::size_t size = state.range(0);
-  std::deque<uint32_t> v;
-  FillSequential(v, size);
-
-  // Indexes
-  std::vector<uint32_t> random_indexes = CreateRandomIndexes(0, size);
-
+template <typename VectorType>
+static void BM_Sort_Base(benchmark::State &state) {
+  using ValueType = typename VectorType::value_type;
   for (auto _ : state) {
-    uint32_t c = 0;
-    for (auto idx : random_indexes) {
-      benchmark::DoNotOptimize(c += v[idx]);
+    VectorType v;
+
+    util::SFC32 gen;
+    std::uniform_int_distribution<uint32_t> dist;
+    for (int32_t i = state.range(0); i--;) {
+      v.push_back(ValueType(dist(gen)));
     }
-    benchmark::ClobberMemory();
   }
 }
 
-BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccess)
-(benchmark::State &state) {
-  // Fill
-  const std::size_t size = state.range(0);
-  ChunkedVectorT<uint32_t> v;
-  FillSequential(v, size);
-
-  // Indexes
-  std::vector<uint32_t> random_indexes = CreateRandomIndexes(0, size);
-
+template <typename VectorType>
+static void BM_Sort(benchmark::State &state) {
+  using ValueType = typename VectorType::value_type;
   for (auto _ : state) {
-    uint32_t c = 0;
-    for (auto idx : random_indexes) {
-      benchmark::DoNotOptimize(c += v[idx]);
+    VectorType v;
+
+    util::SFC32 gen;
+    std::uniform_int_distribution<uint32_t> dist;
+    for (int32_t i = state.range(0); i--;) {
+      v.push_back(ValueType(dist(gen)));
     }
-    benchmark::ClobberMemory();
+
+    ips4o::sort(v.begin(), v.end(), std::less<ValueType>{});
   }
 }
 
@@ -169,47 +130,77 @@ BENCHMARK_DEFINE_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccess)
 //
 // ---------------------------------------------------------
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_InsertAppend)
+BENCHMARK_TEMPLATE(BM_InsertAppend, std::vector<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_InsertAppend)
+BENCHMARK_TEMPLATE(BM_InsertAppend, std::deque<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_InsertAppend)
+BENCHMARK_TEMPLATE(BM_InsertAppend, util::ChunkedVectorT<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_Scan)
+BENCHMARK_TEMPLATE(BM_Scan, std::vector<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_Scan)
+BENCHMARK_TEMPLATE(BM_Scan, std::deque<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_Scan)
+BENCHMARK_TEMPLATE(BM_Scan, util::ChunkedVectorT<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Vector_RandomAccess)
+BENCHMARK_TEMPLATE(BM_RandomAccess, std::vector<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, STL_Deque_RandomAccess)
+BENCHMARK_TEMPLATE(BM_RandomAccess, std::deque<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);
 
-BENCHMARK_REGISTER_F(ChunkedVectorBenchmark, ChunkedVector_RandomAccess)
+BENCHMARK_TEMPLATE(BM_RandomAccess, util::ChunkedVectorT<uint32_t>)
+    ->RangeMultiplier(10)
+    ->Range(1000, 10000000)
+    ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_TEMPLATE(BM_Sort_Base, std::vector<uint32_t>)
+    ->RangeMultiplier(10)
+    ->Range(1000, 10000000)
+    ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_TEMPLATE(BM_Sort, std::vector<uint32_t>)
+    ->RangeMultiplier(10)
+    ->Range(1000, 10000000)
+    ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_TEMPLATE(BM_Sort_Base, std::deque<uint32_t>)
+    ->RangeMultiplier(10)
+    ->Range(1000, 10000000)
+    ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_TEMPLATE(BM_Sort, std::deque<uint32_t>)
+    ->RangeMultiplier(10)
+    ->Range(1000, 10000000)
+    ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_TEMPLATE(BM_Sort_Base, util::ChunkedVectorT<uint32_t>)
+    ->RangeMultiplier(10)
+    ->Range(1000, 10000000)
+    ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_TEMPLATE(BM_Sort, util::ChunkedVectorT<uint32_t>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(benchmark::kMicrosecond);

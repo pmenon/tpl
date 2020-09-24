@@ -590,6 +590,9 @@ class ChunkedVectorT {
   using ReboundAlloc = typename std::allocator_traits<Alloc>::template rebind_alloc<byte>;
 
  public:
+  using value_type = T;
+  using size_type = std::size_t;
+
   /**
    * Construct a vector using the given allocator.
    */
