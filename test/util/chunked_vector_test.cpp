@@ -128,37 +128,6 @@ TEST_F(ChunkedVectorTest, FrontBackTest) {
   EXPECT_EQ(8u, vec.back());
 }
 
-TEST_F(ChunkedVectorTest, ChunkReuseTest) {
-  util::Region tmp("tmp");
-  ChunkedVectorT<uint32_t, StlRegionAllocator<uint32_t>> vec{StlRegionAllocator<uint32_t>(&tmp)};
-
-  for (uint32_t i = 0; i < 1000; i++) {
-    vec.push_back(i);
-  }
-
-  EXPECT_EQ(1000u, vec.size());
-  EXPECT_EQ(999u, vec.back());
-
-  // Track memory allocation after all data inserted
-  auto allocated_1 = tmp.allocated();
-
-  for (uint32_t i = 0; i < 1000; i++) {
-    vec.pop_back();
-  }
-
-  // Pops shouldn't allocated memory
-  auto allocated_2 = tmp.allocated();
-  EXPECT_EQ(0u, allocated_2 - allocated_1);
-
-  for (uint32_t i = 0; i < 1000; i++) {
-    vec.push_back(i);
-  }
-
-  // The above pushes should reuse chunks, i.e., no allocations
-  auto allocated_3 = tmp.allocated();
-  EXPECT_EQ(0u, allocated_3 - allocated_2);
-}
-
 // Object that allocates 20-bytes of data. Used to ensure objects pushed into vector are destroyed.
 class Simple {
  public:

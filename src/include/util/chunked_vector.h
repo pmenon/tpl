@@ -61,7 +61,6 @@ class ChunkedVector {
   ChunkedVector(size_type element_size, allocator_type allocator = {})
       : allocator_(allocator),
         chunks_(chunk_list_allocator_type(allocator_)),
-        active_chunk_idx_(0),
         position_(nullptr),
         end_(nullptr),
         element_size_(element_size),
@@ -74,9 +73,6 @@ class ChunkedVector {
    */
   ChunkedVector(ChunkedVector &&other) noexcept
       : allocator_(std::move(other.allocator_)), chunks_(std::move(other.chunks_)) {
-    active_chunk_idx_ = other.active_chunk_idx_;
-    other.active_chunk_idx_ = 0;
-
     position_ = other.position_;
     other.position_ = nullptr;
 
@@ -110,9 +106,6 @@ class ChunkedVector {
 
     allocator_ = std::move(other.allocator_);
     chunks_ = std::move(other.chunks_);
-
-    active_chunk_idx_ = other.active_chunk_idx_;
-    other.active_chunk_idx_ = 0;
 
     position_ = other.position_;
     other.position_ = nullptr;
@@ -467,12 +460,7 @@ class ChunkedVector {
    */
   byte *alloc_entry() noexcept {
     if (position_ == end_) {
-      if (chunks_.empty() || active_chunk_idx_ == chunks_.size() - 1) {
-        allocate_chunk();
-      } else {
-        position_ = chunks_[++active_chunk_idx_];
-        end_ = position_ + chunk_alloc_size(element_size());
-      }
+      allocate_chunk();
     }
 
     byte *const result = position_;
@@ -494,9 +482,8 @@ class ChunkedVector {
    */
   void pop_back() {
     TPL_ASSERT(!empty(), "Popping empty vector");
-    if (position_ == chunks_[active_chunk_idx_]) {
-      end_ = chunks_[--active_chunk_idx_] + chunk_alloc_size(element_size());
-      position_ = end_;
+    if (position_ == chunks_.back()) {
+      deallocate_chunk_at_back();
     }
 
     position_ -= element_size();
@@ -507,13 +494,8 @@ class ChunkedVector {
    * Remove all elements from the vector.
    */
   void clear() {
-    active_chunk_idx_ = 0;
-    if (!chunks_.empty()) {
-      position_ = chunks_[0];
-      end_ = position_ + chunk_alloc_size(element_size());
-    } else {
-      position_ = end_ = nullptr;
-    }
+    deallocate_all_chunks();
+    position_ = end_ = nullptr;
     num_elements_ = 0;
   }
 
@@ -546,14 +528,22 @@ class ChunkedVector {
   }
 
  private:
-  // Allocate a new chunk, append to chunk list, and activate it.
+  // Called when position_ == end_ and pushing an element.
   void allocate_chunk() {
     const size_type alloc_size = chunk_alloc_size(element_size());
     byte *new_chunk = static_cast<byte *>(allocator_.allocate(alloc_size));
     chunks_.push_back(new_chunk);
-    active_chunk_idx_ = chunks_.size() - 1;
     position_ = new_chunk;
     end_ = new_chunk + alloc_size;
+  }
+
+  // Called when position_ == chunks_.back() and popping an element.
+  void deallocate_chunk_at_back() {
+    TPL_ASSERT(!chunks_.empty(), "No chunks to de-allocate");
+    const size_type chunk_size = chunk_alloc_size(element_size());
+    allocator_.deallocate(chunks_.back(), chunk_size);
+    chunks_.pop_back();
+    position_ = end_ = chunks_.back() + chunk_size;
   }
 
   // Deallocate all chunks.
@@ -563,7 +553,6 @@ class ChunkedVector {
       allocator_.deallocate(chunk, chunk_size);
     }
     chunks_.clear();
-    active_chunk_idx_ = 0;
     position_ = end_ = nullptr;
   }
 
@@ -573,7 +562,6 @@ class ChunkedVector {
   // The list all chunks.
   chunk_list_type chunks_;
   // The current position in the last chunk and the position of the end.
-  size_type active_chunk_idx_;
   byte *position_;
   byte *end_;
   // The size of the elements this vector stores.
@@ -597,6 +585,8 @@ class ChunkedVectorT {
   using vec_type = ChunkedVector<vec_allocator_type>;
 
  public:
+  static constexpr size_type kNumChunkElements = vec_type::kNumElementsPerChunk;
+
   /**
    * Construct a vector using the given allocator.
    */
