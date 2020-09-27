@@ -58,7 +58,7 @@ class ChunkedVector {
    * @param element_size The size of each vector element.
    * @param allocator The allocator to use for all chunk allocations.
    */
-  explicit ChunkedVector(size_type element_size, allocator_type allocator = {})
+  ChunkedVector(size_type element_size, allocator_type allocator = {})
       : allocator_(allocator),
         chunks_(chunk_list_allocator_type(allocator_)),
         active_chunk_idx_(0),
@@ -414,8 +414,8 @@ class ChunkedVector {
    * @return The element at index @em index. This method DOES NOT perform a bounds check.
    */
   byte *operator[](size_type idx) noexcept {
-    const std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
-    const std::size_t chunk_pos = idx & kChunkPositionMask;
+    const size_type chunk_idx = idx >> kLogNumElementsPerChunk;
+    const size_type chunk_pos = idx & kChunkPositionMask;
     return chunks_[chunk_idx] + (element_size() * chunk_pos);
   }
 
@@ -423,8 +423,8 @@ class ChunkedVector {
    * @return The element at index @em index. This method DOES NOT perform a bounds check.
    */
   const byte *operator[](size_type idx) const noexcept {
-    const std::size_t chunk_idx = idx >> kLogNumElementsPerChunk;
-    const std::size_t chunk_pos = idx & kChunkPositionMask;
+    const size_type chunk_idx = idx >> kLogNumElementsPerChunk;
+    const size_type chunk_pos = idx & kChunkPositionMask;
     return chunks_[chunk_idx] + (element_size() * chunk_pos);
   }
 
@@ -584,22 +584,23 @@ class ChunkedVector {
 /**
  * A typed chunked vector.
  */
-template <typename T, typename Alloc = std::allocator<T>>
+template <typename T, typename Allocator = std::allocator<T>>
 class ChunkedVectorT {
-  // We need to rebind the templated allocator to one needed by the generic vector.
-  using rebound_allocator_type = typename std::allocator_traits<Alloc>::template rebind_alloc<byte>;
-  using vector_type = ChunkedVector<rebound_allocator_type>;
-
  public:
-  using allocator_type = Alloc;
+  using allocator_type = Allocator;
   using value_type = T;
   using size_type = std::size_t;
 
+ private:
+  // We need to rebind the templated allocator to one needed by the generic vector.
+  using vec_allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<byte>;
+  using vec_type = ChunkedVector<vec_allocator_type>;
+
+ public:
   /**
    * Construct a vector using the given allocator.
    */
-  explicit ChunkedVectorT(allocator_type allocator = {})
-      : vec_(sizeof(T), rebound_allocator_type(allocator)) {}
+  ChunkedVectorT(allocator_type allocator = {}) : vec_(sizeof(T), vec_allocator_type(allocator)) {}
 
   /**
    * Move constructor.
@@ -704,12 +705,12 @@ class ChunkedVectorT {
   /**
    * A read-write iterator.
    */
-  using iterator = _iterator<T, typename vector_type::iterator>;
+  using iterator = _iterator<T, typename vec_type::iterator>;
 
   /**
    * A read-only iterator.
    */
-  using const_iterator = _iterator<const T, typename vector_type::const_iterator>;
+  using const_iterator = _iterator<const T, typename vec_type::const_iterator>;
 
   /**
    * A read-write reverse iterator.
@@ -772,12 +773,12 @@ class ChunkedVectorT {
   /**
    * @return A mutable reference to the element at index @em idx, skipping any bounds check.
    */
-  T &operator[](std::size_t idx) noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
+  T &operator[](size_type idx) noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
 
   /**
    * @return A mutable reference to the element at index @em idx, skipping any bounds check.
    */
-  const T &operator[](std::size_t idx) const noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
+  const T &operator[](size_type idx) const noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
 
   /**
    * @return A mutable reference to the first element in this vector. Has undefined behavior when
@@ -823,7 +824,7 @@ class ChunkedVectorT {
   /**
    * @return The number of elements in this vector.
    */
-  std::size_t size() const noexcept { return vec_.size(); }
+  size_type size() const noexcept { return vec_.size(); }
 
   // -------------------------------------------------------
   // Modifiers
@@ -865,7 +866,7 @@ class ChunkedVectorT {
   }
 
  private:
-  vector_type vec_;  // The generic backing vector.
+  vec_type vec_;  // The generic backing vector.
 };
 
 }  // namespace tpl::util
