@@ -65,7 +65,7 @@ class ChunkedVector {
         end_(nullptr),
         element_size_(element_size),
         num_elements_(0) {
-    chunks_.reserve(4);
+    append_chunk();
   }
 
   /**
@@ -460,7 +460,7 @@ class ChunkedVector {
    */
   byte *append() noexcept {
     if (position_ == end_) {
-      allocate_chunk();
+      append_chunk();
     }
 
     byte *const result = position_;
@@ -483,7 +483,7 @@ class ChunkedVector {
   void pop_back() {
     TPL_ASSERT(!empty(), "Popping empty vector");
     if (position_ == chunks_.back()) {
-      deallocate_chunk_at_back();
+      erase_chunk_at_back();
     }
 
     position_ -= element_size();
@@ -523,34 +523,42 @@ class ChunkedVector {
    * @return The size (in bytes) of memory chunks allocated by the vector that make up a chunked
    *         vector, given the size (in bytes) of the elements the vector stores.
    */
-  static constexpr size_type chunk_alloc_size(size_type element_size) {
+  static constexpr size_type chunk_alloc_size(size_type element_size) noexcept {
     return kNumElementsPerChunk * element_size;
   }
 
  private:
-  // Called when position_ == end_ and pushing an element.
-  void allocate_chunk() {
+  [[nodiscard]] byte *allocate_chunk() {
     const size_type alloc_size = chunk_alloc_size(element_size());
-    byte *new_chunk = static_cast<byte *>(allocator_.allocate(alloc_size));
-    chunks_.push_back(new_chunk);
-    position_ = new_chunk;
-    end_ = new_chunk + alloc_size;
+    return allocator_.allocate(alloc_size);
   }
 
-  // Called when position_ == chunks_.back() and popping an element.
-  void deallocate_chunk_at_back() {
+  void deallocate_chunk(byte *chunk) {
+    const size_type alloc_size = chunk_alloc_size(element_size());
+    allocator_.deallocate(chunk, alloc_size);
+  }
+
+  // Called when position_ == end_ in append().
+  void append_chunk() {
+    TPL_ASSERT(position_ == end_, "Only append new chunks when exhausted current chunk.");
+    chunks_.push_back(allocate_chunk());
+    position_ = chunks_.back();
+    end_ = chunks_.back() + chunk_alloc_size(element_size());
+  }
+
+  // Called when position_ == chunks_.back() in pop_back();
+  void erase_chunk_at_back() {
     TPL_ASSERT(!chunks_.empty(), "No chunks to de-allocate");
-    const size_type chunk_size = chunk_alloc_size(element_size());
-    allocator_.deallocate(chunks_.back(), chunk_size);
+    TPL_ASSERT(position_ == chunks_.back(), "Only erase chunks when exhausted current chunk.");
+    deallocate_chunk(chunks_.back());
     chunks_.pop_back();
-    position_ = end_ = chunks_.back() + chunk_size;
+    position_ = end_ = chunks_.back() + chunk_alloc_size(element_size());
   }
 
   // Deallocate all chunks.
   void deallocate_all_chunks() {
-    const size_type chunk_size = chunk_alloc_size(element_size());
     for (auto chunk : chunks_) {
-      allocator_.deallocate(chunk, chunk_size);
+      deallocate_chunk(chunk);
     }
     chunks_.clear();
     position_ = end_ = nullptr;
