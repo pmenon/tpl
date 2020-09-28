@@ -49,7 +49,7 @@ class ResultBuffer {
       consumer_->Consume(tuples_);
       tuples_.clear();
     }
-    return tuples_.alloc_entry();
+    return tuples_.append();
   }
 
   /**

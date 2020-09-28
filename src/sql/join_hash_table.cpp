@@ -52,7 +52,7 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
   hll_estimator_->Update(hash);
 
   // Allocate space for a new tuple
-  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.alloc_entry());
+  auto *entry = reinterpret_cast<HashTableEntry *>(entries_.append());
   entry->hash = hash;
   entry->next = nullptr;
   return entry->payload;

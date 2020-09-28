@@ -458,7 +458,7 @@ class ChunkedVector {
    * @post The returned pointer is guaranteed to be large enough to store one element.
    * @return A pointer to a contiguous memory space where a new entry can be stored.
    */
-  byte *alloc_entry() noexcept {
+  byte *append() noexcept {
     if (position_ == end_) {
       allocate_chunk();
     }
@@ -473,7 +473,7 @@ class ChunkedVector {
    * Copy-construct a new element to the end of the vector.
    */
   void push_back(const byte *elem) {
-    byte *dest = alloc_entry();
+    byte *dest = append();
     std::memcpy(dest, elem, element_size());
   }
 
@@ -825,7 +825,7 @@ class ChunkedVectorT {
    */
   template <class... Args>
   void emplace_back(Args &&... args) {
-    T *space = reinterpret_cast<T *>(vec_.alloc_entry());
+    T *space = reinterpret_cast<T *>(vec_.append());
     new (space) T(std::forward<Args>(args)...);
   }
 
@@ -833,7 +833,7 @@ class ChunkedVectorT {
    * Copy construct the provided element @em to the end of the vector.
    */
   void push_back(const T &elem) {
-    T *space = reinterpret_cast<T *>(vec_.alloc_entry());
+    T *space = reinterpret_cast<T *>(vec_.append());
     new (space) T(elem);
   }
 
@@ -841,7 +841,7 @@ class ChunkedVectorT {
    * Move-construct the provided element @em to the end of the vector.
    */
   void push_back(T &&elem) {
-    T *space = reinterpret_cast<T *>(vec_.alloc_entry());
+    T *space = reinterpret_cast<T *>(vec_.append());
     new (space) T(std::move(elem));
   }
 
