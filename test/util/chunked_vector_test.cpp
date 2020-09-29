@@ -220,6 +220,43 @@ TEST_F(ChunkedVectorTest, AssignmentMoveTest) {
   EXPECT_EQ(num_elems, vec2.size());
 }
 
+TEST_F(ChunkedVectorTest, ResizeGrowTest) {
+  static constexpr auto kN1 = 547;
+  static constexpr auto kN2 = 1097;
+  static constexpr auto kN3 = 3467;
+
+  ChunkedVectorT<uint64_t> vec;
+
+  // The first kN1 elements are sorted ascending.
+  for (uint32_t i = 0; i < kN1; i++) vec.push_back(i);
+
+  // Check size.
+  EXPECT_EQ(kN1, vec.size());
+
+  // Now resize and grow vector and check size.
+  vec.resize(kN2);
+  EXPECT_EQ(kN2, vec.size());
+
+  // Insert the same value into net-new elements.
+  for (uint32_t i = kN1; i < kN2; i++) vec[i] = 44;
+
+  // Check first section is sorted, new section is equal to constant.
+  EXPECT_TRUE(std::is_sorted(vec.begin(), vec.begin() + kN1));
+  EXPECT_TRUE(std::all_of(vec.begin() + kN1, vec.end(), [](auto x) { return x == 44; }));
+
+  // Resize and grow again and verify size.
+  vec.resize(kN3);
+  EXPECT_EQ(kN3, vec.size());
+
+  // Set net-new elements in descending.
+  for (uint32_t i = kN2; i < kN3; i++) vec[i] = kN3 - i;
+
+  // Check each section individually.
+  EXPECT_TRUE(std::is_sorted(vec.begin(), vec.begin() + kN1));
+  EXPECT_TRUE(std::all_of(vec.begin() + kN1, vec.begin() + kN2, [](auto x) { return x == 44; }));
+  EXPECT_TRUE(std::is_sorted(vec.begin() + kN3, vec.end(), std::greater<>{}));
+}
+
 // Check that adding random integers to the iterator works.
 TEST_F(ChunkedVectorTest, RandomIteratorAdditionTest) {
   const uint32_t num_elems = 1000;

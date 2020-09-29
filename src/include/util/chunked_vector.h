@@ -500,6 +500,20 @@ class ChunkedVector {
   }
 
   /**
+   * Resizes the vector to the specified number of elements. If the number of elements is smaller
+   * than the vector's current size the vector is truncated; otherwise, new elements are appended.
+   * @param new_size Number of elements the vector should contain.
+   */
+  void resize(size_type new_size) {
+    const size_type len = size();
+    if (new_size > len) {
+      append_many(new_size - len);
+    } else if (new_size < len) {
+      UNREACHABLE("Resizing smaller is unsupported.");
+    }
+  }
+
+  /**
    * @return True if this vector empty; false otherwise.
    */
   bool empty() const noexcept { return size() == 0; }
@@ -540,7 +554,6 @@ class ChunkedVector {
 
   // Called when position_ == end_ in append().
   void append_chunk() {
-    TPL_ASSERT(position_ == end_, "Only append new chunks when exhausted current chunk.");
     chunks_.push_back(allocate_chunk());
     position_ = chunks_.back();
     end_ = chunks_.back() + chunk_alloc_size(element_size());
@@ -549,7 +562,6 @@ class ChunkedVector {
   // Called when position_ == chunks_.back() in pop_back();
   void erase_chunk_at_back() {
     TPL_ASSERT(!chunks_.empty(), "No chunks to de-allocate");
-    TPL_ASSERT(position_ == chunks_.back(), "Only erase chunks when exhausted current chunk.");
     deallocate_chunk(chunks_.back());
     chunks_.pop_back();
     position_ = end_ = chunks_.back() + chunk_alloc_size(element_size());
@@ -562,6 +574,21 @@ class ChunkedVector {
     }
     chunks_.clear();
     position_ = end_ = nullptr;
+  }
+
+  void append_many(size_type n) {
+    const size_type vacancies = kNumElementsPerChunk - (size() & kChunkPositionMask);
+    if (n > vacancies) {
+      const size_type new_elements = n - vacancies;
+      const size_type new_chunks = (new_elements + kNumElementsPerChunk - 1) / kNumElementsPerChunk;
+      for (size_type i = 0; i < new_chunks; i++) {
+        append_chunk();
+      }
+      position_ += (new_elements & kChunkPositionMask) * element_size();
+    } else {
+      position_ += n * element_size();
+    }
+    num_elements_ += n;
   }
 
  private:
@@ -823,6 +850,13 @@ class ChunkedVectorT {
    * @return The number of elements in this vector.
    */
   size_type size() const noexcept { return vec_.size(); }
+
+  /**
+   * Resizes the vector to the specified number of elements. If the number of elements is smaller
+   * than the vector's current size the vector is truncated; otherwise, new elements are appended.
+   * @param new_size Number of elements the vector should contain.
+   */
+  void resize(size_type n) { vec_.resize(n); }
 
   // -------------------------------------------------------
   // Modifiers
