@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <memory>
 #include <random>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -220,41 +221,64 @@ TEST_F(ChunkedVectorTest, AssignmentMoveTest) {
   EXPECT_EQ(num_elems, vec2.size());
 }
 
-TEST_F(ChunkedVectorTest, ResizeGrowTest) {
-  static constexpr auto kN1 = 547;
-  static constexpr auto kN2 = 1097;
-  static constexpr auto kN3 = 3467;
+TEST_F(ChunkedVectorTest, ResizeTest) {
+  static constexpr auto kSize1 = 97;  // This must be smalled than elements-per-chunk.
+  static constexpr auto kSize2 = 1097;
+  static constexpr auto kSize3 = 11;
+  static constexpr auto kSize4 = 5;
+
+  const auto explicit_size_check = [](auto &vec, auto size) {
+    EXPECT_EQ(size, vec.size());
+    uint64_t c = 0;
+    for (UNUSED auto _ : vec) c++;
+    EXPECT_EQ(size, c);
+  };
 
   ChunkedVectorT<uint64_t> vec;
 
-  // The first kN1 elements are sorted ascending.
-  for (uint32_t i = 0; i < kN1; i++) vec.push_back(i);
+  // Case 1: corner-case of 0-element resize.
+  vec.resize(0);
+  explicit_size_check(vec, 0);
 
-  // Check size.
-  EXPECT_EQ(kN1, vec.size());
+  // Case 2: resize+grow, but within same block.
+  vec.resize(kSize1);
+  explicit_size_check(vec, kSize1);
 
-  // Now resize and grow vector and check size.
-  vec.resize(kN2);
-  EXPECT_EQ(kN2, vec.size());
+  // Case 3: resize+grow, but allocate blocks.
+  vec.resize(kSize2);
+  explicit_size_check(vec, kSize2);
 
-  // Insert the same value into net-new elements.
-  for (uint32_t i = kN1; i < kN2; i++) vec[i] = 44;
+  // Set elements in ascending order.
+  for (uint32_t i = 0; i < kSize2; i++) vec[i] = i;
 
-  // Check first section is sorted, new section is equal to constant.
-  EXPECT_TRUE(std::is_sorted(vec.begin(), vec.begin() + kN1));
-  EXPECT_TRUE(std::all_of(vec.begin() + kN1, vec.end(), [](auto x) { return x == 44; }));
+  // Validate contents.
+  EXPECT_TRUE(std::ranges::equal(vec, std::views::iota(0, kSize2)));
 
-  // Resize and grow again and verify size.
-  vec.resize(kN3);
-  EXPECT_EQ(kN3, vec.size());
+  // Case 4: resize+shrink, deallocating blocks.
+  vec.resize(kSize3);
+  explicit_size_check(vec, kSize3);
 
-  // Set net-new elements in descending.
-  for (uint32_t i = kN2; i < kN3; i++) vec[i] = kN3 - i;
+  // Validate contents.
+  EXPECT_TRUE(std::ranges::equal(vec, std::views::iota(0, kSize3)));
 
-  // Check each section individually.
-  EXPECT_TRUE(std::is_sorted(vec.begin(), vec.begin() + kN1));
-  EXPECT_TRUE(std::all_of(vec.begin() + kN1, vec.begin() + kN2, [](auto x) { return x == 44; }));
-  EXPECT_TRUE(std::is_sorted(vec.begin() + kN3, vec.end(), std::greater<>{}));
+  // Overwrite elements.
+  std::ranges::fill(vec, 44);
+
+  // Case 5: resize+shrink, but within block.
+  vec.resize(kSize4);
+  explicit_size_check(vec, kSize4);
+
+  // Validate contents.
+  EXPECT_TRUE(std::ranges::all_of(vec, [](auto x) { return x == 44; }));
+
+  // Case 6: Resize to zero from non-zero size.
+  vec.resize(0);
+  explicit_size_check(vec, 0);
+
+  // Case 7: Append after resize 0.
+  for (uint32_t i = 0; i < kSize2; i++) vec.push_back(i);
+  explicit_size_check(vec, kSize2);
+  EXPECT_TRUE(std::ranges::equal(vec, std::views::iota(0, kSize2)));
 }
 
 // Check that adding random integers to the iterator works.

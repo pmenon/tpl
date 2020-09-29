@@ -407,8 +407,8 @@ class ChunkedVector {
    * @return The element at index @em index. This method DOES NOT perform a bounds check.
    */
   byte *operator[](size_type idx) noexcept {
-    const size_type chunk_idx = idx >> kLogNumElementsPerChunk;
-    const size_type chunk_pos = idx & kChunkPositionMask;
+    const size_type chunk_idx = chunk_index(idx);
+    const size_type chunk_pos = chunk_position(idx);
     return chunks_[chunk_idx] + (element_size() * chunk_pos);
   }
 
@@ -416,8 +416,8 @@ class ChunkedVector {
    * @return The element at index @em index. This method DOES NOT perform a bounds check.
    */
   const byte *operator[](size_type idx) const noexcept {
-    const size_type chunk_idx = idx >> kLogNumElementsPerChunk;
-    const size_type chunk_pos = idx & kChunkPositionMask;
+    const size_type chunk_idx = chunk_index(idx);
+    const size_type chunk_pos = chunk_position(idx);
     return chunks_[chunk_idx] + (element_size() * chunk_pos);
   }
 
@@ -509,7 +509,7 @@ class ChunkedVector {
     if (new_size > len) {
       append_many(new_size - len);
     } else if (new_size < len) {
-      UNREACHABLE("Resizing smaller is unsupported.");
+      erase_many(new_size);
     }
   }
 
@@ -519,7 +519,7 @@ class ChunkedVector {
   bool empty() const noexcept { return size() == 0; }
 
   /**
-   * @reutrn The number of elements currently in the vector.
+   * @return The number of elements currently in the vector.
    */
   size_type size() const noexcept { return num_elements_; }
 
@@ -542,6 +542,12 @@ class ChunkedVector {
   }
 
  private:
+  size_type elements_per_chunk() const noexcept { return kNumElementsPerChunk; }
+
+  size_type chunk_index(size_t idx) const noexcept { return idx >> kLogNumElementsPerChunk; }
+
+  size_type chunk_position(size_type idx) const noexcept { return idx & kChunkPositionMask; }
+
   [[nodiscard]] byte *allocate_chunk() {
     const size_type alloc_size = chunk_alloc_size(element_size());
     return allocator_.allocate(alloc_size);
@@ -550,6 +556,15 @@ class ChunkedVector {
   void deallocate_chunk(byte *chunk) {
     const size_type alloc_size = chunk_alloc_size(element_size());
     allocator_.deallocate(chunk, alloc_size);
+  }
+
+  // Allocate enough chunks for 'new_elements' elements.
+  void allocate_chunks(size_type new_elements) {
+    const size_type new_chunks = (new_elements + elements_per_chunk() - 1) / elements_per_chunk();
+    chunks_.reserve(chunks_.size() + new_chunks);
+    for (size_type i = 0; i < new_chunks; i++) {
+      chunks_.push_back(allocate_chunk());
+    }
   }
 
   // Called when position_ == end_ in append().
@@ -577,18 +592,31 @@ class ChunkedVector {
   }
 
   void append_many(size_type n) {
-    const size_type vacancies = kNumElementsPerChunk - (size() & kChunkPositionMask);
+    const size_type vacancies = kNumElementsPerChunk - chunk_position(size());
     if (n > vacancies) {
-      const size_type new_elements = n - vacancies;
-      const size_type new_chunks = (new_elements + kNumElementsPerChunk - 1) / kNumElementsPerChunk;
-      for (size_type i = 0; i < new_chunks; i++) {
-        append_chunk();
-      }
-      position_ += (new_elements & kChunkPositionMask) * element_size();
+      allocate_chunks(n - vacancies);
+      position_ = chunks_.back();
+      end_ = chunks_.back() + chunk_alloc_size(element_size());
+      // Re-position to last element.
+      position_ += element_size() * chunk_position(n - vacancies);
     } else {
-      position_ += n * element_size();
+      position_ += element_size() * n;
     }
     num_elements_ += n;
+  }
+
+  void erase_many(size_type n) {
+    TPL_ASSERT(n < size(), "Cannot erase more than current size().");
+    const size_type chunk_idx = chunk_index(n);
+    for (size_type i = chunk_idx + 1; i < chunks_.size(); i++) {
+      deallocate_chunk(chunks_[i]);
+    }
+    chunks_.resize(chunk_idx + 1);
+    position_ = chunks_.back();
+    end_ = chunks_.back() + chunk_alloc_size(element_size());
+    // Re-position to last element.
+    position_ += element_size() * chunk_position(n);
+    num_elements_ = n;
   }
 
  private:
