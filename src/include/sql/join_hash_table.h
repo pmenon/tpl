@@ -59,48 +59,59 @@ class JoinHashTable {
   friend class JoinHashTableIterator;
 
  public:
-  // Default precision to use for HLL estimations
+  /** Default precision to use for HLL estimations. */
   static constexpr uint32_t kDefaultHLLPrecision = 10;
 
-  // Minimum number of expected elements to merge before triggering a parallel merge
+  /** Minimum number of expected elements to merge before triggering a parallel merge. */
   static constexpr uint32_t kDefaultMinSizeForParallelMerge = 1024;
 
-  /**
-   * Statistics structure used to capture information during compression.
-   */
+  /** Statistics structure used to capture information during compression. */
   class AnalysisStats {
    public:
-    // Default constructor.
+    /** Default constructor. */
     AnalysisStats() = default;
-    // Constructor with specified column count.
-    AnalysisStats(std::size_t num_cols) : required_bits_(num_cols, 0) {}
-    // Explicitly set column counts.
-    void SetNumCols(std::size_t num_cols) { required_bits_.resize(num_cols); }
-    // Return the number of columns.
-    std::size_t NumCols() const noexcept { return required_bits_.size(); }
-    // Return the (current) number of bits required for the column at the given index.
-    uint8_t BitsForCol(std::size_t idx) const noexcept { return required_bits_[idx]; }
-    // Set the bits for a given column.
-    void SetBitsForCol(std::size_t idx, uint8_t b) noexcept { required_bits_[idx] = b; }
-    // Merge the given stats structure with this.
+
+    /** Constructor with specified column count. */
+    AnalysisStats(std::size_t num_cols) : bits_(num_cols, 0) {}
+
+    /** Explicitly set column counts. */
+    void SetNumCols(std::size_t num_cols) { bits_.resize(num_cols); }
+
+    /** @return The number of columns. */
+    std::size_t NumCols() const noexcept { return bits_.size(); }
+
+    /** @return The (current) number of bits required for the column at the given index. */
+    uint8_t BitsForCol(std::size_t idx) const noexcept { return bits_[idx]; }
+
+    /** Set the bits for a given column. */
+    void SetBitsForCol(std::size_t idx, uint8_t b) noexcept { bits_[idx] = b; }
+
+    /** Merge the given stats structure with this. */
     void Merge(const AnalysisStats &other) {
       TPL_ASSERT(NumCols() == other.NumCols(), "Mismatched columns!");
       for (uint32_t idx = 0, n = NumCols(); idx < n; idx++) {
-        required_bits_[idx] = std::max(required_bits_[idx], other.required_bits_[idx]);
+        bits_[idx] = std::max(bits_[idx], other.bits_[idx]);
       }
     }
-    uint32_t TotalNumBits() const noexcept {
-      return std::accumulate(required_bits_.begin(), required_bits_.end(), 0u);
-    }
+
+    /** @return The total number of bits for all columns. */
+    uint32_t TotalNumBits() const { return std::accumulate(bits_.begin(), bits_.end(), 0u); }
 
    private:
-    // The number of required bits for each column.
-    std::vector<uint8_t> required_bits_;
+    std::vector<uint8_t> bits_;  // Number of bits for each column.
   };
 
+  /** Update an analysis struct. */
   using AnalysisPass = void (*)(uint32_t, const byte **RESTRICT, AnalysisStats *);
 
-  using CompressPass = void (*)(uint32_t, const byte **RESTRICT);
+  /** Compress a set of input data into an output buffer. */
+  using CompressPass = void (*)(uint32_t, const byte **RESTRICT, byte **RESTRICT);
+
+  /** The structure used to materialized build tuples. */
+  using TupleBuffer = util::ChunkedVector<MemoryPoolAllocator<byte>>;
+
+  /** The structure used to collect/store multiple tuple buffers. */
+  using TupleBufferVector = MemPoolVector<TupleBuffer>;
 
   /**
    * Construct a join hash table. All memory allocations are sourced from the injected @em memory,
@@ -266,13 +277,13 @@ class JoinHashTable {
   AnalysisPass analysis_pass_;
   // The optional compression pass.
   CompressPass compress_pass_;
-  // The vector where we store the build-side input.
-  util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
+  // The container storing the build-side input tuples.
+  TupleBuffer entries_;
   // To protect concurrent access to 'owned_entries_'.
   mutable util::SpinLatch owned_latch_;
-  // List of entries this hash table has taken ownership of.
+  // List of entries this hash table has taken ownership of from other tables.
   // Protected by 'owned_latch_'.
-  MemPoolVector<decltype(entries_)> owned_;
+  TupleBufferVector owned_;
   // The chaining hash table.
   TaggedChainingHashTable chaining_hash_table_;
   // The concise hash table.
@@ -391,8 +402,8 @@ class JoinHashTableIterator {
   void FindNextNonEmptyList();
 
  private:
-  using EntryListIterator = decltype(JoinHashTable::owned_)::const_iterator;
-  using EntryIterator = decltype(JoinHashTable::entries_)::const_iterator;
+  using EntryListIterator = JoinHashTable::TupleBufferVector::const_iterator;
+  using EntryIterator = JoinHashTable::TupleBuffer::const_iterator;
 
   // An iterator over the entry lists owned by the join hash table.
   EntryListIterator entry_list_iter_, entry_list_end_;

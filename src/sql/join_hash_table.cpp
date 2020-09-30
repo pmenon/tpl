@@ -9,7 +9,7 @@
 // For HLL unique key estimations.
 #include "count/hll.h"
 
-// For tbb::parallel_for. Needed for parallel build.
+// Needed for parallel build.
 #include "tbb/parallel_for_each.h"
 
 #include "common/cpu_info.h"
@@ -95,41 +95,64 @@ std::vector<const byte *> JoinHashTable::CollectRandomSample() const {
 }
 
 void JoinHashTable::TryCompress() {
+  TPL_ASSERT(!IsBuilt(), "Cannot compress after hash table is already built!");
+
   if (!CompressionSupported()) {
     return;
   }
 
-  // Run a quick-and-dirty analysis on a small sample of tuples.
-  AnalysisStats sample_stats;
-  std::vector<const byte *> sample = CollectRandomSample();
-  analysis_pass_(sample.size(), sample.data(), &sample_stats);
+  // ---------------------------------------------------------------------------
+  // Sampling phase:
+  // At this point, we do not know whether the buffered tuples will compress
+  // well. Rather that moving forward blindly, we first run a quick-and-dirty
+  // analysis on a small sample of tuples to estimate compress-ability. We expect
+  // the sample to be representative of all data. If the sample shows promise, we
+  // proceed with a full-blown analysis. Otherwise, we bail out now.
+  // ---------------------------------------------------------------------------
 
-  // Bail-out if sample indicates poor compress-ability.
-  if (!ShouldCompress(sample_stats)) {
-    return;
+  {
+    AnalysisStats sample_stats;
+    std::vector<const byte *> sample = CollectRandomSample();
+    analysis_pass_(sample.size(), sample.data(), &sample_stats);
+    // Bail-out if sample indicates poor compress-ability.
+    if (!ShouldCompress(sample_stats)) {
+      return;
+    }
   }
 
-  // Statistics indicate promising results. Let's analyze all data.
-  // TODO(pmenon): Parallelize.
-  AnalysisStats global_stats;
-  for (JoinHashTableVectorIterator iter(*this); iter.HasNext(); iter.Next()) {
+  // ---------------------------------------------------------------------------
+  // Analysis phase:
+  // The previous sampling phase indicates promising compression of tuple data.
+  // Let's perform a full analysis by looking at each tuple. It's possible that
+  // the sample was biased in some way, so we need to bail out on exceptions
+  // here, too.
+  // ---------------------------------------------------------------------------
+
+  AnalysisStats stats;
+  std::array<const byte *, kDefaultVectorSize> row_cache;
+  for (uint64_t i = 0; i < entries_.size(); i += kDefaultVectorSize) {
+    const auto num_rows = std::min(entries_.size() - i, static_cast<uint64_t>(kDefaultVectorSize));
+    for (uint64_t j = 0; j < num_rows; j++) {
+      row_cache[j] = reinterpret_cast<const HashTableEntry *>(entries_[i + j])->payload;
+    }
     // Analyze block.
     AnalysisStats block_stats;
-    auto num_rows = iter.GetEntries()->GetSize();
-    auto rows = reinterpret_cast<const byte **>(iter.GetEntries()->GetData());
-    analysis_pass_(num_rows, rows, &block_stats);
+    analysis_pass_(num_rows, row_cache.data(), &block_stats);
     // Check if we should continue.
     if (!ShouldCompress(block_stats)) {
       return;
     }
     // Update global stats with block-local stats.
-    if (TPL_UNLIKELY(global_stats.NumCols() == 0)) {
-      global_stats.SetNumCols(block_stats.NumCols());
+    if (TPL_UNLIKELY(stats.NumCols() == 0)) {
+      stats.SetNumCols(block_stats.NumCols());
     }
-    global_stats.Merge(block_stats);
+    stats.Merge(block_stats);
   }
 
-  // Compress.
+  // ---------------------------------------------------------------------------
+  // Compression phase:
+  // Let's scan the tuple data again and perform a compression into a copy.
+  // ---------------------------------------------------------------------------
 }
 
 void JoinHashTable::BuildChainingHashTable() {
