@@ -58,7 +58,7 @@ class ChunkedVector {
    * @param element_size The size of each vector element.
    * @param allocator The allocator to use for all chunk allocations.
    */
-  ChunkedVector(size_type element_size, allocator_type allocator = {})
+  ChunkedVector(size_type element_size, const allocator_type &allocator = allocator_type())
       : allocator_(allocator),
         chunks_(chunk_list_allocator_type(allocator_)),
         position_(nullptr),
@@ -66,6 +66,19 @@ class ChunkedVector {
         element_size_(element_size),
         num_elements_(0) {
     append_chunk();
+  }
+
+  /**
+   * Construct a chunked vector whose elements have size @em element_size in bytes using the
+   * provided allocator.
+   * @param element_size The size of each vector element.
+   * @param num_elements The number of elements to initially create.
+   * @param allocator The allocator to use for all chunk allocations.
+   */
+  ChunkedVector(size_type element_size, size_type num_elements,
+                const allocator_type &allocator = allocator_type())
+      : ChunkedVector(element_size, allocator) {
+    resize(num_elements);
   }
 
   /**
