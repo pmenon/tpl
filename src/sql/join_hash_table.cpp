@@ -11,6 +11,7 @@
 
 // Needed for parallel build.
 #include "tbb/parallel_for_each.h"
+#include "tbb/parallel_reduce.h"
 
 #include "common/cpu_info.h"
 #include "common/memory.h"
@@ -94,13 +95,7 @@ std::vector<const byte *> JoinHashTable::CollectRandomSample() const {
   return sample;
 }
 
-void JoinHashTable::TryCompress() {
-  TPL_ASSERT(!IsBuilt(), "Cannot compress after hash table is already built!");
-
-  if (!CompressionSupported()) {
-    return;
-  }
-
+std::pair<bool, JoinHashTable::AnalysisStats> JoinHashTable::AnalyzeBufferedTuples() const {
   // ---------------------------------------------------------------------------
   // Sampling phase:
   // At this point, we do not know whether the buffered tuples will compress
@@ -114,9 +109,9 @@ void JoinHashTable::TryCompress() {
     AnalysisStats sample_stats;
     std::vector<const byte *> sample = CollectRandomSample();
     analysis_pass_(sample.size(), sample.data(), &sample_stats);
-    // Bail-out if sample indicates poor compress-ability.
+    // Bail-out if sample indicates poor compressibility.
     if (!ShouldCompress(sample_stats)) {
-      return;
+      return std::make_pair(false, AnalysisStats());
     }
   }
 
@@ -128,31 +123,76 @@ void JoinHashTable::TryCompress() {
   // here, too.
   // ---------------------------------------------------------------------------
 
-  AnalysisStats stats;
-  std::array<const byte *, kDefaultVectorSize> row_cache;
-  for (uint64_t i = 0; i < entries_.size(); i += kDefaultVectorSize) {
-    const auto num_rows = std::min(entries_.size() - i, static_cast<uint64_t>(kDefaultVectorSize));
-    for (uint64_t j = 0; j < num_rows; j++) {
-      row_cache[j] = reinterpret_cast<const HashTableEntry *>(entries_[i + j])->payload;
+  const auto grain = kDefaultVectorSize * 6;
+  const auto stats = tbb::parallel_reduce(
+      tbb::blocked_range<uint64_t>(0, entries_.size(), grain), AnalysisStats(),
+      [&](const auto &r, auto stats) {
+        std::array<const byte *, kDefaultVectorSize> row_cache;
+        for (uint64_t i = r.begin(), n = r.end(); i < n; i += kDefaultVectorSize) {
+          const auto num_rows = std::min(n - i, static_cast<uint64_t>(kDefaultVectorSize));
+          for (uint64_t j = 0; j < num_rows; j++) {
+            row_cache[j] = reinterpret_cast<const HashTableEntry *>(entries_[i])->payload;
+          }
+          analysis_pass_(num_rows, row_cache.data(), &stats);
+        }
+        return stats;
+      },
+      [](auto &lhs, auto &rhs) {
+        AnalysisStats stats = lhs;
+        stats.SetNumCols(rhs.NumCols());
+        stats.Merge(rhs);
+        return stats;
+      });
+
+  return std::make_pair(ShouldCompress(stats), stats);
+}
+
+void JoinHashTable::CompressBufferedTuples(const JoinHashTable::AnalysisStats &range) {
+  const auto compressed_tuple_size = util::MathUtil::DivRoundUp(64, 8);
+  const auto compressed_entry_size = HashTableEntry::ComputeEntrySize(compressed_tuple_size);
+  TupleBuffer compressed_tuples(compressed_entry_size, entries_.size(), entries_.get_allocator());
+
+  const auto grain = kDefaultVectorSize * 6;
+  tbb::parallel_for(tbb::blocked_range<uint64_t>(0, entries_.size(), grain), [&](const auto &r) {
+    std::array<const byte *, kDefaultVectorSize> row_cache;
+    std::array<byte *, kDefaultVectorSize> compr_row_cache;
+    for (uint64_t i = r.begin(), n = r.end(); i < n; i += kDefaultVectorSize) {
+      const auto num_rows = std::min(n - i, static_cast<uint64_t>(kDefaultVectorSize));
+      for (uint64_t j = 0; j < num_rows; j++) {
+        auto in_entry = reinterpret_cast<const HashTableEntry *>(entries_[i]);
+        auto out_entry = reinterpret_cast<HashTableEntry *>(compressed_tuples[i]);
+        // Copy entry header.
+        *out_entry = *in_entry;
+        // Cache payload pointers.
+        row_cache[j] = in_entry->payload;
+        compr_row_cache[j] = out_entry->payload;
+      }
+      // Compress!
+      compress_pass_(num_rows, row_cache.data(), compr_row_cache.data());
     }
-    // Analyze block.
-    AnalysisStats block_stats;
-    analysis_pass_(num_rows, row_cache.data(), &block_stats);
-    // Check if we should continue.
-    if (!ShouldCompress(block_stats)) {
-      return;
-    }
-    // Update global stats with block-local stats.
-    if (TPL_UNLIKELY(stats.NumCols() == 0)) {
-      stats.SetNumCols(block_stats.NumCols());
-    }
-    stats.Merge(block_stats);
+  });
+
+  entries_ = std::move(compressed_tuples);
+}
+
+void JoinHashTable::TryCompress() {
+  TPL_ASSERT(!IsBuilt(), "Cannot compress after hash table is already built!");
+
+  // If compression isn't enable, bail out.
+  if (!CompressionSupported()) {
+    return;
   }
 
-  // ---------------------------------------------------------------------------
-  // Compression phase:
-  // Let's scan the tuple data again and perform a compression into a copy.
-  // ---------------------------------------------------------------------------
+  // Analyze tuple data to determine whether compression is feasible.
+  const auto &[compressible, stats] = AnalyzeBufferedTuples();
+
+  // Bail out if stats indicate we shouldn't compress.
+  if (!compressible) {
+    return;
+  }
+
+  // Stats say things are okay, let's go ahead and compress.
+  CompressBufferedTuples(stats);
 }
 
 void JoinHashTable::BuildChainingHashTable() {
@@ -625,9 +665,6 @@ void JoinHashTable::Build() {
 
   built_ = true;
 }
-
-// TODO(pmenon): Vectorized bloom filter pre-filtering.
-// TODO(pmenon): Implement prefetching.
 
 void JoinHashTable::LookupBatchInChainingHashTable(const Vector &hashes, Vector *results) const {
   UnaryOperationExecutor::Execute<hash_t, const HashTableEntry *>(

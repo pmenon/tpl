@@ -247,6 +247,8 @@ class JoinHashTable {
   void TryCompress();
   bool ShouldCompress(const AnalysisStats &stats) const;
   std::vector<const byte *> CollectRandomSample() const;
+  std::pair<bool, AnalysisStats> AnalyzeBufferedTuples() const;
+  void CompressBufferedTuples(const AnalysisStats &r);
 
   // Dispatched from Build() to build either a chaining or concise hash table.
   void BuildChainingHashTable();
