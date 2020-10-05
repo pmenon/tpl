@@ -844,7 +844,9 @@ class ChunkedVectorT {
   /**
    * @return A mutable reference to the element at index @em idx, skipping any bounds check.
    */
-  const T &operator[](size_type idx) const noexcept { return *reinterpret_cast<T *>(vec_[idx]); }
+  const T &operator[](size_type idx) const noexcept {
+    return *reinterpret_cast<const T *>(vec_[idx]);
+  }
 
   /**
    * @return A mutable reference to the first element in this vector. Has undefined behavior when
