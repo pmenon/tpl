@@ -10,6 +10,7 @@
 #include "count/hll.h"
 
 // Needed for parallel build.
+#include "tbb/iterators.h"
 #include "tbb/parallel_for_each.h"
 #include "tbb/parallel_reduce.h"
 
@@ -70,111 +71,6 @@ bool JoinHashTable::ShouldCompress(const JoinHashTable::AnalysisStats &stats) co
   return compression_factor >= min_compression_rate;
 }
 
-// Collect a set of random tuples from the underlying entries.
-std::vector<const byte *> JoinHashTable::CollectRandomSample() const {
-  // For now, we select O(logN) tuples with reuse. It's dumb, but fast.
-  // We're only looking for a rough estimate.
-  // NOTE: std::sample() is robust, but very slow!
-  const auto oversample_rate = Settings::Instance()->GetInt(Settings::Name::OversamplingRate);
-  const auto sample_size = oversample_rate * util::MathUtil::Log2Ceil(entries_.size());
-  LOG_DEBUG("Choosing {} random samples to test compress-ability", sample_size);
-
-  // Size now since we know how many samples we'll collect.
-  std::vector<const byte *> sample(sample_size);
-
-#ifndef NDEBUG
-  util::SFC32 gen;
-#else
-  util::SFC32 gen(std::random_device{}());
-#endif
-  std::uniform_int_distribution<uint32_t> dist(0, entries_.size() - 1);
-  for (uint32_t i = 0; i < sample_size; i++) {
-    const uint32_t random_index = dist(gen);
-    sample[i] = reinterpret_cast<const HashTableEntry *>(entries_[random_index])->payload;
-  }
-  return sample;
-}
-
-std::pair<bool, JoinHashTable::AnalysisStats> JoinHashTable::AnalyzeBufferedTuples() const {
-  // ---------------------------------------------------------------------------
-  // Sampling phase:
-  // At this point, we do not know whether the buffered tuples will compress
-  // well. Rather that moving forward blindly, we first run a quick-and-dirty
-  // analysis on a small sample of tuples to estimate compress-ability. We expect
-  // the sample to be representative of all data. If the sample shows promise, we
-  // proceed with a full-blown analysis. Otherwise, we bail out now.
-  // ---------------------------------------------------------------------------
-
-  {
-    AnalysisStats sample_stats;
-    std::vector<const byte *> sample = CollectRandomSample();
-    analysis_pass_(sample.size(), sample.data(), &sample_stats);
-    // Bail-out if sample indicates poor compressibility.
-    if (!ShouldCompress(sample_stats)) {
-      return std::make_pair(false, AnalysisStats());
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Analysis phase:
-  // The previous sampling phase indicates promising compression of tuple data.
-  // Let's perform a full analysis by looking at each tuple. It's possible that
-  // the sample was biased in some way, so we need to bail out on exceptions
-  // here, too.
-  // ---------------------------------------------------------------------------
-
-  const auto grain = kDefaultVectorSize * 6;
-  const auto stats = tbb::parallel_reduce(
-      tbb::blocked_range<uint64_t>(0, entries_.size(), grain), AnalysisStats(),
-      [&](const auto &r, auto stats) {
-        std::array<const byte *, kDefaultVectorSize> row_cache;
-        for (uint64_t i = r.begin(), n = r.end(); i < n; i += kDefaultVectorSize) {
-          const auto num_rows = std::min(n - i, static_cast<uint64_t>(kDefaultVectorSize));
-          for (uint64_t j = 0; j < num_rows; j++) {
-            row_cache[j] = reinterpret_cast<const HashTableEntry *>(entries_[i])->payload;
-          }
-          analysis_pass_(num_rows, row_cache.data(), &stats);
-        }
-        return stats;
-      },
-      [](auto &lhs, auto &rhs) {
-        AnalysisStats stats = lhs;
-        stats.SetNumCols(rhs.NumCols());
-        stats.Merge(rhs);
-        return stats;
-      });
-
-  return std::make_pair(ShouldCompress(stats), stats);
-}
-
-void JoinHashTable::CompressBufferedTuples(const JoinHashTable::AnalysisStats &range) {
-  const auto compressed_tuple_size = util::MathUtil::DivRoundUp(64, 8);
-  const auto compressed_entry_size = HashTableEntry::ComputeEntrySize(compressed_tuple_size);
-  TupleBuffer compressed_tuples(compressed_entry_size, entries_.size(), entries_.get_allocator());
-
-  const auto grain = kDefaultVectorSize * 6;
-  tbb::parallel_for(tbb::blocked_range<uint64_t>(0, entries_.size(), grain), [&](const auto &r) {
-    std::array<const byte *, kDefaultVectorSize> row_cache;
-    std::array<byte *, kDefaultVectorSize> compr_row_cache;
-    for (uint64_t i = r.begin(), n = r.end(); i < n; i += kDefaultVectorSize) {
-      const auto num_rows = std::min(n - i, static_cast<uint64_t>(kDefaultVectorSize));
-      for (uint64_t j = 0; j < num_rows; j++) {
-        auto in_entry = reinterpret_cast<const HashTableEntry *>(entries_[i]);
-        auto out_entry = reinterpret_cast<HashTableEntry *>(compressed_tuples[i]);
-        // Copy entry header.
-        *out_entry = *in_entry;
-        // Cache payload pointers.
-        row_cache[j] = in_entry->payload;
-        compr_row_cache[j] = out_entry->payload;
-      }
-      // Compress!
-      compress_pass_(num_rows, row_cache.data(), compr_row_cache.data());
-    }
-  });
-
-  entries_ = std::move(compressed_tuples);
-}
-
 void JoinHashTable::TryCompress() {
   TPL_ASSERT(!IsBuilt(), "Cannot compress after hash table is already built!");
 
@@ -183,16 +79,43 @@ void JoinHashTable::TryCompress() {
     return;
   }
 
-  // Analyze tuple data to determine whether compression is feasible.
-  const auto &[compressible, stats] = AnalyzeBufferedTuples();
+  // Analyze tuple buffer.
+  const std::size_t batch = 2 * kDefaultVectorSize;
+  const auto stats = tbb::parallel_reduce(
+      tbb::blocked_range<ConstTupleIterator>(entries_.cbegin(), entries_.cend(), batch),
+      AnalysisStats(),
+      [&](const auto &range, auto stats) {
+        analysis_pass_(range.begin(), range.end(), &stats);
+        return stats;
+      },
+      [](auto &lhs, auto &rhs) {
+        AnalysisStats stats = lhs;
+        stats.Merge(rhs);
+        return stats;
+      });
 
-  // Bail out if stats indicate we shouldn't compress.
-  if (!compressible) {
+  // Bail out if not compressible.
+  if (!ShouldCompress(stats)) {
     return;
   }
 
-  // Stats say things are okay, let's go ahead and compress.
-  CompressBufferedTuples(stats);
+  // Compress.
+  const auto compressed_tuple_size = util::MathUtil::DivRoundUp(64, 8);
+  const auto compressed_entry_size = HashTableEntry::ComputeEntrySize(compressed_tuple_size);
+  TupleBuffer compressed_tuples(compressed_entry_size, entries_.size(), entries_.get_allocator());
+
+  auto begin = tbb::make_zip_iterator(entries_.cbegin(), compressed_tuples.begin());
+  auto end = tbb::make_zip_iterator(entries_.cend(), compressed_tuples.end());
+
+  tbb::parallel_for(
+      tbb::blocked_range<tbb::zip_iterator<ConstTupleIterator, TupleIterator>>(begin, end, batch),
+      [&](const auto &range) {
+        const auto &[in_iter, out_iter] = range.begin().base();
+        const auto &[in_end, _] = range.end().base();
+        compress_pass_(in_iter, in_end, out_iter);
+      });
+
+  entries_ = std::move(compressed_tuples);
 }
 
 void JoinHashTable::BuildChainingHashTable() {

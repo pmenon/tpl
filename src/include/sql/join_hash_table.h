@@ -101,17 +101,23 @@ class JoinHashTable {
     std::vector<uint8_t> bits_;  // Number of bits for each column.
   };
 
-  /** Update an analysis struct. */
-  using AnalysisPass = void (*)(uint32_t, const byte **RESTRICT, AnalysisStats *);
-
-  /** Compress a set of input data into an output buffer. */
-  using CompressPass = void (*)(uint32_t, const byte **RESTRICT, byte **RESTRICT);
-
   /** The structure used to materialized build tuples. */
   using TupleBuffer = util::ChunkedVector<MemoryPoolAllocator<byte>>;
 
+  /** Pointer to a generic tuple. */
+  using TupleIterator = typename TupleBuffer::iterator;
+
+  /** Const-pointer to a generic tuple. */
+  using ConstTupleIterator = typename TupleBuffer::const_iterator;
+
   /** The structure used to collect/store multiple tuple buffers. */
   using TupleBufferVector = MemPoolVector<TupleBuffer>;
+
+  /** Update an analysis struct. */
+  using AnalysisPass = void (*)(ConstTupleIterator, ConstTupleIterator, AnalysisStats *);
+
+  /** Compress a set of input data into an output buffer. */
+  using CompressPass = void (*)(ConstTupleIterator, ConstTupleIterator, TupleIterator);
 
   /**
    * Construct a join hash table. All memory allocations are sourced from the injected @em memory,
@@ -246,9 +252,6 @@ class JoinHashTable {
   // the physical hash index.
   void TryCompress();
   bool ShouldCompress(const AnalysisStats &stats) const;
-  std::vector<const byte *> CollectRandomSample() const;
-  std::pair<bool, AnalysisStats> AnalyzeBufferedTuples() const;
-  void CompressBufferedTuples(const AnalysisStats &r);
 
   // Dispatched from Build() to build either a chaining or concise hash table.
   void BuildChainingHashTable();

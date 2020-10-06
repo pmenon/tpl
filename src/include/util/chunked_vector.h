@@ -354,6 +354,17 @@ class ChunkedVector {
   }
 
   /**
+   * @return An iterator pointing to the first element in this vector.
+   */
+  const_iterator cbegin() const noexcept {
+    if (empty()) {
+      return const_iterator();
+    }
+    return const_iterator(chunks_.begin(), chunks_.begin(), chunks_.end(), chunks_[0],
+                          element_size());
+  }
+
+  /**
    * @return An iterator pointing to the element following the last in this vector.
    */
   iterator end() noexcept {
@@ -367,6 +378,17 @@ class ChunkedVector {
    * @return An iterator pointing to the element following the last in this vector.
    */
   const_iterator end() const noexcept {
+    if (empty()) {
+      return const_iterator();
+    }
+    return const_iterator(chunks_.end() - 1, chunks_.begin(), chunks_.end(), position_,
+                          element_size());
+  }
+
+  /**
+   * @return An iterator pointing to the element following the last in this vector.
+   */
+  const_iterator cend() const noexcept {
     if (empty()) {
       return const_iterator();
     }
