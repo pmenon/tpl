@@ -104,20 +104,14 @@ class JoinHashTable {
   /** The structure used to materialized build tuples. */
   using TupleBuffer = util::ChunkedVector<MemoryPoolAllocator<byte>>;
 
-  /** Pointer to a generic tuple. */
-  using TupleIterator = typename TupleBuffer::iterator;
-
-  /** Const-pointer to a generic tuple. */
-  using ConstTupleIterator = typename TupleBuffer::const_iterator;
-
   /** The structure used to collect/store multiple tuple buffers. */
   using TupleBufferVector = MemPoolVector<TupleBuffer>;
 
   /** Update an analysis struct. */
-  using AnalysisPass = void (*)(ConstTupleIterator, ConstTupleIterator, AnalysisStats *);
+  using AnalysisPass = void (*)(uint32_t, const byte **, AnalysisStats *);
 
   /** Compress a set of input data into an output buffer. */
-  using CompressPass = void (*)(ConstTupleIterator, ConstTupleIterator, TupleIterator);
+  using CompressPass = void (*)(uint32_t, const byte **, byte **);
 
   /**
    * Construct a join hash table. All memory allocations are sourced from the injected @em memory,

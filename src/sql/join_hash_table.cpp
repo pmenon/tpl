@@ -80,19 +80,25 @@ void JoinHashTable::TryCompress() {
   }
 
   // Analyze tuple buffer.
-  const std::size_t batch = 2 * kDefaultVectorSize;
+  const std::size_t batch = kDefaultVectorSize;
   const auto stats = tbb::parallel_reduce(
-      tbb::blocked_range<ConstTupleIterator>(entries_.cbegin(), entries_.cend(), batch),
-      AnalysisStats(),
+      tbb::blocked_range<uint64_t>(0, entries_.size(), batch), AnalysisStats(),
       [&](const auto &range, auto stats) {
-        analysis_pass_(range.begin(), range.end(), &stats);
+        std::array<const byte *, kDefaultVectorSize> cache;
+        for (uint64_t i = range.begin(), n = range.end(); i < n; i += kDefaultVectorSize) {
+          const auto num_rows = std::min(n - i, static_cast<uint64_t>(kDefaultVectorSize));
+          for (uint64_t j = 0; j < num_rows; j++)
+            cache[j] = reinterpret_cast<const HashTableEntry *>(entries_[i])->payload;
+          analysis_pass_(num_rows, cache.data(), &stats);
+        }
         return stats;
       },
       [](auto &lhs, auto &rhs) {
         AnalysisStats stats = lhs;
         stats.Merge(rhs);
         return stats;
-      });
+      },
+      tbb::static_partitioner{});
 
   // Bail out if not compressible.
   if (!ShouldCompress(stats)) {
@@ -104,16 +110,27 @@ void JoinHashTable::TryCompress() {
   const auto compressed_entry_size = HashTableEntry::ComputeEntrySize(compressed_tuple_size);
   TupleBuffer compressed_tuples(compressed_entry_size, entries_.size(), entries_.get_allocator());
 
-  auto begin = tbb::make_zip_iterator(entries_.cbegin(), compressed_tuples.begin());
-  auto end = tbb::make_zip_iterator(entries_.cend(), compressed_tuples.end());
-
   tbb::parallel_for(
-      tbb::blocked_range<tbb::zip_iterator<ConstTupleIterator, TupleIterator>>(begin, end, batch),
+      tbb::blocked_range<uint64_t>(0, entries_.size(), batch),
       [&](const auto &range) {
-        const auto &[in_iter, out_iter] = range.begin().base();
-        const auto &[in_end, _] = range.end().base();
-        compress_pass_(in_iter, in_end, out_iter);
-      });
+        std::array<const byte *, kDefaultVectorSize> row_cache;
+        std::array<byte *, kDefaultVectorSize> compr_row_cache;
+        for (uint64_t i = range.begin(), n = range.end(); i < n; i += kDefaultVectorSize) {
+          const auto num_rows = std::min(n - i, static_cast<uint64_t>(kDefaultVectorSize));
+          for (uint64_t j = 0; j < num_rows; j++) {
+            auto in_entry = reinterpret_cast<const HashTableEntry *>(entries_[i]);
+            auto out_entry = reinterpret_cast<HashTableEntry *>(compressed_tuples[i]);
+            // Copy entry header.
+            *out_entry = *in_entry;
+            // Cache payload pointers.
+            row_cache[j] = in_entry->payload;
+            compr_row_cache[j] = out_entry->payload;
+          }
+          // Compress!
+          compress_pass_(num_rows, row_cache.data(), compr_row_cache.data());
+        }
+      },
+      tbb::static_partitioner{});
 
   entries_ = std::move(compressed_tuples);
 }
@@ -132,7 +149,6 @@ void JoinHashTable::BuildChainingHashTable() {
 }
 
 namespace {
-
 // The bits we set in the entry to mark if the entry has been buffered in the
 // reorder buffer and whether the entry has been processed (i.e., if the entry
 // is in its final location in either the main or overflow arenas).
