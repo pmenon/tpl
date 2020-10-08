@@ -1,8 +1,6 @@
 #include "sql/join_hash_table.h"
 
 #include <limits>
-#include <queue>
-#include <random>
 #include <ranges>
 #include <utility>
 #include <vector>
@@ -11,7 +9,6 @@
 #include "count/hll.h"
 
 // Needed for parallel build.
-#include "tbb/iterators.h"
 #include "tbb/parallel_for_each.h"
 #include "tbb/parallel_reduce.h"
 
@@ -23,7 +20,6 @@
 #include "sql/thread_state_container.h"
 #include "sql/vector.h"
 #include "sql/vector_operations/unary_operation_executor.h"
-#include "util/sfc_gen.h"
 #include "util/timer.h"
 
 namespace tpl::sql {
