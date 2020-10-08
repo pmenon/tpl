@@ -246,6 +246,8 @@ class JoinHashTable {
   // the physical hash index.
   void TryCompress();
   bool ShouldCompress(const AnalysisStats &stats) const;
+  AnalysisStats AnalyzeBufferedTuples() const;
+  void CompressBufferedTuples(const AnalysisStats &stats);
 
   // Dispatched from Build() to build either a chaining or concise hash table.
   void BuildChainingHashTable();

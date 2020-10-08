@@ -61,7 +61,8 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
 }
 
 bool JoinHashTable::ShouldCompress(const JoinHashTable::AnalysisStats &stats) const {
-  std::size_t compressed_tuple_size = util::MathUtil::DivRoundUp(stats.TotalNumBits(), 8);
+  std::size_t compressed_tuple_size =
+      HashTableEntry::ComputeEntrySize(util::MathUtil::DivRoundUp(stats.TotalNumBits(), 8));
   std::size_t raw_tuple_size = entries_.element_size();
   float compression_factor = static_cast<float>(raw_tuple_size) / compressed_tuple_size;
   TPL_ASSERT(compression_factor >= 1.0f, "Compression rate cannot be less than 1.0");
@@ -71,17 +72,9 @@ bool JoinHashTable::ShouldCompress(const JoinHashTable::AnalysisStats &stats) co
   return compression_factor >= min_compression_rate;
 }
 
-void JoinHashTable::TryCompress() {
-  TPL_ASSERT(!IsBuilt(), "Cannot compress after hash table is already built!");
-
-  // If compression isn't enable, bail out.
-  if (!CompressionSupported()) {
-    return;
-  }
-
-  // Analyze tuple buffer.
+JoinHashTable::AnalysisStats JoinHashTable::AnalyzeBufferedTuples() const {
   const std::size_t batch = kDefaultVectorSize;
-  const auto stats = tbb::parallel_reduce(
+  return tbb::parallel_reduce(
       tbb::blocked_range<uint64_t>(0, entries_.size(), batch), AnalysisStats(),
       [&](const auto &range, auto stats) {
         std::array<const byte *, kDefaultVectorSize> cache;
@@ -99,17 +92,14 @@ void JoinHashTable::TryCompress() {
         return stats;
       },
       tbb::static_partitioner{});
+}
 
-  // Bail out if not compressible.
-  if (!ShouldCompress(stats)) {
-    return;
-  }
-
-  // Compress.
+void JoinHashTable::CompressBufferedTuples(const JoinHashTable::AnalysisStats &stats) {
   const auto compressed_tuple_size = util::MathUtil::DivRoundUp(64, 8);
   const auto compressed_entry_size = HashTableEntry::ComputeEntrySize(compressed_tuple_size);
   TupleBuffer compressed_tuples(compressed_entry_size, entries_.size(), entries_.get_allocator());
 
+  const std::size_t batch = kDefaultVectorSize;
   tbb::parallel_for(
       tbb::blocked_range<uint64_t>(0, entries_.size(), batch),
       [&](const auto &range) {
@@ -133,6 +123,22 @@ void JoinHashTable::TryCompress() {
       tbb::static_partitioner{});
 
   entries_ = std::move(compressed_tuples);
+}
+
+void JoinHashTable::TryCompress() {
+  TPL_ASSERT(!IsBuilt(), "Cannot compress after hash table is already built!");
+
+  // If compression isn't enable, bail out.
+  if (!CompressionSupported()) return;
+
+  // Analyze tuple buffer.
+  const auto stats = AnalyzeBufferedTuples();
+
+  // Bail out if not compressible.
+  if (!ShouldCompress(stats)) return;
+
+  // Compress.
+  CompressBufferedTuples(stats);
 }
 
 void JoinHashTable::BuildChainingHashTable() {
