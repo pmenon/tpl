@@ -81,24 +81,37 @@ class JoinHashTable {
     std::size_t NumCols() const noexcept { return bits_.size(); }
 
     /** @return The (current) number of bits required for the column at the given index. */
-    uint8_t BitsForCol(std::size_t idx) const noexcept { return bits_[idx]; }
+    uint16_t BitsForCol(std::size_t idx) const noexcept { return bits_[idx]; }
 
     /** Set the bits for a given column. */
-    void SetBitsForCol(std::size_t idx, uint8_t b) noexcept { bits_[idx] = b; }
+    void SetBitsForCol(std::size_t idx, uint16_t b) noexcept { bits_[idx] = b; }
 
     /** Merge the given stats structure with this. */
     void Merge(const AnalysisStats &other) {
-      TPL_ASSERT(NumCols() == other.NumCols(), "Mismatched columns!");
-      for (uint32_t idx = 0, n = NumCols(); idx < n; idx++) {
-        bits_[idx] = std::max(bits_[idx], other.bits_[idx]);
+      SetNumCols(other.NumCols());  // Blindly set column count.
+      for (uint32_t i = 0; i < bits_.size(); i++) {
+        bits_[i] = std::max(bits_[i], other.bits_[i]);
       }
     }
 
     /** @return The total number of bits for all columns. */
     uint32_t TotalNumBits() const { return std::accumulate(bits_.begin(), bits_.end(), 0u); }
 
+    /** @return This statistics structure after merging the provided stats. */
+    AnalysisStats &operator+=(const AnalysisStats &other) {
+      Merge(other);
+      return *this;
+    }
+
+    /** @return A new statistics structure that merges this and the provided stats. */
+    AnalysisStats operator+(const AnalysisStats &other) const {
+      AnalysisStats result = *this;
+      result += other;
+      return result;
+    }
+
    private:
-    std::vector<uint8_t> bits_;  // Number of bits for each column.
+    std::vector<uint16_t> bits_;  // Number of bits for each column.
   };
 
   /** The structure used to materialized build tuples. */
@@ -182,10 +195,10 @@ class JoinHashTable {
   /**
    * Merge all thread-local hash tables stored in the state contained into this table. Perform the
    * merge in parallel.
-   * @param thread_state_container The container for all thread-local tables.
+   * @param r The container for all thread-local tables.
    * @param jht_offset The offset in the state where the hash table is.
    */
-  void MergeParallel(const ThreadStateContainer *thread_state_container, std::size_t jht_offset);
+  void MergeParallel(const ThreadStateContainer *r, std::size_t jht_offset);
 
   /**
    * @return The total number of bytes used to materialize tuples. This excludes space required for
@@ -269,9 +282,13 @@ class JoinHashTable {
   void LookupBatchInChainingHashTable(const Vector &hashes, Vector *results) const;
   void LookupBatchInConciseHashTable(const Vector &hashes, Vector *results) const;
 
-  // Merge the source hash table (which isn't built yet) into this one
+  // Merge the source hash table (which isn't built yet) into this one.
   template <bool Concurrent>
   void MergeIncomplete(JoinHashTable *source);
+
+  // Try to compress thread-local hash tables.
+  // Called during parallel build.
+  void TryCompressParallel(const std::vector<JoinHashTable *> &t) const;
 
  private:
   // The optional analysis pass.

@@ -3,6 +3,7 @@
 #include <limits>
 #include <queue>
 #include <random>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -73,55 +74,59 @@ bool JoinHashTable::ShouldCompress(const JoinHashTable::AnalysisStats &stats) co
 }
 
 JoinHashTable::AnalysisStats JoinHashTable::AnalyzeBufferedTuples() const {
-  const std::size_t batch = kDefaultVectorSize;
   return tbb::parallel_reduce(
-      tbb::blocked_range<uint64_t>(0, entries_.size(), batch), AnalysisStats(),
-      [&](const auto &range, auto stats) {
+      tbb::blocked_range<uint64_t>(0, entries_.size(), kDefaultVectorSize), AnalysisStats(),
+      [&](const auto &range, auto init) {
+        // The running statistics structure.
+        AnalysisStats stats = std::move(init);
+        // A cache of tuple pointers.
         std::array<const byte *, kDefaultVectorSize> cache;
+        // Iterate range in chunks of 2048 (i.e., kDefaultVectorSize).
+        // Do this to amortize function call overhead to analysis code.
         for (uint64_t i = range.begin(), n = range.end(); i < n; i += kDefaultVectorSize) {
           const auto num_rows = std::min(n - i, static_cast<uint64_t>(kDefaultVectorSize));
-          for (uint64_t j = 0; j < num_rows; j++)
-            cache[j] = reinterpret_cast<const HashTableEntry *>(entries_[i])->payload;
+          for (uint64_t j = 0; j < num_rows; j++) {
+            cache[j] = reinterpret_cast<const HashTableEntry *>(entries_[i + j])->payload;
+          }
+          // Perform analysis on the cached chunk!
           analysis_pass_(num_rows, cache.data(), &stats);
         }
         return stats;
       },
-      [](auto &lhs, auto &rhs) {
-        AnalysisStats stats = lhs;
-        stats.Merge(rhs);
-        return stats;
-      },
-      tbb::static_partitioner{});
+      std::plus<>{}, tbb::static_partitioner{});
 }
 
 void JoinHashTable::CompressBufferedTuples(const JoinHashTable::AnalysisStats &stats) {
-  const auto compressed_tuple_size = util::MathUtil::DivRoundUp(64, 8);
+  const auto compressed_tuple_size = util::MathUtil::DivRoundUp(stats.TotalNumBits(), 8);
   const auto compressed_entry_size = HashTableEntry::ComputeEntrySize(compressed_tuple_size);
   TupleBuffer compressed_tuples(compressed_entry_size, entries_.size(), entries_.get_allocator());
 
-  const std::size_t batch = kDefaultVectorSize;
   tbb::parallel_for(
-      tbb::blocked_range<uint64_t>(0, entries_.size(), batch),
+      tbb::blocked_range<uint64_t>(0, entries_.size(), kDefaultVectorSize),
       [&](const auto &range) {
-        std::array<const byte *, kDefaultVectorSize> row_cache;
-        std::array<byte *, kDefaultVectorSize> compr_row_cache;
+        // A cache of input (raw) and output (compressed) tuples.
+        std::array<const byte *, kDefaultVectorSize> in_cache;
+        std::array<byte *, kDefaultVectorSize> out_cache;
+        // Iterate range in chunks of 2048 (i.e., kDefaultVectorSize).
+        // Do this to amortize function call overhead to analysis code.
         for (uint64_t i = range.begin(), n = range.end(); i < n; i += kDefaultVectorSize) {
           const auto num_rows = std::min(n - i, static_cast<uint64_t>(kDefaultVectorSize));
           for (uint64_t j = 0; j < num_rows; j++) {
-            auto in_entry = reinterpret_cast<const HashTableEntry *>(entries_[i]);
-            auto out_entry = reinterpret_cast<HashTableEntry *>(compressed_tuples[i]);
+            auto in_entry = reinterpret_cast<const HashTableEntry *>(entries_[i + j]);
+            auto out_entry = reinterpret_cast<HashTableEntry *>(compressed_tuples[i + j]);
             // Copy entry header.
             *out_entry = *in_entry;
             // Cache payload pointers.
-            row_cache[j] = in_entry->payload;
-            compr_row_cache[j] = out_entry->payload;
+            in_cache[j] = in_entry->payload;
+            out_cache[j] = out_entry->payload;
           }
-          // Compress!
-          compress_pass_(num_rows, row_cache.data(), compr_row_cache.data());
+          // Compress cached chunk!
+          compress_pass_(num_rows, in_cache.data(), out_cache.data());
         }
       },
       tbb::static_partitioner{});
 
+  // Swap in compressed tuples.
   entries_ = std::move(compressed_tuples);
 }
 
@@ -139,6 +144,38 @@ void JoinHashTable::TryCompress() {
 
   // Compress.
   CompressBufferedTuples(stats);
+}
+
+void JoinHashTable::TryCompressParallel(const std::vector<JoinHashTable *> &tables) const {
+  TPL_ASSERT(!tables.empty(), "Must be non-empty!");
+
+  // Bail out if compression isn't supported in any of the provided tables.
+  if (std::ranges::any_of(tables, [](auto t) { return !t->CompressionSupported(); })) return;
+
+  // The analysis and compression functions must be the same for all tables!
+  TPL_ASSERT(std::ranges::all_of(tables,
+                                 [&](auto t) {
+                                   return t->analysis_pass_ == tables[0]->analysis_pass_ &&
+                                          t->compress_pass_ == tables[0]->compress_pass_;
+                                 }),
+             "All hash tables must use the same analysis and compression functions!");
+
+  // Find suitable compression plan.
+  using IterType = std::vector<JoinHashTable *>::const_iterator;
+  const auto stats = tbb::parallel_reduce(
+      tbb::blocked_range<IterType>(tables.begin(), tables.end()), AnalysisStats(),
+      [](const auto &range, auto init) {
+        auto stats = std::move(init);
+        for (auto t : range) stats += t->AnalyzeBufferedTuples();
+        return stats;
+      },
+      std::plus<>{}, tbb::static_partitioner{});
+
+  // Bail out if compression would be shitty.
+  if (!ShouldCompress(stats)) return;
+
+  // Do it.
+  tbb::parallel_for_each(tables, [&stats](auto t) { t->CompressBufferedTuples(stats); });
 }
 
 void JoinHashTable::BuildChainingHashTable() {
@@ -640,9 +677,6 @@ void JoinHashTable::MergeIncomplete(JoinHashTable *source) {
   TPL_ASSERT(source != nullptr, "Source table is null");
   TPL_ASSERT(!source->UsingConciseHashTable(), "Merging incomplete concise tables not supported");
 
-  // Attempt to compress.
-  source->TryCompress();
-
   // Bulk-load all entries in the source table into our hash table.
   chaining_hash_table_.InsertBatch<Concurrent>(&source->entries_);
 
@@ -674,24 +708,22 @@ void JoinHashTable::MergeParallel(const ThreadStateContainer *thread_state_conta
   util::Timer<std::milli> timer;
   timer.Start();
 
+  // Try compression, if suitable.
+  TryCompressParallel(tl_join_tables);
+
+  // Now merge data.
   const bool use_serial_build = num_elem_estimate < kDefaultMinSizeForParallelMerge;
   if (use_serial_build) {
-    // TODO(pmenon): Switch to parallel-mode if estimate is wrong.
-    LOG_DEBUG("JHT: Estimated {} elements < {} element parallel threshold. Using serial merge.",
-              num_elem_estimate, kDefaultMinSizeForParallelMerge);
-    for (auto source : tl_join_tables) {
-      MergeIncomplete<false>(source);
-    }
+    // TODO(pmenon): Switch to parallel if estimate is wrong.
+    std::ranges::for_each(tl_join_tables, [this](auto source) { MergeIncomplete<false>(source); });
   } else {
-    LOG_DEBUG("JHT: Estimated {} elements >= {} element parallel threshold. Using parallel merge.",
-              num_elem_estimate, kDefaultMinSizeForParallelMerge);
     tbb::parallel_for_each(tl_join_tables, [this](auto source) { MergeIncomplete<true>(source); });
   }
 
   timer.Stop();
 
   const double tps = (chaining_hash_table_.GetElementCount() / timer.GetElapsed()) / 1000.0;
-  LOG_DEBUG("JHT: {} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
+  LOG_DEBUG("{} merged {} JHTs. Estimated {}, actual {}. Time: {:.2f} ms ({:.2f} mtps)",
             use_serial_build ? "Serial" : "Parallel", tl_join_tables.size(), num_elem_estimate,
             chaining_hash_table_.GetElementCount(), timer.GetElapsed(), tps);
 
