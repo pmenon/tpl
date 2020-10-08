@@ -10,8 +10,8 @@ namespace tpl::ast {
 namespace {
 
 /**
- * Visitor class that walks a type hierarchy tree with the purpose of
- * pretty-printing to an injected output stream.
+ * Visitor class that walks a type hierarchy tree with the purpose of pretty-printing to an injected
+ * output stream.
  */
 class TypePrinter : public TypeVisitor<TypePrinter> {
  public:
@@ -30,9 +30,7 @@ class TypePrinter : public TypeVisitor<TypePrinter> {
   llvm::raw_ostream &out_;
 };
 
-void tpl::ast::TypePrinter::VisitBuiltinType(const BuiltinType *type) {
-  os() << type->GetTplName();
-}
+void TypePrinter::VisitBuiltinType(const BuiltinType *type) { os() << type->GetTplName(); }
 
 void TypePrinter::VisitFunctionType(const FunctionType *type) {
   os() << "(";
@@ -79,7 +77,7 @@ void TypePrinter::VisitArrayType(const ArrayType *type) {
   Visit(type->GetElementType());
 }
 
-void tpl::ast::TypePrinter::VisitMapType(const MapType *type) {
+void TypePrinter::VisitMapType(const MapType *type) {
   os() << "map[";
   Visit(type->GetKeyType());
   os() << "]";
