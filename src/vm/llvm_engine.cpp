@@ -95,7 +95,7 @@ class LLVMEngine::MCMemoryManager : public llvm::SectionMemoryManager {
 // TPL Type to LLVM Type
 // ---------------------------------------------------------
 
-/// A handy class that maps TPL types to LLVM types
+/// A handy class that maps TPL types to LLVM types.
 class LLVMEngine::TypeMap {
  public:
   explicit TypeMap(llvm::Module *module) : module_(module) {
@@ -152,12 +152,10 @@ class LLVMEngine::TypeMap {
 };
 
 llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
-  //
   // First, lookup the type in the cache. We do the lookup by performing a
   // try_emplace() in order to save a second lookup in the case when the type
-  // does not exist in the cache. If the type is uncached, we can directly
+  // does not exist in the cache. If the type is un-cached, we can directly
   // update the returned iterator rather than performing another lookup.
-  //
 
   auto [iter, inserted] = type_map_.try_emplace(type->ToString(), nullptr);
 
@@ -165,10 +163,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     return iter->second;
   }
 
-  //
-  // The type isn't cached, construct it now
-  //
-
+  // The type isn't cached, construct it now.
   llvm::Type *llvm_type = nullptr;
   switch (type->GetTypeId()) {
     case ast::Type::TypeId::StringType: {
@@ -208,29 +203,24 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     }
   }
 
-  //
-  // Update the cache with the constructed type
-  //
-
+  // Update the cache with the constructed type.
   TPL_ASSERT(llvm_type != nullptr, "No LLVM type found!");
-
   iter->second = llvm_type;
-
   return llvm_type;
 }
 
 llvm::Type *LLVMEngine::TypeMap::GetLLVMTypeForBuiltin(const ast::BuiltinType *builtin_type) {
   TPL_ASSERT(!builtin_type->IsPrimitive(), "Primitive types should be cached!");
 
-  // For the builtins, we perform a lookup using the C++ name
+  // For the builtins, we perform a lookup using the C++ name.
   const std::string name = builtin_type->GetCppName();
 
-  // Try "struct" prefix
+  // Try "struct" prefix.
   if (llvm::Type *type = module_->getTypeByName("struct." + name)) {
     return type;
   }
 
-  // Try "class" prefix
+  // Try "class" prefix.
   if (llvm::Type *type = module_->getTypeByName("class." + name)) {
     return type;
   }
@@ -240,41 +230,52 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMTypeForBuiltin(const ast::BuiltinType *b
 }
 
 llvm::StructType *LLVMEngine::TypeMap::GetLLVMStructType(const ast::StructType *struct_type) {
-  // Collect the fields here
+  // Collect struct field types here.
   llvm::SmallVector<llvm::Type *, 8> fields;
 
+  std::size_t struct_size = 0;
   for (const auto &field : struct_type->GetFields()) {
-    fields.push_back(GetLLVMType(field.type));
+    llvm::Type *member_type = GetLLVMType(field.type);
+
+    // TPL structs include padding that we need to replicate here.
+    const std::size_t field_size = field.type->GetSize();
+    const std::size_t field_alignment = field.type->GetAlignment();
+    if (!util::MathUtil::IsAligned(struct_size, field_alignment)) {
+      const std::size_t aligned_size = util::MathUtil::AlignTo(struct_size, field_alignment);
+      fields.push_back(llvm::ArrayType::get(Int8Type(), aligned_size - struct_size));
+      struct_size = aligned_size;
+    }
+
+    struct_size += field_size;
+    fields.push_back(member_type);
   }
 
-  return llvm::StructType::create(fields);
+  llvm::StructType *type = llvm::StructType::create(fields, "struct.TPL");
+  TPL_ASSERT(
+      struct_type->GetSize() == module_->getDataLayout().getStructLayout(type)->getSizeInBytes(),
+      "Mismatched TPL and LLVM struct sizes!");
+  return type;
 }
 
 llvm::FunctionType *LLVMEngine::TypeMap::GetLLVMFunctionType(const ast::FunctionType *func_type) {
-  // Collect parameter types here
+  // Collect parameter types here.
   llvm::SmallVector<llvm::Type *, 8> param_types;
 
-  //
   // If the function has an indirect return value, insert it into the parameter
   // list as the hidden first argument, and setup the function to return void.
   // Otherwise, the return type of the LLVM function is the same as the TPL
   // function.
-  //
 
   llvm::Type *return_type = nullptr;
   if (FunctionHasIndirectReturn(func_type)) {
     llvm::Type *rv_param = GetLLVMType(func_type->GetReturnType()->PointerTo());
     param_types.push_back(rv_param);
-    // Return type of the function is void
     return_type = VoidType();
   } else {
     return_type = GetLLVMType(func_type->GetReturnType());
   }
 
-  //
-  // Now the formal parameters
-  //
-
+  // Now the formal parameters.
   for (const auto &param_info : func_type->GetParams()) {
     llvm::Type *param_type = GetLLVMType(param_info.type);
     param_types.push_back(param_type);
