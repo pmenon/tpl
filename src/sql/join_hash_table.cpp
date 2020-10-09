@@ -1,8 +1,6 @@
 #include "sql/join_hash_table.h"
 
 #include <limits>
-#include <ranges>
-#include <utility>
 #include <vector>
 
 // For HLL unique key estimations.
@@ -76,7 +74,7 @@ JoinHashTable::AnalysisStats JoinHashTable::AnalyzeBufferedTuples() const {
         // The running statistics structure.
         AnalysisStats stats = std::move(init);
         // A cache of tuple pointers.
-        std::array<const byte *, kDefaultVectorSize> cache;
+        const byte *cache[kDefaultVectorSize];
         // Iterate range in chunks of 2048 (i.e., kDefaultVectorSize).
         // Do this to amortize function call overhead to analysis code.
         for (uint64_t i = range.begin(), n = range.end(); i < n; i += kDefaultVectorSize) {
@@ -85,7 +83,7 @@ JoinHashTable::AnalysisStats JoinHashTable::AnalyzeBufferedTuples() const {
             cache[j] = reinterpret_cast<const HashTableEntry *>(entries_[i + j])->payload;
           }
           // Perform analysis on the cached chunk!
-          analysis_pass_(num_rows, cache.data(), &stats);
+          analysis_pass_(num_rows, cache, &stats);
         }
         return stats;
       },
@@ -101,8 +99,8 @@ void JoinHashTable::CompressBufferedTuples(const JoinHashTable::AnalysisStats &s
       tbb::blocked_range<uint64_t>(0, entries_.size(), kDefaultVectorSize),
       [&](const auto &range) {
         // A cache of input (raw) and output (compressed) tuples.
-        std::array<const byte *, kDefaultVectorSize> in_cache;
-        std::array<byte *, kDefaultVectorSize> out_cache;
+        const byte *input_cache[kDefaultVectorSize];
+        byte *output_cache[kDefaultVectorSize];
         // Iterate range in chunks of 2048 (i.e., kDefaultVectorSize).
         // Do this to amortize function call overhead to analysis code.
         for (uint64_t i = range.begin(), n = range.end(); i < n; i += kDefaultVectorSize) {
@@ -113,11 +111,11 @@ void JoinHashTable::CompressBufferedTuples(const JoinHashTable::AnalysisStats &s
             // Copy entry header.
             *out_entry = *in_entry;
             // Cache payload pointers.
-            in_cache[j] = in_entry->payload;
-            out_cache[j] = out_entry->payload;
+            input_cache[j] = in_entry->payload;
+            output_cache[j] = out_entry->payload;
           }
           // Compress cached chunk!
-          compress_pass_(num_rows, in_cache.data(), out_cache.data());
+          compress_pass_(num_rows, input_cache, output_cache);
         }
       },
       tbb::static_partitioner{});
