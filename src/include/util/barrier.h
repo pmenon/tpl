@@ -1,7 +1,7 @@
 #pragma once
 
-#include <condition_variable>
-#include <mutex>
+#include <condition_variable>  // NOLINT
+#include <mutex>               // NOLINT
 
 #include "common/common.h"
 #include "common/macros.h"
@@ -60,16 +60,16 @@ class Barrier {
   }
 
  private:
-  // The mutex used to protect all fields
+  // The mutex used to protect all fields.
   mutable std::mutex mutex_;
-  // The condition variable threads wait on
+  // The condition variable threads wait on.
   std::condition_variable cv_;
 
-  // The current generation
+  // The current generation.
   uint32_t generation_;
-  // The current outstanding count
+  // The current outstanding count.
   uint32_t count_;
-  // The value to reset the count to when rolling into a new generation
+  // The value to reset the count to when rolling into a new generation.
   uint32_t reset_value_;
 };
 

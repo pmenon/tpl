@@ -10,7 +10,7 @@
 #pragma once
 
 #include <limits>
-#include <mutex>
+#include <mutex>  // NOLINT
 
 namespace tpl::util {
 

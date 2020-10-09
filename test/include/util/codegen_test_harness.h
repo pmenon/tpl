@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "util/sql_test_harness.h"
 
 #include "sql/codegen/executable_query.h"

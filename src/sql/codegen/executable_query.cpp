@@ -65,7 +65,7 @@ void ExecutableQuery::Run(ExecutionContext *exec_ctx, vm::ExecutionMode mode) {
   bool found_init = main_module_->GetFunction(init_fn_, mode, init);
   bool found_destroy = main_module_->GetFunction(tear_down_fn_, mode, tear_down);
   // clang-format off
-  (void)found_init; (void)found_destroy; // Force use.
+  (void)found_init; (void)found_destroy;  // Force use.
   // clang-format on
   TPL_ASSERT(found_init, "Query initialization function does not exist in module!");
   TPL_ASSERT(found_destroy, "Query tear-down function does not exist in module!");

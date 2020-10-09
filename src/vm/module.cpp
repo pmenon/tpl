@@ -3,7 +3,7 @@
 #include <memory>
 #include <mutex>  // NOLINT
 #include <string>
-#include <thread>
+#include <thread>  // NOLINT
 #include <utility>
 
 #define XBYAK_NO_OP_NAMES

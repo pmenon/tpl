@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "sql/planner/expression_maker.h"
 #include "sql/planner/plannodes/output_schema.h"
 

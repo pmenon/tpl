@@ -1,14 +1,14 @@
 #include "sql/sorter.h"
 
 #include <algorithm>
+#include <numeric>
 #include <queue>
-#include <utility>
 #include <vector>
 
+// For actual sorting.
 #include "ips4o/ips4o.hpp"
 
-#include "llvm/ADT/STLExtras.h"
-
+// For parallel sorting.
 #include "tbb/parallel_for_each.h"
 
 #include "logging/logger.h"
@@ -152,7 +152,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
   std::vector<Sorter *> tl_sorters;
   thread_state_container->CollectThreadLocalStateElementsAs(&tl_sorters, sorter_offset);
-  llvm::erase_if(tl_sorters, [](const Sorter *sorter) { return sorter->IsEmpty(); });
+  std::erase_if(tl_sorters, [](const auto sorter) { return sorter->IsEmpty(); });
 
   // If there's nothing to sort, exit.
   if (tl_sorters.empty()) {
@@ -162,7 +162,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
   const uint64_t num_tuples = std::accumulate(
       tl_sorters.begin(), tl_sorters.end(), uint64_t(0),
-      [](const auto partial, const auto *sorter) { return partial + sorter->GetTupleCount(); });
+      [](const auto partial, const auto sorter) { return partial + sorter->GetTupleCount(); });
 
   // If the total number of tuples across **ALL** thread-local sorter instances is less than
   // kMinTuplesForParallelSort, we execute a single-threaded sort. Parallel sorting fewer than this
@@ -175,10 +175,10 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container,
 
     // Reserve room for all tuples
     tuples_.reserve(num_tuples);
-    for (auto *tl_sorter : tl_sorters) {
-      tuples_.insert(tuples_.end(), tl_sorter->tuples_.begin(), tl_sorter->tuples_.end());
-      owned_tuples_.emplace_back(std::move(tl_sorter->tuple_storage_));
-      tl_sorter->tuples_.clear();
+    for (auto sorter : tl_sorters) {
+      tuples_.insert(tuples_.end(), sorter->tuples_.begin(), sorter->tuples_.end());
+      owned_tuples_.emplace_back(std::move(sorter->tuple_storage_));
+      sorter->tuples_.clear();
     }
 
     // Single-threaded sort
