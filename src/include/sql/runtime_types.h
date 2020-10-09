@@ -605,7 +605,7 @@ class VarlenEntry {
 
  private:
   // The size of the contents.
-  int32_t size_;
+  uint32_t size_;
   // The inlined prefix of the contents.
   byte prefix_[kPrefixLength];
   // Pointer to the content when not inlined.
