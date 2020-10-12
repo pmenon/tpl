@@ -171,8 +171,9 @@ void ImportTable(const std::string &table_name, Table *table, const std::string 
 
 }  // namespace
 
-void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &data_dir) {
-  LOG_INFO("Loading TPC-H tables ...");
+void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &data_dir,
+                                        bool compress) {
+  LOG_INFO("Loading TPC-H {} tables ...", compress ? "compressed" : "");
 
   // -------------------------------------------------------
   //
@@ -181,7 +182,6 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   // -------------------------------------------------------
 
   {
-    auto table_name = std::string("customer");
     auto schema = MakeSchema({
         {"c_custkey", IntegerType::InstanceNonNullable()},
         {"c_name", VarcharType::InstanceNonNullable(25)},
@@ -192,8 +192,8 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
         {"c_mktsegment", VarcharType::InstanceNonNullable(10)},
         {"c_comment", VarcharType::InstanceNonNullable(117)},
     });
-    auto table = CreateTable(catalog, table_name, std::move(schema));
-    ImportTable(table_name, table, data_dir);
+    auto table = CreateTable(catalog, "tpch.customer", std::move(schema));
+    ImportTable("customer", table, data_dir);
   }
 
   // -------------------------------------------------------
@@ -203,7 +203,6 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   // -------------------------------------------------------
 
   {
-    auto table_name = "part";
     auto schema = MakeSchema({{"p_partkey", IntegerType::InstanceNonNullable()},
                               {"p_name", VarcharType::InstanceNonNullable(55)},
                               {"p_mfgr", VarcharType::InstanceNonNullable(25)},
@@ -213,8 +212,8 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
                               {"p_container", VarcharType::InstanceNonNullable(10)},
                               {"p_retailprice", RealType::InstanceNonNullable()},
                               {"p_comment", VarcharType::InstanceNonNullable(23)}});
-    auto table = CreateTable(catalog, table_name, std::move(schema));
-    ImportTable(table_name, table, data_dir);
+    auto table = CreateTable(catalog, "tpch.part", std::move(schema));
+    ImportTable("part", table, data_dir);
   }
 
   // -------------------------------------------------------
@@ -224,7 +223,6 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   // -------------------------------------------------------
 
   {
-    auto table_name = "supplier";
     auto schema = MakeSchema({{"s_suppkey", IntegerType::InstanceNonNullable()},
                               {"s_name", VarcharType::InstanceNonNullable(25)},
                               {"s_address", VarcharType::InstanceNonNullable(40)},
@@ -232,8 +230,8 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
                               {"s_phone", VarcharType::InstanceNonNullable(15)},
                               {"s_acctbal", RealType::InstanceNonNullable()},
                               {"s_comment", VarcharType::InstanceNonNullable(101)}});
-    auto table = CreateTable(catalog, table_name, std::move(schema));
-    ImportTable(table_name, table, data_dir);
+    auto table = CreateTable(catalog, "tpch.supplier", std::move(schema));
+    ImportTable("supplier", table, data_dir);
   }
 
   // -------------------------------------------------------
@@ -243,14 +241,13 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   // -------------------------------------------------------
 
   {
-    auto table_name = "partsupp";
     auto schema = MakeSchema({{"ps_partkey", IntegerType::InstanceNonNullable()},
                               {"ps_suppkey", IntegerType::InstanceNonNullable()},
                               {"ps_availqty", IntegerType::InstanceNonNullable()},
                               {"ps_supplycost", RealType::InstanceNonNullable()},
                               {"ps_comment", VarcharType::InstanceNonNullable(199)}});
-    auto table = CreateTable(catalog, table_name, std::move(schema));
-    ImportTable(table_name, table, data_dir);
+    auto table = CreateTable(catalog, "tpch.partsupp", std::move(schema));
+    ImportTable("partsupp", table, data_dir);
   }
 
   // -------------------------------------------------------
@@ -260,7 +257,6 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   // -------------------------------------------------------
 
   {
-    auto table_name = "orders";
     auto schema = MakeSchema({{"o_orderkey", IntegerType::InstanceNonNullable()},
                               {"o_custkey", IntegerType::InstanceNonNullable()},
                               {"o_orderstatus", VarcharType::InstanceNonNullable(1)},
@@ -270,8 +266,8 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
                               {"o_clerk", VarcharType::InstanceNonNullable(15)},
                               {"o_shippriority", IntegerType::InstanceNonNullable()},
                               {"o_comment", VarcharType::InstanceNonNullable(79)}});
-    auto table = CreateTable(catalog, table_name, std::move(schema));
-    ImportTable(table_name, table, data_dir);
+    auto table = CreateTable(catalog, "tpch.orders", std::move(schema));
+    ImportTable("orders", table, data_dir);
   }
 
   // -------------------------------------------------------
@@ -281,7 +277,6 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   // -------------------------------------------------------
 
   {
-    auto table_name = "lineitem";
     auto schema = MakeSchema({{"l_orderkey", IntegerType::InstanceNonNullable()},
                               {"l_partkey", IntegerType::InstanceNonNullable()},
                               {"l_suppkey", IntegerType::InstanceNonNullable()},
@@ -299,8 +294,8 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
                               {"l_shipmode", VarcharType::InstanceNonNullable(10)},
                               {"l_comment", VarcharType::InstanceNonNullable(44)}});
 
-    auto table = CreateTable(catalog, table_name, std::move(schema));
-    ImportTable(table_name, table, data_dir);
+    auto table = CreateTable(catalog, "tpch.lineitem", std::move(schema));
+    ImportTable("lineitem", table, data_dir);
   }
 
   // -------------------------------------------------------
@@ -310,13 +305,12 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   // -------------------------------------------------------
 
   {
-    auto table_name = "nation";
     auto schema = MakeSchema({{"n_nationkey", IntegerType::InstanceNonNullable()},
                               {"n_name", VarcharType::InstanceNonNullable(25)},
                               {"n_regionkey", IntegerType::InstanceNonNullable()},
                               {"n_comment", VarcharType::InstanceNonNullable(152)}});
-    auto table = CreateTable(catalog, table_name, std::move(schema));
-    ImportTable(table_name, table, data_dir);
+    auto table = CreateTable(catalog, "tpch.nation", std::move(schema));
+    ImportTable("nation", table, data_dir);
   }
 
   // -------------------------------------------------------
@@ -326,12 +320,11 @@ void TableGenerator::GenerateTPCHTables(Catalog *catalog, const std::string &dat
   // -------------------------------------------------------
 
   {
-    auto table_name = "region";
     auto schema = MakeSchema({{"r_regionkey", IntegerType::InstanceNonNullable()},
                               {"r_name", VarcharType::InstanceNonNullable(25)},
                               {"r_comment", VarcharType::InstanceNonNullable(152)}});
-    auto table = CreateTable(catalog, table_name, std::move(schema));
-    ImportTable(table_name, table, data_dir);
+    auto table = CreateTable(catalog, "tpch.region", std::move(schema));
+    ImportTable("region", table, data_dir);
   }
 
   LOG_INFO("Completed loading TPC-H tables ...");

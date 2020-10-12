@@ -21,8 +21,10 @@ class TableGenerator {
    * Generate all TPC-H tables.
    * @param catalog The catalog instance to insert tables into.
    * @param data_dir The directory containing table data.
+   * @param compress Should table data be compressed after loading?
    */
-  static void GenerateTPCHTables(sql::Catalog *catalog, const std::string &data_dir);
+  static void GenerateTPCHTables(sql::Catalog *catalog, const std::string &data_dir,
+                                 bool compress = false);
 
   /**
    * Generate all Star-Schema Benchmark tables.

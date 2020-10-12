@@ -33,7 +33,7 @@ namespace tpl::sql::codegen {
 namespace {
 
 // The execution mode.
-constexpr auto kExecutionMode = vm::ExecutionMode::Interpret;
+constexpr auto kExecutionMode = vm::ExecutionMode::Compiled;
 
 // Change this path to where your TPC-H data is.
 constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-0.1";
@@ -56,7 +56,7 @@ class TpchBenchmark : public benchmark::Fixture {
 BENCHMARK_DEFINE_F(TpchBenchmark, Q1)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
-  sql::Table *l_table = accessor->LookupTableByName("lineitem");
+  sql::Table *l_table = accessor->LookupTableByName("tpch.lineitem");
   const auto &l_schema = l_table->GetSchema();
   // Scan the table
   std::unique_ptr<planner::AbstractPlanNode> l_seq_scan;
@@ -212,10 +212,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q4)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
   // Orders.
-  sql::Table *o_table = accessor->LookupTableByName("orders");
+  sql::Table *o_table = accessor->LookupTableByName("tpch.orders");
   const auto &o_schema = o_table->GetSchema();
   // Lineitem.
-  sql::Table *l_table = accessor->LookupTableByName("lineitem");
+  sql::Table *l_table = accessor->LookupTableByName("tpch.lineitem");
   const auto &l_schema = l_table->GetSchema();
   // Scan orders
   std::unique_ptr<planner::AbstractPlanNode> o_seq_scan;
@@ -355,22 +355,22 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
   // Region.
-  sql::Table *r_table = accessor->LookupTableByName("region");
+  sql::Table *r_table = accessor->LookupTableByName("tpch.region");
   const auto &r_schema = r_table->GetSchema();
   // Nation.
-  sql::Table *n_table = accessor->LookupTableByName("nation");
+  sql::Table *n_table = accessor->LookupTableByName("tpch.nation");
   const auto &n_schema = n_table->GetSchema();
   // Customer.
-  sql::Table *c_table = accessor->LookupTableByName("customer");
+  sql::Table *c_table = accessor->LookupTableByName("tpch.customer");
   const auto &c_schema = c_table->GetSchema();
   // Orders.
-  sql::Table *o_table = accessor->LookupTableByName("orders");
+  sql::Table *o_table = accessor->LookupTableByName("tpch.orders");
   const auto &o_schema = o_table->GetSchema();
   // Lineitem.
-  sql::Table *l_table = accessor->LookupTableByName("lineitem");
+  sql::Table *l_table = accessor->LookupTableByName("tpch.lineitem");
   const auto &l_schema = l_table->GetSchema();
   // Supplier.
-  sql::Table *s_table = accessor->LookupTableByName("supplier");
+  sql::Table *s_table = accessor->LookupTableByName("tpch.supplier");
   const auto &s_schema = s_table->GetSchema();
   // Scan region
   std::unique_ptr<planner::AbstractPlanNode> r_seq_scan;
@@ -723,7 +723,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q6)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
   // Lineitem.
-  sql::Table *l_table = accessor->LookupTableByName("lineitem");
+  sql::Table *l_table = accessor->LookupTableByName("tpch.lineitem");
   const auto &l_schema = l_table->GetSchema();
   // Scan lineitem
   std::unique_ptr<planner::AbstractPlanNode> l_seq_scan;
@@ -804,19 +804,19 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
   // Nation.
-  sql::Table *n_table = accessor->LookupTableByName("nation");
+  sql::Table *n_table = accessor->LookupTableByName("tpch.nation");
   const auto &n_schema = n_table->GetSchema();
   // Customer.
-  sql::Table *c_table = accessor->LookupTableByName("customer");
+  sql::Table *c_table = accessor->LookupTableByName("tpch.customer");
   const auto &c_schema = c_table->GetSchema();
   // Orders.
-  sql::Table *o_table = accessor->LookupTableByName("orders");
+  sql::Table *o_table = accessor->LookupTableByName("tpch.orders");
   const auto &o_schema = o_table->GetSchema();
   // Lineitem.
-  sql::Table *l_table = accessor->LookupTableByName("lineitem");
+  sql::Table *l_table = accessor->LookupTableByName("tpch.lineitem");
   const auto &l_schema = l_table->GetSchema();
   // Supplier.
-  sql::Table *s_table = accessor->LookupTableByName("supplier");
+  sql::Table *s_table = accessor->LookupTableByName("tpch.supplier");
   const auto &s_schema = s_table->GetSchema();
   // Scan nation1
   std::unique_ptr<planner::AbstractPlanNode> n1_seq_scan;
@@ -1223,13 +1223,13 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
   // Supplier.
-  sql::Table *s_table = accessor->LookupTableByName("supplier");
+  sql::Table *s_table = accessor->LookupTableByName("tpch.supplier");
   const auto &s_schema = s_table->GetSchema();
   // Partsupp.
-  sql::Table *ps_table = accessor->LookupTableByName("partsupp");
+  sql::Table *ps_table = accessor->LookupTableByName("tpch.partsupp");
   const auto &ps_schema = ps_table->GetSchema();
   // Nation.
-  sql::Table *n_table = accessor->LookupTableByName("nation");
+  sql::Table *n_table = accessor->LookupTableByName("tpch.nation");
   const auto &n_schema = n_table->GetSchema();
 
   std::unique_ptr<planner::AbstractPlanNode> n_seq_scan1;
@@ -1594,13 +1594,13 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
   // Part.
-  sql::Table *p_table = accessor->LookupTableByName("part");
+  sql::Table *p_table = accessor->LookupTableByName("tpch.part");
   const auto &p_schema = p_table->GetSchema();
   // Partsupp.
-  sql::Table *ps_table = accessor->LookupTableByName("partsupp");
+  sql::Table *ps_table = accessor->LookupTableByName("tpch.partsupp");
   const auto &ps_schema = ps_table->GetSchema();
   // Supplier.
-  sql::Table *s_table = accessor->LookupTableByName("supplier");
+  sql::Table *s_table = accessor->LookupTableByName("tpch.supplier");
   const auto &s_schema = s_table->GetSchema();
   // Scan part
   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
@@ -1845,13 +1845,13 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q18)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
   // Customer.
-  sql::Table *c_table = accessor->LookupTableByName("customer");
+  sql::Table *c_table = accessor->LookupTableByName("tpch.customer");
   const auto &c_schema = c_table->GetSchema();
   // Orders.
-  sql::Table *o_table = accessor->LookupTableByName("orders");
+  sql::Table *o_table = accessor->LookupTableByName("tpch.orders");
   const auto &o_schema = o_table->GetSchema();
   // Lineitem.
-  sql::Table *l_table = accessor->LookupTableByName("lineitem");
+  sql::Table *l_table = accessor->LookupTableByName("tpch.lineitem");
   const auto &l_schema = l_table->GetSchema();
   // Scan customer
   std::unique_ptr<planner::AbstractPlanNode> c_seq_scan;
@@ -2150,10 +2150,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
   // Lineitem.
-  sql::Table *l_table = accessor->LookupTableByName("lineitem");
+  sql::Table *l_table = accessor->LookupTableByName("tpch.lineitem");
   const auto &l_schema = l_table->GetSchema();
   // Part.
-  sql::Table *p_table = accessor->LookupTableByName("part");
+  sql::Table *p_table = accessor->LookupTableByName("tpch.part");
   const auto &p_schema = p_table->GetSchema();
   // Lineitem scan
   std::unique_ptr<planner::AbstractPlanNode> l_seq_scan;
