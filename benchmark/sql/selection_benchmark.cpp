@@ -7,7 +7,6 @@
 #include "sql/vector_operations/vector_operations.h"
 #include "sql/vector_projection.h"
 #include "sql/vector_projection_iterator.h"
-#include "util/fast_rand.h"
 
 namespace tpl {
 
