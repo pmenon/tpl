@@ -143,6 +143,19 @@ class ExpressionMaker {
   }
 
   /**
+   * Create a LIKE() expression.
+   */
+  Expression CompareLike(Expression input, Expression s) {
+    return Alloc(std::make_unique<planner::BuiltinFunctionExpression>(
+        ast::Builtin::Like, std::vector<Expression>({input, s}), TypeId::Boolean));
+  }
+
+  /**
+   * Create a NOT LIKE() expression.
+   */
+  Expression CompareNotLike(Expression input, Expression s) { return OpNot(CompareLike(input, s)); }
+
+  /**
    * Create a unary operation expression
    */
   Expression Operator(planner::ExpressionType op_type, sql::TypeId ret_type, Expression child) {
