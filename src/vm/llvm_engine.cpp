@@ -19,6 +19,8 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"

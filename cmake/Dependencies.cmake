@@ -69,11 +69,11 @@ list(APPEND TPL_LINK_LIBS ${JEMALLOC_LIBRARIES})
 # LLVM
 ############################################################
 
-# Look for LLVM 10+
-find_package(LLVM 10.0 REQUIRED CONFIG)
+# Look for LLVM 11+
+find_package(LLVM 11 REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-if (${LLVM_PACKAGE_VERSION} VERSION_LESS "10")
-    message(FATAL_ERROR "LLVM 10 or newer is required.")
+if (${LLVM_PACKAGE_VERSION} VERSION_LESS "11")
+    message(FATAL_ERROR "LLVM 11 or newer is required.")
 endif ()
 llvm_map_components_to_libnames(LLVM_LIBRARIES core mcjit nativecodegen native ipo)
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
@@ -111,7 +111,7 @@ list(APPEND TPL_LINK_LIBS libcount)
 # old to use with TPL.
 ############################################################
 
-set(SUPPORTED_CLANGS "clang++-10" "clang++-9" "clang++-8" "clang++-7")
+set(SUPPORTED_CLANGS "clang++-11" "clang++-10" "clang++-9")
 if (${MACOSX})
     # Because MacOS does some weird Clang versioning, and it isn't available
     # through Homebrew, we add in vanilla "clang++". You won't be running TPL

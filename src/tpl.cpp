@@ -65,7 +65,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
 
   sql::tablegen::TPCHOutputSchemas schemas;
   const sql::planner::OutputSchema *schema = schemas.GetSchema(
-      llvm::sys::path::filename(name).take_until([](char x) { return x == '.'; }));
+      llvm::sys::path::filename(name).take_until([](char x) { return x == '.'; }).str());
   sql::PrintingConsumer consumer(std::cout, schema);
 
   double parse_ms = 0.0,       // Time to parse the source
@@ -261,7 +261,7 @@ static void RunRepl() {
     // Run file?
     if (llvm::StringRef line_ref(line); line_ref.startswith_lower(".run")) {
       auto [_, filename] = line_ref.split(' ');
-      RunFile(filename);
+      RunFile(filename.str());
       continue;
     }
 

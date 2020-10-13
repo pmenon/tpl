@@ -94,7 +94,7 @@ std::string Type::ToString(const Type *type) {
   TypePrinter printer(stream);
   printer.Print(type);
 
-  return buffer.str();
+  return buffer.str().str();
 }
 
 }  // namespace tpl::ast

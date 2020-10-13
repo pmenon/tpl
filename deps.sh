@@ -73,7 +73,7 @@ install_mac() {
   brew ls --versions coreutils || brew install coreutils
   brew ls --versions doxygen || brew install doxygen
   brew ls --versions git || brew install git
-  (brew ls --versions llvm@9 | grep 9) || brew install llvm@9
+  (brew ls --versions llvm@11 | grep 11) || brew install llvm@11
   brew ls --versions jemalloc || brew install jemalloc
   brew ls --versions tbb || brew install tbb
   brew ls --versions ninja || brew install ninja
@@ -85,15 +85,15 @@ install_linux() {
   # Install packages.
   apt-get -y install   \
       build-essential  \
-      clang-tidy-10    \
-      clang-format-10  \
+      clang-tidy-11    \
+      clang-format-11  \
       cmake            \
       doxygen          \
       git              \
       lld              \
       g++-10           \
-      clang-10         \
-      llvm-10          \
+      clang-11         \
+      llvm-11          \
       libjemalloc-dev  \
       libtbb-dev       \
       ninja-build      \
