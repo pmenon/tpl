@@ -35,6 +35,7 @@
 
 #include "ast/type.h"
 #include "logging/logger.h"
+#include "util/timer.h"
 #include "vm/bytecode_module.h"
 #include "vm/bytecode_traits.h"
 
@@ -517,7 +518,7 @@ LLVMEngine::CompiledModuleBuilder::CompiledModuleBuilder(const CompilerOptions &
 
 void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
   for (const auto &local_info : tpl_module_.GetStaticLocalsInfo()) {
-    // The raw data wrapped in a string reference
+    // The raw data wrapped in a string reference.
     llvm::StringRef data_ref(reinterpret_cast<const char *>(
                                  tpl_module_.AccessStaticLocalDataRaw(local_info.GetOffset())),
                              local_info.GetSize());
@@ -525,21 +526,22 @@ void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
     // The constant
     llvm::Constant *string_constant = llvm::ConstantDataArray::getString(*context_, data_ref);
 
-    // The global variable wrapping the constant. It's private to this module, so it does NOT
-    // participate in linking. It also not thread-local since it's shared across all threads. Don't
-    // be alarmed by 'new' here; the module will take care of deleting it.
+    // The global variable wrapping the constant. It's private to this module,
+    // so it does NOT participate in linking. It also not thread-local since
+    // it's shared across all threads. Don't be alarmed by 'new' here; the
+    // module will take care of deleting it.
     auto *global_var = new llvm::GlobalVariable(
         *llvm_module_, string_constant->getType(), true, llvm::GlobalValue::PrivateLinkage,
         string_constant, local_info.GetName(), nullptr, llvm::GlobalVariable::NotThreadLocal);
     global_var->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
-    // Convert the global variable into an i8*
+    // Convert the global variable into an i8*.
     llvm::Constant *zero = llvm::ConstantInt::get(type_map_->Int32Type(), 0);
     llvm::Constant *indices[] = {zero, zero};
     auto result = llvm::ConstantExpr::getInBoundsGetElementPtr(global_var->getValueType(),
                                                                global_var, indices);
 
-    // Cache
+    // Cache.
     static_locals_[local_info.GetOffset()] = result;
   }
 }
@@ -1179,23 +1181,81 @@ void LLVMEngine::Shutdown() { llvm::llvm_shutdown(); }
 
 std::unique_ptr<LLVMEngine::CompiledModule> LLVMEngine::Compile(const BytecodeModule &module,
                                                                 const CompilerOptions &options) {
+  util::Timer<std::milli> timer;
+
+  // -------------------------------------------------------
+  // Load op-code handlers.
+  timer.Start();
   CompiledModuleBuilder builder(options, module);
+  timer.Stop();
+  const double init_module_ms = timer.GetElapsed();
 
+  // -------------------------------------------------------
+  // Declare all globals.
+  timer.Start();
   builder.DeclareStaticLocals();
+  timer.Stop();
+  const double decl_statics_ms = timer.GetElapsed();
 
+  // -------------------------------------------------------
+  // Declare functions.
+  timer.Start();
   builder.DeclareFunctions();
+  timer.Stop();
+  const double decl_funcs_ms = timer.GetElapsed();
 
+  // -------------------------------------------------------
+  // Define functions.
+  timer.Start();
   builder.DefineFunctions();
+  timer.Stop();
+  const double def_funcs_ms = timer.GetElapsed();
 
+  // -------------------------------------------------------
+  // Simplify module.
+  timer.Start();
   builder.Simplify();
+  timer.Stop();
+  const double simplify_ms = timer.GetElapsed();
 
+  // -------------------------------------------------------
+  // Verify module.
+  timer.Start();
   builder.Verify();
+  timer.Stop();
+  const double verify_ms = timer.GetElapsed();
 
+  // -------------------------------------------------------
+  // Optimize module.
+  timer.Start();
   builder.Optimize();
+  timer.Stop();
+  const double optimize_ms = timer.GetElapsed();
 
-  auto compiled_module = builder.Finalize();
+  // -------------------------------------------------------
+  // Finalize module.
+  timer.Start();
+  std::unique_ptr<CompiledModule> compiled_module = builder.Finalize();
+  timer.Stop();
+  const double finalize_ms = timer.GetElapsed();
 
+  // -------------------------------------------------------
+  // Load/Link module.
+  timer.Start();
   compiled_module->Load(module);
+  timer.Stop();
+  const double load_ms = timer.GetElapsed();
+
+  LOG_DEBUG("LLVM Compile Stats:");
+  LOG_DEBUG("  Module Init.     : {:.2f}", init_module_ms);
+  LOG_DEBUG("  Declare Statics  : {:.2f}", decl_statics_ms);
+  LOG_DEBUG("  Declare Funcs.   : {:.2f}", decl_funcs_ms);
+  LOG_DEBUG("  Define Funcs.    : {:.2f}", def_funcs_ms);
+  LOG_DEBUG("  Simplify Module  : {:.2f}", simplify_ms);
+  LOG_DEBUG("  Verify Module    : {:.2f}", verify_ms);
+  LOG_DEBUG("  Optimize Module  : {:.2f}", optimize_ms);
+  LOG_DEBUG("  Finalize         : {:.2f}", finalize_ms);
+  LOG_DEBUG("  Load/Link Module : {:.2f}", load_ms);
 
   return compiled_module;
 }
