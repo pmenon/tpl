@@ -132,10 +132,6 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   // value is returned.
   LocalVar VisitExpressionForSQLValue(ast::Expr *expr);
 
-  // Visit an expression that returns a SQL value, storing the result into
-  // the provided destination.
-  void VisitExpressionForSQLValue(ast::Expr *expr, LocalVar dest);
-
   enum class TestFallthrough : uint8_t { None, Then, Else };
 
   void VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *then_label, BytecodeLabel *else_label,

@@ -488,11 +488,16 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
 void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
   if (node->Ret() != nullptr) {
     LocalVar rv = GetCurrentFunction()->GetReturnValueLocal();
+    // The return value 'rv' is the address of the return value in the frame.
+    // In other words, it's a double pointer to the result. Thus, we need to
+    // store the result of the recursive call into *rv, i.e., rv.ValueOf().
     TPL_ASSERT(rv.GetAddressMode() == LocalVar::AddressMode::Address, "RV expected to be address.");
     if (node->Ret()->GetType()->IsSqlValueType()) {
-      VisitExpressionForSQLValue(node->Ret(), rv.ValueOf());
+      LocalVar result = VisitExpressionForSQLValue(node->Ret());
+      BuildDeref(rv.ValueOf(), result, node->Ret()->GetType());
     } else {
-      VisitExpressionForRValue(node->Ret(), rv.ValueOf());
+      LocalVar result = VisitExpressionForRValue(node->Ret());
+      BuildAssign(rv.ValueOf(), result, node->Ret()->GetType());
     }
   }
   GetEmitter()->EmitReturn();
@@ -2490,10 +2495,6 @@ void BytecodeGenerator::VisitExpressionForRValue(ast::Expr *expr, LocalVar dest)
 
 LocalVar BytecodeGenerator::VisitExpressionForSQLValue(ast::Expr *expr) {
   return VisitExpressionForLValue(expr);
-}
-
-void BytecodeGenerator::VisitExpressionForSQLValue(ast::Expr *expr, LocalVar dest) {
-  VisitExpressionForRValue(expr, dest);
 }
 
 void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *then_label,

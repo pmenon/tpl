@@ -25,6 +25,7 @@ offsetof.tpl,false,54
 param.tpl,false,10
 pointer.tpl,false,10
 return-expr.tpl,false,15
+return-sql.tpl,false,0
 #scope.tpl,false,3
 simple.tpl,false,1
 short-circuit.tpl,false,1
