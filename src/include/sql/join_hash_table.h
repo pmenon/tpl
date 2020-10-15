@@ -289,7 +289,7 @@ class JoinHashTable {
 
   // Try to compress thread-local hash tables.
   // Called during parallel build.
-  void TryCompressParallel(const std::vector<JoinHashTable *> &t) const;
+  void TryCompressParallel(const std::vector<JoinHashTable *> &tables) const;
 
  private:
   // The optional analysis pass.
