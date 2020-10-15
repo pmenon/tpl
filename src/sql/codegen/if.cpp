@@ -36,16 +36,21 @@ void If::EndIf() {
     return;
   }
 
+  CodeGen *codegen = function_->GetCodeGen();
+
+  // Set right-brace position.
+  then_stmts_->SetRightBracePosition(codegen->GetPosition());
+
   // Restore the previous statement list, now that we're done.
   function_->statements_ = prev_func_stmt_list_;
 
   // Create and append the if statement.
-  auto codegen = function_->GetCodeGen();
   auto if_stmt = codegen->NodeFactory()->NewIfStmt(position_, condition_, then_stmts_, else_stmts_);
   function_->Append(if_stmt);
 
-  // Un-indent.
-  function_->GetCodeGen()->UnIndent();
+  // Un-indent and bump line.
+  codegen->UnIndent();
+  codegen->NewLine();
 
   // Done.
   completed_ = true;

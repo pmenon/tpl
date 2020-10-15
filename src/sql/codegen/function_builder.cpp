@@ -76,6 +76,9 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
   // Restore the previous function in the codegen instance.
   codegen_->function_ = prev_function_;
 
+  // Next line.
+  codegen_->NewLine();
+
   // Done
   return decl_;
 }

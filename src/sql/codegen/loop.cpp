@@ -19,6 +19,8 @@ Loop::Loop(FunctionBuilder *function, ast::Stmt *init, ast::Expr *condition, ast
   prev_statements_ = function_->statements_;
   // Swap in our loop-body statement list as the active statement list.
   function_->statements_ = loop_body_;
+  // Bump indent for loop body.
+  function_->GetCodeGen()->Indent();
 }
 
 // Static cast to disambiguate constructor.
@@ -43,6 +45,9 @@ void Loop::EndLoop() {
   auto codegen = function_->GetCodeGen();
   auto loop = codegen->NodeFactory()->NewForStmt(position_, init_, condition_, next_, loop_body_);
   function_->Append(loop);
+
+  // Bump line.
+  codegen->NewLine();
 
   // Done.
   completed_ = true;
