@@ -194,6 +194,7 @@ namespace tpl::vm {
                                                                                                                        \
   /* SQL value creation */                                                                                             \
   F(ForceBoolTruth, OperandType::Local, OperandType::Local)                                                            \
+  F(InitSqlNull, OperandType::Local)                                                                                   \
   F(InitBool, OperandType::Local, OperandType::Local)                                                                  \
   F(InitInteger, OperandType::Local, OperandType::Local)                                                               \
   F(InitReal, OperandType::Local, OperandType::Local)                                                                  \

@@ -446,6 +446,8 @@ VM_OP_HOT void OpForceBoolTruth(bool *result, tpl::sql::BoolVal *input) {
   *result = input->ForceTruth();
 }
 
+VM_OP_HOT void OpInitSqlNull(tpl::sql::Val *result) { *result = tpl::sql::Val(true); }
+
 VM_OP_HOT void OpInitBool(tpl::sql::BoolVal *result, bool input) {
   result->is_null = false;
   result->val = input;
