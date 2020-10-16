@@ -1,5 +1,9 @@
-fun init(x: float32) -> Real {
+fun init_impl(x: float32) -> Real {
     return @cos(@floatToSql(x) + @floatToSql(x))
+}
+
+fun init(x: float32) -> Real {
+    return init_impl(x)
 }
 
 fun main() -> int32 {

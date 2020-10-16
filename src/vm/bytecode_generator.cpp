@@ -1855,35 +1855,37 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
 }
 
 void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
-  bool caller_wants_result = GetExecutionResult() != nullptr;
-  TPL_ASSERT(!caller_wants_result || GetExecutionResult()->IsRValue(),
-             "Calls can only be R-Values!");
-
+  // All function invocation parameters.
+  // Reserve now to save re-allocations.
   std::vector<LocalVar> params;
+  params.reserve(call->NumArgs());
 
-  auto *func_type = call->Function()->GetType()->As<ast::FunctionType>();
+  // If the function has a non-nil return, the first parameter must be a pointer
+  // to where the result is written. If the caller wants the result of the
+  // invocation, it must have provided where to store the result. Otherwise, we
+  // need to allocate a temporary local.
+
+  const auto func_type = call->Function()->GetType()->As<ast::FunctionType>();
 
   if (!func_type->GetReturnType()->IsNilType()) {
     LocalVar ret_val;
-    if (caller_wants_result) {
+    if (bool caller_wants_result = GetExecutionResult() != nullptr; caller_wants_result) {
       ret_val = GetExecutionResult()->GetOrCreateDestination(func_type->GetReturnType());
-
-      // Let the caller know where the result value is
-      GetExecutionResult()->SetDestination(ret_val.ValueOf());
+      if (GetExecutionResult()->IsRValue()) {
+        GetExecutionResult()->SetDestination(ret_val.ValueOf());
+      }
     } else {
       ret_val = GetCurrentFunction()->NewLocal(func_type->GetReturnType());
     }
-
-    // Push return value address into parameter list
     params.push_back(ret_val);
   }
 
-  // Collect non-return-value parameters as usual
+  // Collect non-return-value parameters as usual.
   for (uint32_t i = 0; i < func_type->GetNumParams(); i++) {
     params.push_back(VisitExpressionForRValue(call->Arguments()[i]));
   }
 
-  // Emit call
+  // Emit call.
   const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
   TPL_ASSERT(func_id != kInvalidFuncId, "Function not found!");
   GetEmitter()->EmitCall(func_id, params);
