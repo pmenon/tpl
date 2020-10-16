@@ -1078,10 +1078,9 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       const auto sql_kind =
           (builtin == ast::Builtin::VPISetReal || builtin == ast::Builtin::VPISetDouble
                ? ast::BuiltinType::Real
-               : builtin == ast::Builtin::VPISetDate
-                     ? ast::BuiltinType::Date
-                     : builtin == ast::Builtin::VPISetString ? ast::BuiltinType::StringVal
-                                                             : ast::BuiltinType::Integer);
+           : builtin == ast::Builtin::VPISetDate   ? ast::BuiltinType::Date
+           : builtin == ast::Builtin::VPISetString ? ast::BuiltinType::StringVal
+                                                   : ast::BuiltinType::Integer);
       if (!call_args[1]->GetType()->IsSpecificBuiltin(sql_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(sql_kind));
         return;

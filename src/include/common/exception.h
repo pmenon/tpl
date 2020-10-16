@@ -57,7 +57,7 @@ class Exception : public std::exception {
 
  protected:
   template <typename... Args>
-  void Format(const Args &... args);
+  void Format(const Args &...args);
 
  private:
   // The type of the exception

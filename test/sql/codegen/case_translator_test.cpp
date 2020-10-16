@@ -76,11 +76,10 @@ TEST_F(CaseTranslatorTest, CasesWithDefault) {
         [&](const auto &vals) {
           auto colb = static_cast<const Integer *>(vals[0]);
           auto category = static_cast<const StringVal *>(vals[1]);
-          auto expected = colb->val < kColBFilterVal1
-                              ? "VERY LOW"
-                              : colb->val < kColBFilterVal2
-                                    ? "LOW"
-                                    : colb->val < kColBFilterVal3 ? "HIGH" : "VERY HIGH";
+          auto expected = colb->val < kColBFilterVal1   ? "VERY LOW"
+                          : colb->val < kColBFilterVal2 ? "LOW"
+                          : colb->val < kColBFilterVal3 ? "HIGH"
+                                                        : "VERY HIGH";
           EXPECT_FALSE(vals[0]->is_null);
           EXPECT_FALSE(vals[1]->is_null);
           EXPECT_EQ(expected, category->val.GetStringView())

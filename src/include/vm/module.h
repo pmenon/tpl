@@ -180,7 +180,7 @@ namespace detail {
 inline void CopyAll(UNUSED uint8_t *buffer) {}
 
 template <typename HeadT, typename... RestT>
-inline void CopyAll(uint8_t *buffer, const HeadT &head, const RestT &... rest) {
+inline void CopyAll(uint8_t *buffer, const HeadT &head, const RestT &...rest) {
   std::memcpy(buffer, reinterpret_cast<const uint8_t *>(&head), sizeof(head));
   CopyAll(buffer + sizeof(head), rest...);
 }

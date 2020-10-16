@@ -22,7 +22,7 @@ namespace tpl::util::fast_double_parser {
 #ifndef unlikely
 #define unlikely(x) x
 #endif  // unlikely
-#else   // _MSC_VER
+#else  // _MSC_VER
 #ifndef unlikely
 #define unlikely(x) __builtin_expect(!!(x), 0)
 #endif  // unlikely

@@ -15,7 +15,7 @@ Exception::Exception(ExceptionType exception_type, const std::string &message)
 const char *Exception::what() const noexcept { return exception_message_.c_str(); }
 
 template <typename... Args>
-void Exception::Format(const Args &... args) {
+void Exception::Format(const Args &...args) {
   exception_message_ = fmt::format(exception_message_, args...);
 }
 

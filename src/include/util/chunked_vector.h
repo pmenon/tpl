@@ -931,7 +931,7 @@ class ChunkedVectorT {
    * In-place construct an element using arguments @em args and append to the end of the vector.
    */
   template <class... Args>
-  void emplace_back(Args &&... args) {
+  void emplace_back(Args &&...args) {
     T *space = reinterpret_cast<T *>(vec_.append());
     new (space) T(std::forward<Args>(args)...);
   }
