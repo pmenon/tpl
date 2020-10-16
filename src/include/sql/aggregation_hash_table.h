@@ -50,9 +50,11 @@ class AggregationHashTable {
   // optimize accuracy and space manually.
   static constexpr uint32_t kDefaultHLLPrecision = 10;
 
-  // -------------------------------------------------------
-  // Callback functions to customize aggregations
-  // -------------------------------------------------------
+  /** The structure used to materialized build tuples. */
+  using TupleBuffer = util::ChunkedVector<MemoryPoolAllocator<byte>>;
+
+  /** The structure used to collect/store multiple tuple buffers. */
+  using TupleBufferVector = MemPoolVector<TupleBuffer>;
 
   /**
    * Function to check the key equality of an input tuple and an existing entry in the hash table.
@@ -268,10 +270,6 @@ class AggregationHashTable {
   // Internal entry allocation + hash table linkage. Does not resize!
   HashTableEntry *AllocateEntryInternal(hash_t hash);
 
-  // Lookup a hash table entry internally
-  HashTableEntry *LookupEntryInternal(hash_t hash, KeyEqFn key_eq_fn,
-                                      const void *probe_tuple) const;
-
   // Should we flush entries from the main table into the overflow partitions?
   bool NeedsToFlushToOverflowPartitions() const noexcept {
     return hash_table_.GetElementCount() >= flush_threshold_;
@@ -357,19 +355,14 @@ class AggregationHashTable {
  private:
   // Memory allocator.
   MemoryPool *memory_;
-
   // The size of the aggregates in bytes.
   std::size_t payload_size_;
-
   // Where the aggregates are stored.
-  util::ChunkedVector<MemoryPoolAllocator<byte>> entries_;
-
+  TupleBuffer entries_;
   // Entries taken from other tables.
-  MemPoolVector<decltype(entries_)> owned_entries_;
-
+  TupleBufferVector owned_entries_;
   // The hash index.
   UntaggedChainingHashTable hash_table_;
-
   // State used during batch processing.
   MemPoolPtr<BatchProcessState> batch_state_;
 
@@ -410,22 +403,16 @@ class AggregationHashTable {
 // Aggregation Hash Table implementation below
 // ---------------------------------------------------------
 
-inline HashTableEntry *AggregationHashTable::LookupEntryInternal(
-    hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn, const void *probe_tuple) const {
+inline byte *AggregationHashTable::Lookup(hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
+                                          const void *probe_tuple) {
   HashTableEntry *entry = hash_table_.FindChainHead(hash);
   while (entry != nullptr) {
     if (entry->hash == hash && key_eq_fn(entry->payload, probe_tuple)) {
-      return entry;
+      return entry->payload;
     }
     entry = entry->next;
   }
   return nullptr;
-}
-
-inline byte *AggregationHashTable::Lookup(hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
-                                          const void *probe_tuple) {
-  auto *entry = LookupEntryInternal(hash, key_eq_fn, probe_tuple);
-  return (entry == nullptr ? nullptr : entry->payload);
 }
 
 //===----------------------------------------------------------------------===//
