@@ -1255,7 +1255,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
 
     // Read all needed columns
     auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_nationkey = expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
+    auto s_nationkey =
+        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
     // Make the output schema.
     s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
     s_seq_scan_out.AddOutput("s_nationkey", s_nationkey);
@@ -1545,9 +1546,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
                                                             {o_orderdate}, TypeId::Integer));
     proj_out.AddOutput(
         "amount", expr_maker.OpMin(
-                      // (1.0 - l_discount) * l_extendedprice
-                      expr_maker.OpMul(expr_maker.OpMin(expr_maker.Constant(1.0F), l_discount),
-                                       l_extendedprice),
+                      // l_extendedprice * (1.0 - l_discount)
+                      expr_maker.OpMul(l_extendedprice,
+                                       expr_maker.OpMin(expr_maker.Constant(1.0F), l_discount)),
                       // ps_supplycost * l_quantity
                       expr_maker.OpMul(ps_supplycost, l_quantity))
 
@@ -1597,9 +1598,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     auto o_year = agg_out.GetOutput("o_year");
     auto sum_profit = agg_out.GetOutput("sum_profit");
     // Outputs.
+    order_by_out.AddOutput("n_name", n_name);
     order_by_out.AddOutput("o_year", o_year);
     order_by_out.AddOutput("sum_profit", sum_profit);
-    order_by_out.AddOutput("n_name", n_name);
     // Ordering clauses.
     planner::SortKey clause_1{n_name, planner::OrderByOrderingType::ASC};
     planner::SortKey clause_2{o_year, planner::OrderByOrderingType::DESC};

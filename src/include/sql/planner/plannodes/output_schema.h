@@ -101,55 +101,43 @@ class OutputSchema {
    * Instantiates a OutputSchema.
    * @param columns The collection of columns making up the schema.
    */
-  explicit OutputSchema(std::vector<Column> columns) : columns_(std::move(columns)) {}
+  explicit OutputSchema(std::vector<Column> columns);
 
   /**
-   * Copy constructs an OutputSchema.
-   * @param other the OutputSchema to be copied.
+   * @return The information + description for the column at the given index in the output.
    */
-  OutputSchema(const OutputSchema &other) = default;
+  Column GetColumn(const uint32_t col_idx) const;
 
-  /**
-   * Default constructor for deserialization.
-   */
-  OutputSchema() = default;
-
-  /**
-   * @param col_idx offset into the schema specifying which Column to access.
-   * @return description of the schema for a specific column.
-   */
-  Column GetColumn(const uint32_t col_idx) const {
-    TPL_ASSERT(col_idx < columns_.size(), "column id is out of bounds for this Schema");
-    return columns_[col_idx];
-  }
   /**
    * @return the vector of columns that are part of this schema.
    */
-  const std::vector<Column> &GetColumns() const { return columns_; }
+  const std::vector<Column> &GetColumns() const;
+
+  /**
+   * @return The byte offsets of each column in the serialized output.
+   */
+  const std::vector<std::size_t> &GetColumnOffsets() const;
+
+  /**
+   * @return The total number of bytes needed for an output row.
+   */
+  std::size_t ComputeOutputRowSize() const;
 
   /**
    * @return The number of output columns.
    */
-  std::size_t NumColumns() const { return columns_.size(); }
+  uint32_t NumColumns() const;
 
   /**
    * @return A pretty printed version of this output schema.
    */
-  std::string ToString() const {
-    std::string result = "Schema(" + std::to_string(NumColumns()) + ")=[";
-    bool first = true;
-    for (const auto &col : columns_) {
-      if (!first) result += ",";
-      first = false;
-      result += TypeIdToString(col.GetType()) + (col.GetNullable() ? "(NULLABLE)" : "");
-    }
-    result += "]";
-    return result;
-  }
+  std::string ToString() const;
 
  private:
   // The columns.
   std::vector<Column> columns_;
+  // The byte offsets where each column exist in the output.
+  std::vector<std::size_t> column_offsets_;
 };
 
 }  // namespace tpl::sql::planner
