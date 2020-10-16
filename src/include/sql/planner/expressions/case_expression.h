@@ -17,9 +17,9 @@ class CaseExpression : public AbstractExpression {
   /** WHEN ... THEN ... clauses. */
   struct WhenClause {
     // The condition to be checked for this case expression.
-    std::unique_ptr<AbstractExpression> condition;
+    const AbstractExpression *condition;
     // The value to produce if the corresponding condition is true.
-    std::unique_ptr<AbstractExpression> then;
+    const AbstractExpression *then;
   };
 
   /**
@@ -28,43 +28,43 @@ class CaseExpression : public AbstractExpression {
    * @param when_clauses list of WhenClauses
    * @param default_expr default expression for this case
    */
-  CaseExpression(const TypeId return_value_type, std::vector<WhenClause> &&when_clauses,
-                 std::unique_ptr<AbstractExpression> default_expr)
+  CaseExpression(TypeId return_value_type, std::vector<WhenClause> when_clauses,
+                 const AbstractExpression *default_expr)
       : AbstractExpression(ExpressionType::OPERATOR_CASE_EXPR, return_value_type, {}),
         when_clauses_(std::move(when_clauses)),
-        default_expr_(std::move(default_expr)) {}
+        default_expr_(default_expr) {}
 
   /**
    * @return The number of clauses in the case expression.
    */
-  size_t GetWhenClauseSize() const { return when_clauses_.size(); }
+  std::size_t GetWhenClauseSize() const { return when_clauses_.size(); }
 
   /**
    * @return The condition for the clause at the given index.
    */
-  AbstractExpression *GetWhenClauseCondition(std::size_t index) const {
+  const AbstractExpression *GetWhenClauseCondition(std::size_t index) const {
     TPL_ASSERT(index < when_clauses_.size(), "Index must be in bounds.");
-    return when_clauses_[index].condition.get();
+    return when_clauses_[index].condition;
   }
 
   /**
    * @return The value of the clause at the given index.
    */
-  AbstractExpression *GetWhenClauseResult(std::size_t index) const {
+  const AbstractExpression *GetWhenClauseResult(std::size_t index) const {
     TPL_ASSERT(index < when_clauses_.size(), "Index must be in bounds.");
-    return when_clauses_[index].then.get();
+    return when_clauses_[index].then;
   }
 
   /**
    * @return The default clause; null if one does not exist.
    * */
-  AbstractExpression *GetDefaultClause() const { return default_expr_.get(); }
+  const AbstractExpression *GetDefaultClause() const { return default_expr_; }
 
  private:
   // List of when-then clauses.
   std::vector<WhenClause> when_clauses_;
   // Default result case.
-  std::unique_ptr<AbstractExpression> default_expr_;
+  const AbstractExpression *default_expr_;
 };
 
 }  // namespace tpl::sql::planner

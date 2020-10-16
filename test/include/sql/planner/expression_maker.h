@@ -9,6 +9,7 @@
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/aggregate_expression.h"
 #include "sql/planner/expressions/builtin_function_expression.h"
+#include "sql/planner/expressions/case_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
 #include "sql/planner/expressions/conjunction_expression.h"
@@ -290,6 +291,27 @@ class ExpressionMaker {
    */
   AggExpression AggCountStar() {
     return AggregateTerm(planner::ExpressionType::AGGREGATE_COUNT, Constant(1), false);
+  }
+
+  /**
+   * Create a case expression with no default result.
+   */
+  Expression Case(const std::vector<std::pair<Expression, Expression>> &cases) {
+    return Case(cases, nullptr);
+  }
+
+  /**
+   * Create a case expression.
+   */
+  Expression Case(const std::vector<std::pair<Expression, Expression>> &cases,
+                  Expression default_val) {
+    const auto ret_type = cases[0].second->GetReturnValueType();
+    std::vector<CaseExpression::WhenClause> clauses;
+    clauses.reserve(cases.size());
+    std::ranges::transform(cases, std::back_inserter(clauses), [](auto &p) {
+      return CaseExpression::WhenClause{p.first, p.second};
+    });
+    return Alloc(std::make_unique<CaseExpression>(ret_type, clauses, default_val));
   }
 
  private:

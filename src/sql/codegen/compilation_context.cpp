@@ -15,6 +15,7 @@
 #include "sql/codegen/expression//derived_value_translator.h"
 #include "sql/codegen/expression/arithmetic_translator.h"
 #include "sql/codegen/expression/builtin_function_translator.h"
+#include "sql/codegen/expression/case_translator.h"
 #include "sql/codegen/expression/column_value_translator.h"
 #include "sql/codegen/expression/comparison_translator.h"
 #include "sql/codegen/expression/conjunction_translator.h"
@@ -36,6 +37,7 @@
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_graph.h"
 #include "sql/planner/expressions/abstract_expression.h"
+#include "sql/planner/expressions/case_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
 #include "sql/planner/expressions/conjunction_expression.h"
@@ -282,6 +284,11 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
   std::unique_ptr<ExpressionTranslator> translator;
 
   switch (expression.GetExpressionType()) {
+    case planner::ExpressionType::OPERATOR_CASE_EXPR: {
+      const auto &case_expr = static_cast<const planner::CaseExpression &>(expression);
+      translator = std::make_unique<CaseTranslator>(case_expr, this);
+      break;
+    }
     case planner::ExpressionType::COLUMN_VALUE: {
       const auto &column_value = static_cast<const planner::ColumnValueExpression &>(expression);
       translator = std::make_unique<ColumnValueTranslator>(column_value, this);
