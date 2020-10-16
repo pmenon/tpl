@@ -34,7 +34,7 @@ namespace tpl::sql::codegen {
 namespace {
 
 // The execution mode.
-constexpr auto kExecutionMode = vm::ExecutionMode::Compiled;
+constexpr auto kExecutionMode = vm::ExecutionMode::Interpret;
 
 // Change this path to where your TPC-H data is.
 constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-0.1";
@@ -1999,6 +1999,155 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   }
 }
 
+BENCHMARK_DEFINE_F(TpchBenchmark, Q14)(benchmark::State &state) {
+  auto accessor = sql::Catalog::Instance();
+  planner::ExpressionMaker expr_maker;
+
+  // Scan lineitem.
+  std::unique_ptr<planner::AbstractPlanNode> l_seq_scan;
+  planner::OutputSchemaHelper l_seq_scan_out(&expr_maker, 0);
+  {
+    sql::Table *l_table = accessor->LookupTableByName("tpch.lineitem");
+    const auto &l_schema = l_table->GetSchema();
+
+    // Read all needed columns.
+    auto l_extendedprice =
+        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
+    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
+    auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey").oid, sql::TypeId::Integer);
+    // Make the output schema.
+    l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
+    l_seq_scan_out.AddOutput("l_discount", l_discount);
+    l_seq_scan_out.AddOutput("l_partkey", l_partkey);
+    // Predicate.
+    auto predicate = expr_maker.ConjunctionAnd(
+        expr_maker.CompareGe(l_shipdate, expr_maker.Constant(1995, 9, 1)),
+        expr_maker.CompareLt(l_shipdate, expr_maker.Constant(1995, 10, 1)));
+    // Build.
+    l_seq_scan = planner::SeqScanPlanNode::Builder{}
+                     .SetOutputSchema(l_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(l_table->GetId())
+                     .Build();
+  }
+
+  // Scan part.
+  std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
+  planner::OutputSchemaHelper p_seq_scan_out(&expr_maker, 1);
+  {
+    sql::Table *p_table = accessor->LookupTableByName("tpch.part");
+    const auto &p_schema = p_table->GetSchema();
+
+    // Read all needed columns.
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
+    auto p_type = expr_maker.CVE(p_schema.GetColumnInfo("p_type").oid, sql::TypeId::Varchar);
+    // Make the output schema.
+    p_seq_scan_out.AddOutput("p_partkey", p_partkey);
+    p_seq_scan_out.AddOutput("p_type", p_type);
+    // Build.
+    p_seq_scan = planner::SeqScanPlanNode::Builder{}
+                     .SetOutputSchema(p_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(nullptr)
+                     .SetTableOid(p_table->GetId())
+                     .Build();
+  }
+
+  // Make HJ1: lineitem x part.
+  std::unique_ptr<planner::AbstractPlanNode> hash_join1;
+  planner::OutputSchemaHelper hash_join_out1(&expr_maker, 0);
+  {
+    // Left columns.
+    auto l_extendedprice = l_seq_scan_out.GetOutput("l_extendedprice");
+    auto l_discount = l_seq_scan_out.GetOutput("l_discount");
+    auto l_partkey = l_seq_scan_out.GetOutput("l_partkey");
+    // Right columns.
+    auto p_partkey = p_seq_scan_out.GetOutput("p_partkey");
+    auto p_type = p_seq_scan_out.GetOutput("p_type");
+    // Output Schema.
+    hash_join_out1.AddOutput("l_extendedprice", l_extendedprice);
+    hash_join_out1.AddOutput("l_discount", l_discount);
+    hash_join_out1.AddOutput("p_type", p_type);
+    // Predicate.
+    auto predicate = expr_maker.CompareEq(l_partkey, p_partkey);
+    // Build.
+    hash_join1 = planner::HashJoinPlanNode::Builder{}
+                     .AddChild(std::move(l_seq_scan))
+                     .AddChild(std::move(p_seq_scan))
+                     .SetOutputSchema(hash_join_out1.MakeSchema())
+                     .AddLeftHashKey(l_partkey)
+                     .AddRightHashKey(p_partkey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(predicate)
+                     .Build();
+  }
+
+  // Make the aggregate.
+  std::unique_ptr<planner::AbstractPlanNode> agg;
+  planner::OutputSchemaHelper agg_out(&expr_maker, 0);
+  {
+    // Read previous layer's output
+    auto l_extendedprice = hash_join_out1.GetOutput("l_extendedprice");
+    auto l_discount = hash_join_out1.GetOutput("l_discount");
+    auto p_type = hash_join_out1.GetOutput("p_type");
+    // Make the aggregate expressions.
+    auto raw_rev =
+        expr_maker.OpMul(l_extendedprice, expr_maker.OpMin(expr_maker.Constant(1.0f), l_discount));
+    std::vector<std::pair<const planner::AbstractExpression *, const planner::AbstractExpression *>>
+        clauses;
+    clauses.emplace_back(expr_maker.CompareLike(p_type, expr_maker.Constant("PROMO%")), raw_rev);
+    auto promo_rev_1 = expr_maker.AggSum(expr_maker.Case(clauses, expr_maker.Constant(1.0F)));
+    auto promo_rev_2 = expr_maker.AggSum(raw_rev);
+    agg_out.AddAggTerm("promo_revenue_1", promo_rev_1);
+    agg_out.AddAggTerm("promo_revenue_2", promo_rev_2);
+    // Make the output schema.
+    agg_out.AddOutput("promo_revenue_1", agg_out.GetAggTermForOutput("promo_revenue_1"));
+    agg_out.AddOutput("promo_revenue_2", agg_out.GetAggTermForOutput("promo_revenue_2"));
+    // Build
+    agg = planner::AggregatePlanNode::Builder{}
+              .SetOutputSchema(agg_out.MakeSchema())
+              .AddAggregateTerm(promo_rev_1)
+              .AddAggregateTerm(promo_rev_2)
+              .AddChild(std::move(hash_join1))
+              .SetAggregateStrategyType(planner::AggregateStrategyType::PLAIN)
+              .SetHavingClausePredicate(nullptr)
+              .Build();
+  }
+
+  // Make the final projection.
+  std::unique_ptr<planner::AbstractPlanNode> proj;
+  planner::OutputSchemaHelper proj_out(&expr_maker, 0);
+  {
+    // Read previous layer's output
+    auto promo_revenue_1 = agg_out.GetOutput("promo_revenue_1");
+    auto promo_revenue_2 = agg_out.GetOutput("promo_revenue_2");
+    // Make the output schema.
+    proj_out.AddOutput("promo_revenue",
+                       expr_maker.OpMul(expr_maker.Constant(100.0f),
+                                        expr_maker.OpDiv(promo_revenue_1, promo_revenue_2)));
+    // Build.
+    proj = planner::ProjectionPlanNode::Builder{}
+        .AddChild(std::move(agg))
+        .SetOutputSchema(proj_out.MakeSchema())
+        .Build();
+  }
+
+  // Compile plan
+  auto last_op = proj.get();
+  //  NoOpResultConsumer consumer;
+  PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
+  sql::MemoryPool memory(nullptr);
+  sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
+  auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx, kExecutionMode);
+
+  // Only time execution
+  for (auto _ : state) {
+    query->Run(&exec_ctx, kExecutionMode);
+  }
+}
+
 BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
@@ -2768,6 +2917,7 @@ BENCHMARK_REGISTER_F(TpchBenchmark, Q6)->Iterations(10)->Unit(benchmark::kMillis
 BENCHMARK_REGISTER_F(TpchBenchmark, Q7)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q9)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q11)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q14)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q16)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q18)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q19)->Iterations(10)->Unit(benchmark::kMillisecond);
