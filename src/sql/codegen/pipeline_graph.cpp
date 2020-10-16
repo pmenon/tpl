@@ -15,10 +15,13 @@ bool PipelineGraph::IsRegistered(const Pipeline &pipeline) const {
 }
 
 void PipelineGraph::RegisterPipeline(const Pipeline &pipeline) {
+  TPL_ASSERT(!IsRegistered(pipeline), "Duplicate pipeline!");
   dependency_graph_[&pipeline] = DependencySet{};
 }
 
 void PipelineGraph::AddDependency(const Pipeline &a, const Pipeline &b) {
+  TPL_ASSERT(IsRegistered(a), "Adding dependency to unregistered pipeline!");
+  TPL_ASSERT(std::ranges::count(dependency_graph_[&a], &b) == 0, "Duplicate dependency!");
   dependency_graph_[&a].push_back(&b);
 }
 
