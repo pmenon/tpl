@@ -85,22 +85,22 @@ class AstNodeFactory {
     return new (region_) CallExpr(fun, std::move(args), CallExpr::CallKind::Builtin);
   }
 
-  LitExpr *NewNilLiteral(const SourcePosition &pos) { return new (region_) LitExpr(pos); }
+  LiteralExpr *NewNilLiteral(const SourcePosition &pos) { return new (region_) LiteralExpr(pos); }
 
-  LitExpr *NewBoolLiteral(const SourcePosition &pos, bool val) {
-    return new (region_) LitExpr(pos, val);
+  LiteralExpr *NewBoolLiteral(const SourcePosition &pos, bool val) {
+    return new (region_) LiteralExpr(pos, val);
   }
 
-  LitExpr *NewIntLiteral(const SourcePosition &pos, int32_t num) {
-    return new (region_) LitExpr(pos, num);
+  LiteralExpr *NewIntLiteral(const SourcePosition &pos, int32_t num) {
+    return new (region_) LiteralExpr(pos, num);
   }
 
-  LitExpr *NewFloatLiteral(const SourcePosition &pos, float num) {
-    return new (region_) LitExpr(pos, num);
+  LiteralExpr *NewFloatLiteral(const SourcePosition &pos, float num) {
+    return new (region_) LiteralExpr(pos, num);
   }
 
-  LitExpr *NewStringLiteral(const SourcePosition &pos, Identifier str) {
-    return new (region_) LitExpr(pos, str);
+  LiteralExpr *NewStringLiteral(const SourcePosition &pos, Identifier str) {
+    return new (region_) LiteralExpr(pos, str);
   }
 
   FunctionLitExpr *NewFunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body) {

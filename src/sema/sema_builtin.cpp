@@ -87,7 +87,7 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
       break;
     }
     case ast::Builtin::StringToSql: {
-      if (!input_type->IsStringType() || !call->Arguments()[0]->IsLitExpr()) {
+      if (!input_type->IsStringType() || !call->Arguments()[0]->IsLiteralExpr()) {
         ReportIncorrectCallArg(call, 0, "string literal");
       }
       call->SetType(GetBuiltinType(ast::BuiltinType::StringVal));
@@ -252,7 +252,7 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
         return;
       }
       // If there's a third argument indicating regular or partitioned insertion, it must be a bool
-      if (args.size() > 2 && (!args[2]->IsLitExpr() ||
+      if (args.size() > 2 && (!args[2]->IsLiteralExpr() ||
                               !args[2]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Bool))) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Bool));
         return;

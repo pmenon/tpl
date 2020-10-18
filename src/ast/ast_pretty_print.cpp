@@ -32,11 +32,11 @@ class AstPrettyPrintImpl : public AstVisitor<AstPrettyPrintImpl> {
   }
 
  private:
-  // The output stream
+  // The output stream.
   std::ostream &os_;
-  // The AST
+  // The AST.
   AstNode *root_;
-  // Current indent level
+  // Current indent level.
   int32_t indent_;
 };
 
@@ -205,21 +205,21 @@ void AstPrettyPrintImpl::VisitMapTypeRepr(MapTypeRepr *node) {
   Visit(node->ValType());
 }
 
-void AstPrettyPrintImpl::VisitLitExpr(LitExpr *node) {
+void AstPrettyPrintImpl::VisitLiteralExpr(LiteralExpr *node) {
   switch (node->GetLiteralKind()) {
-    case LitExpr::LitKind::Nil:
+    case LiteralExpr::LiteralKind::Nil:
       os_ << "nil";
       break;
-    case LitExpr::LitKind::Boolean:
+    case LiteralExpr::LiteralKind::Boolean:
       os_ << (node->BoolVal() ? "true" : "false");
       break;
-    case LitExpr::LitKind::Int:
+    case LiteralExpr::LiteralKind::Int:
       os_ << node->Int32Val();
       break;
-    case LitExpr::LitKind::Float:
+    case LiteralExpr::LiteralKind::Float:
       os_ << node->Float32Val();
       break;
-    case LitExpr::LitKind::String:
+    case LiteralExpr::LiteralKind::String:
       os_ << "\"" << node->StringVal().GetView() << "\"";
       break;
   }

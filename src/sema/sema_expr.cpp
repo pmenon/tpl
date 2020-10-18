@@ -223,7 +223,7 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 
   if (auto arr_type = obj_type->SafeAs<ast::ArrayType>()) {
-    if (auto index = node->Index()->SafeAs<ast::LitExpr>()) {
+    if (auto index = node->Index()->SafeAs<ast::LiteralExpr>()) {
       const int32_t index_val = index->Int32Val();
       // Check negative array indices.
       if (index_val < 0) {
@@ -244,27 +244,27 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 }
 
-void Sema::VisitLitExpr(ast::LitExpr *node) {
+void Sema::VisitLiteralExpr(ast::LiteralExpr *node) {
   switch (node->GetLiteralKind()) {
-    case ast::LitExpr::LitKind::Nil: {
+    case ast::LiteralExpr::LiteralKind::Nil: {
       node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Nil));
       break;
     }
-    case ast::LitExpr::LitKind::Boolean: {
+    case ast::LiteralExpr::LiteralKind::Boolean: {
       node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Bool));
       break;
     }
-    case ast::LitExpr::LitKind::Float: {
-      // Literal floats default to float32
+    case ast::LiteralExpr::LiteralKind::Float: {
+      // Literal floats default to float32.
       node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Float32));
       break;
     }
-    case ast::LitExpr::LitKind::Int: {
-      // Literal integers default to int32
+    case ast::LiteralExpr::LiteralKind::Int: {
+      // Literal integers default to int32.
       node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Int32));
       break;
     }
-    case ast::LitExpr::LitKind::String: {
+    case ast::LiteralExpr::LiteralKind::String: {
       node->SetType(ast::StringType::Get(context()));
       break;
     }

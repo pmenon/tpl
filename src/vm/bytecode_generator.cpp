@@ -337,7 +337,7 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   LocalVar elem_ptr = GetCurrentFunction()->NewLocal(node->GetType()->PointerTo());
 
   if (node->Index()->IsIntegerLiteral()) {
-    const int32_t index = node->Index()->As<ast::LitExpr>()->Int32Val();
+    const int32_t index = node->Index()->As<ast::LiteralExpr>()->Int32Val();
     TPL_ASSERT(index >= 0, "Array indexes must be non-negative");
     GetEmitter()->EmitLea(elem_ptr, arr, (elem_size * index));
   } else {
@@ -532,7 +532,7 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
       break;
     }
     case ast::Builtin::StringToSql: {
-      auto string_lit = call->Arguments()[0]->As<ast::LitExpr>()->StringVal();
+      auto string_lit = call->Arguments()[0]->As<ast::LiteralExpr>()->StringVal();
       auto static_string = NewStaticString(call->GetType()->GetContext(), string_lit);
       GetEmitter()->EmitInitString(dest, static_string, string_lit.GetLength());
       break;
@@ -634,7 +634,7 @@ void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Buil
     case ast::Builtin::TableIterInit: {
       // The second argument is the table name as a literal string
       TPL_ASSERT(call->Arguments()[1]->IsStringLiteral(), "Table name must be a string literal");
-      ast::Identifier table_name = call->Arguments()[1]->As<ast::LitExpr>()->StringVal();
+      ast::Identifier table_name = call->Arguments()[1]->As<ast::LiteralExpr>()->StringVal();
       sql::Table *table = sql::Catalog::Instance()->LookupTableByName(table_name);
       TPL_ASSERT(table != nullptr, "Table does not exist!");
       GetEmitter()->EmitTableIterInit(Bytecode::TableVectorIteratorInit, iter, table->GetId());
@@ -665,7 +665,7 @@ void BytecodeGenerator::VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Buil
 
 void BytecodeGenerator::VisitBuiltinTableIterParallelCall(ast::CallExpr *call) {
   // First is the table name as a string literal
-  const auto table_name = call->Arguments()[0]->As<ast::LitExpr>()->StringVal();
+  const auto table_name = call->Arguments()[0]->As<ast::LiteralExpr>()->StringVal();
   sql::Table *table = sql::Catalog::Instance()->LookupTableByName(table_name);
   TPL_ASSERT(table != nullptr, "Table does not exist!");
 
@@ -747,12 +747,12 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       break;
     }
 
-#define GEN_CASE(BuiltinName, Bytecode)                                              \
-  case ast::Builtin::BuiltinName: {                                                  \
-    LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType()); \
-    const uint32_t col_idx = call->Arguments()[1]->As<ast::LitExpr>()->Int32Val();   \
-    GetEmitter()->EmitVPIGet(Bytecode, result, vpi, col_idx);                        \
-    break;                                                                           \
+#define GEN_CASE(BuiltinName, Bytecode)                                                \
+  case ast::Builtin::BuiltinName: {                                                    \
+    LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());   \
+    const uint32_t col_idx = call->Arguments()[1]->As<ast::LiteralExpr>()->Int32Val(); \
+    GetEmitter()->EmitVPIGet(Bytecode, result, vpi, col_idx);                          \
+    break;                                                                             \
   }
       // clang-format off
     GEN_CASE(VPIGetBool, Bytecode::VPIGetBool);
@@ -768,12 +768,12 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       // clang-format on
 #undef GEN_CASE
 
-#define GEN_CASE(BuiltinName, Bytecode)                                  \
-  case ast::Builtin::BuiltinName: {                                      \
-    auto input = VisitExpressionForSQLValue(call->Arguments()[1]);       \
-    auto col_idx = call->Arguments()[2]->As<ast::LitExpr>()->Int32Val(); \
-    GetEmitter()->EmitVPISet(Bytecode, vpi, input, col_idx);             \
-    break;                                                               \
+#define GEN_CASE(BuiltinName, Bytecode)                                      \
+  case ast::Builtin::BuiltinName: {                                          \
+    auto input = VisitExpressionForSQLValue(call->Arguments()[1]);           \
+    auto col_idx = call->Arguments()[2]->As<ast::LiteralExpr>()->Int32Val(); \
+    GetEmitter()->EmitVPISet(Bytecode, vpi, input, col_idx);                 \
+    break;                                                                   \
   }
 
       // clang-format off
@@ -933,7 +933,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::B
       if (call->Arguments().size() > 2) {
         TPL_ASSERT(call->Arguments()[2]->IsBoolLiteral(),
                    "Last argument must be a boolean literal");
-        const bool partitioned = call->Arguments()[2]->As<ast::LitExpr>()->BoolVal();
+        const bool partitioned = call->Arguments()[2]->As<ast::LiteralExpr>()->BoolVal();
         bytecode = partitioned ? Bytecode::AggregationHashTableAllocTuplePartitioned
                                : Bytecode::AggregationHashTableAllocTuple;
       }
@@ -1479,9 +1479,9 @@ void BytecodeGenerator::VisitCSVReaderCall(ast::CallExpr *call, ast::Builtin bui
   switch (builtin) {
     case ast::Builtin::CSVReaderInit: {
       LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-      TPL_ASSERT(call->Arguments()[1]->IsLitExpr(),
+      TPL_ASSERT(call->Arguments()[1]->IsLiteralExpr(),
                  "Second argument expected to be string literal");
-      auto string_lit = call->Arguments()[1]->As<ast::LitExpr>()->StringVal();
+      auto string_lit = call->Arguments()[1]->As<ast::LiteralExpr>()->StringVal();
       auto file_name = NewStaticString(call->GetType()->GetContext(), string_lit);
       GetEmitter()->EmitCSVReaderInit(reader, file_name, string_lit.GetLength());
       GetEmitter()->Emit(Bytecode::CSVReaderPerformInit, result, reader);
@@ -1912,32 +1912,32 @@ void BytecodeGenerator::VisitFile(ast::File *node) {
   }
 }
 
-void BytecodeGenerator::VisitLitExpr(ast::LitExpr *node) {
+void BytecodeGenerator::VisitLiteralExpr(ast::LiteralExpr *node) {
   TPL_ASSERT(GetExecutionResult()->IsRValue(), "Literal expressions cannot be R-Values!");
 
   LocalVar target = GetExecutionResult()->GetOrCreateDestination(node->GetType());
 
   switch (node->GetLiteralKind()) {
-    case ast::LitExpr::LitKind::Nil: {
+    case ast::LiteralExpr::LiteralKind::Nil: {
       // Do nothing
       break;
     }
-    case ast::LitExpr::LitKind::Boolean: {
+    case ast::LiteralExpr::LiteralKind::Boolean: {
       GetEmitter()->EmitAssignImm1(target, static_cast<int8_t>(node->BoolVal()));
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
-    case ast::LitExpr::LitKind::Int: {
+    case ast::LiteralExpr::LiteralKind::Int: {
       GetEmitter()->EmitAssignImm4(target, node->Int32Val());
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
-    case ast::LitExpr::LitKind::Float: {
+    case ast::LiteralExpr::LiteralKind::Float: {
       GetEmitter()->EmitAssignImm4F(target, node->Float32Val());
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
-    case ast::LitExpr::LitKind::String: {
+    case ast::LiteralExpr::LiteralKind::String: {
       LocalVar string = NewStaticString(node->GetType()->GetContext(), node->StringVal());
       GetEmitter()->EmitAssign(Bytecode::Assign8, target, string);
       GetExecutionResult()->SetDestination(string.ValueOf());

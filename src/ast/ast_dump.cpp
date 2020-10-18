@@ -321,22 +321,22 @@ void AstDumperImpl::VisitIndexExpr(IndexExpr *node) {
   DumpExpr(node->Index());
 }
 
-void AstDumperImpl::VisitLitExpr(LitExpr *node) {
+void AstDumperImpl::VisitLiteralExpr(LiteralExpr *node) {
   DumpExpressionCommon(node);
   switch (node->GetLiteralKind()) {
-    case LitExpr::LitKind::Nil:
+    case LiteralExpr::LiteralKind::Nil:
       DumpPrimitive("nil");
       break;
-    case LitExpr::LitKind::Boolean:
+    case LiteralExpr::LiteralKind::Boolean:
       DumpPrimitive(node->BoolVal() ? "'true'" : "'false'");
       break;
-    case LitExpr::LitKind::Int:
+    case LiteralExpr::LiteralKind::Int:
       DumpPrimitive(node->Int32Val());
       break;
-    case LitExpr::LitKind::Float:
+    case LiteralExpr::LiteralKind::Float:
       DumpPrimitive(node->Float32Val());
       break;
-    case LitExpr::LitKind::String:
+    case LiteralExpr::LiteralKind::String:
       DumpIdentifier(node->StringVal());
       break;
   }

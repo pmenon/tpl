@@ -221,7 +221,7 @@ inline void AstTraversalVisitor<Subclass>::VisitMapTypeRepr(MapTypeRepr *node) {
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitLitExpr(LitExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitLiteralExpr(LiteralExpr *node) {
   PROCESS_NODE(node);
 }
 

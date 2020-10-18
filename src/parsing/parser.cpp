@@ -416,7 +416,7 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
       ast::Expr *expression = ParseUnaryOpExpr();
 
       // Some quick rewrites here.
-      if (const auto literal = expression->SafeAs<ast::LitExpr>()) {
+      if (const auto literal = expression->SafeAs<ast::LiteralExpr>()) {
         if (op == Token::Type::BANG && literal->IsBoolLitExpr()) {
           // Negate the boolean value and return a new literal.
           return node_factory_->NewBoolLiteral(pos, !literal->BoolVal());

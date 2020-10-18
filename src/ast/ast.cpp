@@ -39,29 +39,29 @@ ExpressionStmt::ExpressionStmt(Expr *expr)
 // ---------------------------------------------------------
 
 bool Expr::IsNilLiteral() const {
-  if (auto *lit_expr = SafeAs<ast::LitExpr>()) {
-    return lit_expr->GetLiteralKind() == ast::LitExpr::LitKind::Nil;
+  if (auto lit_expr = SafeAs<ast::LiteralExpr>()) {
+    return lit_expr->GetLiteralKind() == ast::LiteralExpr::LiteralKind::Nil;
   }
   return false;
 }
 
 bool Expr::IsBoolLiteral() const {
-  if (auto *lit_expr = SafeAs<ast::LitExpr>()) {
-    return lit_expr->GetLiteralKind() == ast::LitExpr::LitKind::Boolean;
+  if (auto lit_expr = SafeAs<ast::LiteralExpr>()) {
+    return lit_expr->GetLiteralKind() == ast::LiteralExpr::LiteralKind::Boolean;
   }
   return false;
 }
 
 bool Expr::IsStringLiteral() const {
-  if (auto *lit_expr = SafeAs<ast::LitExpr>()) {
-    return lit_expr->GetLiteralKind() == ast::LitExpr::LitKind::String;
+  if (auto lit_expr = SafeAs<ast::LiteralExpr>()) {
+    return lit_expr->GetLiteralKind() == ast::LiteralExpr::LiteralKind::String;
   }
   return false;
 }
 
 bool Expr::IsIntegerLiteral() const {
-  if (auto *lit_expr = SafeAs<ast::LitExpr>()) {
-    return lit_expr->GetLiteralKind() == ast::LitExpr::LitKind::Int;
+  if (auto lit_expr = SafeAs<ast::LiteralExpr>()) {
+    return lit_expr->GetLiteralKind() == ast::LiteralExpr::LiteralKind::Int;
   }
   return false;
 }

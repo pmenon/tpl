@@ -65,7 +65,7 @@ namespace ast {
   T(IdentifierExpr)                     \
   T(ImplicitCastExpr)                   \
   T(IndexExpr)                          \
-  T(LitExpr)                            \
+  T(LiteralExpr)                        \
   T(MemberExpr)                         \
   T(UnaryOpExpr)                        \
   /* Type Representation Expressions */ \
@@ -1189,54 +1189,54 @@ class IndexExpr : public Expr {
 /**
  * A literal in the original source code.
  */
-class LitExpr : public Expr {
+class LiteralExpr : public Expr {
  public:
-  enum class LitKind : uint8_t { Nil, Boolean, Int, Float, String };
+  enum class LiteralKind : uint8_t { Nil, Boolean, Int, Float, String };
 
-  explicit LitExpr(const SourcePosition &pos)
-      : Expr(Kind::LitExpr, pos), lit_kind_(LitExpr::LitKind::Nil) {}
+  explicit LiteralExpr(const SourcePosition &pos)
+      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Nil) {}
 
-  LitExpr(const SourcePosition &pos, bool val)
-      : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Boolean), boolean_(val) {}
+  LiteralExpr(const SourcePosition &pos, bool val)
+      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Boolean), boolean_(val) {}
 
-  LitExpr(const SourcePosition &pos, Identifier str)
-      : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::String), str_(str) {}
+  LiteralExpr(const SourcePosition &pos, Identifier str)
+      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::String), str_(str) {}
 
-  LitExpr(const SourcePosition &pos, int32_t num)
-      : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Int), int32_(num) {}
+  LiteralExpr(const SourcePosition &pos, int32_t num)
+      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Int), int32_(num) {}
 
-  LitExpr(const SourcePosition &pos, float num)
-      : Expr(Kind::LitExpr, pos), lit_kind_(LitKind::Float), float32_(num) {}
+  LiteralExpr(const SourcePosition &pos, float num)
+      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Float), float32_(num) {}
 
   /**
    * @return The kind of literal this expression represents.
    */
-  LitExpr::LitKind GetLiteralKind() const { return lit_kind_; }
+  LiteralExpr::LiteralKind GetLiteralKind() const { return lit_kind_; }
 
   /**
    * @return True if this is a 'nil' literal; false otherwise.
    */
-  bool IsNilLitExpr() const { return lit_kind_ == LitKind::Nil; }
+  bool IsNilLitExpr() const { return lit_kind_ == LiteralKind::Nil; }
 
   /**
    * @return True if this is a bool literal ('true' or 'false'); false otherwise.
    */
-  bool IsBoolLitExpr() const { return lit_kind_ == LitKind::Boolean; }
+  bool IsBoolLitExpr() const { return lit_kind_ == LiteralKind::Boolean; }
 
   /**
    * @return True if this is an integer literal ('1', '44', etc.); false otherwise.
    */
-  bool IsIntLitExpr() const { return lit_kind_ == LitKind::Int; }
+  bool IsIntLitExpr() const { return lit_kind_ == LiteralKind::Int; }
 
   /**
    * @return True if this is a floating point literal ('1.0', '77.12', etc.); false otherwise.
    */
-  bool IsFloatLitExpr() const { return lit_kind_ == LitKind::Float; }
+  bool IsFloatLitExpr() const { return lit_kind_ == LiteralKind::Float; }
 
   /**
    * @return True if this is a string literal ('hello', 'there', etc.); false otherwise.
    */
-  bool IsStringLitExpr() const { return lit_kind_ == LitKind::String; }
+  bool IsStringLitExpr() const { return lit_kind_ == LiteralKind::String; }
 
   /**
    * @return The boolean literal value. No check to ensure expression is a boolean literal.
@@ -1275,11 +1275,11 @@ class LitExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a literal; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::LitExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::LiteralExpr; }
 
  private:
   // The kind of literal.
-  LitKind lit_kind_;
+  LiteralKind lit_kind_;
   // A union of possible literal values.
   union {
     bool boolean_;
