@@ -1064,17 +1064,16 @@ class IdentifierExpr : public Expr {
  * An enumeration capturing all possible casting operations.
  */
 enum class CastKind : uint8_t {
-  // Conversion of a 32-bit integer into a non-nullable SQL Integer value
+  // Conversion of a 32-bit integer into a non-nullable SQL Integer value.
   IntToSqlInt,
 
-  // Conversion of a 32-bit integer into a non-nullable SQL Decimal value
+  // Conversion of a 32-bit integer into a non-nullable SQL Decimal value.
   IntToSqlDecimal,
 
-  // Conversion of a SQL boolean value (potentially nullable) into a primitive
-  // boolean value
+  // Conversion of a SQL boolean value into a primitive boolean value.
   SqlBoolToBool,
 
-  // Conversion of a primitive boolean into a SQL boolean
+  // Conversion of a primitive boolean into a SQL boolean.
   BoolToSqlBool,
 
   // A cast between integral types (i.e., 8-bit, 16-bit, 32-bit, or 64-bit
@@ -1088,13 +1087,13 @@ enum class CastKind : uint8_t {
   // A float to integer cast. Only allows widening.
   FloatToInt,
 
-  // A simple bit cast reinterpretation
+  // A simple bit cast reinterpretation.
   BitCast,
 
-  // Conversion of a 64-bit float into a non-nullable SQL Real value
+  // Conversion of a 64-bit float into a non-nullable SQL Real value.
   FloatToSqlReal,
 
-  // Convert a SQL integer into a SQL real
+  // Convert a SQL integer into a SQL real.
   SqlIntToSqlReal,
 };
 
