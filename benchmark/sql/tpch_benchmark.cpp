@@ -2127,9 +2127,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q14)(benchmark::State &state) {
                                         expr_maker.OpDiv(promo_revenue_1, promo_revenue_2)));
     // Build.
     proj = planner::ProjectionPlanNode::Builder{}
-        .AddChild(std::move(agg))
-        .SetOutputSchema(proj_out.MakeSchema())
-        .Build();
+               .AddChild(std::move(agg))
+               .SetOutputSchema(proj_out.MakeSchema())
+               .Build();
   }
 
   // Compile plan
