@@ -201,7 +201,7 @@ class Sema : public ast::AstVisitor<Sema> {
       }
     }
 
-    Sema *check() { return check_; }
+    Sema *Check() { return check_; }
 
    private:
     Sema *check_;
@@ -213,7 +213,7 @@ class Sema : public ast::AstVisitor<Sema> {
    */
   class FunctionSemaScope {
    public:
-    FunctionSemaScope(Sema *check, ast::FunctionLitExpr *func)
+    FunctionSemaScope(Sema *check, ast::FunctionLiteralExpr *func)
         : prev_func_(check->current_function()), block_scope_(check, Scope::Kind::Function) {
       check->curr_func_ = func;
     }
@@ -222,32 +222,34 @@ class Sema : public ast::AstVisitor<Sema> {
 
     void Exit() {
       block_scope_.Exit();
-      block_scope_.check()->curr_func_ = prev_func_;
+      block_scope_.Check()->curr_func_ = prev_func_;
     }
 
    private:
-    ast::FunctionLitExpr *prev_func_;
+    // The outer-nested function being type-checked.
+    ast::FunctionLiteralExpr *prev_func_;
     SemaScope block_scope_;
   };
 
-  ast::FunctionLitExpr *current_function() const { return curr_func_; }
+  ast::FunctionLiteralExpr *current_function() const { return curr_func_; }
 
  private:
-  // The context
-  ast::Context *ctx_;
-
-  // The error reporter
-  ErrorReporter *error_reporter_;
-
-  // The current active scope
-  Scope *scope_;
-
-  // A cache of scopes to reduce allocations
+  // By default, we keep pre-allocate four scopes for four levels of nesting.
+  // This seems to be good for the TPL programs we generate, but adjust as
+  // need be.
   static constexpr const uint32_t kScopeCacheSize = 4;
+
+  // The context.
+  ast::Context *ctx_;
+  // The error reporter.
+  ErrorReporter *error_reporter_;
+  // The current active scope.
+  Scope *scope_;
+  // A cache of scopes to reduce allocations.
   uint64_t num_cached_scopes_;
   std::unique_ptr<Scope> scope_cache_[kScopeCacheSize] = {nullptr};
-
-  ast::FunctionLitExpr *curr_func_;
+  // The current in-flight function being type-checked.
+  ast::FunctionLiteralExpr *curr_func_;
 };
 
 }  // namespace sema

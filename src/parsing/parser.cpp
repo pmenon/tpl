@@ -84,7 +84,7 @@ ast::Decl *Parser::ParseFunctionDecl() {
   ast::Identifier name = GetSymbol();
 
   // The function literal
-  auto *fun = ParseFunctionLitExpr()->As<ast::FunctionLitExpr>();
+  auto *fun = ParseFunctionLitExpr()->As<ast::FunctionLiteralExpr>();
 
   // Create declaration
   ast::FunctionDecl *decl = node_factory_->NewFunctionDecl(position, name, fun);

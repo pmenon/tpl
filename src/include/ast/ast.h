@@ -61,7 +61,7 @@ namespace ast {
   T(BinaryOpExpr)                       \
   T(CallExpr)                           \
   T(ComparisonOpExpr)                   \
-  T(FunctionLitExpr)                    \
+  T(FunctionLiteralExpr)                \
   T(IdentifierExpr)                     \
   T(ImplicitCastExpr)                   \
   T(IndexExpr)                          \
@@ -281,12 +281,12 @@ class FieldDecl : public Decl {
  */
 class FunctionDecl : public Decl {
  public:
-  FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLitExpr *func);
+  FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLiteralExpr *func);
 
   /**
    * @return The function literal defining the body of the function declaration.
    */
-  FunctionLitExpr *Function() const { return func_; }
+  FunctionLiteralExpr *Function() const { return func_; }
 
   /**
    * Is the given node a function declaration? Needed as part of the custom AST RTTI infrastructure.
@@ -297,7 +297,7 @@ class FunctionDecl : public Decl {
 
  private:
   // The function definition (signature and body).
-  FunctionLitExpr *func_;
+  FunctionLiteralExpr *func_;
 };
 
 /**
@@ -988,9 +988,9 @@ class ComparisonOpExpr : public Expr {
 /**
  * A function literal.
  */
-class FunctionLitExpr : public Expr {
+class FunctionLiteralExpr : public Expr {
  public:
-  FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body);
+  FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStmt *body);
 
   /**
    * @return The function's signature.
@@ -1012,7 +1012,7 @@ class FunctionLitExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a function literal; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionLitExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionLiteralExpr; }
 
  private:
   // The function's signature.

@@ -157,7 +157,7 @@ void AstPrettyPrintImpl::VisitFile(File *node) {
   }
 }
 
-void AstPrettyPrintImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
+void AstPrettyPrintImpl::VisitFunctionLiteralExpr(FunctionLiteralExpr *node) {
   Visit(node->TypeRepr());
   os_ << " ";
   Visit(node->Body());

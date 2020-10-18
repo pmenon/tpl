@@ -2277,7 +2277,9 @@ void BytecodeGenerator::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   }
 }
 
-void BytecodeGenerator::VisitFunctionLitExpr(ast::FunctionLitExpr *node) { Visit(node->Body()); }
+void BytecodeGenerator::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
+  Visit(node->Body());
+}
 
 void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest_type) {
   // Emit the appropriate assignment

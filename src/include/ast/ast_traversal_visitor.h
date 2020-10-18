@@ -177,7 +177,7 @@ inline void AstTraversalVisitor<Subclass>::VisitFile(File *node) {
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitFunctionLitExpr(FunctionLitExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitFunctionLiteralExpr(FunctionLiteralExpr *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->TypeRepr()));
   RECURSE(Visit(node->Body()));

@@ -20,7 +20,8 @@ class AstNodeFactory {
     return new (region_) File(pos, std::move(declarations));
   }
 
-  FunctionDecl *NewFunctionDecl(const SourcePosition &pos, Identifier name, FunctionLitExpr *fun) {
+  FunctionDecl *NewFunctionDecl(const SourcePosition &pos, Identifier name,
+                                FunctionLiteralExpr *fun) {
     return new (region_) FunctionDecl(pos, name, fun);
   }
 
@@ -103,8 +104,8 @@ class AstNodeFactory {
     return new (region_) LiteralExpr(pos, str);
   }
 
-  FunctionLitExpr *NewFunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body) {
-    return new (region_) FunctionLitExpr(type_repr, body);
+  FunctionLiteralExpr *NewFunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body) {
+    return new (region_) FunctionLiteralExpr(type_repr, body);
   }
 
   UnaryOpExpr *NewUnaryOpExpr(const SourcePosition &pos, parsing::Token::Type op, Expr *expr) {

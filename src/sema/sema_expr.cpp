@@ -145,7 +145,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   node->SetType(func_type->GetReturnType());
 }
 
-void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
+void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
   // Resolve the type, if not resolved already
   if (auto *type = node->TypeRepr()->GetType(); type == nullptr) {
     type = Resolve(node->TypeRepr());

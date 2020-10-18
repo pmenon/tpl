@@ -8,7 +8,7 @@ namespace tpl::ast {
 // Function Declaration
 // ---------------------------------------------------------
 
-FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLitExpr *func)
+FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLiteralExpr *func)
     : Decl(Kind::FunctionDecl, pos, name, func->TypeRepr()), func_(func) {}
 
 // ---------------------------------------------------------
@@ -92,8 +92,8 @@ bool ComparisonOpExpr::IsLiteralCompareNil(Expr **result) const {
 // Function Literal Expressions
 // ---------------------------------------------------------
 
-FunctionLitExpr::FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body)
-    : Expr(Kind::FunctionLitExpr, type_repr->Position()), type_repr_(type_repr), body_(body) {}
+FunctionLiteralExpr::FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStmt *body)
+    : Expr(Kind::FunctionLiteralExpr, type_repr->Position()), type_repr_(type_repr), body_(body) {}
 
 // ---------------------------------------------------------
 // Call Expression

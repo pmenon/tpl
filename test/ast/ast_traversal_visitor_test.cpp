@@ -168,14 +168,14 @@ class FunctionFinder : public AstTraversalVisitor<FunctionFinder<CountLiterals>>
     AstTraversalVisitor<SelfT>::VisitFunctionDecl(decl);
   }
 
-  void VisitFunctionLitExpr(ast::FunctionLitExpr *expr) {
+  void VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *expr) {
     if constexpr (CountLiterals) {
       num_funcs_++;
     }
-    AstTraversalVisitor<SelfT>::VisitFunctionLitExpr(expr);
+    AstTraversalVisitor<SelfT>::VisitFunctionLiteralExpr(expr);
   }
 
-  uint32_t num_funcs() const { return num_funcs_; }
+  uint32_t NumFunctions() const { return num_funcs_; }
 
  private:
   uint32_t num_funcs_;
@@ -199,8 +199,8 @@ TEST_F(AstTraversalVisitorTest, CountFunctionsTest) {
     find_func_decls.Run();
     find_all_funcs.Run();
 
-    EXPECT_EQ(2u, find_func_decls.num_funcs());
-    EXPECT_EQ(2u, find_all_funcs.num_funcs());
+    EXPECT_EQ(2u, find_func_decls.NumFunctions());
+    EXPECT_EQ(2u, find_all_funcs.NumFunctions());
   }
 
   // Function declarations and literals
@@ -220,8 +220,8 @@ TEST_F(AstTraversalVisitorTest, CountFunctionsTest) {
     find_func_decls.Run();
     find_all_funcs.Run();
 
-    EXPECT_EQ(2u, find_func_decls.num_funcs());
-    EXPECT_EQ(3u, find_all_funcs.num_funcs());
+    EXPECT_EQ(2u, find_func_decls.NumFunctions());
+    EXPECT_EQ(3u, find_all_funcs.NumFunctions());
   }
 }
 
@@ -236,7 +236,7 @@ class IfFinder : public AstTraversalVisitor<IfFinder> {
     AstTraversalVisitor<IfFinder>::VisitIfStmt(stmt);
   }
 
-  uint32_t num_ifs() const { return num_ifs_; }
+  uint32_t NumIfs() const { return num_ifs_; }
 
  private:
   uint32_t num_ifs_;
@@ -267,7 +267,7 @@ TEST_F(AstTraversalVisitorTest, CountIfTest) {
 
     finder.Run();
 
-    EXPECT_EQ(6u, finder.num_ifs());
+    EXPECT_EQ(6u, finder.NumIfs());
   }
 
   // Serial Ifs
@@ -292,7 +292,7 @@ TEST_F(AstTraversalVisitorTest, CountIfTest) {
 
     finder.Run();
 
-    EXPECT_EQ(5u, finder.num_ifs());
+    EXPECT_EQ(5u, finder.NumIfs());
   }
 }
 

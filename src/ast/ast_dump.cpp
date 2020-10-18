@@ -294,7 +294,7 @@ void AstDumperImpl::VisitComparisonOpExpr(ComparisonOpExpr *node) {
   DumpExpr(node->Right());
 }
 
-void AstDumperImpl::VisitFunctionLitExpr(FunctionLitExpr *node) {
+void AstDumperImpl::VisitFunctionLiteralExpr(FunctionLiteralExpr *node) {
   DumpExpressionCommon(node);
   DumpStmt(node->Body());
 }
