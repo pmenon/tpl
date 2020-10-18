@@ -1,6 +1,5 @@
 #include "ast/ast_dump.h"
 
-#include <iostream>
 #include <string>
 #include <utility>
 
@@ -14,8 +13,10 @@ namespace tpl::ast {
 
 class AstDumperImpl : public AstVisitor<AstDumperImpl> {
  public:
-  explicit AstDumperImpl(AstNode *root, int out_fd)
-      : root_(root), top_level_(true), first_child_(true), out_(out_fd, false) {}
+  explicit AstDumperImpl(std::ostream &os, AstNode *root)
+      : root_(root), top_level_(true), first_child_(true), out_(os) {
+    out_.enable_colors(true);
+  }
 
   void Run() { Visit(root_); }
 
@@ -141,16 +142,20 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
   }
 
  private:
+  // The root of the AST to dump.
   AstNode *root_;
-
+  // The current prefix to use when printing an AST node.
+  // This is adjusted as we traverse the tree to add/remove tab levels.
   std::string prefix_;
 
   bool top_level_;
   bool first_child_;
 
+  // The list of pending outputs.
   llvm::SmallVector<std::function<void(bool)>, 32> pending_;
 
-  llvm::raw_fd_ostream out_;
+  // The stream to print the tree to.
+  llvm::raw_os_ostream out_;
 };
 
 void AstDumperImpl::VisitFile(File *node) {
@@ -382,8 +387,8 @@ void AstDumperImpl::VisitMapTypeRepr(MapTypeRepr *node) {
   DumpExpr(node->ValType());
 }
 
-void AstDump::Dump(AstNode *node) {
-  AstDumperImpl print(node, fileno(stderr));
+void AstDump::Dump(std::ostream &os, AstNode *node) {
+  AstDumperImpl print(os, node);
   print.Run();
 }
 

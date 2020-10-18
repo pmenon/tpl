@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iosfwd>
+
 namespace tpl::ast {
 
 class AstNode;
@@ -9,7 +11,7 @@ class AstNode;
  */
 class AstDump {
  public:
-  static void Dump(AstNode *node);
+  static void Dump(std::ostream &os, AstNode *node);
 };
 
 }  // namespace tpl::ast

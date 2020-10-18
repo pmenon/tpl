@@ -107,12 +107,12 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     return;
   }
 
-  // Dump AST
+  // Dump AST?
   if (kPrintAst) {
-    ast::AstDump::Dump(root);
+    ast::AstDump::Dump(std::cout, root);
   }
 
-  // Pretty-print AST
+  // Pretty-print AST?
   if (kPrettyPrint) {
     ast::AstPrettyPrint::Dump(std::cout, root);
   }
