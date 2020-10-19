@@ -47,10 +47,8 @@ bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count
 // Logical ops: and, or
 Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op, const SourcePosition &pos,
                                              ast::Expr *left, ast::Expr *right) {
-  //
   // Both left and right types are either primitive booleans or SQL booleans. We
   // need both to be primitive booleans. Cast each expression as appropriate.
-  //
 
   ast::Type *const bool_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
 
@@ -62,13 +60,12 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op, const Sour
     right = ImplCastExprToType(right, bool_type, ast::CastKind::SqlBoolToBool);
   }
 
-  // If both input expressions are primitive booleans, we're done
+  // If both input expressions are primitive booleans, we're done.
   if (left->GetType()->IsBoolType() && right->GetType()->IsBoolType()) {
     return {bool_type, left, right};
   }
 
   // Okay, there's an error ...
-
   error_reporter()->Report(pos, ErrorMessages::kMismatchedTypesToBinary, left->GetType(),
                            right->GetType(), op);
 
@@ -78,7 +75,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op, const Sour
 // Arithmetic ops: +, -, *, etc.
 Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const SourcePosition &pos,
                                                 ast::Expr *left, ast::Expr *right) {
-  // If neither inputs are arithmetic, fail early
+  // If neither inputs are arithmetic, fail early.
   if (!left->GetType()->IsArithmetic() || !right->GetType()->IsArithmetic()) {
     error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
                              right->GetType());

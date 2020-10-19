@@ -7,6 +7,7 @@
 #include "common/macros.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
+#include "sql/compact_storage.h"
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
 #include "sql/functions/arithmetic_functions.h"
@@ -400,6 +401,48 @@ VM_OP_HOT void OpHashTimestamp(hash_t *const hash_val, const tpl::sql::Timestamp
 VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {
   *hash_val = tpl::util::HashUtil::CombineHashes(*hash_val, new_hash_val);
 }
+
+// ---------------------------------------------------------
+// Compact Storage
+// ---------------------------------------------------------
+
+#define GEN_COMPACT_STORAGE_OPS(Name, SqlValueType, CppType)                                       \
+  VM_OP_HOT void OpCompactStorageWrite##Name(byte *ptr, byte *nulls, uint32_t idx,                 \
+                                             const tpl::sql::SqlValueType *input) {                \
+    tpl::sql::CompactStorage::Write<CppType, false>(ptr, nulls, idx,                               \
+                                                    static_cast<CppType>(input->val), false);      \
+  }                                                                                                \
+  VM_OP_HOT void OpCompactStorageWrite##Name##Null(byte *ptr, byte *nulls, uint32_t idx,           \
+                                                   const tpl::sql::SqlValueType *input) {          \
+    tpl::sql::CompactStorage::Write<CppType, true>(                                                \
+        ptr, nulls, idx, static_cast<CppType>(input->val), input->is_null);                        \
+  }                                                                                                \
+  VM_OP_HOT void OpCompactStorageRead##Name(tpl::sql::SqlValueType *output, const byte *ptr,       \
+                                            const byte *nulls, uint32_t idx) {                     \
+    const auto result = tpl::sql::CompactStorage::Read<CppType, false>(ptr, nulls, idx, nullptr);  \
+    output->is_null = false;                                                                       \
+    output->val = *result;                                                                         \
+  }                                                                                                \
+  VM_OP_HOT void OpCompactStorageRead##Name##Null(tpl::sql::SqlValueType *output, const byte *ptr, \
+                                                  const byte *nulls, uint32_t idx) {               \
+    const auto result =                                                                            \
+        tpl::sql::CompactStorage::Read<CppType, true>(ptr, nulls, idx, &output->is_null);          \
+    output->val = *result;                                                                         \
+  }
+
+GEN_COMPACT_STORAGE_OPS(Bool, BoolVal, bool);
+GEN_COMPACT_STORAGE_OPS(TinyInt, Integer, int8_t);
+GEN_COMPACT_STORAGE_OPS(SmallInt, Integer, int16_t);
+GEN_COMPACT_STORAGE_OPS(Integer, Integer, int32_t);
+GEN_COMPACT_STORAGE_OPS(BigInt, Integer, int64_t);
+GEN_COMPACT_STORAGE_OPS(Real, Real, float);
+GEN_COMPACT_STORAGE_OPS(Double, Real, double);
+GEN_COMPACT_STORAGE_OPS(Decimal, DecimalVal, tpl::sql::Decimal64);
+GEN_COMPACT_STORAGE_OPS(Date, DateVal, tpl::sql::Date);
+GEN_COMPACT_STORAGE_OPS(Timestamp, TimestampVal, tpl::sql::Timestamp);
+GEN_COMPACT_STORAGE_OPS(String, StringVal, tpl::sql::VarlenEntry);
+
+#undef GEN_COMPACT_STORAGE_OPS
 
 // ---------------------------------------------------------
 // Filter Manager

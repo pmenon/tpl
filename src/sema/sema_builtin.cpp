@@ -1099,6 +1099,121 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
+void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCount(call, 4)) return;
+
+  // First argument must be a pointer to where to store the value.
+  if (!call->Arguments()[0]->GetType()->IsPointerType()) {
+    ReportIncorrectCallArg(call, 0, "expected pointer to storage space.");
+    return;
+  }
+
+  // Second argument must be a pointer to the NULL indicators array.
+  if (!call->Arguments()[1]->GetType()->IsPointerType()) {
+    ReportIncorrectCallArg(call, 0, "expected pointer to NULL indicators array.");
+    return;
+  }
+
+  // Third argument is 4-byte index.
+  if (!call->Arguments()[1]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Int32)) {
+    ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Int32));
+    return;
+  }
+
+  // Last argument is the SQL value.
+  ast::BuiltinType::Kind expected_input_type;
+  switch (builtin) {
+    case ast::Builtin::CompactStorageWriteBool:
+      expected_input_type = ast::BuiltinType::Boolean;
+      break;
+    case ast::Builtin::CompactStorageWriteTinyInt:
+    case ast::Builtin::CompactStorageWriteSmallInt:
+    case ast::Builtin::CompactStorageWriteInteger:
+    case ast::Builtin::CompactStorageWriteBigInt:
+      expected_input_type = ast::BuiltinType::Integer;
+      break;
+    case ast::Builtin::CompactStorageWriteReal:
+    case ast::Builtin::CompactStorageWriteDouble:
+      expected_input_type = ast::BuiltinType::Real;
+      break;
+    case ast::Builtin::CompactStorageWriteDate:
+      expected_input_type = ast::BuiltinType::Date;
+      break;
+    case ast::Builtin::CompactStorageWriteTimestamp:
+      expected_input_type = ast::BuiltinType::Timestamp;
+      break;
+    case ast::Builtin::CompactStorageWriteString:
+      expected_input_type = ast::BuiltinType::StringVal;
+      break;
+    default: {
+      UNREACHABLE("Impossible CompactStorage::Write() call!");
+    }
+  }
+
+  // Last argument is the SQL value to write.
+  if (!call->Arguments()[3]->GetType()->IsSpecificBuiltin(expected_input_type)) {
+    ReportIncorrectCallArg(call, 3, GetBuiltinType(expected_input_type));
+    return;
+  }
+
+  // No return.
+  call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+}
+
+void Sema::CheckBuiltinCompactStorageReadCall(ast::CallExpr *call, ast::Builtin builtin) {
+  if (!CheckArgCount(call, 3)) return;
+
+  // First argument must be a pointer to where the value is stored.
+  if (!call->Arguments()[0]->GetType()->IsPointerType()) {
+    ReportIncorrectCallArg(call, 0, "expected pointer to storage space.");
+    return;
+  }
+
+  // Second argument must be a pointer to the NULL indicators array.
+  if (!call->Arguments()[1]->GetType()->IsPointerType()) {
+    ReportIncorrectCallArg(call, 0, "expected pointer to NULL indicators array.");
+    return;
+  }
+
+  // Third argument is 4-byte index.
+  if (!call->Arguments()[1]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Int32)) {
+    ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Int32));
+    return;
+  }
+
+  // Set return type.
+  ast::BuiltinType::Kind return_type;
+  switch (builtin) {
+    case ast::Builtin::CompactStorageReadBool:
+      return_type = ast::BuiltinType::Boolean;
+      break;
+    case ast::Builtin::CompactStorageReadTinyInt:
+    case ast::Builtin::CompactStorageReadSmallInt:
+    case ast::Builtin::CompactStorageReadInteger:
+    case ast::Builtin::CompactStorageReadBigInt:
+      return_type = ast::BuiltinType::Integer;
+      break;
+    case ast::Builtin::CompactStorageReadReal:
+    case ast::Builtin::CompactStorageReadDouble:
+      return_type = ast::BuiltinType::Real;
+      break;
+    case ast::Builtin::CompactStorageReadDate:
+      return_type = ast::BuiltinType::Date;
+      break;
+    case ast::Builtin::CompactStorageReadTimestamp:
+      return_type = ast::BuiltinType::Timestamp;
+      break;
+    case ast::Builtin::CompactStorageReadString:
+      return_type = ast::BuiltinType::StringVal;
+      break;
+    default: {
+      UNREACHABLE("Impossible CompactStorage::Read() call!");
+    }
+  }
+
+  call->SetType(GetBuiltinType(return_type));
+}
+
 void Sema::CheckBuiltinHashCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
@@ -1759,6 +1874,32 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::VPISetDate:
     case ast::Builtin::VPISetString: {
       CheckBuiltinVPICall(call, builtin);
+      break;
+    }
+    case ast::Builtin::CompactStorageWriteBool:
+    case ast::Builtin::CompactStorageWriteTinyInt:
+    case ast::Builtin::CompactStorageWriteSmallInt:
+    case ast::Builtin::CompactStorageWriteInteger:
+    case ast::Builtin::CompactStorageWriteBigInt:
+    case ast::Builtin::CompactStorageWriteReal:
+    case ast::Builtin::CompactStorageWriteDouble:
+    case ast::Builtin::CompactStorageWriteDate:
+    case ast::Builtin::CompactStorageWriteTimestamp:
+    case ast::Builtin::CompactStorageWriteString: {
+      CheckBuiltinCompactStorageWriteCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::CompactStorageReadBool:
+    case ast::Builtin::CompactStorageReadTinyInt:
+    case ast::Builtin::CompactStorageReadSmallInt:
+    case ast::Builtin::CompactStorageReadInteger:
+    case ast::Builtin::CompactStorageReadBigInt:
+    case ast::Builtin::CompactStorageReadReal:
+    case ast::Builtin::CompactStorageReadDouble:
+    case ast::Builtin::CompactStorageReadDate:
+    case ast::Builtin::CompactStorageReadTimestamp:
+    case ast::Builtin::CompactStorageReadString: {
+      CheckBuiltinCompactStorageReadCall(call, builtin);
       break;
     }
     case ast::Builtin::Hash: {

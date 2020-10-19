@@ -147,6 +147,8 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinVectorFilterCall(ast::CallExpr *call);
+  void CheckBuiltinCompactStorageWriteCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinCompactStorageReadCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinHashCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin);

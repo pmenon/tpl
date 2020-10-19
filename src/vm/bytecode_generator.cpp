@@ -795,6 +795,61 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
   }
 }
 
+void BytecodeGenerator::VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast::Builtin builtin) {
+  LocalVar storage = VisitExpressionForRValue(call->Arguments()[0]);
+  switch (builtin) {
+#define GEN_CASE(BuiltinName, Bytecode)                              \
+  case ast::Builtin::BuiltinName: {                                  \
+    LocalVar index = VisitExpressionForRValue(call->Arguments()[1]); \
+    LocalVar ptr = VisitExpressionForRValue(call->Arguments()[2]);   \
+    LocalVar val = VisitExpressionForSQLValue(call->Arguments()[3]); \
+    GetEmitter()->Emit(Bytecode, storage, index, ptr, val);          \
+    break;                                                           \
+  }
+
+      // clang-format off
+    GEN_CASE(CompactStorageWriteBool, Bytecode::CompactStorageWriteBool);
+    GEN_CASE(CompactStorageWriteTinyInt, Bytecode::CompactStorageWriteTinyInt);
+    GEN_CASE(CompactStorageWriteSmallInt, Bytecode::CompactStorageWriteSmallInt);
+    GEN_CASE(CompactStorageWriteInteger, Bytecode::CompactStorageWriteInteger);
+    GEN_CASE(CompactStorageWriteBigInt, Bytecode::CompactStorageWriteBigInt);
+    GEN_CASE(CompactStorageWriteReal, Bytecode::CompactStorageWriteReal);
+    GEN_CASE(CompactStorageWriteDouble, Bytecode::CompactStorageWriteDouble);
+    GEN_CASE(CompactStorageWriteDate, Bytecode::CompactStorageWriteDate);
+    GEN_CASE(CompactStorageWriteTimestamp, Bytecode::CompactStorageWriteTimestamp);
+    GEN_CASE(CompactStorageWriteString, Bytecode::CompactStorageWriteString);
+      // clang-format on
+#undef GEN_CASE
+
+#define GEN_CASE(BuiltinName, Bytecode)                                              \
+  case ast::Builtin::BuiltinName: {                                                  \
+    LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType()); \
+    LocalVar index = VisitExpressionForRValue(call->Arguments()[1]);                 \
+    LocalVar ptr = VisitExpressionForRValue(call->Arguments()[2]);                   \
+    GetEmitter()->Emit(Bytecode, result, storage, index, ptr);                       \
+    break;                                                                           \
+  }
+
+      // clang-format off
+    GEN_CASE(CompactStorageReadBool, Bytecode::CompactStorageReadBool);
+    GEN_CASE(CompactStorageReadTinyInt, Bytecode::CompactStorageReadTinyInt);
+    GEN_CASE(CompactStorageReadSmallInt, Bytecode::CompactStorageReadSmallInt);
+    GEN_CASE(CompactStorageReadInteger, Bytecode::CompactStorageReadInteger);
+    GEN_CASE(CompactStorageReadBigInt, Bytecode::CompactStorageReadBigInt);
+    GEN_CASE(CompactStorageReadReal, Bytecode::CompactStorageReadReal);
+    GEN_CASE(CompactStorageReadDouble, Bytecode::CompactStorageReadDouble);
+    GEN_CASE(CompactStorageReadDate, Bytecode::CompactStorageReadDate);
+    GEN_CASE(CompactStorageReadTimestamp, Bytecode::CompactStorageReadTimestamp);
+    GEN_CASE(CompactStorageReadString, Bytecode::CompactStorageReadString);
+      // clang-format on
+#undef GEN_CASE
+
+    default: {
+      UNREACHABLE("Impossible table iteration call");
+    }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
   TPL_ASSERT(call->GetType()->IsSpecificBuiltin(ast::BuiltinType::Uint64),
              "Return type of @hash(...) expected to be 8-byte unsigned hash");
@@ -1723,6 +1778,29 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPISetDate:
     case ast::Builtin::VPISetString: {
       VisitBuiltinVPICall(call, builtin);
+      break;
+    }
+    case ast::Builtin::CompactStorageWriteBool:
+    case ast::Builtin::CompactStorageWriteTinyInt:
+    case ast::Builtin::CompactStorageWriteSmallInt:
+    case ast::Builtin::CompactStorageWriteInteger:
+    case ast::Builtin::CompactStorageWriteBigInt:
+    case ast::Builtin::CompactStorageWriteReal:
+    case ast::Builtin::CompactStorageWriteDouble:
+    case ast::Builtin::CompactStorageWriteDate:
+    case ast::Builtin::CompactStorageWriteTimestamp:
+    case ast::Builtin::CompactStorageWriteString:
+    case ast::Builtin::CompactStorageReadBool:
+    case ast::Builtin::CompactStorageReadTinyInt:
+    case ast::Builtin::CompactStorageReadSmallInt:
+    case ast::Builtin::CompactStorageReadInteger:
+    case ast::Builtin::CompactStorageReadBigInt:
+    case ast::Builtin::CompactStorageReadReal:
+    case ast::Builtin::CompactStorageReadDouble:
+    case ast::Builtin::CompactStorageReadDate:
+    case ast::Builtin::CompactStorageReadTimestamp:
+    case ast::Builtin::CompactStorageReadString: {
+      VisitBuiltinCompactStorageCall(call, builtin);
       break;
     }
     case ast::Builtin::Hash: {

@@ -709,6 +709,40 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
   // ------------------------------------------------------
+  // Compact Storage
+  // ------------------------------------------------------
+
+#define GEN_COMPACT_STORAGE_OPS(NAME, VAL_CPP_TYPE, CPP_TYPE)           \
+  OP(CompactStorageWrite##NAME) : {                                     \
+    auto ptr = frame->LocalAt<byte *>(READ_LOCAL_ID());                 \
+    auto nulls = frame->LocalAt<byte *>(READ_LOCAL_ID());               \
+    auto col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());           \
+    auto input = frame->LocalAt<const VAL_CPP_TYPE *>(READ_LOCAL_ID()); \
+    OpCompactStorageWrite##NAME(ptr, nulls, col_idx, input);            \
+    DISPATCH_NEXT();                                                    \
+  }                                                                     \
+  OP(CompactStorageRead##NAME) : {                                      \
+    auto result = frame->LocalAt<VAL_CPP_TYPE *>(READ_LOCAL_ID());      \
+    auto ptr = frame->LocalAt<const byte *>(READ_LOCAL_ID());           \
+    auto nulls = frame->LocalAt<const byte *>(READ_LOCAL_ID());         \
+    auto col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());           \
+    OpCompactStorageRead##NAME(result, ptr, nulls, col_idx);            \
+    DISPATCH_NEXT();                                                    \
+  }
+  GEN_COMPACT_STORAGE_OPS(Bool, sql::BoolVal, bool)
+  GEN_COMPACT_STORAGE_OPS(TinyInt, sql::Integer, int8_t)
+  GEN_COMPACT_STORAGE_OPS(SmallInt, sql::Integer, int16_t)
+  GEN_COMPACT_STORAGE_OPS(Integer, sql::Integer, int32_t)
+  GEN_COMPACT_STORAGE_OPS(BigInt, sql::Integer, int64_t)
+  GEN_COMPACT_STORAGE_OPS(Real, sql::Real, float)
+  GEN_COMPACT_STORAGE_OPS(Double, sql::Real, double)
+  GEN_COMPACT_STORAGE_OPS(Decimal, sql::DecimalVal, sql::Decimal64)
+  GEN_COMPACT_STORAGE_OPS(Date, sql::DateVal, sql::Date)
+  GEN_COMPACT_STORAGE_OPS(Timestamp, sql::TimestampVal, sql::Timestamp)
+  GEN_COMPACT_STORAGE_OPS(String, sql::StringVal, sql::VarlenEntry)
+#undef GEN_COMPACT_STORAGE_OPS
+
+  // ------------------------------------------------------
   // Filter Manager
   // ------------------------------------------------------
 

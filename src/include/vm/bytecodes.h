@@ -264,6 +264,30 @@ namespace tpl::vm {
   F(HashString, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(HashCombine, OperandType::Local, OperandType::Local)                                                               \
                                                                                                                        \
+  /* Compact storage. */                                                                                               \
+  F(CompactStorageWriteBool, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)           \
+  F(CompactStorageWriteSmallInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)       \
+  F(CompactStorageWriteTinyInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)        \
+  F(CompactStorageWriteInteger, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)        \
+  F(CompactStorageWriteBigInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageWriteReal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)           \
+  F(CompactStorageWriteDouble, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageWriteDecimal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)        \
+  F(CompactStorageWriteDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)           \
+  F(CompactStorageWriteTimestamp, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)      \
+  F(CompactStorageWriteString, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageReadBool, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)            \
+  F(CompactStorageReadSmallInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)        \
+  F(CompactStorageReadTinyInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageReadInteger, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageReadBigInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
+  F(CompactStorageReadReal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)            \
+  F(CompactStorageReadDouble, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
+  F(CompactStorageReadDecimal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageReadDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)            \
+  F(CompactStorageReadTimestamp, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)       \
+  F(CompactStorageReadString, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
+                                                                                                                       \
   /* Aggregation Hash Table */                                                                                         \
   F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \
   F(AggregationHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                        \

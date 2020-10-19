@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
+#include "sql/compact_storage.h"
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
 #include "sql/generic_value.h"
