@@ -296,6 +296,8 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   DO_GEN_BIT_OP(BitAnd, type) \
   DO_GEN_BIT_OP(BitOr, type)  \
   DO_GEN_BIT_OP(BitXor, type) \
+  DO_GEN_BIT_OP(BitShl, type) \
+  DO_GEN_BIT_OP(BitShr, type) \
   DO_GEN_NEG_OP(type)
 
   INT_TYPES(GEN_BIT_OP)

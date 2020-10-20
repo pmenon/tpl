@@ -406,6 +406,26 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *UnaryOp(parsing::Token::Type op, ast::Expr *input) const;
 
+  /**
+   * @return The result of lhs & rhs.
+   */
+  [[nodiscard]] ast::Expr *BitAnd(ast::Expr *lhs, ast::Expr *rhs) const;
+
+  /**
+   * @return The result of lhs | rhs.
+   */
+  [[nodiscard]] ast::Expr *BitOr(ast::Expr *lhs, ast::Expr *rhs) const;
+
+  /**
+   * @return The result of val << num_bits.
+   */
+  [[nodiscard]] ast::Expr *BitShiftLeft(ast::Expr *val, ast::Expr *num_bits) const;
+
+  /**
+   * @return The result of val >> num_bits.
+   */
+  [[nodiscard]] ast::Expr *BitShiftRight(ast::Expr *val, ast::Expr *num_bits) const;
+
   // ---------------------------------------------------------------------------
   //
   // Struct/Array access

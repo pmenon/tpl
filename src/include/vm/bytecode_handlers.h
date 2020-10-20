@@ -118,22 +118,28 @@ FLOAT_TYPES(FLOAT_MODULAR)
 // Bitwise operations
 // ---------------------------------------------------------
 
-#define BITS(type, ...)                                                                         \
-  /* Primitive bitwise AND */                                                                   \
-  VM_OP_HOT void OpBitAnd##_##type(type *result, type lhs, type rhs) { *result = (lhs & rhs); } \
-                                                                                                \
-  /* Primitive bitwise OR */                                                                    \
-  VM_OP_HOT void OpBitOr##_##type(type *result, type lhs, type rhs) { *result = (lhs | rhs); }  \
-                                                                                                \
-  /* Primitive bitwise XOR */                                                                   \
-  VM_OP_HOT void OpBitXor##_##type(type *result, type lhs, type rhs) { *result = (lhs ^ rhs); } \
-                                                                                                \
-  /* Primitive bitwise COMPLEMENT */                                                            \
-  VM_OP_HOT void OpBitNeg##_##type(type *result, type input) { *result = ~input; }
+#define BIT_OPS(type, ...)                                                                         \
+  /* Primitive bitwise AND */                                                                      \
+  VM_OP_HOT void OpBitAnd##_##type(type *result, type lhs, type rhs) { *result = (lhs & rhs); }    \
+                                                                                                   \
+  /* Primitive bitwise OR */                                                                       \
+  VM_OP_HOT void OpBitOr##_##type(type *result, type lhs, type rhs) { *result = (lhs | rhs); }     \
+                                                                                                   \
+  /* Primitive bitwise XOR */                                                                      \
+  VM_OP_HOT void OpBitXor##_##type(type *result, type lhs, type rhs) { *result = (lhs ^ rhs); }    \
+                                                                                                   \
+  /* Primitive bitwise COMPLEMENT */                                                               \
+  VM_OP_HOT void OpBitNeg##_##type(type *result, type input) { *result = ~input; }                 \
+                                                                                                   \
+  /* Primitive bitwise shift left */                                                               \
+  VM_OP_HOT void OpBitShl##_##type(type *result, type input, uint32_t n) { *result = input << n; } \
+                                                                                                   \
+  /* Primitive bitwise shift right */                                                              \
+  VM_OP_HOT void OpBitShr##_##type(type *result, type input, uint32_t n) { *result = input >> n; }
 
-INT_TYPES(BITS);
+INT_TYPES(BIT_OPS);
 
-#undef BITS
+#undef BIT_OPS
 
 // ---------------------------------------------------------
 // Memory operations

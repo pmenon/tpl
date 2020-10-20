@@ -151,6 +151,8 @@ void Scanner::Scan() {
         Advance();
         if (Matches('=')) {
           type = Token::Type::GREATER_EQUAL;
+        } else if (Matches('>')) {
+          type = Token::Type::BIT_SHR;
         } else {
           type = Token::Type::GREATER;
         }
@@ -160,6 +162,8 @@ void Scanner::Scan() {
         Advance();
         if (Matches('=')) {
           type = Token::Type::LESS_EQUAL;
+        } else if (Matches('<')) {
+          type = Token::Type::BIT_SHL;
         } else {
           type = Token::Type::LESS;
         }

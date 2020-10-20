@@ -33,6 +33,8 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     case parsing::Token::Type::AMPERSAND:
     case parsing::Token::Type::BIT_XOR:
     case parsing::Token::Type::BIT_OR:
+    case parsing::Token::Type::BIT_SHL:
+    case parsing::Token::Type::BIT_SHR:
     case parsing::Token::Type::PLUS:
     case parsing::Token::Type::MINUS:
     case parsing::Token::Type::STAR:
