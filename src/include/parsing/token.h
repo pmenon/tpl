@@ -33,22 +33,24 @@ namespace tpl::parsing {
   T(COMMA, ",", 1)                                 \
   K(OR, "or", 3)                                   \
   K(AND, "and", 4)                                 \
-  T(BIT_OR, "|", 6)                                \
-  T(BIT_XOR, "^", 7)                               \
-  T(AMPERSAND, "&", 8)                             \
-  T(PLUS, "+", 9)                                  \
-  T(MINUS, "-", 9)                                 \
-  T(STAR, "*", 10)                                 \
-  T(SLASH, "/", 10)                                \
-  T(PERCENT, "%", 10)                              \
+  T(BIT_OR, "|", 5)                                \
+  T(BIT_XOR, "^", 6)                               \
+  T(AMPERSAND, "&", 7)                             \
+  T(BIT_SHL, "<<", 10)                             \
+  T(BIT_SHR, ">>", 10)                             \
+  T(PLUS, "+", 11)                                 \
+  T(MINUS, "-", 11)                                \
+  T(STAR, "*", 12)                                 \
+  T(SLASH, "/", 12)                                \
+  T(PERCENT, "%", 12)                              \
                                                    \
   /* Comparison operators, sorted by precedence */ \
-  T(BANG_EQUAL, "!=", 5)                           \
-  T(EQUAL_EQUAL, "==", 5)                          \
-  T(GREATER, ">", 6)                               \
-  T(GREATER_EQUAL, ">=", 6)                        \
-  T(LESS, "<", 6)                                  \
-  T(LESS_EQUAL, "<=", 6)                           \
+  T(BANG_EQUAL, "!=", 8)                           \
+  T(EQUAL_EQUAL, "==", 8)                          \
+  T(GREATER, ">", 9)                               \
+  T(GREATER_EQUAL, ">=", 9)                        \
+  T(LESS, "<", 9)                                  \
+  T(LESS_EQUAL, "<=", 9)                           \
                                                    \
   /* Identifiers and literals */                   \
   T(IDENTIFIER, "[ident]", 0)                      \

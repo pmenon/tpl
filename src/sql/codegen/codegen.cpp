@@ -288,6 +288,26 @@ ast::Expr *CodeGen::UnaryOp(parsing::Token::Type op, ast::Expr *input) const {
   return NodeFactory()->NewUnaryOpExpr(position_, op, input);
 }
 
+// ---------------------------------------------------------
+// Bit Operations.
+// ---------------------------------------------------------
+
+ast::Expr *CodeGen::BitAnd(ast::Expr *lhs, ast::Expr *rhs) const {
+  return BinaryOp(parsing::Token::Type::AMPERSAND, lhs, rhs);
+}
+
+ast::Expr *CodeGen::BitOr(ast::Expr *lhs, ast::Expr *rhs) const {
+  return BinaryOp(parsing::Token::Type::BIT_OR, lhs, rhs);
+}
+
+ast::Expr *CodeGen::BitShiftLeft(ast::Expr *val, ast::Expr *num_bits) const {
+  return BinaryOp(parsing::Token::Type::BIT_SHL, val, num_bits);
+}
+
+ast::Expr *CodeGen::BitShiftRight(ast::Expr *val, ast::Expr *num_bits) const {
+  return BinaryOp(parsing::Token::Type::BIT_SHR, val, num_bits);
+}
+
 ast::Expr *CodeGen::AccessStructMember(ast::Expr *object, ast::Identifier member) {
   return NodeFactory()->NewMemberExpr(position_, object, MakeExpr(member));
 }

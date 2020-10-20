@@ -2041,6 +2041,14 @@ void BytecodeGenerator::VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node) {
       bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitXor), node->GetType());
       break;
     }
+    case parsing::Token::Type::BIT_SHL: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitShl), node->GetType());
+      break;
+    }
+    case parsing::Token::Type::BIT_SHR: {
+      bytecode = GetIntTypedBytecode(GET_BASE_FOR_INT_TYPES(Bytecode::BitShr), node->GetType());
+      break;
+    }
     default: {
       UNREACHABLE("Impossible binary operation");
     }
