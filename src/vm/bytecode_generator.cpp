@@ -337,8 +337,8 @@ void BytecodeGenerator::VisitArrayIndexExpr(ast::IndexExpr *node) {
   LocalVar elem_ptr = GetCurrentFunction()->NewLocal(node->GetType()->PointerTo());
 
   if (node->Index()->IsIntegerLiteral()) {
-    const int32_t index = node->Index()->As<ast::LiteralExpr>()->Int32Val();
-    TPL_ASSERT(index >= 0, "Array indexes must be non-negative");
+    const int64_t index = node->Index()->As<ast::LiteralExpr>()->IntegerVal();
+    TPL_ASSERT(index >= 0, "Array indexes must be non-negative! Should");
     GetEmitter()->EmitLea(elem_ptr, arr, (elem_size * index));
   } else {
     LocalVar index = VisitExpressionForRValue(node->Index());
@@ -747,12 +747,13 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       break;
     }
 
-#define GEN_CASE(BuiltinName, Bytecode)                                                \
-  case ast::Builtin::BuiltinName: {                                                    \
-    LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());   \
-    const uint32_t col_idx = call->Arguments()[1]->As<ast::LiteralExpr>()->Int32Val(); \
-    GetEmitter()->EmitVPIGet(Bytecode, result, vpi, col_idx);                          \
-    break;                                                                             \
+#define GEN_CASE(BuiltinName, Bytecode)                                              \
+  case ast::Builtin::BuiltinName: {                                                  \
+    LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType()); \
+    const auto col_idx = call->Arguments()[1]->As<ast::LiteralExpr>()->IntegerVal(); \
+    TPL_ASSERT(col_idx >= 0, "Column index should be non-negative!");                \
+    GetEmitter()->EmitVPIGet(Bytecode, result, vpi, static_cast<uint32_t>(col_idx)); \
+    break;                                                                           \
   }
       // clang-format off
     GEN_CASE(VPIGetBool, Bytecode::VPIGetBool);
@@ -768,12 +769,13 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
       // clang-format on
 #undef GEN_CASE
 
-#define GEN_CASE(BuiltinName, Bytecode)                                      \
-  case ast::Builtin::BuiltinName: {                                          \
-    auto input = VisitExpressionForSQLValue(call->Arguments()[1]);           \
-    auto col_idx = call->Arguments()[2]->As<ast::LiteralExpr>()->Int32Val(); \
-    GetEmitter()->EmitVPISet(Bytecode, vpi, input, col_idx);                 \
-    break;                                                                   \
+#define GEN_CASE(BuiltinName, Bytecode)                                              \
+  case ast::Builtin::BuiltinName: {                                                  \
+    auto input = VisitExpressionForSQLValue(call->Arguments()[1]);                   \
+    const auto col_idx = call->Arguments()[1]->As<ast::LiteralExpr>()->IntegerVal(); \
+    TPL_ASSERT(col_idx >= 0, "Column index should be non-negative!");                \
+    GetEmitter()->EmitVPISet(Bytecode, vpi, input, static_cast<uint32_t>(col_idx));  \
+    break;                                                                           \
   }
 
       // clang-format off
@@ -1928,12 +1930,12 @@ void BytecodeGenerator::VisitLiteralExpr(ast::LiteralExpr *node) {
       break;
     }
     case ast::LiteralExpr::LiteralKind::Int: {
-      GetEmitter()->EmitAssignImm4(target, node->Int32Val());
+      GetEmitter()->EmitAssignImm4(target, node->IntegerVal());
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
     case ast::LiteralExpr::LiteralKind::Float: {
-      GetEmitter()->EmitAssignImm4F(target, node->Float32Val());
+      GetEmitter()->EmitAssignImm4F(target, node->FloatVal());
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }

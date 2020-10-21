@@ -226,7 +226,7 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
 
   if (auto arr_type = obj_type->SafeAs<ast::ArrayType>()) {
     if (auto index = node->Index()->SafeAs<ast::LiteralExpr>()) {
-      const int32_t index_val = index->Int32Val();
+      const int64_t index_val = index->IntegerVal();
       // Check negative array indices.
       if (index_val < 0) {
         error_reporter()->Report(index->Position(), ErrorMessages::kNegativeArrayIndexValue,

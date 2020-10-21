@@ -27,7 +27,7 @@ class TestAstBuilder {
 
   Expr *BoolLit(bool b) { return node_factory()->NewBoolLiteral(empty_, b); }
 
-  Expr *IntLit(int32_t i) { return node_factory()->NewIntLiteral(empty_, i); }
+  Expr *IntLit(int64_t i) { return node_factory()->NewIntLiteral(empty_, i); }
 
   Expr *FloatLit(float i) { return node_factory()->NewFloatLiteral(empty_, i); }
 
@@ -95,6 +95,9 @@ class TestAstBuilder {
   Expr *StringSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::StringVal>(); }
 
   Expr *ArrayTypeRepr(Expr *type) { return node_factory()->NewArrayType(empty_, nullptr, type); }
+  Expr *ArrayTypeRepr(Expr *type, uint32_t len) {
+    return node_factory()->NewArrayType(empty_, IntLit(len), type);
+  }
 
   Expr *ArrayIndex(Expr *arr, Expr *idx) { return node_factory()->NewIndexExpr(empty_, arr, idx); }
 

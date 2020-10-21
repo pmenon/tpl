@@ -426,7 +426,7 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
             case Token::Type::PLUS:
               return expression;
             case Token::Type::MINUS:
-              return node_factory_->NewIntLiteral(pos, -literal->Int32Val());
+              return node_factory_->NewIntLiteral(pos, -literal->IntegerVal());
             default:
               break;
           }
@@ -531,14 +531,12 @@ ast::Expr *Parser::ParseOperand() {
     }
     case Token::Type::INTEGER: {
       Next();
-      // Convert the number
       char *end = nullptr;
-      int32_t num = std::strtol(GetSymbol().GetData(), &end, 10);
+      int64_t num = std::strtoll(GetSymbol().GetData(), &end, 10);
       return node_factory_->NewIntLiteral(scanner_->current_position(), num);
     }
     case Token::Type::FLOAT: {
       Next();
-      // Convert the number
       char *end = nullptr;
       float num = std::strtof(GetSymbol().GetData(), &end);
       return node_factory_->NewFloatLiteral(scanner_->current_position(), num);

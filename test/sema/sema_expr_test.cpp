@@ -160,6 +160,22 @@ TEST_F(SemaExprTest, ArrayIndexTest) {
            ExprStmt(ArrayIndex(IdentExpr("arr"), IdentExpr("i"))),                // arr[i]
        })},
 
+      // Test: Perform an array index using a negative integer.
+      // Expectation: Invalid.
+      {true, "Array indexes must be non-negative.",
+       Block({
+           DeclStmt(DeclVar(Ident("arr"), ArrayTypeRepr(IdentExpr("int32")))),    // var arr: []int32
+           ExprStmt(ArrayIndex(IdentExpr("arr"), IntLit(-4))),                    // arr[-4]
+       })},
+
+      // Test: Perform an array index using a negative integer.
+      // Expectation: Invalid.
+      {true, "Array indexes must be smaller than declared array size.",
+       Block({
+           DeclStmt(DeclVar(Ident("arr"), ArrayTypeRepr(IdentExpr("int32"), 4))), // var arr: [4]int32
+           ExprStmt(ArrayIndex(IdentExpr("arr"), IntLit(4))),                     // arr[4]
+       })},
+
       // Test: Perform an array index using an floating-point variable
       // Expectation: Invalid
       {true, "Array indexes must be integer values",

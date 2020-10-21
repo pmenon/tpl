@@ -214,10 +214,10 @@ void AstPrettyPrintImpl::VisitLiteralExpr(LiteralExpr *node) {
       os_ << (node->BoolVal() ? "true" : "false");
       break;
     case LiteralExpr::LiteralKind::Int:
-      os_ << node->Int32Val();
+      os_ << node->IntegerVal();
       break;
     case LiteralExpr::LiteralKind::Float:
-      os_ << node->Float32Val();
+      os_ << node->FloatVal();
       break;
     case LiteralExpr::LiteralKind::String:
       os_ << "\"" << node->StringVal().GetView() << "\"";

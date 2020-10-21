@@ -331,10 +331,10 @@ void AstDumperImpl::VisitLiteralExpr(LiteralExpr *node) {
       DumpPrimitive(node->BoolVal() ? "'true'" : "'false'");
       break;
     case LiteralExpr::LiteralKind::Int:
-      DumpPrimitive(node->Int32Val());
+      DumpPrimitive(node->IntegerVal());
       break;
     case LiteralExpr::LiteralKind::Float:
-      DumpPrimitive(node->Float32Val());
+      DumpPrimitive(node->FloatVal());
       break;
     case LiteralExpr::LiteralKind::String:
       DumpIdentifier(node->StringVal());

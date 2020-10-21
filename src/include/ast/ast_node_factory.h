@@ -92,7 +92,7 @@ class AstNodeFactory {
     return new (region_) LiteralExpr(pos, val);
   }
 
-  LiteralExpr *NewIntLiteral(const SourcePosition &pos, int32_t num) {
+  LiteralExpr *NewIntLiteral(const SourcePosition &pos, int64_t num) {
     return new (region_) LiteralExpr(pos, num);
   }
 
