@@ -1196,16 +1196,16 @@ class LiteralExpr : public Expr {
       : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Nil) {}
 
   LiteralExpr(const SourcePosition &pos, bool val)
-      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Boolean), boolean_(val) {}
+      : Expr(Kind::LiteralExpr, pos), bool_val_(val), lit_kind_(LiteralKind::Boolean) {}
 
   LiteralExpr(const SourcePosition &pos, Identifier str)
-      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::String), str_(str) {}
+      : Expr(Kind::LiteralExpr, pos), string_val_(str), lit_kind_(LiteralKind::String) {}
 
-  LiteralExpr(const SourcePosition &pos, int32_t num)
-      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Int), int32_(num) {}
+  LiteralExpr(const SourcePosition &pos, int64_t num)
+      : Expr(Kind::LiteralExpr, pos), int_val_(num), lit_kind_(LiteralKind::Int) {}
 
-  LiteralExpr(const SourcePosition &pos, float num)
-      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Float), float32_(num) {}
+  LiteralExpr(const SourcePosition &pos, double num)
+      : Expr(Kind::LiteralExpr, pos), float_val_(num), lit_kind_(LiteralKind::Float) {}
 
   /**
    * @return The kind of literal this expression represents.
@@ -1242,7 +1242,7 @@ class LiteralExpr : public Expr {
    */
   bool BoolVal() const {
     TPL_ASSERT(IsBoolLitExpr(), "Literal is not a boolean value literal");
-    return boolean_;
+    return bool_val_;
   }
 
   /**
@@ -1250,23 +1250,23 @@ class LiteralExpr : public Expr {
    */
   Identifier StringVal() const {
     TPL_ASSERT(IsStringLitExpr(), "Literal is not a string or identifier");
-    return str_;
+    return string_val_;
   }
 
   /**
    * @return The integer value. No check to ensure expression is an integer.
    */
-  int32_t Int32Val() const {
+  int64_t IntegerVal() const {
     TPL_ASSERT(IsIntLitExpr(), "Literal is not an integer literal");
-    return int32_;
+    return int_val_;
   }
 
   /**
    * @return The floating point value. No check to ensure expression is a floating point value.
    */
-  float Float32Val() const {
+  double FloatVal() const {
     TPL_ASSERT(IsFloatLitExpr(), "Literal is not a floating point literal");
-    return float32_;
+    return float_val_;
   }
 
   /**
@@ -1277,15 +1277,15 @@ class LiteralExpr : public Expr {
   static bool classof(const AstNode *node) { return node->GetKind() == Kind::LiteralExpr; }
 
  private:
-  // The kind of literal.
-  LiteralKind lit_kind_;
   // A union of possible literal values.
   union {
-    bool boolean_;
-    Identifier str_;
-    int32_t int32_;
-    float float32_;
+    bool bool_val_;
+    Identifier string_val_;
+    int64_t int_val_;
+    double float_val_;
   };
+  // The kind of literal.
+  LiteralKind lit_kind_;
 };
 
 /**
