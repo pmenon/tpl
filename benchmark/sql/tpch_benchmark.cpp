@@ -2134,8 +2134,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q14)(benchmark::State &state) {
 
   // Compile plan
   auto last_op = proj.get();
-  //  NoOpResultConsumer consumer;
-  PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
+  NoOpResultConsumer consumer;
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
