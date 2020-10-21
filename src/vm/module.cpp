@@ -9,6 +9,8 @@
 #define XBYAK_NO_OP_NAMES
 #include "xbyak/xbyak.h"
 
+#include "logging/logger.h"
+
 namespace tpl::vm {
 
 Module::Module(std::unique_ptr<BytecodeModule> bytecode_module)

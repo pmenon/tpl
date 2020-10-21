@@ -1,5 +1,7 @@
 #include "sql/codegen/execution_plan.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "common/exception.h"
 #include "vm/module.h"
 
