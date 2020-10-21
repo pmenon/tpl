@@ -2,6 +2,7 @@
 
 #include "spdlog/fmt/fmt.h"
 
+#include "ast/ast.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/function_builder.h"
 
@@ -47,11 +48,8 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
   util::RegionVector<ast::FieldDecl *> members = codegen_->MakeEmptyFieldList();
   members.reserve(schema.size() + 1);
   for (uint32_t i = 0; i < schema.size(); i++) {
-    // Add field.
     ast::Identifier name = codegen_->MakeIdentifier(fmt::format("_m{}", i));
     members.push_back(codegen_->MakeField(name, codegen_->PrimitiveTplType(schema[reordered[i]])));
-    // Add name to column list.
-    col_info_.emplace_back(schema[i], name);
   }
 
   // Tack on the NULL indicators.
@@ -59,6 +57,12 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
   const uint32_t num_null_bytes = util::MathUtil::DivRoundUp(schema.size(), 8);
   members.push_back(
       codegen_->MakeField(nulls_, codegen_->ArrayType(num_null_bytes, ast::BuiltinType::Uint8)));
+
+  // Fill out the column information. We can only do this after all fields have
+  // been added since we rely on the field names for access.
+  for (uint32_t i = 0; i < schema.size(); i++) {
+    col_info_.emplace_back(schema[i], members[reordered[i]]->Name());
+  }
 
   // Build the final type.
   codegen_->DeclareStruct(type_name_, std::move(members));
