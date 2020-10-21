@@ -90,8 +90,8 @@ class TestAstBuilder {
   Expr *PrimFloatTypeRepr() { return BuiltinTypeRepr<BuiltinType::Float32>(); }
   Expr *PrimBoolTypeRepr() { return BuiltinTypeRepr<BuiltinType::Bool>(); }
 
-  Expr *IntegerSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::Integer>(); }
-  Expr *RealSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::Real>(); }
+  Expr *IntegerSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::IntegerVal>(); }
+  Expr *RealSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::RealVal>(); }
   Expr *StringSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::StringVal>(); }
 
   Expr *ArrayTypeRepr(Expr *type) { return node_factory()->NewArrayType(empty_, nullptr, type); }

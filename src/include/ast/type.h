@@ -87,13 +87,13 @@ class Context;
   NON_PRIM(StringMaxAggregate, tpl::sql::StringMaxAggregate)                     \
                                                                                  \
   /* Non-primitive SQL Runtime Values */                                         \
-  SQL(Boolean, tpl::sql::BoolVal)                                                \
-  SQL(Integer, tpl::sql::Integer)                                                \
-  SQL(Real, tpl::sql::Real)                                                      \
-  SQL(Decimal, tpl::sql::DecimalVal)                                             \
+  SQL(BooleanVal, tpl::sql::BoolVal)                                             \
+  SQL(IntegerVal, tpl::sql::Integer)                                             \
+  SQL(RealVal, tpl::sql::Real)                                                   \
+  SQL(DecimalVal, tpl::sql::DecimalVal)                                          \
   SQL(StringVal, tpl::sql::StringVal)                                            \
-  SQL(Date, tpl::sql::DateVal)                                                   \
-  SQL(Timestamp, tpl::sql::TimestampVal)
+  SQL(DateVal, tpl::sql::DateVal)                                                \
+  SQL(TimestampVal, tpl::sql::TimestampVal)
 
 // Ignore a builtin
 #define IGNORE_BUILTIN_TYPE (...)
@@ -338,7 +338,9 @@ class BuiltinType : public Type {
   /**
    * @return True if this type is a SQL value type.
    */
-  bool IsSqlValue() const { return Kind::Boolean <= GetKind() && GetKind() <= Kind::Timestamp; }
+  bool IsSqlValue() const {
+    return Kind::BooleanVal <= GetKind() && GetKind() <= Kind::TimestampVal;
+  }
 
   /**
    * @return True if this type is a SQL aggregator type (i.e., IntegerSumAggregate,

@@ -52,36 +52,34 @@ TEST_F(SemaExprTest, LogicalOperationTest) {
 }
 
 TEST_F(SemaExprTest, ComparisonOperationWithImplicitCastTest) {
-  // clang-format off
   TestCase tests[] = {
       // Test: Compare a primitive int32 with a SQL integer
       // Expectation: Valid
       {false, "SQL integers should be comparable to native integers",
        Block({
-           DeclStmt(DeclVar(Ident("sqlInt"), IdentExpr("Integer"))),    // var sqlInt: Integer
-           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                   // var i = 10
-           ExprStmt(CmpLt(IdentExpr("sqlInt"), IdentExpr("i"))),        // sqlInt < i
+           DeclStmt(DeclVar(Ident("sql_int"), IntegerSqlTypeRepr())),  // var sql_int: IntegerVal
+           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                  // var i = 10
+           ExprStmt(CmpLt(IdentExpr("sql_int"), IdentExpr("i"))),      // sql_int < i
        })},
 
       // Test: Compare a primitive int32 with a SQL integer
       // Expectation: Valid
       {false, "SQL integers should be comparable to native integers",
        Block({
-           DeclStmt(DeclVar(Ident("sqlInt"), IdentExpr("Integer"))),    // var sqlInt: Integer
-           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                   // var i = 10
-           ExprStmt(CmpLt(IdentExpr("i"), IdentExpr("sqlInt"))),        // i < sqlInt
+           DeclStmt(DeclVar(Ident("sql_int"), IntegerSqlTypeRepr())),  // var sql_int: IntegerVal
+           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                  // var i = 10
+           ExprStmt(CmpLt(IdentExpr("i"), IdentExpr("sql_int"))),      // i < sql_int
        })},
 
       // Test: Compare a primitive bool with a SQL integer
       // Expectation: Invalid
       {true, "SQL integers should not be comparable to native boolean values",
        Block({
-           DeclStmt(DeclVar(Ident("sqlInt"), IdentExpr("Integer"))),    // var sqlInt: Integer
-           DeclStmt(DeclVar(Ident("b"), BoolLit(false))),               // var b = false
-           ExprStmt(CmpLt(IdentExpr("b"), IdentExpr("sqlInt"))),        // b < sqlInt
+           DeclStmt(DeclVar(Ident("sql_int"), IntegerSqlTypeRepr())),  // var sql_int: IntegerVal
+           DeclStmt(DeclVar(Ident("b"), BoolLit(false))),              // var b = false
+           ExprStmt(CmpLt(IdentExpr("b"), IdentExpr("sql_int"))),      // b < sql_int
        })},
   };
-  // clang-format on
 
   for (const auto &test : tests) {
     Sema sema(ctx());
@@ -174,7 +172,7 @@ TEST_F(SemaExprTest, ArrayIndexTest) {
       {true, "Array indexes must be integer values",
        Block({
            DeclStmt(DeclVar(Ident("arr"), ArrayTypeRepr(IdentExpr("int32")))),    // var arr: []int32
-           DeclStmt(DeclVar(Ident("i"), IdentExpr("Integer"), nullptr)),          // var i: Integer
+           DeclStmt(DeclVar(Ident("i"), IntegerSqlTypeRepr(), nullptr)),          // var i: IntegerVal
            ExprStmt(ArrayIndex(IdentExpr("arr"), IdentExpr("i"))),                // arr[i]
        })},
   };

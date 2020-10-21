@@ -26,11 +26,11 @@ namespace tpl::ast {
 
 // TODO(pmenon): Fix me
 bool Type::IsArithmetic() const {
-  return IsIntegerType() ||                          // Primitive TPL integers
-         IsFloatType() ||                            // Primitive TPL floats
-         IsSpecificBuiltin(BuiltinType::Integer) ||  // SQL integer
-         IsSpecificBuiltin(BuiltinType::Real) ||     // SQL reals
-         IsSpecificBuiltin(BuiltinType::Decimal);    // SQL decimals
+  return IsIntegerType() ||                             // Primitive TPL integers
+         IsFloatType() ||                               // Primitive TPL floats
+         IsSpecificBuiltin(BuiltinType::IntegerVal) ||  // SQL integer
+         IsSpecificBuiltin(BuiltinType::RealVal) ||     // SQL reals
+         IsSpecificBuiltin(BuiltinType::DecimalVal);    // SQL decimals
 }
 
 // ---------------------------------------------------------

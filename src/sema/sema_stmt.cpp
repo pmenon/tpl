@@ -88,7 +88,7 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
   // implicitly cast it to a native boolean value before we feed it into the
   // if-condition.
 
-  if (node->Condition()->GetType()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+  if (node->Condition()->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
     // A primitive boolean
     auto *bool_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
 

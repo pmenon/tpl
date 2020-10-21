@@ -807,7 +807,7 @@ void BytecodeGenerator::VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast:
     break;                                                           \
   }
 
-      // clang-format off
+    // clang-format off
     GEN_CASE(CompactStorageWriteBool, Bytecode::CompactStorageWriteBool);
     GEN_CASE(CompactStorageWriteTinyInt, Bytecode::CompactStorageWriteTinyInt);
     GEN_CASE(CompactStorageWriteSmallInt, Bytecode::CompactStorageWriteSmallInt);
@@ -818,7 +818,7 @@ void BytecodeGenerator::VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast:
     GEN_CASE(CompactStorageWriteDate, Bytecode::CompactStorageWriteDate);
     GEN_CASE(CompactStorageWriteTimestamp, Bytecode::CompactStorageWriteTimestamp);
     GEN_CASE(CompactStorageWriteString, Bytecode::CompactStorageWriteString);
-      // clang-format on
+    // clang-format on
 #undef GEN_CASE
 
 #define GEN_CASE(BuiltinName, Bytecode)                                              \
@@ -830,7 +830,7 @@ void BytecodeGenerator::VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast:
     break;                                                                           \
   }
 
-      // clang-format off
+    // clang-format off
     GEN_CASE(CompactStorageReadBool, Bytecode::CompactStorageReadBool);
     GEN_CASE(CompactStorageReadTinyInt, Bytecode::CompactStorageReadTinyInt);
     GEN_CASE(CompactStorageReadSmallInt, Bytecode::CompactStorageReadSmallInt);
@@ -841,7 +841,7 @@ void BytecodeGenerator::VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast:
     GEN_CASE(CompactStorageReadDate, Bytecode::CompactStorageReadDate);
     GEN_CASE(CompactStorageReadTimestamp, Bytecode::CompactStorageReadTimestamp);
     GEN_CASE(CompactStorageReadString, Bytecode::CompactStorageReadString);
-      // clang-format on
+    // clang-format on
 #undef GEN_CASE
 
     default: {
@@ -868,19 +868,19 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
     LocalVar input = VisitExpressionForSQLValue(call->Arguments()[idx]);
     const auto *type = call->Arguments()[idx]->GetType()->As<ast::BuiltinType>();
     switch (type->GetKind()) {
-      case ast::BuiltinType::Integer:
+      case ast::BuiltinType::IntegerVal:
         GetEmitter()->Emit(Bytecode::HashInt, hash_val, input, hash_val.ValueOf());
         break;
-      case ast::BuiltinType::Real:
+      case ast::BuiltinType::RealVal:
         GetEmitter()->Emit(Bytecode::HashReal, hash_val, input, hash_val.ValueOf());
         break;
       case ast::BuiltinType::StringVal:
         GetEmitter()->Emit(Bytecode::HashString, hash_val, input, hash_val.ValueOf());
         break;
-      case ast::BuiltinType::Date:
+      case ast::BuiltinType::DateVal:
         GetEmitter()->Emit(Bytecode::HashDate, hash_val, input, hash_val.ValueOf());
         break;
-      case ast::BuiltinType::Timestamp:
+      case ast::BuiltinType::TimestampVal:
         GetEmitter()->Emit(Bytecode::HashTimestamp, hash_val, input, hash_val.ValueOf());
       default:
         UNREACHABLE("Hashing this type isn't supported!");
@@ -1301,7 +1301,7 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
       // Hack to handle advancing AvgAggregates with float/double precision numbers. The default
       // behavior in OpForAgg() is to use AvgAggregateAdvanceInteger.
       if (agg_kind == ast::BuiltinType::AvgAggregate &&
-          args[1]->GetType()->GetPointeeType()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
+          args[1]->GetType()->GetPointeeType()->IsSpecificBuiltin(ast::BuiltinType::RealVal)) {
         bytecode = Bytecode::AvgAggregateAdvanceReal;
       }
 
@@ -2146,7 +2146,7 @@ void BytecodeGenerator::VisitSqlArithmeticExpr(ast::BinaryOpExpr *node) {
   LocalVar left = VisitExpressionForSQLValue(node->Left());
   LocalVar right = VisitExpressionForSQLValue(node->Right());
 
-  const bool is_integer_math = node->GetType()->IsSpecificBuiltin(ast::BuiltinType::Integer);
+  const bool is_integer_math = node->GetType()->IsSpecificBuiltin(ast::BuiltinType::IntegerVal);
 
   Bytecode bytecode;
   switch (node->Op()) {
@@ -2206,16 +2206,16 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
 
 #define SQL_COMPARISON_BYTECODE(CODE_RESULT, COMPARISON_TYPE, ARG_KIND) \
   switch (ARG_KIND) {                                                   \
-    case ast::BuiltinType::Kind::Boolean:                               \
+    case ast::BuiltinType::Kind::BooleanVal:                            \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Bool;                    \
       break;                                                            \
-    case ast::BuiltinType::Kind::Integer:                               \
+    case ast::BuiltinType::Kind::IntegerVal:                            \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Integer;                 \
       break;                                                            \
-    case ast::BuiltinType::Kind::Real:                                  \
+    case ast::BuiltinType::Kind::RealVal:                               \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Real;                    \
       break;                                                            \
-    case ast::BuiltinType::Kind::Date:                                  \
+    case ast::BuiltinType::Kind::DateVal:                               \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Date;                    \
       break;                                                            \
     case ast::BuiltinType::Kind::StringVal:                             \

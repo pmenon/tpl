@@ -52,7 +52,7 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
                                call->Arguments()[2]->GetType());
     }
     // All good. Set return type as SQL Date.
-    call->SetType(GetBuiltinType(ast::BuiltinType::Date));
+    call->SetType(GetBuiltinType(ast::BuiltinType::DateVal));
     return;
   }
 
@@ -67,7 +67,7 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
         ReportIncorrectCallArg(call, 0, "boolean literal");
         return;
       }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Boolean));
+      call->SetType(GetBuiltinType(ast::BuiltinType::BooleanVal));
       break;
     }
     case ast::Builtin::IntToSql: {
@@ -75,7 +75,7 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
         ReportIncorrectCallArg(call, 0, "integer literal");
         return;
       }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+      call->SetType(GetBuiltinType(ast::BuiltinType::IntegerVal));
       break;
     }
     case ast::Builtin::FloatToSql: {
@@ -83,7 +83,7 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
         ReportIncorrectCallArg(call, 0, "floating point number literal");
         return;
       }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Real));
+      call->SetType(GetBuiltinType(ast::BuiltinType::RealVal));
       break;
     }
     case ast::Builtin::StringToSql: {
@@ -94,7 +94,7 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
       break;
     }
     case ast::Builtin::SqlToBool: {
-      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+      if (!input_type->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
         error_reporter()->Report(call->Position(), ErrorMessages::kInvalidSqlCastToBool,
                                  input_type);
         return;
@@ -112,14 +112,14 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
     call->SetType(GetBuiltinType(ast::BuiltinType::OutputType));       \
     break;                                                             \
   }
-      CONVERSION_CASE(ConvertBoolToInteger, Boolean, Integer);
-      CONVERSION_CASE(ConvertIntegerToReal, Integer, Real);
-      CONVERSION_CASE(ConvertDateToTimestamp, Date, Timestamp);
-      CONVERSION_CASE(ConvertStringToBool, StringVal, Boolean);
-      CONVERSION_CASE(ConvertStringToInt, StringVal, Integer);
-      CONVERSION_CASE(ConvertStringToReal, StringVal, Real);
-      CONVERSION_CASE(ConvertStringToDate, StringVal, Date);
-      CONVERSION_CASE(ConvertStringToTime, StringVal, Timestamp);
+      CONVERSION_CASE(ConvertBoolToInteger, BooleanVal, IntegerVal);
+      CONVERSION_CASE(ConvertIntegerToReal, IntegerVal, RealVal);
+      CONVERSION_CASE(ConvertDateToTimestamp, DateVal, TimestampVal);
+      CONVERSION_CASE(ConvertStringToBool, StringVal, BooleanVal);
+      CONVERSION_CASE(ConvertStringToInt, StringVal, IntegerVal);
+      CONVERSION_CASE(ConvertStringToReal, StringVal, RealVal);
+      CONVERSION_CASE(ConvertStringToDate, StringVal, DateVal);
+      CONVERSION_CASE(ConvertStringToTime, StringVal, TimestampVal);
 #undef CONVERSION_CASE
 
     default: {
@@ -158,7 +158,7 @@ void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
   }
 
   // Returns a SQL boolean
-  call->SetType(GetBuiltinType(ast::BuiltinType::Boolean));
+  call->SetType(GetBuiltinType(ast::BuiltinType::BooleanVal));
 }
 
 void Sema::CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -166,7 +166,7 @@ void Sema::CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builti
     return;
   }
   // First arg must be a date.
-  auto date_kind = ast::BuiltinType::Date;
+  auto date_kind = ast::BuiltinType::DateVal;
   if (!call->Arguments()[0]->GetType()->IsSpecificBuiltin(date_kind)) {
     ReportIncorrectCallArg(call, 0, GetBuiltinType(date_kind));
     return;
@@ -174,7 +174,7 @@ void Sema::CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builti
 
   switch (builtin) {
     case ast::Builtin::ExtractYear:
-      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+      call->SetType(GetBuiltinType(ast::BuiltinType::IntegerVal));
       return;
     default:
       UNREACHABLE("Impossible date function");
@@ -551,13 +551,13 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin)
         case ast::BuiltinType::Kind::IntegerMaxAggregate:
         case ast::BuiltinType::Kind::IntegerMinAggregate:
         case ast::BuiltinType::Kind::IntegerSumAggregate:
-          call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+          call->SetType(GetBuiltinType(ast::BuiltinType::IntegerVal));
           break;
         case ast::BuiltinType::Kind::RealMaxAggregate:
         case ast::BuiltinType::Kind::RealMinAggregate:
         case ast::BuiltinType::Kind::RealSumAggregate:
         case ast::BuiltinType::Kind::AvgAggregate:
-          call->SetType(GetBuiltinType(ast::BuiltinType::Real));
+          call->SetType(GetBuiltinType(ast::BuiltinType::RealVal));
           break;
         default:
           UNREACHABLE("Impossible aggregate type!");
@@ -1005,7 +1005,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       }
       // If the match argument is a SQL boolean, implicitly cast to native
       ast::Expr *match_arg = call_args[1];
-      if (match_arg->GetType()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
+      if (match_arg->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
         match_arg = ImplCastExprToType(match_arg, GetBuiltinType(ast::BuiltinType::Bool),
                                        ast::CastKind::SqlBoolToBool);
         call->SetArgument(1, match_arg);
@@ -1022,7 +1022,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Boolean));
+      call->SetType(GetBuiltinType(ast::BuiltinType::BooleanVal));
       break;
     }
     case ast::Builtin::VPIGetTinyInt:
@@ -1032,7 +1032,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Integer));
+      call->SetType(GetBuiltinType(ast::BuiltinType::IntegerVal));
       break;
     }
     case ast::Builtin::VPIGetReal:
@@ -1040,14 +1040,14 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Real));
+      call->SetType(GetBuiltinType(ast::BuiltinType::RealVal));
       break;
     }
     case ast::Builtin::VPIGetDate: {
       if (!CheckArgCount(call, 2)) {
         return;
       }
-      call->SetType(GetBuiltinType(ast::BuiltinType::Date));
+      call->SetType(GetBuiltinType(ast::BuiltinType::DateVal));
       break;
     }
     case ast::Builtin::VPIGetString: {
@@ -1077,10 +1077,10 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
       // Second argument must be either an Integer or Real
       const auto sql_kind =
           (builtin == ast::Builtin::VPISetReal || builtin == ast::Builtin::VPISetDouble
-               ? ast::BuiltinType::Real
-           : builtin == ast::Builtin::VPISetDate   ? ast::BuiltinType::Date
+               ? ast::BuiltinType::RealVal
+           : builtin == ast::Builtin::VPISetDate   ? ast::BuiltinType::DateVal
            : builtin == ast::Builtin::VPISetString ? ast::BuiltinType::StringVal
-                                                   : ast::BuiltinType::Integer);
+                                                   : ast::BuiltinType::IntegerVal);
       if (!call_args[1]->GetType()->IsSpecificBuiltin(sql_kind)) {
         ReportIncorrectCallArg(call, 1, GetBuiltinType(sql_kind));
         return;
@@ -1124,23 +1124,23 @@ void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpr *call, ast::Builtin
   ast::BuiltinType::Kind expected_input_type;
   switch (builtin) {
     case ast::Builtin::CompactStorageWriteBool:
-      expected_input_type = ast::BuiltinType::Boolean;
+      expected_input_type = ast::BuiltinType::BooleanVal;
       break;
     case ast::Builtin::CompactStorageWriteTinyInt:
     case ast::Builtin::CompactStorageWriteSmallInt:
     case ast::Builtin::CompactStorageWriteInteger:
     case ast::Builtin::CompactStorageWriteBigInt:
-      expected_input_type = ast::BuiltinType::Integer;
+      expected_input_type = ast::BuiltinType::IntegerVal;
       break;
     case ast::Builtin::CompactStorageWriteReal:
     case ast::Builtin::CompactStorageWriteDouble:
-      expected_input_type = ast::BuiltinType::Real;
+      expected_input_type = ast::BuiltinType::RealVal;
       break;
     case ast::Builtin::CompactStorageWriteDate:
-      expected_input_type = ast::BuiltinType::Date;
+      expected_input_type = ast::BuiltinType::DateVal;
       break;
     case ast::Builtin::CompactStorageWriteTimestamp:
-      expected_input_type = ast::BuiltinType::Timestamp;
+      expected_input_type = ast::BuiltinType::TimestampVal;
       break;
     case ast::Builtin::CompactStorageWriteString:
       expected_input_type = ast::BuiltinType::StringVal;
@@ -1185,23 +1185,23 @@ void Sema::CheckBuiltinCompactStorageReadCall(ast::CallExpr *call, ast::Builtin 
   ast::BuiltinType::Kind return_type;
   switch (builtin) {
     case ast::Builtin::CompactStorageReadBool:
-      return_type = ast::BuiltinType::Boolean;
+      return_type = ast::BuiltinType::BooleanVal;
       break;
     case ast::Builtin::CompactStorageReadTinyInt:
     case ast::Builtin::CompactStorageReadSmallInt:
     case ast::Builtin::CompactStorageReadInteger:
     case ast::Builtin::CompactStorageReadBigInt:
-      return_type = ast::BuiltinType::Integer;
+      return_type = ast::BuiltinType::IntegerVal;
       break;
     case ast::Builtin::CompactStorageReadReal:
     case ast::Builtin::CompactStorageReadDouble:
-      return_type = ast::BuiltinType::Real;
+      return_type = ast::BuiltinType::RealVal;
       break;
     case ast::Builtin::CompactStorageReadDate:
-      return_type = ast::BuiltinType::Date;
+      return_type = ast::BuiltinType::DateVal;
       break;
     case ast::Builtin::CompactStorageReadTimestamp:
-      return_type = ast::BuiltinType::Timestamp;
+      return_type = ast::BuiltinType::TimestampVal;
       break;
     case ast::Builtin::CompactStorageReadString:
       return_type = ast::BuiltinType::StringVal;
@@ -1325,7 +1325,7 @@ void Sema::CheckBuiltinVectorFilterCall(ast::CallExpr *call) {
 }
 
 void Sema::CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
-  const auto real_kind = ast::BuiltinType::Real;
+  const auto real_kind = ast::BuiltinType::RealVal;
 
   const auto &call_args = call->Arguments();
   switch (builtin) {
