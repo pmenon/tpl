@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/compact_storage.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/state_descriptor.h"
@@ -36,12 +37,6 @@ class HashJoinTranslator : public OperatorTranslator {
    * Link the left (i.e., build) and right (i.e., probe) pipelines.
    */
   void DeclarePipelineDependencies() const override;
-
-  /**
-   * Declare the build-row struct used to materialized tuples from the build side of the join.
-   * @param container The container for query-level types and functions.
-   */
-  void DefineStructsAndFunctions() override;
 
   /**
    * Initialize the global hash table.
@@ -106,14 +101,17 @@ class HashJoinTranslator : public OperatorTranslator {
   }
 
  private:
-  // Initialize the given join hash table instance, provided as a *JHT.
-  void InitializeJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;
+  // Get the join plan.
+  const planner::HashJoinPlanNode &GetJoinPlan() const {
+    return GetPlanAs<planner::HashJoinPlanNode>();
+  }
 
-  // Clean up and destroy the given join hash table instance, provided as a *JHT.
+  // Functions to initialize and tear-down the given join hash table.
+  void InitializeJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;
   void TearDownJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;
 
   // Access an attribute at the given index in the provided build row.
-  ast::Expr *GetBuildRowAttribute(ast::Expr *build_row, uint32_t attr_idx) const;
+  ast::Expr *GetBuildRowAttribute(uint32_t attr_idx) const;
 
   // Evaluate the provided hash keys in the provided context and return the
   // results in the provided results output vector.
@@ -121,7 +119,7 @@ class HashJoinTranslator : public OperatorTranslator {
                            const std::vector<const planner::AbstractExpression *> &hash_keys) const;
 
   // Fill the build row with the columns from the given context.
-  void FillBuildRow(ConsumerContext *ctx, FunctionBuilder *function, ast::Expr *build_row) const;
+  void WriteBuildRow(ConsumerContext *context, FunctionBuilder *function) const;
 
   // Input the tuple(s) in the provided context into the join hash table.
   void InsertIntoJoinHashTable(ConsumerContext *context, FunctionBuilder *function) const;
@@ -142,18 +140,17 @@ class HashJoinTranslator : public OperatorTranslator {
   bool ShouldValidateHashOnProbe() const;
 
  private:
-  // The name of the materialized row when inserting or probing into join hash
-  // table.
+  // Storage used to read/write rows into/from hash table.
+  CompactStorage storage_;
+  // The name of the materialized row when inserting or probing the hash table.
   ast::Identifier build_row_var_;
-  ast::Identifier build_row_type_;
-  // For mark-based joins.
-  ast::Identifier build_mark_;
+  // For mark-based joins. The index in the row where the mark is stored.
+  uint32_t build_mark_index_;
 
   // The left build-side pipeline.
   Pipeline left_pipeline_;
 
-  // The slots in the global and thread-local state where this join's join hash
-  // table is stored.
+  // The slots storing the global thread thread-local join hash tables.
   StateDescriptor::Slot global_join_ht_;
   StateDescriptor::Slot local_join_ht_;
 };

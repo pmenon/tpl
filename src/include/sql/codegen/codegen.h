@@ -200,6 +200,11 @@ class CodeGen {
   [[nodiscard]] ast::Expr *Float64Type() const;
 
   /**
+   * @return A type representation expression that is "[num_elems]kind".
+   */
+  [[nodiscard]] ast::Expr *ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind);
+
+  /**
    * @return The type representation for the provided builtin type.
    */
   [[nodiscard]] ast::Expr *BuiltinType(ast::BuiltinType::Kind builtin_kind) const;
@@ -225,11 +230,28 @@ class CodeGen {
   [[nodiscard]] ast::Expr *PointerType(ast::BuiltinType::Kind builtin) const;
 
   /**
-   * Convert a SQL type into a type representation expression.
+   * Convert a SQL type into a runtime SQL value type representation expression.
+   *
+   * For example:
+   * TypeId::Boolean = sql::Boolean
+   * TypeId::BigInt = sql::Integer
+   *
    * @param type The SQL type.
    * @return The corresponding TPL type.
    */
   [[nodiscard]] ast::Expr *TplType(TypeId type);
+
+  /**
+   * Convert the given type into a primitive TPL type.
+   *
+   * For example:
+   * TypeId::Boolean = bool
+   * TypeId::SmallInt = int16
+   *
+   * @param type The SQL type.
+   * @return The corresponding primitive TPL type.
+   */
+  [[nodiscard]] ast::Expr *PrimitiveTplType(TypeId type);
 
   /**
    * Return the appropriate aggregate type for the given input aggregation expression.

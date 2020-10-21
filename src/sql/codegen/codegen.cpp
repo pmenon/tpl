@@ -129,6 +129,10 @@ ast::Stmt *CodeGen::Assign(ast::Expr *dest, ast::Expr *value) {
   return NodeFactory()->NewAssignmentStmt(position_, dest, value);
 }
 
+ast::Expr *CodeGen::ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind) {
+  return NodeFactory()->NewArrayType(position_, Const64(num_elems), BuiltinType(kind));
+}
+
 ast::Expr *CodeGen::BuiltinType(ast::BuiltinType::Kind builtin_kind) const {
   // Lookup the builtin type. We'll use it to construct an identifier.
   ast::BuiltinType *type = ast::BuiltinType::Get(Context(), builtin_kind);
@@ -191,6 +195,27 @@ ast::Expr *CodeGen::TplType(sql::TypeId type) {
       return BuiltinType(ast::BuiltinType::Real);
     case sql::TypeId::Varchar:
       return BuiltinType(ast::BuiltinType::StringVal);
+    default:
+      UNREACHABLE("Cannot codegen unsupported type.");
+  }
+}
+
+ast::Expr *CodeGen::PrimitiveTplType(TypeId type) {
+  switch (type) {
+    case sql::TypeId::Boolean:
+      return BuiltinType(ast::BuiltinType::Bool);
+    case sql::TypeId::TinyInt:
+      return BuiltinType(ast::BuiltinType::Int8);
+    case sql::TypeId::SmallInt:
+      return BuiltinType(ast::BuiltinType::Int16);
+    case sql::TypeId::Integer:
+      return BuiltinType(ast::BuiltinType::Int32);
+    case sql::TypeId::BigInt:
+      return BuiltinType(ast::BuiltinType::Int64);
+    case sql::TypeId::Float:
+      return BuiltinType(ast::BuiltinType::Float32);
+    case sql::TypeId::Double:
+      return BuiltinType(ast::BuiltinType::Float64);
     default:
       UNREACHABLE("Cannot codegen unsupported type.");
   }

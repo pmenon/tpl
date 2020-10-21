@@ -1110,13 +1110,13 @@ void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpr *call, ast::Builtin
 
   // Second argument must be a pointer to the NULL indicators array.
   if (!call->Arguments()[1]->GetType()->IsPointerType()) {
-    ReportIncorrectCallArg(call, 0, "expected pointer to NULL indicators array.");
+    ReportIncorrectCallArg(call, 1, "expected pointer to NULL indicators array.");
     return;
   }
 
   // Third argument is 4-byte index.
-  if (!call->Arguments()[1]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Int32)) {
-    ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Int32));
+  if (!call->Arguments()[2]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Int32)) {
+    ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Int32));
     return;
   }
 
@@ -1165,19 +1165,19 @@ void Sema::CheckBuiltinCompactStorageReadCall(ast::CallExpr *call, ast::Builtin 
 
   // First argument must be a pointer to where the value is stored.
   if (!call->Arguments()[0]->GetType()->IsPointerType()) {
-    ReportIncorrectCallArg(call, 0, "expected pointer to storage space.");
+    ReportIncorrectCallArg(call, 0, "pointer to storage space.");
     return;
   }
 
   // Second argument must be a pointer to the NULL indicators array.
   if (!call->Arguments()[1]->GetType()->IsPointerType()) {
-    ReportIncorrectCallArg(call, 0, "expected pointer to NULL indicators array.");
+    ReportIncorrectCallArg(call, 1, "pointer to NULL indicators array.");
     return;
   }
 
   // Third argument is 4-byte index.
-  if (!call->Arguments()[1]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Int32)) {
-    ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Int32));
+  if (!call->Arguments()[2]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Int32)) {
+    ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Int32));
     return;
   }
 
