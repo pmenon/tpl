@@ -216,6 +216,12 @@ ast::Expr *CodeGen::PrimitiveTplType(TypeId type) {
       return BuiltinType(ast::BuiltinType::Float32);
     case sql::TypeId::Double:
       return BuiltinType(ast::BuiltinType::Float64);
+    case sql::TypeId::Date:
+      return BuiltinType(ast::BuiltinType::Date);
+    case sql::TypeId::Timestamp:
+      return BuiltinType(ast::BuiltinType::Timestamp);
+    case sql::TypeId::Varchar:
+      return BuiltinType(ast::BuiltinType::VarlenEntry);
     default:
       UNREACHABLE("Cannot codegen unsupported type.");
   }

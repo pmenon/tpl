@@ -58,6 +58,7 @@ class Context;
   NON_PRIM(AHTOverflowPartitionIterator, tpl::sql::AHTOverflowPartitionIterator) \
   NON_PRIM(CompactStorage, tpl::sql::CompactStorage)                             \
   NON_PRIM(CSVReader, tpl::util::CSVReader)                                      \
+  NON_PRIM(Date, tpl::sql::Date)                                                 \
   NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                         \
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                               \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                             \
@@ -67,7 +68,9 @@ class Context;
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                             \
   NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)                   \
   NON_PRIM(ThreadStateContainer, tpl::sql::ThreadStateContainer)                 \
+  NON_PRIM(Timestamp, tpl::sql::Timestamp)                                       \
   NON_PRIM(TupleIdList, tpl::sql::TupleIdList)                                   \
+  NON_PRIM(VarlenEntry, tpl::sql::VarlenEntry)                                   \
   NON_PRIM(VectorProjection, tpl::sql::VectorProjection)                         \
   NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator)         \
                                                                                  \
