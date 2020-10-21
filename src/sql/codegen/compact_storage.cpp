@@ -20,14 +20,10 @@ namespace tpl::sql::codegen {
   F(TypeId::Timestamp, CompactStorageWriteTimestamp, CompactStorageReadTimestamp) \
   F(TypeId::Varchar, CompactStorageWriteString, CompactStorageReadString)
 
-namespace {
-
-std::string MakeCompactTypeName(std::string_view name) { return fmt::format("{}_Compact", name); }
-
-}  // namespace
-
 codegen::CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name)
-    : codegen_(codegen), type_name_(codegen->MakeFreshIdentifier(MakeCompactTypeName(name))) {}
+    : codegen_(codegen),
+      type_name_(codegen->MakeFreshIdentifier(fmt::format("{}_Compact", name))),
+      nulls_(codegen_->MakeIdentifier("nulls")) {}
 
 CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name,
                                const std::vector<TypeId> &schema)
@@ -51,12 +47,10 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
     ast::Identifier name = codegen_->MakeIdentifier(fmt::format("_m{}", i));
     members.push_back(codegen_->MakeField(name, codegen_->PrimitiveTplType(schema[reordered[i]])));
   }
-
   // Tack on the NULL indicators.
-  nulls_ = codegen_->MakeIdentifier("nulls");
-  const uint32_t num_null_bytes = util::MathUtil::DivRoundUp(schema.size(), 8);
+  const uint32_t null_bytes = util::MathUtil::DivRoundUp(schema.size(), 8);
   members.push_back(
-      codegen_->MakeField(nulls_, codegen_->ArrayType(num_null_bytes, ast::BuiltinType::Uint8)));
+      codegen_->MakeField(nulls_, codegen_->ArrayType(null_bytes, ast::BuiltinType::Uint8)));
 
   // Fill out the column information. We can only do this after all fields have
   // been added since we rely on the field names for access.
@@ -69,7 +63,7 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
 }
 
 ast::Expr *CompactStorage::Nulls(ast::Expr *ptr) const {
-  return codegen_->AddressOf(codegen_->AccessStructMember(ptr, codegen_->MakeIdentifier("nulls")));
+  return codegen_->AddressOf(codegen_->AccessStructMember(ptr, nulls_));
 }
 
 ast::Expr *CompactStorage::ColumnPtr(ast::Expr *ptr, uint32_t index) const {
@@ -90,9 +84,8 @@ void CompactStorage::WriteSQL(ast::Expr *ptr, uint32_t index, ast::Expr *val) co
   // clang-format on
   switch (col_info_[index].first) {
     CODE_LIST(GEN_CASE)
-    default: {
-      UNREACHABLE("Impossible CompactStorage::Read() call!");
-    }
+    default:
+      UNREACHABLE("Impossible type in CompactStorage::Write() call!");
   }
 #undef GEN_CASE
 
@@ -113,16 +106,13 @@ ast::Expr *CompactStorage::ReadSQL(ast::Expr *ptr, uint32_t index) const {
   // clang-format on
   switch (col_info_[index].first) {
     CODE_LIST(GEN_CASE)
-    default: {
-      UNREACHABLE("Impossible CompactStorage::Read() call!");
-    }
+    default:
+      UNREACHABLE("Impossible type in CompactStorage::Read() call!");
   }
 #undef GEN_CASE
 
   // Call.
-  ast::Expr *col_ptr = ColumnPtr(ptr, index);
-  ast::Expr *nulls = Nulls(ptr);
-  return codegen_->CallBuiltin(op, {col_ptr, nulls, codegen_->Const32(index)});
+  return codegen_->CallBuiltin(op, {ColumnPtr(ptr, index), Nulls(ptr), codegen_->Const32(index)});
 }
 
 }  // namespace tpl::sql::codegen
