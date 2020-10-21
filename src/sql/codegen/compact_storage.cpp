@@ -48,11 +48,10 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
   members.reserve(schema.size() + 1);
   for (uint32_t i = 0; i < schema.size(); i++) {
     // Add field.
-    TypeId type = schema[reordered[i]];
     ast::Identifier name = codegen_->MakeIdentifier(fmt::format("_m{}", i));
-    members.push_back(codegen_->MakeField(name, codegen_->PrimitiveTplType(type)));
+    members.push_back(codegen_->MakeField(name, codegen_->PrimitiveTplType(schema[reordered[i]])));
     // Add name to column list.
-    col_info_.emplace_back(type, name);
+    col_info_.emplace_back(schema[i], name);
   }
 
   // Tack on the NULL indicators.
