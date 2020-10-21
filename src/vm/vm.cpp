@@ -5,16 +5,18 @@
 
 #include "common/common.h"
 #include "common/memory.h"
+#include "logging/logger.h"
 #include "sql/value.h"
 #include "vm/bytecode_function_info.h"
 #include "vm/bytecode_handlers.h"
+#include "vm/bytecodes.h"
 #include "vm/module.h"
 
 namespace tpl::vm {
 
 /**
- * An execution frame where all function's local variables and parameters live
- * for the duration of the function's lifetime.
+ * An execution frame where all function's local variables and parameters live for the duration of
+ * the function's lifetime.
  */
 class VM::Frame {
   friend class VM;

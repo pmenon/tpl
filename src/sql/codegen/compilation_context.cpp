@@ -9,6 +9,7 @@
 #include "ast/context.h"
 #include "common/exception.h"
 #include "common/macros.h"
+#include "logging/logger.h"
 #include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/executable_query.h"
 #include "sql/codegen/execution_plan.h"
