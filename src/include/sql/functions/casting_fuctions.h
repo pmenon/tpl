@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "sql/execution_context.h"
 #include "sql/operators/cast_operators.h"
 #include "sql/value.h"
 
@@ -14,29 +15,29 @@ class ExecutionContext;
  */
 class CastingFunctions : public AllStatic {
  public:
-  static void CastToBoolVal(BoolVal *result, const Integer &v);
-  static void CastToBoolVal(BoolVal *result, const Real &v);
-  static void CastToBoolVal(BoolVal *result, const StringVal &v);
+  static void CastToBoolVal(BoolVal *result, const Integer &input);
+  static void CastToBoolVal(BoolVal *result, const Real &input);
+  static void CastToBoolVal(BoolVal *result, const StringVal &input);
 
-  static void CastToInteger(Integer *result, const BoolVal &v);
-  static void CastToInteger(Integer *result, const Real &v);
-  static void CastToInteger(Integer *result, const StringVal &v);
+  static void CastToInteger(Integer *result, const BoolVal &input);
+  static void CastToInteger(Integer *result, const Real &input);
+  static void CastToInteger(Integer *result, const StringVal &input);
 
-  static void CastToReal(Real *result, const BoolVal &v);
-  static void CastToReal(Real *result, const Integer &v);
-  static void CastToReal(Real *result, const StringVal &v);
+  static void CastToReal(Real *result, const BoolVal &input);
+  static void CastToReal(Real *result, const Integer &input);
+  static void CastToReal(Real *result, const StringVal &input);
 
-  static void CastToDateVal(DateVal *result, const TimestampVal &v);
-  static void CastToDateVal(DateVal *result, const StringVal &v);
+  static void CastToDateVal(DateVal *result, const TimestampVal &input);
+  static void CastToDateVal(DateVal *result, const StringVal &input);
 
-  static void CastToTimestampVal(TimestampVal *result, const DateVal &v);
-  static void CastToTimestampVal(TimestampVal *result, const StringVal &v);
+  static void CastToTimestampVal(TimestampVal *result, const DateVal &input);
+  static void CastToTimestampVal(TimestampVal *result, const StringVal &input);
 
-  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const BoolVal &v);
-  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const Integer &v);
-  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const Real &v);
-  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const DateVal &v);
-  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const TimestampVal &v);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const BoolVal &input);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const Integer &input);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const Real &input);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const DateVal &input);
+  static void CastToStringVal(StringVal *result, ExecutionContext *ctx, const TimestampVal &input);
 };
 
 // ---------------------------------------------------------
@@ -48,25 +49,25 @@ class CastingFunctions : public AllStatic {
 
 // TODO(pmenon): Catch cast exceptions!
 
-#define CAST_HIDE_NULL_FAST(FROM_TYPE, TO_TYPE)                                        \
-  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &v) { \
-    using InputType = decltype(FROM_TYPE::val);                                        \
-    using OutputType = decltype(TO_TYPE::val);                                         \
-    result->is_null = v.is_null;                                                       \
-    tpl::sql::TryCast<InputType, OutputType>{}(v.val, &result->val);                   \
+#define CAST_HIDE_NULL_FAST(FROM_TYPE, TO_TYPE)                                            \
+  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &input) { \
+    using InputType = decltype(FROM_TYPE::val);                                            \
+    using OutputType = decltype(TO_TYPE::val);                                             \
+    result->is_null = input.is_null;                                                       \
+    tpl::sql::TryCast<InputType, OutputType>{}(input.val, &result->val);                   \
   }
 
-#define CAST_HIDE_NULL(FROM_TYPE, TO_TYPE)                                             \
-  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &v) { \
-    using InputType = decltype(FROM_TYPE::val);                                        \
-    using OutputType = decltype(TO_TYPE::val);                                         \
-    if (v.is_null) {                                                                   \
-      *result = TO_TYPE::Null();                                                       \
-      return;                                                                          \
-    }                                                                                  \
-    OutputType output{};                                                               \
-    tpl::sql::TryCast<InputType, OutputType>{}(v.val, &output);                        \
-    *result = TO_TYPE(output);                                                         \
+#define CAST_HIDE_NULL(FROM_TYPE, TO_TYPE)                                                 \
+  inline void CastingFunctions::CastTo##TO_TYPE(TO_TYPE *result, const FROM_TYPE &input) { \
+    using InputType = decltype(FROM_TYPE::val);                                            \
+    using OutputType = decltype(TO_TYPE::val);                                             \
+    if (input.is_null) {                                                                   \
+      *result = TO_TYPE::Null();                                                           \
+      return;                                                                              \
+    }                                                                                      \
+    OutputType output{};                                                                   \
+    tpl::sql::TryCast<InputType, OutputType>{}(input.val, &output);                        \
+    *result = TO_TYPE(output);                                                             \
   }
 
 // Something to boolean.
@@ -94,16 +95,16 @@ CAST_HIDE_NULL(StringVal, TimestampVal);
 // Something to string.
 #define CAST_TO_STRING(FROM_TYPE)                                                               \
   inline void CastingFunctions::CastToStringVal(StringVal *result, ExecutionContext *const ctx, \
-                                                const FROM_TYPE &v) {                           \
+                                                const FROM_TYPE &input) {                       \
     /*                                                                                          \
      * TODO(pmenon): Perform an explicit if-check here because we expect string                 \
      *               parsing to be costlier than a branch mis-prediction. Check!                \
      */                                                                                         \
-    if (v.is_null) {                                                                            \
+    if (input.is_null) {                                                                        \
       *result = StringVal::Null();                                                              \
       return;                                                                                   \
     }                                                                                           \
-    const auto str = tpl::sql::Cast<decltype(FROM_TYPE::val), std::string>{}(v.val);            \
+    const auto str = tpl::sql::Cast<decltype(FROM_TYPE::val), std::string>{}(input.val);        \
     *result = StringVal(ctx->GetStringHeap()->AddVarlen(str));                                  \
   }
 

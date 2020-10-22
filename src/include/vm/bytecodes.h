@@ -24,6 +24,10 @@ namespace tpl::vm {
 /** Creates instances of a given opcode for primitive numeric types. */
 #define CREATE_FOR_NUMERIC_TYPES(F, op, ...) ALL_NUMERIC_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
+/** Create instances of a given opcode for all pairs of primitive types. */
+#define GEN_ALL_TYPED_OPS(type1, type2, F, op, ...) F(op##_##type1##_##type2, __VA_ARGS__)
+#define CREATE_FOR_ALL_TYPE_PAIRS(F, op, ...) ALL_TYPE_PAIRS(GEN_ALL_TYPED_OPS, F, op, __VA_ARGS__)
+
 /** Creates instances of a given opcode for *ALL* primitive types. */
 #define CREATE_FOR_ALL_TYPES(F, op, ...) ALL_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
@@ -55,6 +59,7 @@ namespace tpl::vm {
   CREATE_FOR_ALL_TYPES(F, LessThan, OperandType::Local, OperandType::Local, OperandType::Local)                        \
   CREATE_FOR_ALL_TYPES(F, LessThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                   \
   CREATE_FOR_ALL_TYPES(F, NotEqual, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  CREATE_FOR_ALL_TYPE_PAIRS(F, Cast, OperandType::Local, OperandType::Local, OperandType::Local)                       \
   /* Boolean compliment */                                                                                             \
   F(Not, OperandType::Local, OperandType::Local)                                                                       \
                                                                                                                        \
