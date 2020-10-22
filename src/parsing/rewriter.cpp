@@ -69,9 +69,7 @@ ast::Stmt *RewriteForInScan(ast::Context *ctx, ast::ForInStmt *for_in) {
   //
 
   TPL_ASSERT(for_in->Target()->IsIdentifierExpr(), "Target must be an identifier");
-  TPL_ASSERT(for_in->Iterable()->IsLiteralExpr(), "Iterable must be a literal expression");
-  TPL_ASSERT(for_in->Iterable()->As<ast::LiteralExpr>()->IsStringLitExpr(),
-             "Iterable must be a string literal");
+  TPL_ASSERT(for_in->Iterable()->IsStringLiteral(), "Iterable must be a string literal");
 
   const auto pos = for_in->Position();
   auto *factory = ctx->GetNodeFactory();

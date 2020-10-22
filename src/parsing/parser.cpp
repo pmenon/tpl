@@ -417,10 +417,10 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
 
       // Some quick rewrites here.
       if (const auto literal = expression->SafeAs<ast::LiteralExpr>()) {
-        if (op == Token::Type::BANG && literal->IsBoolLitExpr()) {
+        if (op == Token::Type::BANG && literal->IsBoolLiteral()) {
           // Negate the boolean value and return a new literal.
           return node_factory_->NewBoolLiteral(pos, !literal->BoolVal());
-        } else if (literal->IsIntLitExpr()) {
+        } else if (literal->IsIntegerLiteral()) {
           // Simple rewrites involving numbers.
           switch (op) {
             case Token::Type::PLUS:
