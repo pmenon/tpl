@@ -59,7 +59,7 @@ namespace tpl::vm {
   CREATE_FOR_ALL_TYPES(F, LessThan, OperandType::Local, OperandType::Local, OperandType::Local)                        \
   CREATE_FOR_ALL_TYPES(F, LessThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                   \
   CREATE_FOR_ALL_TYPES(F, NotEqual, OperandType::Local, OperandType::Local, OperandType::Local)                        \
-  CREATE_FOR_ALL_TYPE_PAIRS(F, Cast, OperandType::Local, OperandType::Local, OperandType::Local)                       \
+  CREATE_FOR_ALL_TYPE_PAIRS(F, Cast, OperandType::Local, OperandType::Local)                                           \
   /* Boolean compliment */                                                                                             \
   F(Not, OperandType::Local, OperandType::Local)                                                                       \
                                                                                                                        \
