@@ -358,8 +358,19 @@ class BuiltinType : public Type {
    */
   Kind GetKind() const { return kind_; }
 
+  /**
+   * Factory to create a builtin type of the given kind.
+   * @param ctx The context to create the type in.
+   * @param kind The kind of builtin to create.
+   * @return The builtin type.
+   */
   static BuiltinType *Get(Context *ctx, Kind kind);
 
+  /**
+   * Is the given type a builtin type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a builtin type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::BuiltinType; }
 
  private:
@@ -385,8 +396,18 @@ class BuiltinType : public Type {
  */
 class StringType : public Type {
  public:
+  /**
+   * Factory to create a string type.
+   * @param ctx The context to create the type in.
+   * @return The string type.
+   */
   static StringType *Get(Context *ctx);
 
+  /**
+   * Is the given type a string type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a string type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::StringType; }
 
  private:
@@ -400,10 +421,23 @@ class StringType : public Type {
  */
 class PointerType : public Type {
  public:
+  /**
+   * @return The type of element this pointer type points to.
+   */
   Type *GetBase() const { return base_; }
 
+  /**
+   * Factory to create a pointer type.
+   * @param ctx The context to create the type in.
+   * @return The string type.
+   */
   static PointerType *Get(Type *base);
 
+  /**
+   * Is the given type a pointer type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a pointer type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::PointerType; }
 
  private:
@@ -450,6 +484,11 @@ class ArrayType : public Type {
    */
   static ArrayType *Get(uint64_t length, Type *elem_type);
 
+  /**
+   * Is the given type an array type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is an array type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::ArrayType; }
 
  private:
@@ -515,6 +554,11 @@ class FunctionType : public Type {
    */
   static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
 
+  /**
+   * Is the given type a function type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a function type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::FunctionType; }
 
  private:
@@ -548,6 +592,11 @@ class MapType : public Type {
    */
   static MapType *Get(Type *key_type, Type *value_type);
 
+  /**
+   * Is the given type a map type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a map type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::MapType; }
 
  private:
@@ -612,14 +661,17 @@ class StructType : public Type {
 
   /**
    * Create a structure with the given fields.
-   *
    * @pre The fields vector cannot be empty!
-   *
    * @param fields The non-empty fields making up the struct.
    * @return The structure type.
    */
   static StructType *Get(util::RegionVector<Field> &&fields);
 
+  /**
+   * Is the given type a struct type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a struct type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::StructType; }
 
  private:
