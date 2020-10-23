@@ -1687,6 +1687,61 @@ void BytecodeGenerator::VisitBuiltinOffsetOfCall(ast::CallExpr *call) {
   GetExecutionResult()->SetDestination(offset_var.ValueOf());
 }
 
+void BytecodeGenerator::VisitBuiltinIntCastCall(ast::CallExpr *call) {
+  // Does the caller want the result of the cast? Most likely, yes.
+  const bool caller_wants_result = GetExecutionResult() != nullptr;
+
+  LocalVar dest;
+  if (caller_wants_result) {
+    dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  } else {
+    dest = GetCurrentFunction()->NewLocal(call->GetType());
+  }
+  LocalVar input = VisitExpressionForRValue(call->Arguments()[1]);
+
+  // Cast input->target.
+  const auto input_type = call->Arguments()[1]->GetType()->As<ast::BuiltinType>()->GetKind();
+  const auto target_type = call->GetType()->As<ast::BuiltinType>()->GetKind();
+
+  // clang-format off
+#define EMIT_CAST(type1, type2) GetEmitter()->Emit(Bytecode::Cast_##type1##_##type2, dest, input);
+
+#define DISPATCH(type)                                                         \
+  switch (target_type) {                                                       \
+    case ast::BuiltinType::Bool: EMIT_CAST(type, bool); break;                 \
+    case ast::BuiltinType::Int8: EMIT_CAST(type, int8_t); break;               \
+    case ast::BuiltinType::Int16:EMIT_CAST(type, int16_t); break;              \
+    case ast::BuiltinType::Int32: EMIT_CAST(type, int32_t); break;             \
+    case ast::BuiltinType::Int64: EMIT_CAST(type, int64_t); break;             \
+    case ast::BuiltinType::Uint8: EMIT_CAST(type, uint8_t); break;             \
+    case ast::BuiltinType::Uint16: EMIT_CAST(type, uint16_t); break;           \
+    case ast::BuiltinType::Uint32: EMIT_CAST(type, uint32_t); break;           \
+    case ast::BuiltinType::Uint64: EMIT_CAST(type, uint64_t); break;           \
+    default: UNREACHABLE("Impossible integer type.");                          \
+  }
+
+  switch (input_type) {
+    case ast::BuiltinType::Bool: DISPATCH(bool); break;
+    case ast::BuiltinType::Int8: DISPATCH(int8_t); break;
+    case ast::BuiltinType::Int16: DISPATCH(int16_t); break;
+    case ast::BuiltinType::Int32: DISPATCH(int32_t); break;
+    case ast::BuiltinType::Int64: DISPATCH(int64_t); break;
+    case ast::BuiltinType::Uint8: DISPATCH(uint8_t); break;
+    case ast::BuiltinType::Uint16: DISPATCH(uint16_t); break;
+    case ast::BuiltinType::Uint32: DISPATCH(uint32_t); break;
+    case ast::BuiltinType::Uint64: DISPATCH(uint64_t); break;
+    default: UNREACHABLE("Impossible integer type.");
+  }
+    // clang-format on
+
+#undef DISPATCH
+#undef EMIT
+
+  if (caller_wants_result) {
+    GetExecutionResult()->SetDestination(dest.ValueOf());
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
   ast::Builtin builtin;
 
@@ -1929,6 +1984,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     }
     case ast::Builtin::PtrCast: {
       Visit(call->Arguments()[1]);
+      break;
+    }
+    case ast::Builtin::IntCast: {
+      VisitBuiltinIntCastCall(call);
       break;
     }
   }

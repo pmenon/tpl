@@ -69,7 +69,7 @@ namespace sema {
   F(NonIntegerArrayIndexValue, "non-integer array index", ())                                      \
   F(NegativeArrayIndexValue, "invalid array index %0. index must be non-negative", (int64_t))      \
   F(OutOfBoundsArrayIndexValue, "invalid array index %0. out of bounds for %1-element array",      \
-    (int64_t, uint64_t))                                                                            \
+    (int64_t, uint64_t))                                                                           \
   F(InvalidCastToSqlInt, "invalid cast of %0 to SQL integer", (ast::Type *))                       \
   F(InvalidCastToSqlDecimal, "invalid cast of %0 to SQL decimal", (ast::Type *))                   \
   F(InvalidCastToSqlDate,                                                                          \
@@ -83,8 +83,11 @@ namespace sema {
     "sorterInit requires a comparison function of type (*,*)->bool. received type '%0'",           \
     (ast::Type *))                                                                                 \
   F(BadArgToPtrCast,                                                                               \
-    "ptrCast() expects (compile-time *Type, Expr) arguments. received type '%0' in position %1",   \
+    "@ptrCast() expects (compile-time *Type, Expr) arguments. received type '%0' in position %1",  \
     (ast::Type *, uint32_t))                                                                       \
+  F(BadArgToIntCast, "@intCast() expects (compile-time intN, Expr).", )                            \
+  F(BadArgToIntCast1, "target type '%0' to @intCast() not primitive integer", (ast::Identifier))   \
+  F(BadArgToIntCast2, "input expression to @intCast() not integer: %0", (ast::Type *))             \
   F(BadHashArg, "cannot hash type '%0'", (ast::Type *))                                            \
   F(MissingArrayLength, "missing array length (either compile-time number or '*')", ())            \
   F(NotASQLAggregate, "'%0' is not a SQL aggregator type", (ast::Type *))                          \
