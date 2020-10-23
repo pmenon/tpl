@@ -501,9 +501,16 @@ class FunctionType : public Type {
   Type *GetReturnType() const { return ret_; }
 
   /**
+   * Create a zero-parameter function returning type @em ret.
+   * @param ret The return type of the function.
+   * @return The function type.
+   */
+  static FunctionType *Get(Type *ret);
+
+  /**
    * Create a function with parameters @em params and returning types of type @em ret.
    * @param params The parameters to the function.
-   * @param ret The type of the object the function returns.
+   * @param ret The return type of the function.
    * @return The function type.
    */
   static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);

@@ -336,6 +336,12 @@ StructType *StructType::Get(util::RegionVector<Field> &&fields) {
 }
 
 // static
+FunctionType *FunctionType::Get(Type *ret) {
+  util::RegionVector<Field> empty(ret->GetContext()->GetRegion());
+  return FunctionType::Get(std::move(empty), ret);
+}
+
+// static
 FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
   Context *ctx = ret->GetContext();
 
