@@ -2067,12 +2067,26 @@ void BytecodeGenerator::VisitLiteralExpr(ast::LiteralExpr *node) {
       break;
     }
     case ast::LiteralExpr::LiteralKind::Int: {
-      GetEmitter()->EmitAssignImm4(target, node->IntegerVal());
+      if (const auto size = node->GetType()->GetSize(); size == 1) {
+        GetEmitter()->EmitAssignImm1(target, node->IntegerVal());
+      } else if (size == 2) {
+        GetEmitter()->EmitAssignImm2(target, node->IntegerVal());
+      } else if (size == 4) {
+        GetEmitter()->EmitAssignImm4(target, node->IntegerVal());
+      } else {
+        TPL_ASSERT(size == 8, "Invalid integer literal size. Must be 1-, 2-, 4-, or 8-bytes.");
+        GetEmitter()->EmitAssignImm8(target, node->IntegerVal());
+      }
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
     case ast::LiteralExpr::LiteralKind::Float: {
-      GetEmitter()->EmitAssignImm4F(target, node->FloatVal());
+      if (const auto size = node->GetType()->GetSize(); size == 4) {
+        GetEmitter()->EmitAssignImm4F(target, node->FloatVal());
+      } else {
+        TPL_ASSERT(size == 8, "Invalid float literal size. Must be 4-, or 8-bytes.");
+        GetEmitter()->EmitAssignImm8F(target, node->FloatVal());
+      }
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
@@ -2080,10 +2094,6 @@ void BytecodeGenerator::VisitLiteralExpr(ast::LiteralExpr *node) {
       LocalVar string = NewStaticString(node->GetType()->GetContext(), node->StringVal());
       GetEmitter()->EmitAssign(Bytecode::Assign8, target, string);
       GetExecutionResult()->SetDestination(string.ValueOf());
-    }
-    default: {
-      LOG_ERROR("Non-bool or non-integer literals not supported in bytecode");
-      break;
     }
   }
 }

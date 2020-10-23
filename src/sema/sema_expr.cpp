@@ -257,13 +257,23 @@ void Sema::VisitLiteralExpr(ast::LiteralExpr *node) {
       break;
     }
     case ast::LiteralExpr::LiteralKind::Float: {
-      // Literal floats default to float32.
-      node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Float32));
+      // Initially try to fit it as a 32-bit float, otherwise a 64-bit double.
+      if (node->IsRepresentable(GetBuiltinType(ast::BuiltinType::Float32))) {
+        node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Float32));
+      } else {
+        node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Float64));
+      }
       break;
     }
     case ast::LiteralExpr::LiteralKind::Int: {
-      // Literal integers default to int32.
-      node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Int32));
+      // Initially try to fit the literal as a 32-bit signed integer. If the
+      // value is not representable with 32 bits, use 64-bits. There isn't
+      // another option because TPL does not currently support big integers.
+      if (node->IsRepresentable(GetBuiltinType(ast::BuiltinType::Int32))) {
+        node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Int32));
+      } else {
+        node->SetType(ast::BuiltinType::Get(context(), ast::BuiltinType::Int64));
+      }
       break;
     }
     case ast::LiteralExpr::LiteralKind::String: {
