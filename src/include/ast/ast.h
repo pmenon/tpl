@@ -1270,6 +1270,11 @@ class LiteralExpr : public Expr {
   }
 
   /**
+   * @return True if this expression is representable as the given type; false otherwise.
+   */
+  bool IsRepresentable(ast::Type *type) const;
+
+  /**
    * Is the given node a literal? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a literal; false otherwise.
