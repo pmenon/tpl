@@ -689,14 +689,14 @@ class StructType : public Type {
 // ---------------------------------------------------------
 
 inline Type *Type::GetPointeeType() const {
-  if (auto *ptr_type = SafeAs<PointerType>()) {
+  if (auto ptr_type = SafeAs<PointerType>()) {
     return ptr_type->GetBase();
   }
   return nullptr;
 }
 
 inline bool Type::IsSpecificBuiltin(uint16_t kind) const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->GetKind() == static_cast<BuiltinType::Kind>(kind);
   }
   return false;
@@ -707,28 +707,28 @@ inline bool Type::IsNilType() const { return IsSpecificBuiltin(BuiltinType::Nil)
 inline bool Type::IsBoolType() const { return IsSpecificBuiltin(BuiltinType::Bool); }
 
 inline bool Type::IsIntegerType() const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->IsIntegral();
   }
   return false;
 }
 
 inline bool Type::IsFloatType() const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->IsFloatingPoint();
   }
   return false;
 }
 
 inline bool Type::IsSqlValueType() const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->IsSqlValue();
   }
   return false;
 }
 
 inline bool Type::IsSqlAggregatorType() const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->IsSqlAggregateType();
   }
   return false;
