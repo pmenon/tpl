@@ -414,6 +414,69 @@ ast::Expr *CodeGen::StringToSql(std::string_view str) const {
   return call;
 }
 
+ast::Expr *CodeGen::ConvertSql(ast::Expr *input, sql::TypeId from_type, sql::TypeId to_type) const {
+  if (from_type == to_type) {
+    return input;
+  }
+
+  // TODO(pmenon): The compiler will convert the below switch into a lookup
+  //               table for us, but we should do it manually for readability.
+  switch (from_type) {
+    case TypeId::Boolean:
+      switch (to_type) {
+        case TypeId::TinyInt:
+        case TypeId::SmallInt:
+        case TypeId::Integer:
+        case TypeId::BigInt:
+          return CallBuiltin(ast::Builtin::ConvertBoolToInteger, {input});
+        default:
+          break;
+      }
+      break;
+    case TypeId::TinyInt:
+    case TypeId::SmallInt:
+    case TypeId::Integer:
+    case TypeId::BigInt:
+      switch (to_type) {
+        case TypeId::Float:
+        case TypeId::Double:
+          return CallBuiltin(ast::Builtin::ConvertIntegerToReal, {input});
+        default:
+          break;
+      }
+      break;
+    case TypeId::Date:
+      switch (to_type) {
+        case TypeId::Timestamp:
+          return CallBuiltin(ast::Builtin::ConvertDateToTimestamp, {input});
+        default:
+          break;
+      }
+      break;
+    case TypeId::Varchar:
+      switch (to_type) {
+        case TypeId::Boolean:
+          return CallBuiltin(ast::Builtin::ConvertStringToBool, {input});
+        case TypeId::BigInt:
+          return CallBuiltin(ast::Builtin::ConvertStringToInt, {input});
+        case TypeId::Double:
+          return CallBuiltin(ast::Builtin::ConvertStringToReal, {input});
+        case TypeId::Date:
+          return CallBuiltin(ast::Builtin::ConvertStringToDate, {input});
+        case TypeId::Timestamp:
+          return CallBuiltin(ast::Builtin::ConvertStringToTime, {input});
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
+  }
+
+  throw ConversionException(fmt::format("Cannot convert from SQL type '{}' to type '{}'.",
+                                        TypeIdToString(from_type), TypeIdToString(to_type)));
+}
+
 // ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------

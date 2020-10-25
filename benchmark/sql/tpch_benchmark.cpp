@@ -1661,6 +1661,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
                       .SetTableOid(n_table->GetId())
                       .Build();
   }
+
   std::unique_ptr<planner::AbstractPlanNode> n_seq_scan2;
   planner::OutputSchemaHelper n_seq_scan_out2{&expr_maker, 0};
   {
@@ -1702,6 +1703,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
                       .SetTableOid(s_table->GetId())
                       .Build();
   }
+
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan2;
   planner::OutputSchemaHelper s_seq_scan_out2{&expr_maker, 1};
   {
@@ -1749,6 +1751,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
                        .SetTableOid(ps_table->GetId())
                        .Build();
   }
+
   std::unique_ptr<planner::AbstractPlanNode> ps_seq_scan2;
   planner::OutputSchemaHelper ps_seq_scan_out2{&expr_maker, 1};
   {
@@ -1801,6 +1804,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
                        .AddRightHashKey(s_nationkey)
                        .Build();
   }
+
   std::unique_ptr<planner::AbstractPlanNode> hash_join1_2;
   planner::OutputSchemaHelper hash_join_out1_2{&expr_maker, 0};
   {
@@ -1854,6 +1858,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
                        .AddRightHashKey(ps_suppkey)
                        .Build();
   }
+
   std::unique_ptr<planner::AbstractPlanNode> hash_join2_2;
   planner::OutputSchemaHelper hash_join_out2_2{&expr_maker, 0};
   {
@@ -1892,7 +1897,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
     auto ps_supplycost = hash_join_out2_1.GetOutput("ps_supplycost");
     auto ps_availqty = hash_join_out2_1.GetOutput("ps_availqty");
     // Make the aggregate expressions
-    auto value = expr_maker.OpMul(ps_supplycost, ps_availqty);
+    auto value =
+        expr_maker.OpMul(ps_supplycost, expr_maker.OpCast(ps_availqty, sql::TypeId::Float));
     auto value_sum = expr_maker.AggSum(value);
     // Add them to the helper.
     agg_out1.AddAggTerm("value_sum", value_sum);
@@ -1908,6 +1914,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
                .SetHavingClausePredicate(nullptr)
                .Build();
   }
+
   std::unique_ptr<planner::AbstractPlanNode> agg2;
   planner::OutputSchemaHelper agg_out2{&expr_maker, 1};
   {
@@ -1916,7 +1923,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
     auto ps_availqty = hash_join_out2_2.GetOutput("ps_availqty");
     auto ps_partkey = hash_join_out2_2.GetOutput("ps_partkey");
     // Make the aggregate expressions
-    auto value = expr_maker.OpMul(ps_supplycost, ps_availqty);
+    auto value =
+        expr_maker.OpMul(ps_supplycost, expr_maker.OpCast(ps_availqty, sql::TypeId::Float));
     auto value_sum = expr_maker.AggSum(value);
     // Add them to the helper.
     agg_out2.AddGroupByTerm("ps_partkey", ps_partkey);

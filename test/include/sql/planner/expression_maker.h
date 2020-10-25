@@ -174,6 +174,13 @@ class ExpressionMaker {
   }
 
   /**
+   * Cast the input expression to the given type.
+   */
+  Expression OpCast(Expression input, sql::TypeId to_type) {
+    return Operator(planner::ExpressionType::OPERATOR_CAST, to_type, input);
+  }
+
+  /**
    * create expression for child1 + child2
    */
   Expression OpSum(Expression child1, Expression child2) {
