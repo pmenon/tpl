@@ -545,6 +545,16 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *StringToSql(std::string_view str) const;
 
+  /**
+   * Perform a SQLL cast.
+   * @param input The input to the cast.
+   * @param from_type The type of the input.
+   * @param to_type The type to convert to.
+   * @return
+   */
+  [[nodiscard]] ast::Expr *ConvertSql(ast::Expr *input, sql::TypeId from_type,
+                                      sql::TypeId to_type) const;
+
   // -------------------------------------------------------
   //
   // Table stuff
