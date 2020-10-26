@@ -5,7 +5,6 @@
 #include "ast/ast.h"
 #include "ast/ast_visitor.h"
 #include "ast/builtins.h"
-#include "sema/error_reporter.h"
 #include "sema/scope.h"
 
 namespace tpl {
@@ -20,11 +19,12 @@ class Schema;
 
 namespace sema {
 
+class ErrorReporter;
+
 /**
- * This is the main class that performs semantic analysis of TPL programs. It
- * traverses an untyped TPL abstract syntax tree (AST), fills in types based on
- * declarations, derives types of expressions and ensures correctness of all
- * operations in the TPL program.
+ * This is the main class that performs semantic analysis of TPL programs. It traverses an untyped
+ * TPL abstract syntax tree (AST), fills in types based on declarations, derives types of
+ * expressions and ensures correctness of all operations in the TPL program.
  *
  * Usage:
  * @code
@@ -38,21 +38,19 @@ namespace sema {
 class Sema : public ast::AstVisitor<Sema> {
  public:
   /**
-   * Construct using the given context
-   * @param ctx The context used to acquire memory for new ASTs and the
-   *            diagnostic error reporter.
+   * Construct using the given context.
+   * @param ctx The context used to acquire memory for new ASTs and the diagnostic error reporter.
    */
   explicit Sema(ast::Context *ctx);
 
   /**
-   * This class cannot be copied or moved
+   * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(Sema);
 
   /**
-   * Run the type checker on the provided AST rooted at \a root. Ensures proper
-   * types of all statements and expressions, and also annotates the AST with
-   * correct type information.
+   * Run the type checker on the provided AST rooted at @em root. Ensures proper types of all
+   * statements and expressions, and also annotates the AST with correct type information.
    * @return True if type-checking found errors; false otherwise
    */
   bool Run(ast::AstNode *root);
@@ -62,18 +60,24 @@ class Sema : public ast::AstVisitor<Sema> {
   AST_NODES(DECLARE_AST_VISIT_METHOD)
 #undef DECLARE_AST_VISIT_METHOD
 
+  /**
+   * @return The AST context in which semantic analysis is being performed.
+   */
   ast::Context *context() const { return ctx_; }
 
+  /**
+   * @return Reporter to use when reporting type-checking errors.
+   */
   ErrorReporter *error_reporter() const { return error_reporter_; }
 
  private:
-  // Resolve the type of the input expression
+  // Resolve the type of the input expression.
   ast::Type *Resolve(ast::Expr *expr) {
     Visit(expr);
     return expr->GetType();
   }
 
-  // Create a builtin type
+  // Create a builtin type.
   ast::Type *GetBuiltinType(uint16_t builtin_kind);
 
   struct CheckResult {
@@ -156,7 +160,7 @@ class Sema : public ast::AstVisitor<Sema> {
 
   Scope *current_scope() { return scope_; }
 
-  // Enter a new scope
+  // Enter a new scope.
   void EnterScope(Scope::Kind scope_kind) {
     if (num_cached_scopes_ > 0) {
       Scope *scope = scope_cache_[--num_cached_scopes_].release();
@@ -168,7 +172,7 @@ class Sema : public ast::AstVisitor<Sema> {
     }
   }
 
-  // Exit the current scope
+  // Exit the current scope.
   void ExitScope() {
     TPL_ASSERT(current_scope() != nullptr, "Mismatched scope exit");
 
@@ -230,6 +234,7 @@ class Sema : public ast::AstVisitor<Sema> {
     SemaScope block_scope_;
   };
 
+  // Return the function that's currently getting type-checked.
   ast::FunctionLiteralExpr *current_function() const { return curr_func_; }
 
  private:

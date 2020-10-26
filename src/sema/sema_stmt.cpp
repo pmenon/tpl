@@ -3,6 +3,7 @@
 #include "ast/ast_node_factory.h"
 #include "ast/context.h"
 #include "ast/type.h"
+#include "sema/error_reporter.h"
 #include "sql/catalog.h"
 #include "sql/table.h"
 
