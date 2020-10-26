@@ -17,11 +17,11 @@ Parser::Parser(Scanner *scanner, ast::Context *context)
       error_reporter_(context->GetErrorReporter()) {}
 
 ast::AstNode *Parser::Parse() {
-  util::RegionVector<ast::Decl *> decls(region());
+  util::RegionVector<ast::Decl *> decls(Region());
 
-  const SourcePosition &start_pos = scanner_->current_position();
+  const SourcePosition &start_pos = scanner_->CurrentPosition();
 
-  while (peek() != Token::Type::EOS) {
+  while (Peek() != Token::Type::EOS) {
     if (ast::Decl *decl = ParseDecl()) {
       decls.push_back(decl);
     }
@@ -32,8 +32,8 @@ ast::AstNode *Parser::Parse() {
 
 void Parser::Sync(const std::unordered_set<Token::Type> &s) {
   Next();
-  while (peek() != Token::Type::EOS) {
-    if (s.count(peek()) > 0) {
+  while (Peek() != Token::Type::EOS) {
+    if (s.count(Peek()) > 0) {
       return;
     }
     Next();
@@ -56,7 +56,7 @@ ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
 
 ast::Decl *Parser::ParseDecl() {
   // At the top-level, we only allow structs and functions
-  switch (peek()) {
+  switch (Peek()) {
     case Token::Type::STRUCT: {
       return ParseStructDecl();
     }
@@ -69,7 +69,7 @@ ast::Decl *Parser::ParseDecl() {
   }
 
   // Report error, sync up and try again
-  error_reporter_->Report(scanner_->current_position(), sema::ErrorMessages::kInvalidDeclaration);
+  error_reporter_->Report(scanner_->CurrentPosition(), sema::ErrorMessages::kInvalidDeclaration);
   Sync(kTopLevelDecls);
   return nullptr;
 }
@@ -77,7 +77,7 @@ ast::Decl *Parser::ParseDecl() {
 ast::Decl *Parser::ParseFunctionDecl() {
   Expect(Token::Type::FUN);
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   // The function name
   Expect(Token::Type::IDENTIFIER);
@@ -96,7 +96,7 @@ ast::Decl *Parser::ParseFunctionDecl() {
 ast::Decl *Parser::ParseStructDecl() {
   Expect(Token::Type::STRUCT);
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   // The struct name
   Expect(Token::Type::IDENTIFIER);
@@ -117,7 +117,7 @@ ast::Decl *Parser::ParseVariableDecl() {
 
   Expect(Token::Type::VAR);
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   // The name
   Expect(Token::Type::IDENTIFIER);
@@ -138,7 +138,7 @@ ast::Decl *Parser::ParseVariableDecl() {
   }
 
   if (type == nullptr && init == nullptr) {
-    error_reporter_->Report(scanner_->current_position(),
+    error_reporter_->Report(scanner_->CurrentPosition(),
                             sema::ErrorMessages::kMissingTypeAndInitialValue, name);
   }
 
@@ -153,7 +153,7 @@ ast::Stmt *Parser::ParseStmt() {
   // Statement = Block | ExpressionStmt | ForStmt | IfStmt | ReturnStmt |
   //             SimpleStmt | VariableDecl ;
 
-  switch (peek()) {
+  switch (Peek()) {
     case Token::Type::LEFT_BRACE: {
       return ParseBlockStmt();
     }
@@ -181,7 +181,7 @@ ast::Stmt *Parser::ParseSimpleStmt() {
   ast::Expr *left = ParseExpr();
 
   if (Matches(Token::Type::EQUAL)) {
-    const SourcePosition &pos = scanner_->current_position();
+    const SourcePosition &pos = scanner_->CurrentPosition();
     ast::Expr *right = ParseExpr();
     return node_factory_->NewAssignmentStmt(pos, left, right);
   }
@@ -194,21 +194,21 @@ ast::Stmt *Parser::ParseBlockStmt() {
 
   // Eat the left brace
   Expect(Token::Type::LEFT_BRACE);
-  const SourcePosition &start_position = scanner_->current_position();
+  const SourcePosition &start_position = scanner_->CurrentPosition();
 
   // Where we store all the statements in the block
-  util::RegionVector<ast::Stmt *> statements(region());
+  util::RegionVector<ast::Stmt *> statements(Region());
   statements.reserve(16);
 
   // Loop while we don't see the right brace
-  while (peek() != Token::Type::RIGHT_BRACE && peek() != Token::Type::EOS) {
+  while (Peek() != Token::Type::RIGHT_BRACE && Peek() != Token::Type::EOS) {
     ast::Stmt *stmt = ParseStmt();
     statements.emplace_back(stmt);
   }
 
   // Eat the right brace
   Expect(Token::Type::RIGHT_BRACE);
-  const SourcePosition &end_position = scanner_->current_position();
+  const SourcePosition &end_position = scanner_->CurrentPosition();
 
   return node_factory_->NewBlockStmt(start_position, end_position, std::move(statements));
 }
@@ -265,7 +265,7 @@ Parser::ForHeader Parser::ParseForHeader() {
   // Attributes = { Ident '=' Expr } .
 
   // Infinite loop?
-  if (peek() == Token::Type::LEFT_BRACE) {
+  if (Peek() == Token::Type::LEFT_BRACE) {
     return ForHeader::Infinite();
   }
 
@@ -273,7 +273,7 @@ Parser::ForHeader Parser::ParseForHeader() {
 
   ast::Stmt *init = nullptr, *cond = nullptr, *next = nullptr;
 
-  if (peek() != Token::Type::SEMI) {
+  if (Peek() != Token::Type::SEMI) {
     cond = ParseStmt();
   }
 
@@ -290,11 +290,11 @@ Parser::ForHeader Parser::ParseForHeader() {
   if (Matches(Token::Type::SEMI)) {
     init = cond;
     cond = nullptr;
-    if (peek() != Token::Type::SEMI) {
+    if (Peek() != Token::Type::SEMI) {
       cond = ParseStmt();
     }
     Expect(Token::Type::SEMI);
-    if (peek() != Token::Type::RIGHT_PAREN) {
+    if (Peek() != Token::Type::RIGHT_PAREN) {
       next = ParseStmt();
     }
   }
@@ -308,7 +308,7 @@ ast::Stmt *Parser::ParseForStmt() {
   // ForStmt = 'for' ForHeader Block ;
   Expect(Token::Type::FOR);
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   // Parse the header to get the initialization statement, loop condition and
   // next-value statement
@@ -331,7 +331,7 @@ ast::Stmt *Parser::ParseIfStmt() {
 
   Expect(Token::Type::IF);
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   // Handle condition
   Expect(Token::Type::LEFT_PAREN);
@@ -344,7 +344,7 @@ ast::Stmt *Parser::ParseIfStmt() {
   // Handle 'else' statement, if one exists
   ast::Stmt *else_stmt = nullptr;
   if (Matches(Token::Type::ELSE)) {
-    if (peek() == Token::Type::IF) {
+    if (Peek() == Token::Type::IF) {
       else_stmt = ParseIfStmt();
     } else {
       else_stmt = ParseBlockStmt();
@@ -357,10 +357,10 @@ ast::Stmt *Parser::ParseIfStmt() {
 ast::Stmt *Parser::ParseReturnStmt() {
   Expect(Token::Type::RETURN);
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   ast::Expr *ret = nullptr;
-  if (peek() != Token::Type::RIGHT_BRACE) {
+  if (Peek() != Token::Type::RIGHT_BRACE) {
     ret = ParseExpr();
   }
 
@@ -374,19 +374,19 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
 
   ast::Expr *left = ParseUnaryOpExpr();
 
-  for (uint32_t prec = Token::GetPrecedence(peek()); prec > min_prec; prec--) {
+  for (uint32_t prec = Token::GetPrecedence(Peek()); prec > min_prec; prec--) {
     // It's possible that we reach a token that has lower precedence than the
     // minimum (e.g., EOS) so we check and early exit
-    if (Token::GetPrecedence(peek()) < min_prec) {
+    if (Token::GetPrecedence(Peek()) < min_prec) {
       break;
     }
 
     // Make sure to consume **all** tokens with the same precedence as the
     // current value before moving on to a lower precedence expression. This is
     // to handle cases like 1+2+3+4.
-    while (Token::GetPrecedence(peek()) == prec) {
+    while (Token::GetPrecedence(Peek()) == prec) {
       Token::Type op = Next();
-      const SourcePosition &position = scanner_->current_position();
+      const SourcePosition &position = scanner_->CurrentPosition();
       ast::Expr *right = ParseBinaryOpExpr(prec);
 
       if (Token::IsCompareOp(op)) {
@@ -404,7 +404,7 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
   // UnaryOpExpr = PrimaryExpr | unary_op UnaryOpExpr ;
   // unary_op = '&' | '!' | '~' | '^' | '-' | '*'
 
-  switch (peek()) {
+  switch (Peek()) {
     case Token::Type::AMPERSAND:
     case Token::Type::BANG:
     case Token::Type::BIT_NOT:
@@ -412,7 +412,7 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
     case Token::Type::MINUS:
     case Token::Type::STAR: {
       Token::Type op = Next();
-      SourcePosition pos = scanner_->current_position();
+      SourcePosition pos = scanner_->CurrentPosition();
       ast::Expr *expression = ParseUnaryOpExpr();
 
       // Some quick rewrites here.
@@ -452,15 +452,15 @@ ast::Expr *Parser::ParsePrimaryExpr() {
   ast::Expr *result = ParseOperand();
 
   do {
-    switch (peek()) {
+    switch (Peek()) {
       case Token::Type::LEFT_PAREN: {
         // Call expression
         Consume(Token::Type::LEFT_PAREN);
-        util::RegionVector<ast::Expr *> args(region());
-        while (peek() != Token::Type::RIGHT_PAREN) {
+        util::RegionVector<ast::Expr *> args(Region());
+        while (Peek() != Token::Type::RIGHT_PAREN) {
           ast::Expr *arg = ParseExpr();
           args.push_back(arg);
-          if (peek() == Token::Type::COMMA) {
+          if (Peek() == Token::Type::COMMA) {
             Next();
           }
         }
@@ -488,7 +488,7 @@ ast::Expr *Parser::ParsePrimaryExpr() {
         break;
       }
     }
-  } while (Token::IsCallOrMemberOrIndex(peek()));
+  } while (Token::IsCallOrMemberOrIndex(Peek()));
 
   return result;
 }
@@ -498,27 +498,27 @@ ast::Expr *Parser::ParseOperand() {
   // Literal = int_lit | float_lit | 'nil' | 'true' | 'false' | FunctionLiteral
   // OperandName = identifier
 
-  switch (peek()) {
+  switch (Peek()) {
     case Token::Type::NIL: {
       Consume(Token::Type::NIL);
-      return node_factory_->NewNilLiteral(scanner_->current_position());
+      return node_factory_->NewNilLiteral(scanner_->CurrentPosition());
     }
     case Token::Type::FALSE:
     case Token::Type::TRUE: {
       const bool bool_val = (Next() == Token::Type::TRUE);
-      return node_factory_->NewBoolLiteral(scanner_->current_position(), bool_val);
+      return node_factory_->NewBoolLiteral(scanner_->CurrentPosition(), bool_val);
     }
     case Token::Type::BUILTIN_IDENTIFIER: {
       // Builtin call expression
       Next();
       ast::Expr *func_name =
-          node_factory_->NewIdentifierExpr(scanner_->current_position(), GetSymbol());
+          node_factory_->NewIdentifierExpr(scanner_->CurrentPosition(), GetSymbol());
       Consume(Token::Type::LEFT_PAREN);
-      util::RegionVector<ast::Expr *> args(region());
-      while (peek() != Token::Type::RIGHT_PAREN) {
+      util::RegionVector<ast::Expr *> args(Region());
+      while (Peek() != Token::Type::RIGHT_PAREN) {
         ast::Expr *arg = ParseExpr();
         args.push_back(arg);
-        if (peek() == Token::Type::COMMA) {
+        if (Peek() == Token::Type::COMMA) {
           Next();
         }
       }
@@ -527,23 +527,23 @@ ast::Expr *Parser::ParseOperand() {
     }
     case Token::Type::IDENTIFIER: {
       Next();
-      return node_factory_->NewIdentifierExpr(scanner_->current_position(), GetSymbol());
+      return node_factory_->NewIdentifierExpr(scanner_->CurrentPosition(), GetSymbol());
     }
     case Token::Type::INTEGER: {
       Next();
       char *end = nullptr;
       int64_t num = std::strtoll(GetSymbol().GetData(), &end, 10);
-      return node_factory_->NewIntLiteral(scanner_->current_position(), num);
+      return node_factory_->NewIntLiteral(scanner_->CurrentPosition(), num);
     }
     case Token::Type::FLOAT: {
       Next();
       char *end = nullptr;
       float num = std::strtof(GetSymbol().GetData(), &end);
-      return node_factory_->NewFloatLiteral(scanner_->current_position(), num);
+      return node_factory_->NewFloatLiteral(scanner_->CurrentPosition(), num);
     }
     case Token::Type::STRING: {
       Next();
-      return node_factory_->NewStringLiteral(scanner_->current_position(), GetSymbol());
+      return node_factory_->NewStringLiteral(scanner_->CurrentPosition(), GetSymbol());
     }
     case Token::Type::FUN: {
       Next();
@@ -561,9 +561,9 @@ ast::Expr *Parser::ParseOperand() {
   }
 
   // Error
-  error_reporter_->Report(scanner_->current_position(), sema::ErrorMessages::kExpectingExpression);
+  error_reporter_->Report(scanner_->CurrentPosition(), sema::ErrorMessages::kExpectingExpression);
   Next();
-  return node_factory_->NewBadExpr(scanner_->current_position());
+  return node_factory_->NewBadExpr(scanner_->CurrentPosition());
 }
 
 ast::Expr *Parser::ParseFunctionLitExpr() {
@@ -582,11 +582,11 @@ ast::Expr *Parser::ParseFunctionLitExpr() {
 }
 
 ast::Expr *Parser::ParseType() {
-  switch (peek()) {
+  switch (Peek()) {
     case Token::Type::NIL:
     case Token::Type::IDENTIFIER: {
       Next();
-      const SourcePosition &position = scanner_->current_position();
+      const SourcePosition &position = scanner_->CurrentPosition();
       return node_factory_->NewIdentifierExpr(position, GetSymbol());
     }
     case Token::Type::MAP: {
@@ -610,7 +610,7 @@ ast::Expr *Parser::ParseType() {
   }
 
   // Error
-  error_reporter_->Report(scanner_->current_position(), sema::ErrorMessages::kExpectingType);
+  error_reporter_->Report(scanner_->CurrentPosition(), sema::ErrorMessages::kExpectingType);
 
   return nullptr;
 }
@@ -619,15 +619,15 @@ ast::Expr *Parser::ParseFunctionType() {
   // FuncType = '(' { ParameterList } ')' '->' Type ;
   // ParameterList = { Ident ':' } Type ;
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   Consume(Token::Type::LEFT_PAREN);
 
-  util::RegionVector<ast::FieldDecl *> params(region());
+  util::RegionVector<ast::FieldDecl *> params(Region());
   params.reserve(4);
 
-  while (peek() != Token::Type::RIGHT_PAREN) {
-    const SourcePosition &field_position = scanner_->current_position();
+  while (Peek() != Token::Type::RIGHT_PAREN) {
+    const SourcePosition &field_position = scanner_->CurrentPosition();
 
     ast::Identifier ident;
 
@@ -663,7 +663,7 @@ ast::Expr *Parser::ParseFunctionType() {
 ast::Expr *Parser::ParsePointerType() {
   // PointerTypeRepr = '*' Type ;
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   Expect(Token::Type::STAR);
 
@@ -676,7 +676,7 @@ ast::Expr *Parser::ParseArrayType() {
   // ArrayTypeRepr = '[' Length ']' Type ;
   // Length = [ '*' | Expr ] ;
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   Consume(Token::Type::LEFT_BRACKET);
 
@@ -701,16 +701,16 @@ ast::Expr *Parser::ParseArrayType() {
 ast::Expr *Parser::ParseStructType() {
   // StructType = '{' { Ident ':' Type } '}' ;
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   Consume(Token::Type::LEFT_BRACE);
 
-  util::RegionVector<ast::FieldDecl *> fields(region());
+  util::RegionVector<ast::FieldDecl *> fields(Region());
 
-  while (peek() != Token::Type::RIGHT_BRACE) {
+  while (Peek() != Token::Type::RIGHT_BRACE) {
     Expect(Token::Type::IDENTIFIER);
 
-    const SourcePosition &field_position = scanner_->current_position();
+    const SourcePosition &field_position = scanner_->CurrentPosition();
 
     // The parameter name
     ast::Identifier name = GetSymbol();
@@ -733,7 +733,7 @@ ast::Expr *Parser::ParseStructType() {
 ast::Expr *Parser::ParseMapType() {
   // MapType = 'map' '[' Expr ']' Expr ;
 
-  const SourcePosition &position = scanner_->current_position();
+  const SourcePosition &position = scanner_->CurrentPosition();
 
   Consume(Token::Type::MAP);
 

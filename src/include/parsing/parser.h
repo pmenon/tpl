@@ -12,28 +12,37 @@
 
 namespace tpl::parsing {
 
+/**
+ * Parser for TPL source.
+ */
 class Parser {
  public:
-  /// Build a parser instance using the given scanner and AST context
-  /// \param scanner The scanner used to read input tokens
-  /// \param context The context
+  /**
+   * Build a parser instance using the given scanner and AST context.
+   * @param scanner The scanner used to read input tokens.
+   * @param context The context parsing occurs in. Mainly used for node creations.
+   */
   Parser(Scanner *scanner, ast::Context *context);
 
-  /// This class cannot be copied or moved
+  /**
+   * This class cannot be copied or moved.
+   */
   DISALLOW_COPY_AND_MOVE(Parser);
 
-  /// Parse and generate an abstract syntax tree from the input TPL source code
-  /// \return The generated AST
+  /**
+   * Parse and generate an abstract syntax tree from the input TPL source code
+   * @return The generated AST.
+   */
   ast::AstNode *Parse();
 
  private:
-  util::Region *region() { return context_->GetRegion(); }
+  util::Region *Region() { return context_->GetRegion(); }
 
   // Move to the next token in the stream
   Token::Type Next() { return scanner_->Next(); }
 
   // Peek at the next token in the stream
-  Token::Type peek() const { return scanner_->peek(); }
+  Token::Type Peek() const { return scanner_->Peek(); }
 
   // Consume one token. In debug mode, throw an error if the next token isn't
   // what was expected. In release mode, just consume the token without checking
@@ -41,7 +50,7 @@ class Parser {
     UNUSED Token::Type next = Next();
 #ifndef NDEBUG
     if (next != expected) {
-      error_reporter_->Report(scanner_->current_position(), sema::ErrorMessages::kUnexpectedToken,
+      error_reporter_->Report(scanner_->CurrentPosition(), sema::ErrorMessages::kUnexpectedToken,
                               next, expected);
     }
 #endif
@@ -51,7 +60,7 @@ class Parser {
   void Expect(Token::Type expected) {
     Token::Type next = Next();
     if (next != expected) {
-      error_reporter_->Report(scanner_->current_position(), sema::ErrorMessages::kUnexpectedToken,
+      error_reporter_->Report(scanner_->CurrentPosition(), sema::ErrorMessages::kUnexpectedToken,
                               next, expected);
     }
   }
@@ -59,7 +68,7 @@ class Parser {
   // If the next token matches the given expected token, consume it and return
   // true; otherwise, return false
   bool Matches(Token::Type expected) {
-    if (peek() != expected) {
+    if (Peek() != expected) {
       return false;
     }
 
@@ -69,7 +78,7 @@ class Parser {
 
   // Get the current symbol as an AST string
   ast::Identifier GetSymbol() {
-    const std::string &literal = scanner_->current_literal();
+    const std::string &literal = scanner_->CurrentLiteral();
     return context_->GetIdentifier(literal);
   }
 
@@ -132,16 +141,13 @@ class Parser {
   ast::Expr *ParseMapType();
 
  private:
-  // The source code scanner
+  // The source code scanner.
   Scanner *scanner_;
-
-  // The context
+  // The context.
   ast::Context *context_;
-
-  // A factory for all node types
+  // A factory for all node types.
   ast::AstNodeFactory *node_factory_;
-
-  // The error reporter
+  // The error reporter.
   sema::ErrorReporter *error_reporter_;
 };
 

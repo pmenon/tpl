@@ -69,7 +69,7 @@ namespace sema {
   F(NonIntegerArrayIndexValue, "non-integer array index", ())                                      \
   F(NegativeArrayIndexValue, "invalid array index %0. index must be non-negative", (int64_t))      \
   F(OutOfBoundsArrayIndexValue, "invalid array index %0. out of bounds for %1-element array",      \
-    (int64_t, uint64_t))                                                                            \
+    (int64_t, uint64_t))                                                                           \
   F(InvalidCastToSqlInt, "invalid cast of %0 to SQL integer", (ast::Type *))                       \
   F(InvalidCastToSqlDecimal, "invalid cast of %0 to SQL decimal", (ast::Type *))                   \
   F(InvalidCastToSqlDate,                                                                          \
