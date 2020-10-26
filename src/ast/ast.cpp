@@ -225,10 +225,6 @@ std::string CastKindToString(const CastKind cast_kind) {
       return "BoolToSqlBool";
     case CastKind::IntegralCast:
       return "IntegralCast";
-    case CastKind::IntToFloat:
-      return "IntToFloat";
-    case CastKind::FloatToInt:
-      return "FloatToInt";
     case CastKind::BitCast:
       return "BitCast";
     case CastKind::FloatToSqlReal:

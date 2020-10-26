@@ -1081,12 +1081,6 @@ enum class CastKind : uint8_t {
   // a sign-extension, or a zero-extension. The same as in C/C++.
   IntegralCast,
 
-  // An integer to float cast. Only allows widening.
-  IntToFloat,
-
-  // A float to integer cast. Only allows widening.
-  FloatToInt,
-
   // A simple bit cast reinterpretation.
   BitCast,
 
