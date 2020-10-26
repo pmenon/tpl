@@ -57,6 +57,8 @@ std::size_t GetTypeIdSize(TypeId type) {
       return sizeof(double);
     case TypeId::Date:
       return sizeof(Date);
+    case TypeId::Timestamp:
+      return sizeof(Timestamp);
     case TypeId::Varchar:
       return sizeof(VarlenEntry);
     case TypeId::Varbinary:

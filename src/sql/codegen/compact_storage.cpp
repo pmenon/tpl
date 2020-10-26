@@ -20,7 +20,7 @@ namespace tpl::sql::codegen {
   F(TypeId::Timestamp, CompactStorageWriteTimestamp, CompactStorageReadTimestamp) \
   F(TypeId::Varchar, CompactStorageWriteString, CompactStorageReadString)
 
-codegen::CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name)
+CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name)
     : codegen_(codegen),
       type_name_(codegen->MakeFreshIdentifier(fmt::format("{}_Compact", name))),
       nulls_(codegen_->MakeIdentifier("nulls")) {}
@@ -36,27 +36,24 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
   std::iota(reordered.begin(), reordered.end(), 0u);
 
   // Re-order attributes by decreasing size to minimize padding.
-  std::ranges::sort(reordered, [&](auto left_idx, auto right_idx) {
+  std::ranges::stable_sort(reordered, [&](auto left_idx, auto right_idx) {
     return GetTypeIdSize(schema[left_idx]) > GetTypeIdSize(schema[right_idx]);
   });
 
+  col_info_.resize(schema.size());
+
   // Generate the compact struct.
   util::RegionVector<ast::FieldDecl *> members = codegen_->MakeEmptyFieldList();
-  members.reserve(schema.size() + 1);
+  members.resize(schema.size() + 1);
   for (uint32_t i = 0; i < schema.size(); i++) {
     ast::Identifier name = codegen_->MakeIdentifier(fmt::format("_m{}", i));
-    members.push_back(codegen_->MakeField(name, codegen_->PrimitiveTplType(schema[reordered[i]])));
+    members[i] = codegen_->MakeField(name, codegen_->PrimitiveTplType(schema[reordered[i]]));
+    col_info_[reordered[i]] = std::make_pair(schema[reordered[i]], name);
   }
-  // Tack on the NULL indicators.
-  const uint32_t null_bytes = util::MathUtil::DivRoundUp(schema.size(), 8);
-  members.push_back(
-      codegen_->MakeField(nulls_, codegen_->ArrayType(null_bytes, ast::BuiltinType::Uint8)));
-
-  // Fill out the column information. We can only do this after all fields have
-  // been added since we rely on the field names for access.
-  for (uint32_t i = 0; i < schema.size(); i++) {
-    col_info_.emplace_back(schema[i], members[reordered[i]]->Name());
-  }
+  // Tack on the NULL indicators for all fields as a bitmap byte array.
+  const auto null_byte = ast::BuiltinType::Uint8;
+  const auto num_null_bytes = util::MathUtil::DivRoundUp(schema.size(), 8);
+  members.back() = codegen_->MakeField(nulls_, codegen_->ArrayType(num_null_bytes, null_byte));
 
   // Build the final type.
   codegen_->DeclareStruct(type_name_, std::move(members));
@@ -113,6 +110,11 @@ ast::Expr *CompactStorage::ReadSQL(ast::Expr *ptr, uint32_t index) const {
 
   // Call.
   return codegen_->CallBuiltin(op, {ColumnPtr(ptr, index), Nulls(ptr), codegen_->Const32(index)});
+}
+
+ast::Identifier CompactStorage::FieldNameAtIndex(uint32_t index) const {
+  TPL_ASSERT(index < col_info_.size(), "Out-of-bounds field access.");
+  return col_info_[index].second;
 }
 
 }  // namespace tpl::sql::codegen

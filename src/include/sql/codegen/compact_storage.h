@@ -1,6 +1,5 @@
 #pragma once
 
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -56,6 +55,11 @@ class CompactStorage {
    * @return A pair storing the read value and NULL-indication flag.
    */
   ast::Expr *ReadSQL(ast::Expr *ptr, uint32_t index) const;
+
+  /**
+   * @return The name of the field at the given index in the compact struct.
+   */
+  ast::Identifier FieldNameAtIndex(uint32_t index) const;
 
  private:
   // Given a pointer to the storage space, return a pointer to the NULL
