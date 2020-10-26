@@ -1,16 +1,12 @@
 #include "parsing/scanner.h"
 
-#include <cassert>
-#include <stdexcept>
-#include <string>
-
 namespace tpl::parsing {
 
 Scanner::Scanner(const std::string &source) : Scanner(source.data(), source.length()) {}
 
 Scanner::Scanner(const char *source, uint64_t source_len)
     : source_(source), source_len_(source_len), offset_(0) {
-  // Setup current token information
+  // Setup current token information.
   curr_.type = Token::Type::UNINIITIALIZED;
   curr_.offset = 0;
   curr_.pos.line = 0;
@@ -21,12 +17,12 @@ Scanner::Scanner(const char *source, uint64_t source_len)
   next_.pos.line = 0;
   next_.pos.column = 0;
 
-  // Advance character iterator to the first slot
+  // Advance character iterator to the first slot.
   c0_pos_.line = 1;
   c0_pos_.column = 0;
   Advance();
 
-  // Find the first token
+  // Find the first token.
   Scan();
 }
 
@@ -37,14 +33,14 @@ Token::Type Scanner::Next() {
 }
 
 void Scanner::Scan() {
-  // Re-init the next token
+  // Re-init the next token.
   next_.literal.clear();
 
-  // The token
+  // The token.
   Token::Type type;
 
   do {
-    // Setup current token positions
+    // Setup current token positions.
     next_.pos = c0_pos_;
     next_.offset = offset_;
 
@@ -257,10 +253,10 @@ void Scanner::SkipLineComment() {
 
 void Scanner::SkipBlockComment() {
   while (c0_ != kEndOfInput) {
-    // Find the first '*'
+    // Find the first '*'.
     AdvanceUntil([](auto c) { return c == '*'; });
 
-    // Look for '/' after potentially repeated '*'
+    // Look for '/' after potentially repeated '*'.
     while (c0_ == '*') {
       Advance();
       if (c0_ == '/') {
@@ -272,7 +268,7 @@ void Scanner::SkipBlockComment() {
 }
 
 Token::Type Scanner::ScanIdentifierOrKeyword() {
-  // First collect identifier
+  // First collect identifier.
   int32_t identifier_char0 = c0_;
   while (IsIdentifierChar(c0_) && c0_ != kEndOfInput) {
     next_.literal += static_cast<char>(c0_);
@@ -280,7 +276,7 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
   }
 
   if (identifier_char0 == '_' || IsInRange(identifier_char0, 'A', 'Z')) {
-    // Definitely not keyword
+    // Definitely not keyword.
     return Token::Type::IDENTIFIER;
   }
 
@@ -345,13 +341,13 @@ Token::Type Scanner::CheckIdentifierOrKeyword(const char *input, uint32_t input_
   }
   // clang-format on
 
-  // The main switch statement that outlines all keywords
+  // The main switch statement that outlines all keywords.
   switch (input[0]) {
     default:
       KEYWORDS()
   }
 
-  // The input isn't a keyword, it must be an identifier
+  // The input isn't a keyword, it must be an identifier.
   return Token::Type::IDENTIFIER;
 }
 
@@ -386,7 +382,7 @@ Token::Type Scanner::ScanNumber() {
 
 Token::Type Scanner::ScanString() {
   // Single-line string. The lookahead character points to the start of the
-  // string literal
+  // string literal.
   while (true) {
     if (c0_ == kEndOfInput) {
       next_.literal.clear();
@@ -397,12 +393,12 @@ Token::Type Scanner::ScanString() {
     // Is this character an escape?
     bool escape = (c0_ == '\\');
 
-    // Add the character to the current string literal
+    // Add the character to the current string literal.
     next_.literal += static_cast<char>(c0_);
 
     Advance();
 
-    // If we see an enclosing quote and it hasn't been escaped, we're done
+    // If we see an enclosing quote and it hasn't been escaped, we're done.
     if (c0_ == '"' && !escape) {
       Advance();
       return Token::Type::STRING;
