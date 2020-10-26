@@ -51,33 +51,75 @@ TEST_F(SemaExprTest, LogicalOperationTest) {
   }
 }
 
-TEST_F(SemaExprTest, ComparisonOperationWithImplicitCastTest) {
+TEST_F(SemaExprTest, ArithmeticOperationTest) {
   TestCase tests[] = {
-      // Test: Compare a primitive int32 with a SQL integer
+      // Test: Add SQL integers.
       // Expectation: Valid
-      {false, "SQL integers should be comparable to native integers",
+      {false, "SQL integers should be summable",
        Block({
-           DeclStmt(DeclVar(Ident("sql_int"), IntegerSqlTypeRepr())),  // var sql_int: IntegerVal
-           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                  // var i = 10
-           ExprStmt(CmpLt(IdentExpr("sql_int"), IdentExpr("i"))),      // sql_int < i
+           DeclStmt(DeclVar("a", "IntegerVal", nullptr)),  // var a: IntegerVal
+           DeclStmt(DeclVar("b", "IntegerVal", nullptr)),  // var b: IntegerVal
+           DeclStmt(DeclVar("c", BinOp<parsing::Token::Type::PLUS>(
+                                     IdentExpr("a"), IdentExpr("b")))),  // var c = a + b
        })},
 
-      // Test: Compare a primitive int32 with a SQL integer
+      // Test: Add SQL floats.
       // Expectation: Valid
-      {false, "SQL integers should be comparable to native integers",
+      {false, "SQL floats should be summable",
        Block({
-           DeclStmt(DeclVar(Ident("sql_int"), IntegerSqlTypeRepr())),  // var sql_int: IntegerVal
-           DeclStmt(DeclVar(Ident("i"), IntLit(10))),                  // var i = 10
-           ExprStmt(CmpLt(IdentExpr("i"), IdentExpr("sql_int"))),      // i < sql_int
+           DeclStmt(DeclVar("a", "RealVal", nullptr)),  // var a: RealVal
+           DeclStmt(DeclVar("b", "RealVal", nullptr)),  // var b: RealVal
+           DeclStmt(DeclVar("c", BinOp<parsing::Token::Type::PLUS>(
+                                     IdentExpr("a"), IdentExpr("b")))),  // var c = a + b
        })},
 
-      // Test: Compare a primitive bool with a SQL integer
+      // Test: Add primitive floats.
+      // Expectation: Valid
+      {false, "Primitive floats should be summable",
+       Block({
+           DeclStmt(DeclVar("a", "float32", nullptr)),  // var a: float32
+           DeclStmt(DeclVar("b", "float32", nullptr)),  // var b: float32
+           DeclStmt(DeclVar("c", BinOp<parsing::Token::Type::PLUS>(
+                                     IdentExpr("a"), IdentExpr("b")))),  // var c = a + b
+       })},
+
+      // Test: Floats of different types are not summable.
       // Expectation: Invalid
-      {true, "SQL integers should not be comparable to native boolean values",
+      {true, "Primitive Floats of different types are not summable",
        Block({
-           DeclStmt(DeclVar(Ident("sql_int"), IntegerSqlTypeRepr())),  // var sql_int: IntegerVal
-           DeclStmt(DeclVar(Ident("b"), BoolLit(false))),              // var b = false
-           ExprStmt(CmpLt(IdentExpr("b"), IdentExpr("sql_int"))),      // b < sql_int
+           DeclStmt(DeclVar("a", "float64", nullptr)),  // var a: float64
+           DeclStmt(DeclVar("b", "float32", nullptr)),  // var b: float32
+           DeclStmt(DeclVar("c", BinOp<parsing::Token::Type::PLUS>(
+                                     IdentExpr("a"), IdentExpr("b")))),  // var c = a + b
+       })},
+
+      // Test: Mixing primitive and SQL types in arithmetic is invalid.
+      // Expectation: Invalid
+      {true, "Mixing primitive and SQL types in arithmetic is invalid",
+       Block({
+           DeclStmt(DeclVar("a", "RealVal", nullptr)),  // var a: RealVal
+           DeclStmt(DeclVar("b", "float64", nullptr)),  // var b: float64
+           DeclStmt(DeclVar("c", BinOp<parsing::Token::Type::PLUS>(
+                                     IdentExpr("a"), IdentExpr("b")))),  // var c = a + b
+       })},
+
+      // Test: Non-arithmetic types cannot be added.
+      // Expectation: Invalid
+      {true, "Non-arithmetic types cannot be added",
+       Block({
+           DeclStmt(DeclVar("a", "JoinHashTable", nullptr)),  // var a: JoinHashTable
+           DeclStmt(DeclVar("b", "Sorter", nullptr)),         // var b: Sorter
+           DeclStmt(DeclVar("c", BinOp<parsing::Token::Type::PLUS>(
+                                     IdentExpr("a"), IdentExpr("b")))),  // var c = a + b
+       })},
+
+      // Test: Implicit constant casting in arithmetic is supported.
+      // Expectation: Invalid
+      {false, "Implicit constant casting in arithmetic is supported",
+       Block({
+           DeclStmt(DeclVar("a", "float32", nullptr)),  // var a: float32
+           DeclStmt(DeclVar("b", BinOp<parsing::Token::Type::PLUS>(
+                                     IdentExpr("a"), FloatLit(23.0)))),  // var b = a + 23.0
        })},
   };
 
@@ -125,7 +167,7 @@ TEST_F(SemaExprTest, ComparisonOperationWithPointersTest) {
        Block({
            DeclStmt(DeclVar(Ident("ptr1"), PtrType(IdentExpr("float32")))),     // var ptr1: *float32
            DeclStmt(DeclVar(Ident("ptr2"), PtrType(IdentExpr("float32")))),     // var ptr2: *float32
-           ExprStmt(CmpLt(IdentExpr("ptr1"), IdentExpr("ptr2"))),               // ptr1 == ptr2
+           ExprStmt(CmpLt(IdentExpr("ptr1"), IdentExpr("ptr2"))),               // ptr1 < ptr2
        })},
   };
   // clang-format on

@@ -54,6 +54,12 @@ class TestAstBuilder {
 
   VariableDecl *DeclVar(Identifier name, Expr *init) { return DeclVar(name, nullptr, init); }
 
+  VariableDecl *DeclVar(std::string n, Expr *init) { return DeclVar(Ident(n), nullptr, init); }
+
+  VariableDecl *DeclVar(std::string n, std::string type_name, Expr *init) {
+    return DeclVar(Ident(n), IdentExpr(type_name), init);
+  }
+
   VariableDecl *DeclVar(Identifier name, Expr *type_repr, Expr *init) {
     return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
   }

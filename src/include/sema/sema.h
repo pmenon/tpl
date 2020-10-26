@@ -105,10 +105,6 @@ class Sema : public ast::AstVisitor<Sema> {
   CheckResult CheckComparisonOperands(parsing::Token::Type op, const SourcePosition &pos,
                                       ast::Expr *left, ast::Expr *right);
 
-  // Check operands to a comparison where at least one of the inputs is a SQL value.
-  CheckResult CheckSqlComparisonOperands(parsing::Token::Type op, const SourcePosition &pos,
-                                         ast::Expr *left, ast::Expr *right);
-
   // Check the assignment of the expression to a variable or the target type.
   // Return true if the assignment is valid, and false otherwise.
   // Will also apply an implicit cast to make the assignment valid.
