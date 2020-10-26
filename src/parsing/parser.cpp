@@ -178,6 +178,8 @@ ast::Stmt *Parser::ParseStmt() {
 
 ast::Stmt *Parser::ParseSimpleStmt() {
   // SimpleStmt = AssignmentStmt | ExpressionStmt ;
+  // AssignmentStmt = Expr '=' Expr ;
+  // ExpressionStmt = Expr ;
   ast::Expr *left = ParseExpr();
 
   if (Matches(Token::Type::EQUAL)) {
@@ -402,7 +404,7 @@ ast::Expr *Parser::ParseBinaryOpExpr(uint32_t min_prec) {
 
 ast::Expr *Parser::ParseUnaryOpExpr() {
   // UnaryOpExpr = PrimaryExpr | unary_op UnaryOpExpr ;
-  // unary_op = '&' | '!' | '~' | '^' | '-' | '*'
+  // unary_op = '&' | '!' | '~' | '^' | '-' | '+' | '*'
 
   switch (peek()) {
     case Token::Type::AMPERSAND:
@@ -410,6 +412,7 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
     case Token::Type::BIT_NOT:
     case Token::Type::BIT_XOR:
     case Token::Type::MINUS:
+    case Token::Type::PLUS:
     case Token::Type::STAR: {
       Token::Type op = Next();
       SourcePosition pos = scanner_->current_position();

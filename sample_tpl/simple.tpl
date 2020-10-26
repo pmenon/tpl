@@ -1,6 +1,9 @@
-// Should return 1
+// All branches should be true and return 1.
 
 fun main() -> int32 {
+  var x: int32 = +10
+  var y: int32 = -10
+
   if (true == true) {
     if (false < true) {
       if (true > false) {
@@ -28,5 +31,6 @@ fun main() -> int32 {
       }
     }
   }
-  return 0
+
+  return x+y
 }
