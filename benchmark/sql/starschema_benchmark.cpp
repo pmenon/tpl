@@ -8,6 +8,7 @@
 #include "compiler/compiler.h"
 #include "sema/sema.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/executable_query.h"
 #include "sql/codegen/output_checker.h"
 #include "sql/execution_context.h"
 #include "sql/planner/expression_maker.h"
@@ -29,8 +30,11 @@ namespace tpl::sql::codegen {
 
 namespace {
 
+// The execution mode.
+constexpr auto kExecutionMode = vm::ExecutionMode::Interpret;
+
 // Change this path to where your SSBM data is.
-constexpr char kSSBMDataDir[] = "/home/pmenon/tools/SSBM/data/sf-1";
+constexpr char kSSBMDataDir[] = "/home/pmenon/tools/SSBM/data/sf-0.1";
 
 // Flag used to ensure the SSBM database is only loaded once.
 std::once_flag kLoadSSBMDatabaseOnce{};
@@ -159,14 +163,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_1)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, agg->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, agg->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -282,14 +286,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_2)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, agg->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, agg->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -408,14 +412,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_3)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, agg->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, agg->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -659,14 +663,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_1)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -909,14 +913,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_2)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -1158,14 +1162,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_3)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -1423,14 +1427,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_1)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -1688,14 +1692,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_2)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -1955,14 +1959,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_3)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -2223,14 +2227,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_4)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -2540,14 +2544,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_1)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -2877,14 +2881,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_2)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
@@ -3212,14 +3216,14 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
   {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 
   // Only time execution.
   for (auto _ : state) {
     sql::MemoryPool memory(nullptr);
     sql::ExecutionContext exec_ctx(&memory, sort->GetOutputSchema(), &consumer);
-    query->Run(&exec_ctx, vm::ExecutionMode::Compiled);
+    query->Run(&exec_ctx, kExecutionMode);
   }
 }
 
