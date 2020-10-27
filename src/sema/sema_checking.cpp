@@ -8,27 +8,27 @@
 namespace tpl::sema {
 
 void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, ast::Type *expected) {
-  error_reporter()->Report(call->Position(), ErrorMessages::kIncorrectCallArgType,
-                           call->GetFuncName(), expected, index,
-                           call->Arguments()[index]->GetType());
+  GetErrorReporter()->Report(call->Position(), ErrorMessages::kIncorrectCallArgType,
+                             call->GetFuncName(), expected, index,
+                             call->Arguments()[index]->GetType());
 }
 
 void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, const char *expected) {
-  error_reporter()->Report(call->Position(), ErrorMessages::kIncorrectCallArgType2,
-                           call->GetFuncName(), expected, index,
-                           call->Arguments()[index]->GetType());
+  GetErrorReporter()->Report(call->Position(), ErrorMessages::kIncorrectCallArgType2,
+                             call->GetFuncName(), expected, index,
+                             call->Arguments()[index]->GetType());
 }
 
 ast::Expr *Sema::ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,
                                     ast::CastKind cast_kind) {
-  return context()->GetNodeFactory()->NewImplicitCastExpr(expr->Position(), cast_kind, target_type,
-                                                          expr);
+  return GetContext()->GetNodeFactory()->NewImplicitCastExpr(expr->Position(), cast_kind,
+                                                             target_type, expr);
 }
 
 bool Sema::CheckArgCount(ast::CallExpr *call, uint32_t expected_arg_count) {
   if (call->NumArgs() != expected_arg_count) {
-    error_reporter()->Report(call->Position(), ErrorMessages::kMismatchedCallArgs,
-                             call->GetFuncName(), expected_arg_count, call->NumArgs());
+    GetErrorReporter()->Report(call->Position(), ErrorMessages::kMismatchedCallArgs,
+                               call->GetFuncName(), expected_arg_count, call->NumArgs());
     return false;
   }
 
@@ -37,8 +37,8 @@ bool Sema::CheckArgCount(ast::CallExpr *call, uint32_t expected_arg_count) {
 
 bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count) {
   if (call->NumArgs() < expected_arg_count) {
-    error_reporter()->Report(call->Position(), ErrorMessages::kMismatchedCallArgs,
-                             call->GetFuncName(), expected_arg_count, call->NumArgs());
+    GetErrorReporter()->Report(call->Position(), ErrorMessages::kMismatchedCallArgs,
+                               call->GetFuncName(), expected_arg_count, call->NumArgs());
     return false;
   }
 
@@ -51,7 +51,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op, const Sour
   // Both left and right types are either primitive booleans or SQL booleans. We
   // need both to be primitive booleans. Cast each expression as appropriate.
 
-  ast::Type *const bool_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
+  ast::Type *const bool_type = ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Bool);
 
   if (left->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
     left = ImplCastExprToType(left, bool_type, ast::CastKind::SqlBoolToBool);
@@ -67,8 +67,8 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op, const Sour
   }
 
   // Okay, there's an error ...
-  error_reporter()->Report(pos, ErrorMessages::kMismatchedTypesToBinary, left->GetType(),
-                           right->GetType(), op);
+  GetErrorReporter()->Report(pos, ErrorMessages::kMismatchedTypesToBinary, left->GetType(),
+                             right->GetType(), op);
 
   return {nullptr, left, right};
 }
@@ -78,8 +78,8 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
                                                 ast::Expr *left, ast::Expr *right) {
   // If neither inputs are arithmetic, fail early.
   if (!left->GetType()->IsArithmetic() || !right->GetType()->IsArithmetic()) {
-    error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
-                             right->GetType());
+    GetErrorReporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
+                               right->GetType());
     return {nullptr, left, right};
   }
 
@@ -95,8 +95,8 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
   }
 
   // Error.
-  error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
-                           right->GetType());
+  GetErrorReporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
+                             right->GetType());
 
   return {nullptr, left, right};
 }
@@ -129,8 +129,8 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
   // Check assignment constraints.
   if (!CheckAssignmentConstraints(right->GetType(), left)) {
     if (!CheckAssignmentConstraints(left->GetType(), right)) {
-      error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
-                               right->GetType());
+      GetErrorReporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
+                                 right->GetType());
       return {nullptr, left, right};
     }
   }
@@ -141,18 +141,18 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
 
   // Pointers can only be used in equality-like comparisons.
   if (left->GetType()->IsPointerType() && !parsing::Token::IsEqualityOp(op)) {
-    error_reporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
-                             right->GetType());
+    GetErrorReporter()->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
+                               right->GetType());
     return {nullptr, left, right};
   }
 
   // If the operands are SQL values, the result type is a SQL boolean.
   if (left->GetType()->IsSqlValueType()) {
-    return {ast::BuiltinType::Get(context(), ast::BuiltinType::BooleanVal), left, right};
+    return {ast::BuiltinType::Get(GetContext(), ast::BuiltinType::BooleanVal), left, right};
   }
 
   // Otherwise, the result type is a primitive bool.
-  return {ast::BuiltinType::Get(context(), ast::BuiltinType::Bool), left, right};
+  return {ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Bool), left, right};
 }
 
 bool Sema::CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr) {

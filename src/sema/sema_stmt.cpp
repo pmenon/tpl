@@ -91,11 +91,11 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
 
   if (node->Condition()->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
     // A primitive boolean
-    auto *bool_type = ast::BuiltinType::Get(context(), ast::BuiltinType::Bool);
+    auto *bool_type = ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Bool);
 
     // Perform implicit cast from SQL boolean to primitive boolean
     ast::Expr *cond = node->Condition();
-    cond = context()->GetNodeFactory()->NewImplicitCastExpr(
+    cond = GetContext()->GetNodeFactory()->NewImplicitCastExpr(
         cond->Position(), ast::CastKind::SqlBoolToBool, bool_type, cond);
     cond->SetType(bool_type);
     node->SetCondition(cond);
@@ -116,7 +116,7 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
 void Sema::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->Declaration()); }
 
 void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
-  if (current_function() == nullptr) {
+  if (GetCurrentFunction() == nullptr) {
     error_reporter_->Report(node->Position(), ErrorMessages::kReturnOutsideFunction);
     return;
   }
@@ -132,7 +132,7 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   // If the function has a nil-type, we just need to make sure this return
   // statement doesn't have an attached expression. If it does, that's an error
 
-  auto *func_type = current_function()->GetType()->As<ast::FunctionType>();
+  auto *func_type = GetCurrentFunction()->GetType()->As<ast::FunctionType>();
 
   if (func_type->GetReturnType()->IsNilType()) {
     if (return_type != nullptr) {

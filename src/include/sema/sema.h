@@ -39,9 +39,10 @@ class Sema : public ast::AstVisitor<Sema> {
  public:
   /**
    * Construct using the given context.
-   * @param ctx The context used to acquire memory for new ASTs and the diagnostic error reporter.
+   * @param context The context in which type-checking occurs. Used to source AST allocations and
+   *                report diagnostics during type-checking.
    */
-  explicit Sema(ast::Context *ctx);
+  explicit Sema(ast::Context *context);
 
   /**
    * This class cannot be copied or moved.
@@ -61,14 +62,14 @@ class Sema : public ast::AstVisitor<Sema> {
 #undef DECLARE_AST_VISIT_METHOD
 
   /**
-   * @return The AST context in which semantic analysis is being performed.
+   * @return The context in which type-checking occurs.
    */
-  ast::Context *context() const { return ctx_; }
+  ast::Context *GetContext() const { return ctx_; }
 
   /**
-   * @return Reporter to use when reporting type-checking errors.
+   * @return The diagnostic error reporter used to report error messages while type-checking.
    */
-  ErrorReporter *error_reporter() const { return error_reporter_; }
+  ErrorReporter *GetErrorReporter() const { return error_reporter_; }
 
  private:
   // Resolve the type of the input expression.
@@ -86,19 +87,19 @@ class Sema : public ast::AstVisitor<Sema> {
     ast::Expr *right;
   };
 
+  // Report an incorrect call argument for the given call expression.
   void ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, ast::Type *expected);
-
   void ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, const char *expected);
 
   // Implicitly cast the input expression into the target type using the
   // provided cast kind, also setting the type of the casted expression result.
   ast::Expr *ImplCastExprToType(ast::Expr *expr, ast::Type *target_type, ast::CastKind cast_kind);
 
-  // Check the number of arguments to the call; true if good, false otherwise
+  // Check the number of arguments to the call; true if good, false otherwise.
   bool CheckArgCount(ast::CallExpr *call, uint32_t expected_arg_count);
   bool CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count);
 
-  // Check boolean logic operands: and, or
+  // Check boolean logic operands: and, or.
   CheckResult CheckLogicalOperands(parsing::Token::Type op, const SourcePosition &pos,
                                    ast::Expr *left, ast::Expr *right);
 
@@ -114,7 +115,7 @@ class Sema : public ast::AstVisitor<Sema> {
   // Will also apply an implicit cast to make the assignment valid.
   bool CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr);
 
-  // Dispatched from VisitCall() to handle builtin functions
+  // Dispatched from VisitCall() to handle builtin functions.
   void CheckBuiltinCall(ast::CallExpr *call);
   void CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckNullValueCall(ast::CallExpr *call, ast::Builtin builtin);
@@ -158,25 +159,25 @@ class Sema : public ast::AstVisitor<Sema> {
   // Scoping
   // -------------------------------------------------------
 
-  Scope *current_scope() { return scope_; }
+  Scope *GetCurrentScope() { return scope_; }
 
   // Enter a new scope.
   void EnterScope(Scope::Kind scope_kind) {
     if (num_cached_scopes_ > 0) {
       Scope *scope = scope_cache_[--num_cached_scopes_].release();
       TPL_ASSERT(scope != nullptr, "Cached scope was null");
-      scope->Init(current_scope(), scope_kind);
+      scope->Init(GetCurrentScope(), scope_kind);
       scope_ = scope;
     } else {
-      scope_ = new Scope(current_scope(), scope_kind);
+      scope_ = new Scope(GetCurrentScope(), scope_kind);
     }
   }
 
   // Exit the current scope.
   void ExitScope() {
-    TPL_ASSERT(current_scope() != nullptr, "Mismatched scope exit");
+    TPL_ASSERT(GetCurrentScope() != nullptr, "Mismatched scope exit");
 
-    Scope *scope = current_scope();
+    Scope *scope = GetCurrentScope();
     scope_ = scope->outer();
 
     if (num_cached_scopes_ < kScopeCacheSize) {
@@ -217,7 +218,7 @@ class Sema : public ast::AstVisitor<Sema> {
   class FunctionSemaScope {
    public:
     FunctionSemaScope(Sema *check, ast::FunctionLiteralExpr *func)
-        : prev_func_(check->current_function()), block_scope_(check, Scope::Kind::Function) {
+        : prev_func_(check->GetCurrentFunction()), block_scope_(check, Scope::Kind::Function) {
       check->curr_func_ = func;
     }
 
@@ -235,7 +236,7 @@ class Sema : public ast::AstVisitor<Sema> {
   };
 
   // Return the function that's currently getting type-checked.
-  ast::FunctionLiteralExpr *current_function() const { return curr_func_; }
+  ast::FunctionLiteralExpr *GetCurrentFunction() const { return curr_func_; }
 
  private:
   // By default, we keep pre-allocate four scopes for four levels of nesting.
