@@ -1,7 +1,7 @@
 #include "ast/ast.h"
 
-#include <cstdint>
 #include <cfloat>
+#include <cstdint>
 
 #include "ast/type.h"
 
