@@ -37,10 +37,13 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
 
   // Setup compact storage.
   std::vector<TypeId> types;
-  for (const auto &col : GetJoinPlan().GetChild(0)->GetOutputSchema()->GetColumns()) {
+  types.reserve(plan.GetChild(0)->GetOutputSchema()->NumColumns());
+  for (const auto &col : plan.GetChild(0)->GetOutputSchema()->GetColumns()) {
     types.push_back(col.GetType());
   }
-  if (GetJoinPlan().RequiresLeftMark()) types.push_back(TypeId::Boolean);
+  if (plan.RequiresLeftMark()) {
+    types.push_back(TypeId::Boolean);
+  }
   storage_.Setup(types);
 
   // Declare global hash table.

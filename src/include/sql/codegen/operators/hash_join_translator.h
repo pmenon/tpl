@@ -1,6 +1,5 @@
 #pragma once
 
-#include <sql/codegen/compilation_unit.h>
 #include <vector>
 
 #include "sql/codegen/ast_fwd.h"
