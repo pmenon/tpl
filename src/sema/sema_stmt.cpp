@@ -91,11 +91,11 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
 
   if (node->Condition()->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
     // A primitive boolean
-    auto *bool_type = ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Bool);
+    auto *bool_type = ast::BuiltinType::Get(context_, ast::BuiltinType::Bool);
 
     // Perform implicit cast from SQL boolean to primitive boolean
     ast::Expr *cond = node->Condition();
-    cond = GetContext()->GetNodeFactory()->NewImplicitCastExpr(
+    cond = context_->GetNodeFactory()->NewImplicitCastExpr(
         cond->Position(), ast::CastKind::SqlBoolToBool, bool_type, cond);
     cond->SetType(bool_type);
     node->SetCondition(cond);

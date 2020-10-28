@@ -61,16 +61,6 @@ class Sema : public ast::AstVisitor<Sema> {
   AST_NODES(DECLARE_AST_VISIT_METHOD)
 #undef DECLARE_AST_VISIT_METHOD
 
-  /**
-   * @return The context in which type-checking occurs.
-   */
-  ast::Context *GetContext() const { return ctx_; }
-
-  /**
-   * @return The diagnostic error reporter used to report error messages while type-checking.
-   */
-  ErrorReporter *GetErrorReporter() const { return error_reporter_; }
-
  private:
   // Resolve the type of the input expression.
   ast::Type *Resolve(ast::Expr *expr) {
@@ -250,7 +240,7 @@ class Sema : public ast::AstVisitor<Sema> {
   static constexpr const uint32_t kScopeCacheSize = 4;
 
   // The context.
-  ast::Context *ctx_;
+  ast::Context *context_;
   // The error reporter.
   ErrorReporter *error_reporter_;
   // The current active scope.

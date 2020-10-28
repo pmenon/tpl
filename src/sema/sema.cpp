@@ -8,7 +8,7 @@
 namespace tpl::sema {
 
 Sema::Sema(ast::Context *context)
-    : ctx_(context),
+    : context_(context),
       error_reporter_(context->GetErrorReporter()),
       scope_(nullptr),
       num_cached_scopes_(0),
@@ -23,11 +23,11 @@ Sema::Sema(ast::Context *context)
 // Main entry point to semantic analysis and type checking an AST
 bool Sema::Run(ast::AstNode *root) {
   Visit(root);
-  return GetErrorReporter()->HasErrors();
+  return error_reporter_->HasErrors();
 }
 
 ast::Type *Sema::GetBuiltinType(const uint16_t builtin_kind) {
-  return ast::BuiltinType::Get(GetContext(), static_cast<ast::BuiltinType::Kind>(builtin_kind));
+  return ast::BuiltinType::Get(context_, static_cast<ast::BuiltinType::Kind>(builtin_kind));
 }
 
 }  // namespace tpl::sema

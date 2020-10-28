@@ -99,7 +99,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Check that the resolved function type is actually a function
   auto *func_type = type->SafeAs<ast::FunctionType>();
   if (func_type == nullptr) {
-    GetErrorReporter()->Report(node->Position(), ErrorMessages::kNonFunction);
+    error_reporter_->Report(node->Position(), ErrorMessages::kNonFunction);
     return;
   }
 
@@ -177,11 +177,11 @@ void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
   // case, we automatically insert a "return" statement.
   if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->Body())) {
     if (!func_type->GetReturnType()->IsNilType()) {
-      GetErrorReporter()->Report(node->Body()->RightBracePosition(), ErrorMessages::kMissingReturn);
+      error_reporter_->Report(node->Body()->RightBracePosition(), ErrorMessages::kMissingReturn);
       return;
     }
 
-    auto *empty_ret = GetContext()->GetNodeFactory()->NewReturnStmt(node->Position(), nullptr);
+    auto *empty_ret = context_->GetNodeFactory()->NewReturnStmt(node->Position(), nullptr);
     node->Body()->AppendStatement(empty_ret);
   }
 }
@@ -194,13 +194,13 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   }
 
   // Check the builtin types
-  if (auto *type = GetContext()->LookupBuiltinType(node->Name())) {
+  if (auto *type = context_->LookupBuiltinType(node->Name())) {
     node->SetType(type);
     return;
   }
 
   // Error
-  GetErrorReporter()->Report(node->Position(), ErrorMessages::kUndefinedVariable, node->Name());
+  error_reporter_->Report(node->Position(), ErrorMessages::kUndefinedVariable, node->Name());
 }
 
 void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
@@ -216,12 +216,12 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 
   if (!obj_type->IsArrayType() && !obj_type->IsMapType()) {
-    GetErrorReporter()->Report(node->Position(), ErrorMessages::kInvalidIndexOperation, obj_type);
+    error_reporter_->Report(node->Position(), ErrorMessages::kInvalidIndexOperation, obj_type);
     return;
   }
 
   if (!index_type->IsIntegerType()) {
-    GetErrorReporter()->Report(node->Position(), ErrorMessages::kNonIntegerArrayIndexValue);
+    error_reporter_->Report(node->Position(), ErrorMessages::kNonIntegerArrayIndexValue);
     return;
   }
 
@@ -230,14 +230,14 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
       const int64_t index_val = index->IntegerVal();
       // Check negative array indices.
       if (index_val < 0) {
-        GetErrorReporter()->Report(index->Position(), ErrorMessages::kNegativeArrayIndexValue,
-                                   index_val);
+        error_reporter_->Report(index->Position(), ErrorMessages::kNegativeArrayIndexValue,
+                                index_val);
         return;
       }
       // Check known out-of-bounds array access.
       if (arr_type->HasKnownLength() && static_cast<uint64_t>(index_val) >= arr_type->GetLength()) {
-        GetErrorReporter()->Report(index->Position(), ErrorMessages::kOutOfBoundsArrayIndexValue,
-                                   index_val, arr_type->GetLength());
+        error_reporter_->Report(index->Position(), ErrorMessages::kOutOfBoundsArrayIndexValue,
+                                index_val, arr_type->GetLength());
         return;
       }
     }
@@ -250,19 +250,19 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
 void Sema::VisitLiteralExpr(ast::LiteralExpr *node) {
   switch (node->GetLiteralKind()) {
     case ast::LiteralExpr::LiteralKind::Nil: {
-      node->SetType(ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Nil));
+      node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
       break;
     }
     case ast::LiteralExpr::LiteralKind::Boolean: {
-      node->SetType(ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Bool));
+      node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
       break;
     }
     case ast::LiteralExpr::LiteralKind::Float: {
       // Initially try to fit it as a 32-bit float, otherwise a 64-bit double.
       if (node->IsRepresentable(GetBuiltinType(ast::BuiltinType::Float32))) {
-        node->SetType(ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Float32));
+        node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Float32));
       } else {
-        node->SetType(ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Float64));
+        node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Float64));
       }
       break;
     }
@@ -271,14 +271,14 @@ void Sema::VisitLiteralExpr(ast::LiteralExpr *node) {
       // value is not representable with 32 bits, use 64-bits. There isn't
       // another option because TPL does not currently support big integers.
       if (node->IsRepresentable(GetBuiltinType(ast::BuiltinType::Int32))) {
-        node->SetType(ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Int32));
+        node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Int32));
       } else {
-        node->SetType(ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Int64));
+        node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Int64));
       }
       break;
     }
     case ast::LiteralExpr::LiteralKind::String: {
-      node->SetType(ast::StringType::Get(GetContext()));
+      node->SetType(ast::StringType::Get(context_));
       break;
     }
   }
@@ -296,8 +296,8 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   switch (node->Op()) {
     case parsing::Token::Type::BANG: {
       if (!expr_type->IsBoolType()) {
-        GetErrorReporter()->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
-                                   expr_type);
+        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
+                                expr_type);
         return;
       }
 
@@ -306,8 +306,8 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     case parsing::Token::Type::MINUS: {
       if (!expr_type->IsArithmetic()) {
-        GetErrorReporter()->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
-                                   expr_type);
+        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
+                                expr_type);
         return;
       }
 
@@ -316,8 +316,8 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     case parsing::Token::Type::STAR: {
       if (!expr_type->IsPointerType()) {
-        GetErrorReporter()->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
-                                   expr_type);
+        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
+                                expr_type);
         return;
       }
 
@@ -326,8 +326,8 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
     }
     case parsing::Token::Type::AMPERSAND: {
       if (expr_type->IsFunctionType()) {
-        GetErrorReporter()->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
-                                   expr_type);
+        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
+                                expr_type);
         return;
       }
 
@@ -353,14 +353,13 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   }
 
   if (!obj_type->IsStructType()) {
-    GetErrorReporter()->Report(node->Position(), ErrorMessages::kMemberObjectNotComposite,
-                               obj_type);
+    error_reporter_->Report(node->Position(), ErrorMessages::kMemberObjectNotComposite, obj_type);
     return;
   }
 
   if (!node->Member()->IsIdentifierExpr()) {
-    GetErrorReporter()->Report(node->Member()->Position(),
-                               ErrorMessages::kExpectedIdentifierForMember);
+    error_reporter_->Report(node->Member()->Position(),
+                            ErrorMessages::kExpectedIdentifierForMember);
     return;
   }
 
@@ -369,8 +368,8 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   ast::Type *member_type = obj_type->As<ast::StructType>()->LookupFieldByName(member);
 
   if (member_type == nullptr) {
-    GetErrorReporter()->Report(node->Member()->Position(), ErrorMessages::kFieldObjectDoesNotExist,
-                               member, obj_type);
+    error_reporter_->Report(node->Member()->Position(), ErrorMessages::kFieldObjectDoesNotExist,
+                            member, obj_type);
     return;
   }
 
