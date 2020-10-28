@@ -4,8 +4,6 @@
 #include <thread>  // NOLINT
 #include <vector>
 
-#include "tbb/task_scheduler_init.h"
-
 #include "gtest/gtest.h"
 
 #include "common/common.h"
@@ -28,9 +26,6 @@ class TplTest : public ::testing::Test {
   const char *GetTestName() const {
     return ::testing::UnitTest::GetInstance()->current_test_info()->name();
   }
-
- private:
-  tbb::task_scheduler_init anonymous_;
 };
 
 template <typename F>
