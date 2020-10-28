@@ -126,11 +126,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinJoinHashTableInit(ast::CallExpr *call);
-  void CheckBuiltinJoinHashTableInsert(ast::CallExpr *call);
-  void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinJoinHashTableLookup(ast::CallExpr *call);
-  void CheckBuiltinJoinHashTableFree(ast::CallExpr *call);
+  void CheckBuiltinJoinHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterInit(ast::CallExpr *call);
   void CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin);
@@ -154,6 +150,15 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinHashCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin);
+
+  template <typename T>
+  struct CheckHelper;
+
+  template <typename... T>
+  struct ArgCheck;
+
+  template <typename T>
+  bool GenericBuiltinCheck(ast::CallExpr *call);
 
   // -------------------------------------------------------
   // Scoping
