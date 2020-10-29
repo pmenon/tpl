@@ -185,6 +185,11 @@ class CodeGen {
   [[nodiscard]] ast::Expr *Int32Type() const;
 
   /**
+   * @return The type representation for an unsigned 32-bit integer (i.e., uint32)
+   */
+  [[nodiscard]] ast::Expr *UInt32Type() const;
+
+  /**
    * @return The type representation for an 64-bit signed integer (i.e., int64)
    */
   [[nodiscard]] ast::Expr *Int64Type() const;
@@ -447,6 +452,21 @@ class CodeGen {
    * @return The result of val >> num_bits.
    */
   [[nodiscard]] ast::Expr *BitShiftRight(ast::Expr *val, ast::Expr *num_bits) const;
+
+  /**
+   * @return The result of left + right;
+   */
+  [[nodiscard]] ast::Expr *Add(ast::Expr *left, ast::Expr *right) const;
+
+  /**
+   * @return The result of left - right;
+   */
+  [[nodiscard]] ast::Expr *Sub(ast::Expr *left, ast::Expr *right) const;
+
+  /**
+   * @return The result of left * right;
+   */
+  [[nodiscard]] ast::Expr *Mul(ast::Expr *left, ast::Expr *right) const;
 
   // ---------------------------------------------------------------------------
   //

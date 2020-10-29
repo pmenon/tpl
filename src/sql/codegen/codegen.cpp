@@ -152,6 +152,8 @@ ast::Expr *CodeGen::Int16Type() const { return BuiltinType(ast::BuiltinType::Int
 
 ast::Expr *CodeGen::Int32Type() const { return BuiltinType(ast::BuiltinType::Int32); }
 
+ast::Expr *CodeGen::UInt32Type() const { return BuiltinType(ast::BuiltinType::Uint32); }
+
 ast::Expr *CodeGen::Int64Type() const { return BuiltinType(ast::BuiltinType::Int64); }
 
 ast::Expr *CodeGen::Float32Type() const { return BuiltinType(ast::BuiltinType::Float32); }
@@ -337,6 +339,18 @@ ast::Expr *CodeGen::BitShiftLeft(ast::Expr *val, ast::Expr *num_bits) const {
 
 ast::Expr *CodeGen::BitShiftRight(ast::Expr *val, ast::Expr *num_bits) const {
   return BinaryOp(parsing::Token::Type::BIT_SHR, val, num_bits);
+}
+
+ast::Expr *CodeGen::Add(ast::Expr *left, ast::Expr *right) const {
+  return BinaryOp(parsing::Token::Type::PLUS, left, right);
+}
+
+ast::Expr *CodeGen::Sub(ast::Expr *left, ast::Expr *right) const {
+  return BinaryOp(parsing::Token::Type::MINUS, left, right);
+}
+
+ast::Expr *CodeGen::Mul(ast::Expr *left, ast::Expr *right) const {
+  return BinaryOp(parsing::Token::Type::STAR, left, right);
 }
 
 ast::Expr *CodeGen::AccessStructMember(ast::Expr *object, ast::Identifier member) {
