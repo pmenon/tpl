@@ -5,13 +5,15 @@
 #include <utility>
 #include <vector>
 
+// LLVM data structures.
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
+
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/type.h"
 #include "common/common.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringMap.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/compact_storage.h"
@@ -24,7 +26,6 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/value.h"
-#include "sql/vector_filter_executor.h"
 #include "util/csv_reader.h"
 #include "util/math_util.h"
 
@@ -169,29 +170,32 @@ Context::Context(sema::ErrorReporter *error_reporter)
       error_reporter_(error_reporter),
       node_factory_(std::make_unique<AstNodeFactory>(&region_)),
       impl_(std::make_unique<Implementation>(this)) {
-  // Put all builtins into list
-#define F(BKind, ...) impl_->builtin_types_list.push_back(impl()->BKind##Type);
+  // Put all builtin types into list.
+  impl_->builtin_types_list.resize(BuiltinType::GetNumBuiltinKinds());
+#define F(BKind, ...) impl_->builtin_types_list[BuiltinType::BKind] = impl()->BKind##Type;
   BUILTIN_TYPE_LIST(F, F, F)
 #undef F
 
-  // Put all builtins into cache by name
+  // Put all builtin types into fast map keyed on its name.
+  impl_->builtin_types.reserve(BuiltinType::GetNumBuiltinKinds());
 #define PRIM(BKind, CppType, TplName) \
-  impl_->builtin_types[GetIdentifier(TplName)] = impl_->BKind##Type;
-#define OTHERS(BKind, CppType) impl_->builtin_types[GetIdentifier(#BKind)] = impl_->BKind##Type;
+  impl_->builtin_types[GetIdentifier(TplName)] = impl()->BKind##Type;
+#define OTHERS(BKind, CppType) impl_->builtin_types[GetIdentifier(#BKind)] = impl()->BKind##Type;
   BUILTIN_TYPE_LIST(PRIM, OTHERS, OTHERS)
 #undef OTHERS
 #undef PRIM
 
-  // Builtin aliases
-  impl_->builtin_types[GetIdentifier("int")] = impl_->Int32Type;
-  impl_->builtin_types[GetIdentifier("float")] = impl_->Float32Type;
-  impl_->builtin_types[GetIdentifier("void")] = impl_->NilType;
+  // Insert some convenient type-aliases.
+  impl_->builtin_types[GetIdentifier("int")] = impl()->Int32Type;
+  impl_->builtin_types[GetIdentifier("float")] = impl()->Float32Type;
+  impl_->builtin_types[GetIdentifier("void")] = impl()->NilType;
 
-  // Initialize builtin functions
-#define BUILTIN_FUNC(Name, ...) \
+  // Put all builtin functions into a fast map keyed on name.
+  impl_->builtin_funcs.reserve(Builtins::NumBuiltins());
+#define F(Name, ...) \
   impl_->builtin_funcs[GetIdentifier(Builtins::GetFunctionName(Builtin::Name))] = Builtin::Name;
-  BUILTINS_LIST(BUILTIN_FUNC)
-#undef BUILTIN_FUNC
+  BUILTINS_LIST(F)
+#undef F
 }
 
 Context::~Context() = default;

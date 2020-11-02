@@ -293,13 +293,23 @@ class Type : public util::RegionObject {
 };
 
 /**
- * Builtin types (int32, float32, Integer, JoinHashTable etc.)
+ * Builtin types (int32, float32, Integer, JoinHashTable etc.). These types cannot be composed from
+ * any other TPL type.
  */
 class BuiltinType : public Type {
+#define F(BKind, ...) +1
+  static constexpr uint32_t kNumBuiltinKinds = BUILTIN_TYPE_LIST(F, F, F);
+#undef F
+
  public:
 #define F(BKind, ...) BKind,
   enum Kind : uint16_t { BUILTIN_TYPE_LIST(F, F, F) };
 #undef F
+
+  /**
+   * @return The number of builtin kinds.
+   */
+  static constexpr uint32_t GetNumBuiltinKinds() { return kNumBuiltinKinds; }
 
   /**
    * @return The name of the builtin as it appears in TPL code.
