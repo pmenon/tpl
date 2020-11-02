@@ -3,8 +3,9 @@
 #include <cstdint>
 #include <string>
 
-#include "ast/identifier.h"
 #include "llvm/Support/Casting.h"
+
+#include "ast/identifier.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 

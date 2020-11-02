@@ -28,6 +28,7 @@
 #include "sql/value.h"
 #include "util/csv_reader.h"
 #include "util/math_util.h"
+#include "util/region_allocator_llvm.h"
 
 namespace tpl::ast {
 
