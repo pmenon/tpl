@@ -120,6 +120,10 @@ bool IndexExpr::IsMapAccess() const {
   return Object()->GetType()->IsMapType();
 }
 
+// ---------------------------------------------------------
+// Literal Expressions
+// ---------------------------------------------------------
+
 bool LiteralExpr::IsRepresentable(ast::Type *type) const {
   // Integers.
   if (type->IsIntegerType()) {
