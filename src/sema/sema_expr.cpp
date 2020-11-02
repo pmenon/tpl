@@ -166,7 +166,8 @@ void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
 
   // Declare function parameters in scope
   for (const auto &param : func_type->GetParams()) {
-    GetCurrentScope()->Declare(param.name, param.type);
+    TPL_ASSERT(scope_ != nullptr, "No scope exists!");
+    scope_->Declare(param.name, param.type);
   }
 
   // Recurse into the function body
@@ -188,7 +189,7 @@ void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
 
 void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   // Check the current context
-  if (auto *type = GetCurrentScope()->Lookup(node->Name())) {
+  if (auto *type = scope_->Lookup(node->Name())) {
     node->SetType(type);
     return;
   }

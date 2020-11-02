@@ -173,23 +173,23 @@ Context::Context(sema::ErrorReporter *error_reporter)
       impl_(std::make_unique<Implementation>(this)) {
   // Put all builtin types into list.
   impl_->builtin_types_list.resize(BuiltinType::GetNumBuiltinKinds());
-#define F(BKind, ...) impl_->builtin_types_list[BuiltinType::BKind] = impl()->BKind##Type;
+#define F(BKind, ...) impl_->builtin_types_list[BuiltinType::BKind] = Impl()->BKind##Type;
   BUILTIN_TYPE_LIST(F, F, F)
 #undef F
 
   // Put all builtin types into fast map keyed on its name.
   impl_->builtin_types.reserve(BuiltinType::GetNumBuiltinKinds());
 #define PRIM(BKind, CppType, TplName) \
-  impl_->builtin_types[GetIdentifier(TplName)] = impl()->BKind##Type;
-#define OTHERS(BKind, CppType) impl_->builtin_types[GetIdentifier(#BKind)] = impl()->BKind##Type;
+  impl_->builtin_types[GetIdentifier(TplName)] = Impl()->BKind##Type;
+#define OTHERS(BKind, CppType) impl_->builtin_types[GetIdentifier(#BKind)] = Impl()->BKind##Type;
   BUILTIN_TYPE_LIST(PRIM, OTHERS, OTHERS)
 #undef OTHERS
 #undef PRIM
 
   // Insert some convenient type-aliases.
-  impl_->builtin_types[GetIdentifier("int")] = impl()->Int32Type;
-  impl_->builtin_types[GetIdentifier("float")] = impl()->Float32Type;
-  impl_->builtin_types[GetIdentifier("void")] = impl()->NilType;
+  impl_->builtin_types[GetIdentifier("int")] = Impl()->Int32Type;
+  impl_->builtin_types[GetIdentifier("float")] = Impl()->Float32Type;
+  impl_->builtin_types[GetIdentifier("void")] = Impl()->NilType;
 
   // Put all builtin functions into a fast map keyed on name.
   impl_->builtin_funcs.reserve(Builtins::NumBuiltins());
@@ -206,17 +206,19 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
     return Identifier();
   }
 
-  auto iter = impl_->string_table.insert(std::make_pair(str, static_cast<char>(0))).first;
+  const auto iter = impl_->string_table.insert(std::make_pair(str, static_cast<char>(0))).first;
   return Identifier(iter->getKeyData());
 }
 
+std::size_t Context::GetNumIdentifiers() const noexcept { return impl_->string_table.size(); }
+
 Type *Context::LookupBuiltinType(Identifier name) const {
-  auto iter = impl_->builtin_types.find(name);
+  const auto iter = impl_->builtin_types.find(name);
   return (iter == impl_->builtin_types.end() ? nullptr : iter->second);
 }
 
 bool Context::IsBuiltinFunction(Identifier name, Builtin *builtin) const {
-  if (auto iter = impl_->builtin_funcs.find(name); iter != impl_->builtin_funcs.end()) {
+  if (const auto iter = impl_->builtin_funcs.find(name); iter != impl_->builtin_funcs.end()) {
     if (builtin != nullptr) {
       *builtin = iter->second;
     }
@@ -230,17 +232,17 @@ PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
 // static
 BuiltinType *BuiltinType::Get(Context *ctx, BuiltinType::Kind kind) {
-  return ctx->impl()->builtin_types_list[kind];
+  return ctx->Impl()->builtin_types_list[kind];
 }
 
 // static
-StringType *StringType::Get(Context *ctx) { return ctx->impl()->string_type; }
+StringType *StringType::Get(Context *ctx) { return ctx->Impl()->string_type; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
   Context *ctx = base->GetContext();
 
-  PointerType *&pointer_type = ctx->impl()->pointer_types[base];
+  PointerType *&pointer_type = ctx->Impl()->pointer_types[base];
 
   if (pointer_type == nullptr) {
     pointer_type = new (ctx->GetRegion()) PointerType(base);
@@ -253,7 +255,7 @@ PointerType *PointerType::Get(Type *base) {
 ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
   Context *ctx = elem_type->GetContext();
 
-  ArrayType *&array_type = ctx->impl()->array_types[{elem_type, length}];
+  ArrayType *&array_type = ctx->Impl()->array_types[{elem_type, length}];
 
   if (array_type == nullptr) {
     array_type = new (ctx->GetRegion()) ArrayType(length, elem_type);
@@ -266,7 +268,7 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 MapType *MapType::Get(Type *key_type, Type *value_type) {
   Context *ctx = key_type->GetContext();
 
-  MapType *&map_type = ctx->impl()->map_types[{key_type, value_type}];
+  MapType *&map_type = ctx->Impl()->map_types[{key_type, value_type}];
 
   if (map_type == nullptr) {
     map_type = new (ctx->GetRegion()) MapType(key_type, value_type);
@@ -287,7 +289,7 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
 
   const StructTypeKeyInfo::KeyTy key(fields);
 
-  auto [iter, inserted] = ctx->impl()->struct_types.insert_as(nullptr, key);
+  auto [iter, inserted] = ctx->Impl()->struct_types.insert_as(nullptr, key);
 
   StructType *struct_type = nullptr;
 
@@ -352,7 +354,7 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
 
   const FunctionTypeKeyInfo::KeyTy key(ret, params);
 
-  auto [iter, inserted] = ctx->impl()->func_types.insert_as(nullptr, key);
+  auto [iter, inserted] = ctx->Impl()->func_types.insert_as(nullptr, key);
 
   FunctionType *func_type = nullptr;
 

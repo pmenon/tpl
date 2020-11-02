@@ -9,7 +9,8 @@
 namespace tpl::sema {
 
 void Sema::VisitVariableDecl(ast::VariableDecl *node) {
-  if (GetCurrentScope()->LookupLocal(node->Name()) != nullptr) {
+  TPL_ASSERT(scope_ != nullptr, "No scope exists!");
+  if (scope_->LookupLocal(node->Name()) != nullptr) {
     error_reporter_->Report(node->Position(), ErrorMessages::kVariableRedeclared, node->Name());
     return;
   }
@@ -55,8 +56,9 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
     }
   }
 
+  TPL_ASSERT(scope_ != nullptr, "No scope exists!");
   ast::Type *resolved_type = (declared_type != nullptr ? declared_type : initializer_type);
-  GetCurrentScope()->Declare(node->Name(), resolved_type);
+  scope_->Declare(node->Name(), resolved_type);
 }
 
 void Sema::VisitFieldDecl(ast::FieldDecl *node) { Visit(node->TypeRepr()); }
@@ -83,14 +85,19 @@ bool HasDuplicatesNames(const util::RegionVector<ast::FieldDecl *> &fields,
 }  // namespace
 
 void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
-  // Resolve just the function type (not the body of the function).
+  // Resolve **JUST** the function's type representation, not the function body.
   ast::Type *func_type = Resolve(node->TypeRepr());
 
+  // Error.
   if (func_type == nullptr) {
     return;
   }
 
-  // Check for duplicate parameter names.
+  // At this point, the resolved type should be a function type.
+  // The FunctionDecl constructor forces this. But, it's 2020, so let's be sure.
+  TPL_ASSERT(func_type->IsFunctionType(), "Resolved type isn't function?!");
+
+  // Check for duplicate parameter names in signature.
   if (const ast::FieldDecl *dup = nullptr;
       HasDuplicatesNames(node->TypeRepr()->As<ast::FunctionTypeRepr>()->Parameters(), &dup)) {
     error_reporter_->Report(node->Position(), ErrorMessages::kDuplicateArgName, dup->Name(),
@@ -99,7 +106,8 @@ void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
   }
 
   // Make declaration available.
-  GetCurrentScope()->Declare(node->Name(), func_type);
+  TPL_ASSERT(scope_ != nullptr, "No scope exists!");
+  scope_->Declare(node->Name(), func_type);
 
   // Now resolve the whole function.
   Resolve(node->Function());
@@ -112,6 +120,10 @@ void Sema::VisitStructDecl(ast::StructDecl *node) {
     return;
   }
 
+  // At this point, the resolved type should be a struct type.
+  // The StructDecl constructor forces this. But, it's 2020, so let's be sure.
+  TPL_ASSERT(struct_type->IsStructType(), "Resolved type isn't struct?!");
+
   // Check for duplicate fields.
   if (const ast::FieldDecl *dup = nullptr;
       HasDuplicatesNames(node->TypeRepr()->As<ast::StructTypeRepr>()->Fields(), &dup)) {
@@ -121,7 +133,8 @@ void Sema::VisitStructDecl(ast::StructDecl *node) {
   }
 
   // Make the declaration available.
-  GetCurrentScope()->Declare(node->Name(), struct_type);
+  TPL_ASSERT(scope_ != nullptr, "No scope exists!");
+  scope_->Declare(node->Name(), struct_type);
 }
 
 }  // namespace tpl::sema

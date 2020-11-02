@@ -9,24 +9,22 @@ bool Scope::Declare(ast::Identifier decl_name, ast::Type *type) {
   if (curr_decl != nullptr) {
     return false;
   }
-  decls_[decl_name] = type;
+  declarations_[decl_name] = type;
   return true;
 }
 
 ast::Type *Scope::Lookup(ast::Identifier name) const {
-  for (const Scope *scope = this; scope != nullptr; scope = scope->outer()) {
+  for (const Scope *scope = this; scope != nullptr; scope = scope->GetOuter()) {
     if (ast::Type *decl_type = scope->LookupLocal(name)) {
       return decl_type;
     }
   }
-
-  // Not in any scope
   return nullptr;
 }
 
 ast::Type *Scope::LookupLocal(ast::Identifier name) const {
-  auto iter = decls_.find(name);
-  return (iter == decls_.end() ? nullptr : iter->second);
+  const auto iter = declarations_.find(name);
+  return iter == declarations_.end() ? nullptr : iter->second;
 }
 
 }  // namespace tpl::sema

@@ -62,7 +62,7 @@ class Identifier {
    * @param other The identifier to compare with.
    * @return True if equal; false otherwise.
    */
-  bool operator==(const Identifier &other) const noexcept { return GetData() == other.GetData(); }
+  bool operator==(const Identifier &other) const noexcept { return data_ == other.data_; }
 
   /**
    * Is this identifier not equal to another identifier @em other.
@@ -72,7 +72,7 @@ class Identifier {
   bool operator!=(const Identifier &other) const noexcept { return !(*this == other); }
 
   /**
-   * @return An identifier that can be used to indicate an empty idenfitier.
+   * @return An identifier that can be used to indicate an available entry in a DenseMap.
    */
   static Identifier GetEmptyKey() {
     return Identifier(static_cast<const char *>(llvm::DenseMapInfo<const void *>::getEmptyKey()));
@@ -88,7 +88,7 @@ class Identifier {
   }
 
  private:
-  // Data
+  // Data pointer.
   const char *data_;
 };
 
@@ -101,15 +101,19 @@ namespace llvm {
  */
 template <>
 struct DenseMapInfo<tpl::ast::Identifier> {
+  /** @return An identifier representing an empty key. */
   static tpl::ast::Identifier getEmptyKey() { return tpl::ast::Identifier::GetEmptyKey(); }
 
+  /** @return An identifier representing a deleted key. */
   static tpl::ast::Identifier getTombstoneKey() { return tpl::ast::Identifier::GetTombstoneKey(); }
 
+  /** @return The hash of the given identifier. */
   static unsigned getHashValue(const tpl::ast::Identifier identifier) {
     return DenseMapInfo<const void *>::getHashValue(
         static_cast<const void *>(identifier.GetData()));
   }
 
+  /** @return True if the given identifiers are equal; false otherwise. */
   static bool isEqual(const tpl::ast::Identifier lhs, const tpl::ast::Identifier rhs) {
     return lhs == rhs;
   }
@@ -124,6 +128,7 @@ namespace std {
  */
 template <>
 struct hash<tpl::ast::Identifier> {
+  /** @return The hash of the given identifier. */
   std::size_t operator()(const tpl::ast::Identifier &identifier) const noexcept {
     return std::hash<const char *>()(identifier.GetData());
   }

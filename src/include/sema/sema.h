@@ -149,26 +149,24 @@ class Sema : public ast::AstVisitor<Sema> {
   // Scoping
   // -------------------------------------------------------
 
-  Scope *GetCurrentScope() { return scope_; }
-
   // Enter a new scope.
   void EnterScope(Scope::Kind scope_kind) {
     if (num_cached_scopes_ > 0) {
       Scope *scope = scope_cache_[--num_cached_scopes_].release();
       TPL_ASSERT(scope != nullptr, "Cached scope was null");
-      scope->Init(GetCurrentScope(), scope_kind);
+      scope->Init(scope_, scope_kind);
       scope_ = scope;
     } else {
-      scope_ = new Scope(GetCurrentScope(), scope_kind);
+      scope_ = new Scope(scope_, scope_kind);
     }
   }
 
   // Exit the current scope.
   void ExitScope() {
-    TPL_ASSERT(GetCurrentScope() != nullptr, "Mismatched scope exit");
+    TPL_ASSERT(scope_ != nullptr, "Mismatched scope exit.");
 
-    Scope *scope = GetCurrentScope();
-    scope_ = scope->outer();
+    Scope *scope = scope_;
+    scope_ = scope->GetOuter();
 
     if (num_cached_scopes_ < kScopeCacheSize) {
       scope_cache_[num_cached_scopes_++].reset(scope);
@@ -178,7 +176,8 @@ class Sema : public ast::AstVisitor<Sema> {
   }
 
   /**
-   * RAII scope class to track the current scope.
+   * RAII class to automatically enter and exit a new scope during its lifetime. Callers can
+   * control the type of scope that is created.
    */
   class SemaScope {
    public:
@@ -186,8 +185,10 @@ class Sema : public ast::AstVisitor<Sema> {
       check->EnterScope(scope_kind);
     }
 
+    // Destructor. Exits the current scope.
     ~SemaScope() { Exit(); }
 
+    // Manually exit the current scope, if not already exited.
     void Exit() {
       if (!exited_) {
         check_->ExitScope();
@@ -195,10 +196,13 @@ class Sema : public ast::AstVisitor<Sema> {
       }
     }
 
+    // Access the semantic check instance.
     Sema *Check() { return check_; }
 
    private:
+    // The checker.
     Sema *check_;
+    // Flag indicating if the scope has already exited.
     bool exited_;
   };
 
@@ -212,8 +216,10 @@ class Sema : public ast::AstVisitor<Sema> {
       check->curr_func_ = func;
     }
 
+    // Destructor. Exits the current scope.
     ~FunctionSemaScope() { Exit(); }
 
+    // Manually exit the current scope, if not already exited.
     void Exit() {
       block_scope_.Exit();
       block_scope_.Check()->curr_func_ = prev_func_;
