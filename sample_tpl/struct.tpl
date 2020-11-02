@@ -9,6 +9,10 @@ struct SDup {
     f: int
 }
 
+struct X {
+  n: *X
+}
+
 fun main() -> int {
     var p: S
     var q: S

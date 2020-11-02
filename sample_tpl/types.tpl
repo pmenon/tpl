@@ -1,17 +1,17 @@
 fun i16() -> int16 {
-  var a: int32 = 1
-  var b: uint16 = 2
-  return @intCast(int16, a) + @intCast(int16, b)
+    var a: int32 = 1
+    var b: uint16 = 2
+    return @intCast(int16, a) + @intCast(int16, b)
 }
 
 fun u8() -> uint8 {
-  var a: uint8 = 3
-  var b: uint8 = 4
-  return a + b
+    var a: uint8 = 3
+    var b: uint8 = 4
+    return a + b
 }
 
 fun add(a: uint8, b : int16) -> uint32 {
-  return @intCast(uint32, a) + @intCast(uint32, b)
+    return @intCast(uint32, a) + @intCast(uint32, b)
 }
 
 fun gg() -> int8 { return 1 }
