@@ -128,17 +128,36 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
-void Sema::CheckNullValueCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+void Sema::CheckNullValueCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
-  // Input must be a SQL value.
-  if (auto type = call->Arguments()[0]->GetType(); !type->IsSqlValueType()) {
-    error_reporter_->Report(call->Position(), ErrorMessages::kIsValNullExpectsSqlValue, type);
-    return;
+
+  ast::Type *input_type = call->Arguments()[0]->GetType();
+
+  switch (builtin) {
+    case ast::Builtin::IsValNull: {
+      // Input must be a SQL value.
+      if (!input_type->IsSqlValueType()) {
+        ReportIncorrectCallArg(call, 0, "SQL type");
+        return;
+      }
+      // Returns a primitive boolean.
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::InitSqlNull: {
+      if (!IsPointerToSQLValue(input_type)) {
+        ReportIncorrectCallArg(call, 0, "pointer to SQL value");
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    default: {
+      UNREACHABLE("Unsupported NULL type.");
+    }
   }
-  // Returns a primitive boolean.
-  call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
 }
 
 void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
@@ -1843,7 +1862,8 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
       CheckSqlConversionCall(call, builtin);
       break;
     }
-    case ast::Builtin::IsValNull: {
+    case ast::Builtin::IsValNull:
+    case ast::Builtin::InitSqlNull: {
       CheckNullValueCall(call, builtin);
       break;
     }

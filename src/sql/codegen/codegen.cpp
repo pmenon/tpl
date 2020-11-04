@@ -491,6 +491,10 @@ ast::Expr *CodeGen::ConvertSql(ast::Expr *input, sql::TypeId from_type, sql::Typ
                                         TypeIdToString(from_type), TypeIdToString(to_type)));
 }
 
+ast::Expr *CodeGen::InitSqlNull(ast::Expr *val) const {
+  return CallBuiltin(ast::Builtin::InitSqlNull, {AddressOf(val)});
+}
+
 // ---------------------------------------------------------
 // Table Vector Iterator
 // ---------------------------------------------------------

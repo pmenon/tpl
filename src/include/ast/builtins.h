@@ -15,6 +15,7 @@ namespace tpl::ast {
   F(StringToSql, stringToSql)                                   \
   F(SqlToBool, sqlToBool)                                       \
   F(IsValNull, isValNull)                                       \
+  F(InitSqlNull, initSqlNull)                                   \
                                                                 \
   /* SQL Conversions */                                         \
   F(ConvertBoolToInteger, convertBoolToInt)                     \
