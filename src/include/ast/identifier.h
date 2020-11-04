@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/StringMapEntry.h"
 
 #include "common/macros.h"
 
@@ -13,69 +14,83 @@ namespace tpl::ast {
 /**
  * A uniqued string identifier in some AST context. This serves as a super-lightweight string
  * reference. Two identifiers allocated from the same AST context are equal if they have the same
- * pointer value - we don't need to check contents.
+ * pointer value - we needn't check contents.
  */
 class Identifier {
+  using EntryType = llvm::StringMapEntry<llvm::NoneType>;
+
  private:
   friend class Context;
 
   // Constructor accessible only to Context which ensures uniqueness.
-  explicit Identifier(const char *str) noexcept : data_(str) {}
+  // Given the string entry stored in context's identifier table.
+  explicit Identifier(const EntryType *entry) noexcept : entry_(entry) {}
 
  public:
   /**
    * Create an empty identifier.
    */
-  Identifier() noexcept : data_(nullptr) {}
+  Identifier() noexcept : entry_(nullptr) {}
+
+  /**
+   * Copy-construct the given identifier. This is a very light-weight operation.
+   * @param other The identifier to copy.
+   */
+  Identifier(const Identifier &other) = default;
+
+  /**
+   * Copy-assign the given identifier. This is a very light-weight operation.
+   * @param other The identifier to copy.
+   */
+  Identifier &operator=(const Identifier &other) = default;
 
   /**
    * @return A const pointer to this identifier's underlying string data.
    */
-  const char *GetData() const noexcept { return data_; }
+  const char *GetData() const noexcept { return entry_->getKeyData(); }
 
   /**
    * @return The length of this identifier in bytes.
    */
-  std::size_t GetLength() const {
-    TPL_ASSERT(data_ != nullptr, "Trying to get the length of an invalid identifier");
-    return std::strlen(GetData());
-  }
+  std::size_t GetLength() const noexcept { return entry_->getKeyLength(); }
 
   /**
    * @return True if this identifier is empty; false otherwise.
    */
-  bool IsEmpty() const noexcept { return data_ == nullptr; }
+  bool IsEmpty() const noexcept { return entry_ == nullptr; }
 
   /**
    * @return A string view over this identifier.
    */
-  std::string_view GetView() const noexcept { return std::string_view(data_, GetLength()); }
+  std::string_view GetView() const noexcept { return entry_->getKey(); }
 
   /**
-   * @return A copy of this identifier's contents as a string. We assume that the identifier was
-   *         properly NULL terminated.
+   * @return A copy of this identifier's contents as a string.
    */
-  std::string ToString() const { return !data_ ? std::string() : std::string(data_, GetLength()); }
+  std::string ToString() const { return entry_->getKey().str(); }
 
   /**
-   * Is this identifier equal to another identifier @em other.
-   * @param other The identifier to compare with.
-   * @return True if equal; false otherwise.
+   * Allows implicit conversions of Identifiers to string-views.
+   * @return String-view representation of this identifier.
    */
-  bool operator==(const Identifier &other) const noexcept { return data_ == other.data_; }
+  operator std::string_view() const noexcept { return GetView(); }
 
   /**
-   * Is this identifier not equal to another identifier @em other.
-   * @param other The identifier to compare with.
-   * @return True if not equal; false otherwise.
+   * @return True if this identifier is equal to @em that; false otherwise.
    */
-  bool operator!=(const Identifier &other) const noexcept { return !(*this == other); }
+  bool operator==(const Identifier &that) const noexcept { return entry_ == that.entry_; }
+
+  /**
+   * @return True if this identifier is NOT equal to @em that; false otherwise.
+   */
+  bool operator!=(const Identifier &that) const noexcept { return !(*this == that); }
 
   /**
    * @return An identifier that can be used to indicate an available entry in a DenseMap.
    */
   static Identifier GetEmptyKey() {
-    return Identifier(static_cast<const char *>(llvm::DenseMapInfo<const void *>::getEmptyKey()));
+    return Identifier(
+        static_cast<const EntryType *>(llvm::DenseMapInfo<const void *>::getEmptyKey()));
   }
 
   /**
@@ -84,13 +99,33 @@ class Identifier {
    */
   static Identifier GetTombstoneKey() {
     return Identifier(
-        static_cast<const char *>(llvm::DenseMapInfo<const void *>::getTombstoneKey()));
+        static_cast<const EntryType *>(llvm::DenseMapInfo<const void *>::getTombstoneKey()));
   }
 
  private:
-  // Data pointer.
-  const char *data_;
+  // Pointer to the map entry storing the string.
+  const EntryType *entry_;
 };
+
+/**
+ * @return True if the left Identifier is equivalent to the right string; false otherwise.
+ */
+inline bool operator==(Identifier lhs, std::string_view rhs) { return lhs.GetView() == rhs; }
+
+/**
+ * @return True if the left Identifier is **NOT** equivalent to the right string; false otherwise.
+ */
+inline bool operator!=(Identifier lhs, std::string_view rhs) { return !(lhs == rhs); }
+
+/**
+ * @return True if the left string is equivalent to the right Identifier; false otherwise.
+ */
+inline bool operator==(std::string_view lhs, Identifier rhs) { return rhs.GetView() == lhs; }
+
+/**
+ * @return True if the left string is **NOT** equivalent to the right Identifier; false otherwise.
+ */
+inline bool operator!=(std::string_view lhs, Identifier rhs) { return !(lhs == rhs); }
 
 }  // namespace tpl::ast
 

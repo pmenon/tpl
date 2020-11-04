@@ -143,7 +143,7 @@ struct Context::Implementation {
   // Type caches
   // -------------------------------------------------------
 
-  llvm::StringMap<char, util::LLVMRegionAllocator> string_table;
+  llvm::StringMap<llvm::NoneType, util::LLVMRegionAllocator> identifier_table;
   std::vector<BuiltinType *> builtin_types_list;
   llvm::DenseMap<Identifier, Type *> builtin_types;
   llvm::DenseMap<Identifier, Builtin> builtin_funcs;
@@ -154,8 +154,8 @@ struct Context::Implementation {
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
   explicit Implementation(Context *ctx)
-      : string_table(kDefaultStringTableCapacity, util::LLVMRegionAllocator(ctx->GetRegion())) {
-    // Instantiate all the builtins
+      : identifier_table(kDefaultStringTableCapacity, util::LLVMRegionAllocator(ctx->GetRegion())) {
+    // Instantiate all the builtin types.
 #define F(BKind, CppType, ...)         \
   BKind##Type = new (ctx->GetRegion()) \
       BuiltinType(ctx, sizeof(CppType), alignof(CppType), BuiltinType::BKind);
@@ -206,11 +206,11 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
     return Identifier();
   }
 
-  const auto iter = impl_->string_table.insert(std::make_pair(str, static_cast<char>(0))).first;
-  return Identifier(iter->getKeyData());
+  auto &entry = *impl_->identifier_table.insert(std::make_pair(str, llvm::None)).first;
+  return Identifier(&entry);
 }
 
-std::size_t Context::GetNumIdentifiers() const noexcept { return impl_->string_table.size(); }
+std::size_t Context::GetNumIdentifiers() const noexcept { return impl_->identifier_table.size(); }
 
 Type *Context::LookupBuiltinType(Identifier name) const {
   const auto iter = impl_->builtin_types.find(name);

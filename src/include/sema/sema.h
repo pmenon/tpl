@@ -175,10 +175,8 @@ class Sema : public ast::AstVisitor<Sema> {
     }
   }
 
-  /**
-   * RAII class to automatically enter and exit a new scope during its lifetime. Callers can
-   * control the type of scope that is created.
-   */
+  // RAII class to automatically enter and exit a new scope during its lifetime.
+  // Callers can control the type of scope that is created.
   class SemaScope {
    public:
     SemaScope(Sema *check, Scope::Kind scope_kind) : check_(check), exited_(false) {
@@ -206,9 +204,7 @@ class Sema : public ast::AstVisitor<Sema> {
     bool exited_;
   };
 
-  /**
-   * RAII scope class to capture both the current function and its scope.
-   */
+  // RAII scope class to capture both the current function and its scope.
   class FunctionSemaScope {
    public:
     FunctionSemaScope(Sema *check, ast::FunctionLiteralExpr *func)

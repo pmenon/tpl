@@ -640,7 +640,7 @@ ast::Expr *Parser::ParseFunctionType() {
       ident = GetSymbol();
     }
 
-    if (Matches(Token::Type::COLON) || ident.GetData() == nullptr) {
+    if (Matches(Token::Type::COLON) || ident.IsEmpty()) {
       type = ParseType();
     } else {
       type = node_factory_->NewIdentifierExpr(field_position, ident);
