@@ -1,8 +1,7 @@
 #pragma once
 
 #include <memory>
-
-#include "llvm/ADT/StringRef.h"
+#include <string_view>
 
 #include "ast/builtins.h"
 #include "ast/identifier.h"
@@ -53,7 +52,7 @@ class Context {
    * @param str The input string.
    * @return A uniqued (interned) version of the string in this context.
    */
-  Identifier GetIdentifier(llvm::StringRef str);
+  Identifier GetIdentifier(std::string_view str);
 
   /**
    * @return The number of unique identifiers lexed in this context.

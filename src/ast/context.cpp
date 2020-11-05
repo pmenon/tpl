@@ -201,7 +201,7 @@ Context::Context(sema::ErrorReporter *error_reporter)
 
 Context::~Context() = default;
 
-Identifier Context::GetIdentifier(llvm::StringRef str) {
+Identifier Context::GetIdentifier(std::string_view str) {
   if (str.empty()) {
     return Identifier();
   }
