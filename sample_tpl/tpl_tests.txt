@@ -5,6 +5,7 @@
 array.tpl,false,44
 array-iterate.tpl,false,110
 array-iterate-2.tpl,false,110
+bits.tpl,false,0
 call.tpl,false,70
 comments.tpl,false,46
 compare.tpl,false,200
