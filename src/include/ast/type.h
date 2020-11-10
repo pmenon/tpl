@@ -345,6 +345,11 @@ class BuiltinType : public Type {
   bool IsIntegral() const { return Kind::Int8 <= GetKind() && GetKind() <= Kind::Uint128; }
 
   /**
+   * @return True if this type is a signed type; false otherwise.
+   */
+  bool IsSigned() const { return kSignedFlags[static_cast<uint16_t>(kind_)]; }
+
+  /**
    * @return True if this type is a C/C++ primitive floating point number; false otherwise.
    */
   bool IsFloatingPoint() const { return kFloatingPointFlags[static_cast<uint16_t>(kind_)]; }

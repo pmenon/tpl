@@ -21,6 +21,7 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector_filter_executor.h"
+#include "util/bit_util.h"
 #include "util/csv_reader.h"
 
 // All VM bytecode op handlers must use this macro
@@ -139,6 +140,21 @@ FLOAT_TYPES(FLOAT_MODULAR)
   VM_OP_HOT void OpBitShr##_##type(type *result, type input, uint32_t n) { *result = input >> n; }
 
 INT_TYPES(BIT_OPS);
+
+#undef BIT_OPS
+
+#define BIT_OPS(type, ...)                                          \
+  /* Primitive count-leading-zeros */                               \
+  VM_OP_HOT void OpBitCtlz##_##type(uint32_t *result, type input) { \
+    *result = tpl::util::BitUtil::CountLeadingZeros(input);         \
+  }                                                                 \
+                                                                    \
+  /* Primitive count-trailing-zeros */                              \
+  VM_OP_HOT void OpBitCttz##_##type(uint32_t *result, type input) { \
+    *result = tpl::util::BitUtil::CountTrailingZeros(input);        \
+  }
+
+FOR_EACH_UNSIGNED_INT_TYPE(BIT_OPS)
 
 #undef BIT_OPS
 

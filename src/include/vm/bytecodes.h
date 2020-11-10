@@ -15,6 +15,9 @@ namespace tpl::vm {
 /** Creates instances of a given opcode for all integer primitive types. */
 #define CREATE_FOR_INT_TYPES(F, op, ...) INT_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
+/** Creates instances of a given opcode for all unsigned integer primitive types. */
+#define CREATE_FOR_UINT_TYPES(F, op, ...) FOR_EACH_UNSIGNED_INT_TYPE(GEN_TYPED_OP, F, op, __VA_ARGS__)
+
 /** Creates instances of a given opcode for primitive boolean types. */
 #define CREATE_FOR_BOOL_TYPES(F, op, ...) BOOL_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
@@ -32,6 +35,7 @@ namespace tpl::vm {
 #define CREATE_FOR_ALL_TYPES(F, op, ...) ALL_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
 #define GET_BASE_FOR_INT_TYPES(op) (op##_int8_t)
+#define GET_BASE_FOR_UINT_TYPES(op) (op##_uint8_t)
 #define GET_BASE_FOR_FLOAT_TYPES(op) (op##_float)
 #define GET_BASE_FOR_BOOL_TYPES(op) (op##_bool)
 
@@ -51,8 +55,10 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(F, BitOr, OperandType::Local, OperandType::Local, OperandType::Local)                           \
   CREATE_FOR_INT_TYPES(F, BitXor, OperandType::Local, OperandType::Local, OperandType::Local)                          \
   CREATE_FOR_INT_TYPES(F, BitNeg, OperandType::Local, OperandType::Local)                                              \
-  CREATE_FOR_INT_TYPES(F, BitShl, OperandType::Local, OperandType::Local)                                              \
-  CREATE_FOR_INT_TYPES(F, BitShr, OperandType::Local, OperandType::Local)                                              \
+  CREATE_FOR_INT_TYPES(F, BitShl, OperandType::Local, OperandType::Local, OperandType::Local)                          \
+  CREATE_FOR_INT_TYPES(F, BitShr, OperandType::Local, OperandType::Local, OperandType::Local)                          \
+  CREATE_FOR_UINT_TYPES(F, BitCtlz, OperandType::Local, OperandType::Local)                                            \
+  CREATE_FOR_UINT_TYPES(F, BitCttz, OperandType::Local, OperandType::Local)                                            \
   CREATE_FOR_ALL_TYPES(F, GreaterThan, OperandType::Local, OperandType::Local, OperandType::Local)                     \
   CREATE_FOR_ALL_TYPES(F, GreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                \
   CREATE_FOR_ALL_TYPES(F, Equal, OperandType::Local, OperandType::Local, OperandType::Local)                           \

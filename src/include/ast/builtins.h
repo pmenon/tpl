@@ -191,6 +191,10 @@ namespace tpl::ast {
   F(Sin, sin)                                                   \
   F(Tan, tan)                                                   \
                                                                 \
+  /* Bits */                                                    \
+  F(Ctlz, ctlz)                                                 \
+  F(Cttz, cttz)                                                 \
+                                                                \
   /* Generic */                                                 \
   F(SizeOf, sizeOf)                                             \
   F(OffsetOf, offsetOf)                                         \

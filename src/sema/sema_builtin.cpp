@@ -1384,6 +1384,18 @@ void Sema::CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
   call->SetType(GetBuiltinType(real_kind));
 }
 
+void Sema::CheckBuiltinBitsCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+  if (!CheckArgCount(call, 1)) {
+    return;
+  }
+  auto type = call->Arguments()[0]->GetType()->SafeAs<ast::BuiltinType>();
+  if (!type || !type->IsIntegerType() || type->IsSigned()) {
+    ReportIncorrectCallArg(call, 0, "primitive unsigned integer");
+    return;
+  }
+  call->SetType(GetBuiltinType(ast::BuiltinType::Uint32));
+}
+
 void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
@@ -2093,6 +2105,11 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::Sin:
     case ast::Builtin::Tan: {
       CheckMathTrigCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::Ctlz:
+    case ast::Builtin::Cttz: {
+      CheckBuiltinBitsCall(call, builtin);
       break;
     }
     case ast::Builtin::SizeOf: {

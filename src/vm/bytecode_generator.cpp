@@ -1684,6 +1684,40 @@ void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin b
   }
 }
 
+void BytecodeGenerator::VisitBuiltinBitsCall(ast::CallExpr *call, ast::Builtin builtin) {
+  const bool caller_wants_result = GetExecutionResult() != nullptr;
+
+  LocalVar result;
+  if (caller_wants_result) {
+    result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  } else {
+    result = GetCurrentFunction()->NewLocal(call->GetType());
+  }
+
+  LocalVar input = VisitExpressionForRValue(call->Arguments()[0]);
+
+  Bytecode op;
+  switch (ast::Type *input_type = call->Arguments()[0]->GetType(); builtin) {
+    case ast::Builtin::Ctlz: {
+      op = GetIntTypedBytecode(GET_BASE_FOR_UINT_TYPES(Bytecode::BitCtlz), input_type, false);
+      break;
+    }
+    case ast::Builtin::Cttz: {
+      op = GetIntTypedBytecode(GET_BASE_FOR_UINT_TYPES(Bytecode::BitCttz), input_type, false);
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible bit-based bytecode");
+    }
+  }
+
+  GetEmitter()->Emit(op, result, input);
+
+  if (caller_wants_result) {
+    GetExecutionResult()->SetDestination(result.ValueOf());
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinSizeOfCall(ast::CallExpr *call) {
   ast::Type *target_type = call->Arguments()[0]->GetType();
   LocalVar size_var = GetExecutionResult()->GetOrCreateDestination(call->GetType());
@@ -1986,6 +2020,11 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::Sin:
     case ast::Builtin::Tan: {
       VisitBuiltinTrigCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::Ctlz:
+    case ast::Builtin::Cttz: {
+      VisitBuiltinBitsCall(call, builtin);
       break;
     }
     case ast::Builtin::SizeOf: {
@@ -2695,10 +2734,10 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *t
   }
 }
 
-Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode, ast::Type *type) {
+Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode, ast::Type *type, bool sign) {
   TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
   auto int_kind = type->SafeAs<ast::BuiltinType>()->GetKind();
-  auto kind_idx = static_cast<uint8_t>(int_kind - ast::BuiltinType::Int8);
+  auto kind_idx = int_kind - (sign ? ast::BuiltinType::Int8 : ast::BuiltinType::Uint8);
   return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }
 
