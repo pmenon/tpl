@@ -438,6 +438,14 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_ASSIGN(int64_t, 8);
 #undef GEN_ASSIGN
 
+  OP(AssignN) : {
+    auto *dest = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto len = READ_UIMM4();
+    OpAssignN(dest, src, len);
+    DISPATCH_NEXT();
+  }
+
   OP(AssignImm4F) : {
     auto *dest = frame->LocalAt<float *>(READ_LOCAL_ID());
     OpAssignImm4F(dest, READ_IMM4F());

@@ -86,6 +86,7 @@ namespace tpl::vm {
   F(Assign2, OperandType::Local, OperandType::Local)                                                                   \
   F(Assign4, OperandType::Local, OperandType::Local)                                                                   \
   F(Assign8, OperandType::Local, OperandType::Local)                                                                   \
+  F(AssignN, OperandType::Local, OperandType::Local, OperandType::UImm4)                                               \
   F(AssignImm1, OperandType::Local, OperandType::Imm1)                                                                 \
   F(AssignImm2, OperandType::Local, OperandType::Imm2)                                                                 \
   F(AssignImm4, OperandType::Local, OperandType::Imm4)                                                                 \
