@@ -36,6 +36,7 @@
 #include "sql/codegen/operators/seq_scan_translator.h"
 #include "sql/codegen/operators/sort_translator.h"
 #include "sql/codegen/operators/static_aggregation_translator.h"
+#include "sql/codegen/operators/union_all_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_graph.h"
 #include "sql/planner/expressions/abstract_expression.h"
@@ -54,6 +55,7 @@
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
+#include "sql/planner/plannodes/set_op_plan_node.h"
 #include "util/timer.h"
 #include "vm/module.h"
 
@@ -270,6 +272,11 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
     case planner::PlanNodeType::SEQSCAN: {
       const auto &seq_scan = static_cast<const planner::SeqScanPlanNode &>(plan);
       translator = std::make_unique<SeqScanTranslator>(seq_scan, this, pipeline);
+      break;
+    }
+    case planner::PlanNodeType::SETOP: {
+      const auto &set_op = static_cast<const planner::SetOpPlanNode &>(plan);
+      translator = std::make_unique<UnionAllTranslator>(set_op, this, pipeline);
       break;
     }
     default: {

@@ -77,12 +77,15 @@ ast::Expr *OperatorTranslator::GetMemoryPool() const {
   return codegen_->ExecCtxGetMemoryPool(GetExecutionContext());
 }
 
+const planner::OutputSchema *OperatorTranslator::GetChildOutputSchema(uint32_t child_idx) const {
+  return plan_.GetChild(child_idx)->GetOutputSchema();
+}
+
 void OperatorTranslator::GetAllChildOutputFields(
     const uint32_t child_index, const std::string &field_name_prefix,
     util::RegionVector<ast::FieldDecl *> *fields) const {
   // Reserve now to reduce allocations.
-  const auto child_output_schema = plan_.GetChild(child_index)->GetOutputSchema();
-  fields->reserve(child_output_schema->NumColumns());
+  fields->reserve(GetChildOutputSchema(child_index)->NumColumns());
 
   // Add columns to output.
   uint32_t attr_idx = 0;

@@ -13,6 +13,7 @@
 
 namespace tpl::sql::planner {
 class AbstractPlanNode;
+class OutputSchema;
 }  // namespace tpl::sql::planner
 
 namespace tpl::sql::codegen {
@@ -233,6 +234,9 @@ class OperatorTranslator : public ColumnValueProvider {
     static_assert(std::is_base_of_v<planner::AbstractPlanNode, T>, "Template is not a plan node");
     return static_cast<const T &>(plan_);
   }
+
+  // Get the output schema of the given child plan node.
+  const planner::OutputSchema *GetChildOutputSchema(uint32_t child_idx) const;
 
   // Used by operators when they need to generate a struct containing a child's
   // output. Also used by the output layer to materialize the output.
