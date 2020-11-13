@@ -36,7 +36,7 @@ void CaseTranslator::GenerateCases(const ast::Identifier ret, const std::size_t 
       ast::Expr *default_result = context->DeriveValue(*default_val, provider);
       function->Append(codegen_->Assign(codegen_->MakeExpr(ret), default_result));
     } else {
-      UNREACHABLE("Null default not implemented");
+      function->Append(codegen_->InitSqlNull(codegen_->MakeExpr(ret)));
     }
     return;
   }

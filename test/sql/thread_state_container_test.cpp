@@ -5,7 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/tbb.h"
+#include "tbb/blocked_range.h"
+#include "tbb/parallel_for.h"
 
 #include "sql/thread_state_container.h"
 #include "util/test_harness.h"

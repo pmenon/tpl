@@ -129,6 +129,10 @@ ast::Stmt *CodeGen::Assign(ast::Expr *dest, ast::Expr *value) {
   return NodeFactory()->NewAssignmentStmt(position_, dest, value);
 }
 
+ast::Expr *CodeGen::ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind) {
+  return NodeFactory()->NewArrayType(position_, Const64(num_elems), BuiltinType(kind));
+}
+
 ast::Expr *CodeGen::BuiltinType(ast::BuiltinType::Kind builtin_kind) const {
   // Lookup the builtin type. We'll use it to construct an identifier.
   ast::BuiltinType *type = ast::BuiltinType::Get(Context(), builtin_kind);
@@ -147,6 +151,8 @@ ast::Expr *CodeGen::Int8Type() const { return BuiltinType(ast::BuiltinType::Int8
 ast::Expr *CodeGen::Int16Type() const { return BuiltinType(ast::BuiltinType::Int16); }
 
 ast::Expr *CodeGen::Int32Type() const { return BuiltinType(ast::BuiltinType::Int32); }
+
+ast::Expr *CodeGen::UInt32Type() const { return BuiltinType(ast::BuiltinType::Uint32); }
 
 ast::Expr *CodeGen::Int64Type() const { return BuiltinType(ast::BuiltinType::Int64); }
 
@@ -176,21 +182,48 @@ ast::Expr *CodeGen::PointerType(ast::BuiltinType::Kind builtin) const {
 ast::Expr *CodeGen::TplType(sql::TypeId type) {
   switch (type) {
     case sql::TypeId::Boolean:
-      return BuiltinType(ast::BuiltinType::Boolean);
+      return BuiltinType(ast::BuiltinType::BooleanVal);
     case sql::TypeId::TinyInt:
     case sql::TypeId::SmallInt:
     case sql::TypeId::Integer:
     case sql::TypeId::BigInt:
-      return BuiltinType(ast::BuiltinType::Integer);
+      return BuiltinType(ast::BuiltinType::IntegerVal);
+    case sql::TypeId::Date:
+      return BuiltinType(ast::BuiltinType::DateVal);
+    case sql::TypeId::Timestamp:
+      return BuiltinType(ast::BuiltinType::TimestampVal);
+    case sql::TypeId::Double:
+    case sql::TypeId::Float:
+      return BuiltinType(ast::BuiltinType::RealVal);
+    case sql::TypeId::Varchar:
+      return BuiltinType(ast::BuiltinType::StringVal);
+    default:
+      UNREACHABLE("Cannot codegen unsupported type.");
+  }
+}
+
+ast::Expr *CodeGen::PrimitiveTplType(TypeId type) {
+  switch (type) {
+    case sql::TypeId::Boolean:
+      return BuiltinType(ast::BuiltinType::Bool);
+    case sql::TypeId::TinyInt:
+      return BuiltinType(ast::BuiltinType::Int8);
+    case sql::TypeId::SmallInt:
+      return BuiltinType(ast::BuiltinType::Int16);
+    case sql::TypeId::Integer:
+      return BuiltinType(ast::BuiltinType::Int32);
+    case sql::TypeId::BigInt:
+      return BuiltinType(ast::BuiltinType::Int64);
+    case sql::TypeId::Float:
+      return BuiltinType(ast::BuiltinType::Float32);
+    case sql::TypeId::Double:
+      return BuiltinType(ast::BuiltinType::Float64);
     case sql::TypeId::Date:
       return BuiltinType(ast::BuiltinType::Date);
     case sql::TypeId::Timestamp:
       return BuiltinType(ast::BuiltinType::Timestamp);
-    case sql::TypeId::Double:
-    case sql::TypeId::Float:
-      return BuiltinType(ast::BuiltinType::Real);
     case sql::TypeId::Varchar:
-      return BuiltinType(ast::BuiltinType::StringVal);
+      return BuiltinType(ast::BuiltinType::VarlenEntry);
     default:
       UNREACHABLE("Cannot codegen unsupported type.");
   }
@@ -308,6 +341,18 @@ ast::Expr *CodeGen::BitShiftRight(ast::Expr *val, ast::Expr *num_bits) const {
   return BinaryOp(parsing::Token::Type::BIT_SHR, val, num_bits);
 }
 
+ast::Expr *CodeGen::Add(ast::Expr *left, ast::Expr *right) const {
+  return BinaryOp(parsing::Token::Type::PLUS, left, right);
+}
+
+ast::Expr *CodeGen::Sub(ast::Expr *left, ast::Expr *right) const {
+  return BinaryOp(parsing::Token::Type::MINUS, left, right);
+}
+
+ast::Expr *CodeGen::Mul(ast::Expr *left, ast::Expr *right) const {
+  return BinaryOp(parsing::Token::Type::STAR, left, right);
+}
+
 ast::Expr *CodeGen::AccessStructMember(ast::Expr *object, ast::Identifier member) {
   return NodeFactory()->NewMemberExpr(position_, object, MakeExpr(member));
 }
@@ -348,19 +393,19 @@ ast::Expr *CodeGen::CallBuiltin(ast::Builtin builtin, const std::vector<ast::Exp
 
 ast::Expr *CodeGen::BoolToSql(bool b) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::BoolToSql, {ConstBool(b)});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Boolean));
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::BooleanVal));
   return call;
 }
 
 ast::Expr *CodeGen::IntToSql(int64_t num) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::IntToSql, {Const64(num)});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Integer));
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::IntegerVal));
   return call;
 }
 
 ast::Expr *CodeGen::FloatToSql(double num) const {
   ast::Expr *call = CallBuiltin(ast::Builtin::FloatToSql, {ConstDouble(num)});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Real));
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::RealVal));
   return call;
 }
 
@@ -373,7 +418,7 @@ ast::Expr *CodeGen::DateToSql(Date date) const {
 ast::Expr *CodeGen::DateToSql(int32_t year, int32_t month, int32_t day) const {
   ast::Expr *call =
       CallBuiltin(ast::Builtin::DateToSql, {Const32(year), Const32(month), Const32(day)});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Date));
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::DateVal));
   return call;
 }
 
@@ -444,6 +489,10 @@ ast::Expr *CodeGen::ConvertSql(ast::Expr *input, sql::TypeId from_type, sql::Typ
 
   throw ConversionException(fmt::format("Cannot convert from SQL type '{}' to type '{}'.",
                                         TypeIdToString(from_type), TypeIdToString(to_type)));
+}
+
+ast::Expr *CodeGen::InitSqlNull(ast::Expr *val) const {
+  return CallBuiltin(ast::Builtin::InitSqlNull, {AddressOf(val)});
 }
 
 // ---------------------------------------------------------
@@ -534,35 +583,35 @@ ast::Expr *CodeGen::VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, u
   switch (type_id) {
     case sql::TypeId::Boolean:
       builtin = ast::Builtin::VPIGetBool;
-      ret_kind = ast::BuiltinType::Boolean;
+      ret_kind = ast::BuiltinType::BooleanVal;
       break;
     case sql::TypeId::TinyInt:
       builtin = ast::Builtin::VPIGetTinyInt;
-      ret_kind = ast::BuiltinType::Integer;
+      ret_kind = ast::BuiltinType::IntegerVal;
       break;
     case sql::TypeId::SmallInt:
       builtin = ast::Builtin::VPIGetSmallInt;
-      ret_kind = ast::BuiltinType::Integer;
+      ret_kind = ast::BuiltinType::IntegerVal;
       break;
     case sql::TypeId::Integer:
       builtin = ast::Builtin::VPIGetInt;
-      ret_kind = ast::BuiltinType::Integer;
+      ret_kind = ast::BuiltinType::IntegerVal;
       break;
     case sql::TypeId::BigInt:
       builtin = ast::Builtin::VPIGetBigInt;
-      ret_kind = ast::BuiltinType::Integer;
+      ret_kind = ast::BuiltinType::IntegerVal;
       break;
     case sql::TypeId::Float:
       builtin = ast::Builtin::VPIGetReal;
-      ret_kind = ast::BuiltinType::Real;
+      ret_kind = ast::BuiltinType::RealVal;
       break;
     case sql::TypeId::Double:
       builtin = ast::Builtin::VPIGetDouble;
-      ret_kind = ast::BuiltinType::Real;
+      ret_kind = ast::BuiltinType::RealVal;
       break;
     case sql::TypeId::Date:
       builtin = ast::Builtin::VPIGetDate;
-      ret_kind = ast::BuiltinType::Date;
+      ret_kind = ast::BuiltinType::DateVal;
       break;
     case sql::TypeId::Varchar:
       builtin = ast::Builtin::VPIGetString;

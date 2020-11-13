@@ -4,6 +4,7 @@
 
 #include "ast/context.h"
 #include "ast/type.h"
+#include "sema/error_reporter.h"
 
 namespace tpl::sema {
 
@@ -11,13 +12,13 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
   uint64_t arr_len = 0;
   if (node->Length() != nullptr) {
     if (!node->Length()->IsIntegerLiteral()) {
-      error_reporter()->Report(node->Length()->Position(), ErrorMessages::kNonIntegerArrayLength);
+      error_reporter_->Report(node->Length()->Position(), ErrorMessages::kNonIntegerArrayLength);
       return;
     }
 
     auto length = node->Length()->As<ast::LiteralExpr>()->IntegerVal();
     if (length < 0) {
-      error_reporter()->Report(node->Length()->Position(), ErrorMessages::kNegativeArrayLength);
+      error_reporter_->Report(node->Length()->Position(), ErrorMessages::kNegativeArrayLength);
       return;
     }
 
@@ -35,7 +36,7 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
 
 void Sema::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   // Handle parameters
-  util::RegionVector<ast::Field> param_types(context()->GetRegion());
+  util::RegionVector<ast::Field> param_types(context_->GetRegion());
   for (auto *param : node->Parameters()) {
     Visit(param);
     ast::Type *param_type = param->TypeRepr()->GetType();
@@ -66,7 +67,7 @@ void Sema::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
 }
 
 void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
-  util::RegionVector<ast::Field> field_types(context()->GetRegion());
+  util::RegionVector<ast::Field> field_types(context_->GetRegion());
   for (auto *field : node->Fields()) {
     Visit(field);
     ast::Type *field_type = field->TypeRepr()->GetType();
@@ -76,7 +77,7 @@ void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
     field_types.emplace_back(field->Name(), field_type);
   }
 
-  node->SetType(ast::StructType::Get(context(), std::move(field_types)));
+  node->SetType(ast::StructType::Get(context_, std::move(field_types)));
 }
 
 void Sema::VisitMapTypeRepr(ast::MapTypeRepr *node) {

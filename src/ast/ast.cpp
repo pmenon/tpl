@@ -1,5 +1,8 @@
 #include "ast/ast.h"
 
+#include <cfloat>
+#include <cstdint>
+
 #include "ast/type.h"
 
 namespace tpl::ast {
@@ -39,29 +42,29 @@ ExpressionStmt::ExpressionStmt(Expr *expr)
 // ---------------------------------------------------------
 
 bool Expr::IsNilLiteral() const {
-  if (auto lit_expr = SafeAs<ast::LiteralExpr>()) {
-    return lit_expr->GetLiteralKind() == ast::LiteralExpr::LiteralKind::Nil;
+  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+    return literal->IsNilLiteral();
   }
   return false;
 }
 
 bool Expr::IsBoolLiteral() const {
-  if (auto lit_expr = SafeAs<ast::LiteralExpr>()) {
-    return lit_expr->GetLiteralKind() == ast::LiteralExpr::LiteralKind::Boolean;
+  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+    return literal->IsBoolLiteral();
   }
   return false;
 }
 
 bool Expr::IsStringLiteral() const {
-  if (auto lit_expr = SafeAs<ast::LiteralExpr>()) {
-    return lit_expr->GetLiteralKind() == ast::LiteralExpr::LiteralKind::String;
+  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+    return literal->IsStringLiteral();
   }
   return false;
 }
 
 bool Expr::IsIntegerLiteral() const {
-  if (auto lit_expr = SafeAs<ast::LiteralExpr>()) {
-    return lit_expr->GetLiteralKind() == ast::LiteralExpr::LiteralKind::Int;
+  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+    return literal->IsIntegerLiteral();
   }
   return false;
 }
@@ -118,6 +121,70 @@ bool IndexExpr::IsMapAccess() const {
 }
 
 // ---------------------------------------------------------
+// Literal Expressions
+// ---------------------------------------------------------
+
+bool LiteralExpr::IsRepresentable(ast::Type *type) const {
+  // Integers.
+  if (type->IsIntegerType()) {
+    if (!IsIntegerLiteral()) {
+      return false;
+    }
+    const int64_t val = IntegerVal();
+    // clang-format off
+    switch (type->As<ast::BuiltinType>()->GetKind()) {
+      case ast::BuiltinType::Kind::Int8:  return INT8_MIN <= val && val <= INT8_MAX;
+      case ast::BuiltinType::Kind::Int16: return INT16_MIN <= val && val <= INT16_MAX;
+      case ast::BuiltinType::Kind::Int32: return INT32_MIN <= val && val <= INT32_MAX;
+      case ast::BuiltinType::Kind::Int64: return true;
+      case ast::BuiltinType::Kind::Uint8: return 0 <= val && val <= int64_t(UINT8_MAX);
+      case ast::BuiltinType::Kind::Uint16: return 0 <= val && val <= int64_t(UINT16_MAX);
+      case ast::BuiltinType::Kind::Uint32: return 0 <= val && val <= int64_t(UINT32_MAX);
+      case ast::BuiltinType::Kind::Uint64: return 0 <= val;
+      default: UNREACHABLE("Impossible integer kind.");
+    }
+    // clang-format on
+  }
+
+  // Floats.
+  if (type->IsFloatType()) {
+    if (!IsFloatLiteral()) {
+      return false;
+    }
+    const double val = FloatVal();
+    switch (type->As<ast::BuiltinType>()->GetKind()) {
+      case ast::BuiltinType::Kind::Float32: {
+        const auto tmp = static_cast<float>(val);
+        return FLT_MIN <= val && val <= FLT_MAX && static_cast<double>(tmp) == val;
+      }
+      case ast::BuiltinType::Kind::Float64: {
+        return true;
+      }
+      default: {
+        UNREACHABLE("Impossible integer kind.");
+      }
+    }
+  }
+
+  // Strings.
+  if (type->IsStringType() && IsStringLiteral()) {
+    return true;
+  }
+
+  // Booleans.
+  if (type->IsBoolType() && IsBoolLiteral()) {
+    return true;
+  }
+
+  // Nil.
+  if (type->IsPointerType() && IsNilLiteral()) {
+    return true;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------
 // Member expression
 // ---------------------------------------------------------
 
@@ -162,10 +229,6 @@ std::string CastKindToString(const CastKind cast_kind) {
       return "BoolToSqlBool";
     case CastKind::IntegralCast:
       return "IntegralCast";
-    case CastKind::IntToFloat:
-      return "IntToFloat";
-    case CastKind::FloatToInt:
-      return "FloatToInt";
     case CastKind::BitCast:
       return "BitCast";
     case CastKind::FloatToSqlReal:

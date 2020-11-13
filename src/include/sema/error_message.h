@@ -83,8 +83,11 @@ namespace sema {
     "sorterInit requires a comparison function of type (*,*)->bool. received type '%0'",           \
     (ast::Type *))                                                                                 \
   F(BadArgToPtrCast,                                                                               \
-    "ptrCast() expects (compile-time *Type, Expr) arguments. received type '%0' in position %1",   \
+    "@ptrCast() expects (compile-time *Type, Expr) arguments. received type '%0' in position %1",  \
     (ast::Type *, uint32_t))                                                                       \
+  F(BadArgToIntCast, "@intCast() expects (compile-time intN, Expr).", )                            \
+  F(BadArgToIntCast1, "target type '%0' to @intCast() not primitive integer", (ast::Identifier))   \
+  F(BadArgToIntCast2, "input expression to @intCast() not integer: %0", (ast::Type *))             \
   F(BadHashArg, "cannot hash type '%0'", (ast::Type *))                                            \
   F(MissingArrayLength, "missing array length (either compile-time number or '*')", ())            \
   F(NotASQLAggregate, "'%0' is not a SQL aggregator type", (ast::Type *))                          \
@@ -95,7 +98,8 @@ namespace sema {
   F(BadKeyEqualityCheckFunctionForJoinTableLookup,                                                 \
     "key equality check function must have type: (*,*,*)->bool, received '%0'", (ast::Type *))     \
   F(IsValNullExpectsSqlValue, "@isValNull() expects a SQL value input, received type '%0'",        \
-    (ast::Type *))
+    (ast::Type *))                                                                                 \
+  F(NotPointerToSqlValue, "Expected pointer to a SQL value, received '%0'", (ast::Type *))
 
 /// Define the ErrorMessageId enumeration
 enum class ErrorMessageId : uint16_t {

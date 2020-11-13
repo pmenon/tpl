@@ -1081,12 +1081,6 @@ enum class CastKind : uint8_t {
   // a sign-extension, or a zero-extension. The same as in C/C++.
   IntegralCast,
 
-  // An integer to float cast. Only allows widening.
-  IntToFloat,
-
-  // A float to integer cast. Only allows widening.
-  FloatToInt,
-
   // A simple bit cast reinterpretation.
   BitCast,
 
@@ -1215,33 +1209,33 @@ class LiteralExpr : public Expr {
   /**
    * @return True if this is a 'nil' literal; false otherwise.
    */
-  bool IsNilLitExpr() const { return lit_kind_ == LiteralKind::Nil; }
+  bool IsNilLiteral() const { return lit_kind_ == LiteralKind::Nil; }
 
   /**
    * @return True if this is a bool literal ('true' or 'false'); false otherwise.
    */
-  bool IsBoolLitExpr() const { return lit_kind_ == LiteralKind::Boolean; }
+  bool IsBoolLiteral() const { return lit_kind_ == LiteralKind::Boolean; }
 
   /**
    * @return True if this is an integer literal ('1', '44', etc.); false otherwise.
    */
-  bool IsIntLitExpr() const { return lit_kind_ == LiteralKind::Int; }
+  bool IsIntegerLiteral() const { return lit_kind_ == LiteralKind::Int; }
 
   /**
    * @return True if this is a floating point literal ('1.0', '77.12', etc.); false otherwise.
    */
-  bool IsFloatLitExpr() const { return lit_kind_ == LiteralKind::Float; }
+  bool IsFloatLiteral() const { return lit_kind_ == LiteralKind::Float; }
 
   /**
    * @return True if this is a string literal ('hello', 'there', etc.); false otherwise.
    */
-  bool IsStringLitExpr() const { return lit_kind_ == LiteralKind::String; }
+  bool IsStringLiteral() const { return lit_kind_ == LiteralKind::String; }
 
   /**
    * @return The boolean literal value. No check to ensure expression is a boolean literal.
    */
   bool BoolVal() const {
-    TPL_ASSERT(IsBoolLitExpr(), "Literal is not a boolean value literal");
+    TPL_ASSERT(IsBoolLiteral(), "Literal is not a boolean value literal");
     return bool_val_;
   }
 
@@ -1249,7 +1243,7 @@ class LiteralExpr : public Expr {
    * @return The raw string value. No check to ensure expression is a string.
    */
   Identifier StringVal() const {
-    TPL_ASSERT(IsStringLitExpr(), "Literal is not a string or identifier");
+    TPL_ASSERT(IsStringLiteral(), "Literal is not a string or identifier");
     return string_val_;
   }
 
@@ -1257,7 +1251,7 @@ class LiteralExpr : public Expr {
    * @return The integer value. No check to ensure expression is an integer.
    */
   int64_t IntegerVal() const {
-    TPL_ASSERT(IsIntLitExpr(), "Literal is not an integer literal");
+    TPL_ASSERT(IsIntegerLiteral(), "Literal is not an integer literal");
     return int_val_;
   }
 
@@ -1265,9 +1259,14 @@ class LiteralExpr : public Expr {
    * @return The floating point value. No check to ensure expression is a floating point value.
    */
   double FloatVal() const {
-    TPL_ASSERT(IsFloatLitExpr(), "Literal is not a floating point literal");
+    TPL_ASSERT(IsFloatLiteral(), "Literal is not a floating point literal");
     return float_val_;
   }
+
+  /**
+   * @return True if this expression is representable as the given type; false otherwise.
+   */
+  bool IsRepresentable(ast::Type *type) const;
 
   /**
    * Is the given node a literal? Needed as part of the custom AST RTTI infrastructure.

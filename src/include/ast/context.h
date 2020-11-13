@@ -1,8 +1,7 @@
 #pragma once
 
 #include <memory>
-
-#include "llvm/ADT/StringRef.h"
+#include <string_view>
 
 #include "ast/builtins.h"
 #include "ast/identifier.h"
@@ -53,7 +52,12 @@ class Context {
    * @param str The input string.
    * @return A uniqued (interned) version of the string in this context.
    */
-  Identifier GetIdentifier(llvm::StringRef str);
+  Identifier GetIdentifier(std::string_view str);
+
+  /**
+   * @return The number of unique identifiers lexed in this context.
+   */
+  std::size_t GetNumIdentifiers() const noexcept;
 
   /**
    * Lookup a builtin type with name @em name in the TPL type system.
@@ -92,19 +96,16 @@ class Context {
   /**
    * @return The internal opaque implementation.
    */
-  Implementation *impl() const { return impl_.get(); }
+  Implementation *Impl() const { return impl_.get(); }
 
  private:
-  // Region allocator for all Ast objects this context needs
+  // Region allocator for all AST nodes this context needs.
   util::Region region_;
-
-  // Error reporter
+  // Error reporter.
   sema::ErrorReporter *error_reporter_;
-
-  // The factory used for Ast nodes
+  // The factory used for AST nodes.
   std::unique_ptr<AstNodeFactory> node_factory_;
-
-  // Pimpl
+  // Pimpl.
   std::unique_ptr<Implementation> impl_;
 };
 

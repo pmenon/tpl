@@ -28,7 +28,7 @@ TEST_F(SemaBuiltinTest, CheckSqlConversions) {
     auto result = Call<ast::Builtin::IntToSql>(DeclRef(input1));
     auto block = Block({DeclStmt(input1), ExprStmt(result)});
     EXPECT_EQ(false, Check(block));
-    EXPECT_TRUE(result->GetType()->IsSpecificBuiltin(ast::BuiltinType::Integer));
+    EXPECT_TRUE(result->GetType()->IsSpecificBuiltin(ast::BuiltinType::IntegerVal));
     ResetErrorReporter();
   }
 
@@ -60,7 +60,7 @@ TEST_F(SemaBuiltinTest, CheckSqlConversions) {
     auto result = Call<ast::Builtin::BoolToSql>(DeclRef(input1));
     auto block = Block({DeclStmt(input1), ExprStmt(result)});
     EXPECT_EQ(false, Check(block));
-    EXPECT_TRUE(result->GetType()->IsSpecificBuiltin(ast::BuiltinType::Boolean));
+    EXPECT_TRUE(result->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal));
     ResetErrorReporter();
   }
 
@@ -83,7 +83,7 @@ TEST_F(SemaBuiltinTest, CheckSqlConversions) {
     auto result = Call<ast::Builtin::FloatToSql>(DeclRef(input1));
     auto block = Block({DeclStmt(input1), ExprStmt(result)});
     EXPECT_EQ(false, Check(block));
-    EXPECT_TRUE(result->GetType()->IsSpecificBuiltin(ast::BuiltinType::Real));
+    EXPECT_TRUE(result->GetType()->IsSpecificBuiltin(ast::BuiltinType::RealVal));
     ResetErrorReporter();
   }
 

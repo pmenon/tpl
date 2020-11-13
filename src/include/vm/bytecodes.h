@@ -15,6 +15,9 @@ namespace tpl::vm {
 /** Creates instances of a given opcode for all integer primitive types. */
 #define CREATE_FOR_INT_TYPES(F, op, ...) INT_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
+/** Creates instances of a given opcode for all unsigned integer primitive types. */
+#define CREATE_FOR_UINT_TYPES(F, op, ...) FOR_EACH_UNSIGNED_INT_TYPE(GEN_TYPED_OP, F, op, __VA_ARGS__)
+
 /** Creates instances of a given opcode for primitive boolean types. */
 #define CREATE_FOR_BOOL_TYPES(F, op, ...) BOOL_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
@@ -24,10 +27,15 @@ namespace tpl::vm {
 /** Creates instances of a given opcode for primitive numeric types. */
 #define CREATE_FOR_NUMERIC_TYPES(F, op, ...) ALL_NUMERIC_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
+/** Create instances of a given opcode for all pairs of primitive types. */
+#define GEN_ALL_TYPED_OPS(type1, type2, F, op, ...) F(op##_##type1##_##type2, __VA_ARGS__)
+#define CREATE_FOR_ALL_TYPE_PAIRS(F, op, ...) ALL_TYPE_PAIRS(GEN_ALL_TYPED_OPS, F, op, __VA_ARGS__)
+
 /** Creates instances of a given opcode for *ALL* primitive types. */
 #define CREATE_FOR_ALL_TYPES(F, op, ...) ALL_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
 #define GET_BASE_FOR_INT_TYPES(op) (op##_int8_t)
+#define GET_BASE_FOR_UINT_TYPES(op) (op##_uint8_t)
 #define GET_BASE_FOR_FLOAT_TYPES(op) (op##_float)
 #define GET_BASE_FOR_BOOL_TYPES(op) (op##_bool)
 
@@ -47,14 +55,17 @@ namespace tpl::vm {
   CREATE_FOR_INT_TYPES(F, BitOr, OperandType::Local, OperandType::Local, OperandType::Local)                           \
   CREATE_FOR_INT_TYPES(F, BitXor, OperandType::Local, OperandType::Local, OperandType::Local)                          \
   CREATE_FOR_INT_TYPES(F, BitNeg, OperandType::Local, OperandType::Local)                                              \
-  CREATE_FOR_INT_TYPES(F, BitShl, OperandType::Local, OperandType::Local)                                              \
-  CREATE_FOR_INT_TYPES(F, BitShr, OperandType::Local, OperandType::Local)                                              \
+  CREATE_FOR_INT_TYPES(F, BitShl, OperandType::Local, OperandType::Local, OperandType::Local)                          \
+  CREATE_FOR_INT_TYPES(F, BitShr, OperandType::Local, OperandType::Local, OperandType::Local)                          \
+  CREATE_FOR_UINT_TYPES(F, BitCtlz, OperandType::Local, OperandType::Local)                                            \
+  CREATE_FOR_UINT_TYPES(F, BitCttz, OperandType::Local, OperandType::Local)                                            \
   CREATE_FOR_ALL_TYPES(F, GreaterThan, OperandType::Local, OperandType::Local, OperandType::Local)                     \
   CREATE_FOR_ALL_TYPES(F, GreaterThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                \
   CREATE_FOR_ALL_TYPES(F, Equal, OperandType::Local, OperandType::Local, OperandType::Local)                           \
   CREATE_FOR_ALL_TYPES(F, LessThan, OperandType::Local, OperandType::Local, OperandType::Local)                        \
   CREATE_FOR_ALL_TYPES(F, LessThanEqual, OperandType::Local, OperandType::Local, OperandType::Local)                   \
   CREATE_FOR_ALL_TYPES(F, NotEqual, OperandType::Local, OperandType::Local, OperandType::Local)                        \
+  CREATE_FOR_ALL_TYPE_PAIRS(F, Cast, OperandType::Local, OperandType::Local)                                           \
   /* Boolean compliment */                                                                                             \
   F(Not, OperandType::Local, OperandType::Local)                                                                       \
                                                                                                                        \
@@ -75,6 +86,7 @@ namespace tpl::vm {
   F(Assign2, OperandType::Local, OperandType::Local)                                                                   \
   F(Assign4, OperandType::Local, OperandType::Local)                                                                   \
   F(Assign8, OperandType::Local, OperandType::Local)                                                                   \
+  F(AssignN, OperandType::Local, OperandType::Local, OperandType::UImm4)                                               \
   F(AssignImm1, OperandType::Local, OperandType::Imm1)                                                                 \
   F(AssignImm2, OperandType::Local, OperandType::Imm2)                                                                 \
   F(AssignImm4, OperandType::Local, OperandType::Imm4)                                                                 \
@@ -263,6 +275,30 @@ namespace tpl::vm {
   F(HashTimestamp, OperandType::Local, OperandType::Local, OperandType::Local)                                         \
   F(HashString, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(HashCombine, OperandType::Local, OperandType::Local)                                                               \
+                                                                                                                       \
+  /* Compact storage. */                                                                                               \
+  F(CompactStorageWriteBool, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)           \
+  F(CompactStorageWriteSmallInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)       \
+  F(CompactStorageWriteTinyInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)        \
+  F(CompactStorageWriteInteger, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)        \
+  F(CompactStorageWriteBigInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageWriteReal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)           \
+  F(CompactStorageWriteDouble, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageWriteDecimal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)        \
+  F(CompactStorageWriteDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)           \
+  F(CompactStorageWriteTimestamp, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)      \
+  F(CompactStorageWriteString, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageReadBool, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)            \
+  F(CompactStorageReadSmallInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)        \
+  F(CompactStorageReadTinyInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageReadInteger, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageReadBigInt, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
+  F(CompactStorageReadReal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)            \
+  F(CompactStorageReadDouble, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
+  F(CompactStorageReadDecimal, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)         \
+  F(CompactStorageReadDate, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)            \
+  F(CompactStorageReadTimestamp, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)       \
+  F(CompactStorageReadString, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)          \
                                                                                                                        \
   /* Aggregation Hash Table */                                                                                         \
   F(AggregationHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                              \

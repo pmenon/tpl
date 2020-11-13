@@ -566,11 +566,24 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
   }
 }
 
-void BytecodeGenerator::VisitNullValueCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
-  LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-  LocalVar input = VisitExpressionForSQLValue(call->Arguments()[0]);
-  GetEmitter()->Emit(Bytecode::ValIsNull, result, input);
-  GetExecutionResult()->SetDestination(result.ValueOf());
+void BytecodeGenerator::VisitNullValueCall(ast::CallExpr *call, ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::IsValNull: {
+      LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+      LocalVar input = VisitExpressionForSQLValue(call->Arguments()[0]);
+      GetEmitter()->Emit(Bytecode::ValIsNull, result, input);
+      GetExecutionResult()->SetDestination(result.ValueOf());
+      break;
+    }
+    case ast::Builtin::InitSqlNull: {
+      LocalVar input = VisitExpressionForRValue(call->Arguments()[0]);
+      GetEmitter()->Emit(Bytecode::InitSqlNull, input);
+      break;
+    }
+    default: {
+      UNREACHABLE("VisitNullValueCall unknown builtin type.");
+    }
+  }
 }
 
 void BytecodeGenerator::VisitSqlStringLikeCall(ast::CallExpr *call) {
@@ -797,6 +810,61 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
   }
 }
 
+void BytecodeGenerator::VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast::Builtin builtin) {
+  LocalVar storage = VisitExpressionForRValue(call->Arguments()[0]);
+  switch (builtin) {
+#define GEN_CASE(BuiltinName, Bytecode)                              \
+  case ast::Builtin::BuiltinName: {                                  \
+    LocalVar index = VisitExpressionForRValue(call->Arguments()[1]); \
+    LocalVar ptr = VisitExpressionForRValue(call->Arguments()[2]);   \
+    LocalVar val = VisitExpressionForSQLValue(call->Arguments()[3]); \
+    GetEmitter()->Emit(Bytecode, storage, index, ptr, val);          \
+    break;                                                           \
+  }
+
+    // clang-format off
+    GEN_CASE(CompactStorageWriteBool, Bytecode::CompactStorageWriteBool);
+    GEN_CASE(CompactStorageWriteTinyInt, Bytecode::CompactStorageWriteTinyInt);
+    GEN_CASE(CompactStorageWriteSmallInt, Bytecode::CompactStorageWriteSmallInt);
+    GEN_CASE(CompactStorageWriteInteger, Bytecode::CompactStorageWriteInteger);
+    GEN_CASE(CompactStorageWriteBigInt, Bytecode::CompactStorageWriteBigInt);
+    GEN_CASE(CompactStorageWriteReal, Bytecode::CompactStorageWriteReal);
+    GEN_CASE(CompactStorageWriteDouble, Bytecode::CompactStorageWriteDouble);
+    GEN_CASE(CompactStorageWriteDate, Bytecode::CompactStorageWriteDate);
+    GEN_CASE(CompactStorageWriteTimestamp, Bytecode::CompactStorageWriteTimestamp);
+    GEN_CASE(CompactStorageWriteString, Bytecode::CompactStorageWriteString);
+    // clang-format on
+#undef GEN_CASE
+
+#define GEN_CASE(BuiltinName, Bytecode)                                              \
+  case ast::Builtin::BuiltinName: {                                                  \
+    LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType()); \
+    LocalVar index = VisitExpressionForRValue(call->Arguments()[1]);                 \
+    LocalVar ptr = VisitExpressionForRValue(call->Arguments()[2]);                   \
+    GetEmitter()->Emit(Bytecode, result, storage, index, ptr);                       \
+    break;                                                                           \
+  }
+
+    // clang-format off
+    GEN_CASE(CompactStorageReadBool, Bytecode::CompactStorageReadBool);
+    GEN_CASE(CompactStorageReadTinyInt, Bytecode::CompactStorageReadTinyInt);
+    GEN_CASE(CompactStorageReadSmallInt, Bytecode::CompactStorageReadSmallInt);
+    GEN_CASE(CompactStorageReadInteger, Bytecode::CompactStorageReadInteger);
+    GEN_CASE(CompactStorageReadBigInt, Bytecode::CompactStorageReadBigInt);
+    GEN_CASE(CompactStorageReadReal, Bytecode::CompactStorageReadReal);
+    GEN_CASE(CompactStorageReadDouble, Bytecode::CompactStorageReadDouble);
+    GEN_CASE(CompactStorageReadDate, Bytecode::CompactStorageReadDate);
+    GEN_CASE(CompactStorageReadTimestamp, Bytecode::CompactStorageReadTimestamp);
+    GEN_CASE(CompactStorageReadString, Bytecode::CompactStorageReadString);
+    // clang-format on
+#undef GEN_CASE
+
+    default: {
+      UNREACHABLE("Impossible table iteration call");
+    }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
   TPL_ASSERT(call->GetType()->IsSpecificBuiltin(ast::BuiltinType::Uint64),
              "Return type of @hash(...) expected to be 8-byte unsigned hash");
@@ -815,19 +883,19 @@ void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
     LocalVar input = VisitExpressionForSQLValue(call->Arguments()[idx]);
     const auto *type = call->Arguments()[idx]->GetType()->As<ast::BuiltinType>();
     switch (type->GetKind()) {
-      case ast::BuiltinType::Integer:
+      case ast::BuiltinType::IntegerVal:
         GetEmitter()->Emit(Bytecode::HashInt, hash_val, input, hash_val.ValueOf());
         break;
-      case ast::BuiltinType::Real:
+      case ast::BuiltinType::RealVal:
         GetEmitter()->Emit(Bytecode::HashReal, hash_val, input, hash_val.ValueOf());
         break;
       case ast::BuiltinType::StringVal:
         GetEmitter()->Emit(Bytecode::HashString, hash_val, input, hash_val.ValueOf());
         break;
-      case ast::BuiltinType::Date:
+      case ast::BuiltinType::DateVal:
         GetEmitter()->Emit(Bytecode::HashDate, hash_val, input, hash_val.ValueOf());
         break;
-      case ast::BuiltinType::Timestamp:
+      case ast::BuiltinType::TimestampVal:
         GetEmitter()->Emit(Bytecode::HashTimestamp, hash_val, input, hash_val.ValueOf());
       default:
         UNREACHABLE("Hashing this type isn't supported!");
@@ -1248,7 +1316,7 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Bui
       // Hack to handle advancing AvgAggregates with float/double precision numbers. The default
       // behavior in OpForAgg() is to use AvgAggregateAdvanceInteger.
       if (agg_kind == ast::BuiltinType::AvgAggregate &&
-          args[1]->GetType()->GetPointeeType()->IsSpecificBuiltin(ast::BuiltinType::Real)) {
+          args[1]->GetType()->GetPointeeType()->IsSpecificBuiltin(ast::BuiltinType::RealVal)) {
         bytecode = Bytecode::AvgAggregateAdvanceReal;
       }
 
@@ -1616,6 +1684,40 @@ void BytecodeGenerator::VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin b
   }
 }
 
+void BytecodeGenerator::VisitBuiltinBitsCall(ast::CallExpr *call, ast::Builtin builtin) {
+  const bool caller_wants_result = GetExecutionResult() != nullptr;
+
+  LocalVar result;
+  if (caller_wants_result) {
+    result = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  } else {
+    result = GetCurrentFunction()->NewLocal(call->GetType());
+  }
+
+  LocalVar input = VisitExpressionForRValue(call->Arguments()[0]);
+
+  Bytecode op;
+  switch (ast::Type *input_type = call->Arguments()[0]->GetType(); builtin) {
+    case ast::Builtin::Ctlz: {
+      op = GetIntTypedBytecode(GET_BASE_FOR_UINT_TYPES(Bytecode::BitCtlz), input_type, false);
+      break;
+    }
+    case ast::Builtin::Cttz: {
+      op = GetIntTypedBytecode(GET_BASE_FOR_UINT_TYPES(Bytecode::BitCttz), input_type, false);
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible bit-based bytecode");
+    }
+  }
+
+  GetEmitter()->Emit(op, result, input);
+
+  if (caller_wants_result) {
+    GetExecutionResult()->SetDestination(result.ValueOf());
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinSizeOfCall(ast::CallExpr *call) {
   ast::Type *target_type = call->Arguments()[0]->GetType();
   LocalVar size_var = GetExecutionResult()->GetOrCreateDestination(call->GetType());
@@ -1630,6 +1732,61 @@ void BytecodeGenerator::VisitBuiltinOffsetOfCall(ast::CallExpr *call) {
   LocalVar offset_var = GetExecutionResult()->GetOrCreateDestination(call->GetType());
   GetEmitter()->EmitAssignImm4(offset_var, offset);
   GetExecutionResult()->SetDestination(offset_var.ValueOf());
+}
+
+void BytecodeGenerator::VisitBuiltinIntCastCall(ast::CallExpr *call) {
+  // Does the caller want the result of the cast? Most likely, yes.
+  const bool caller_wants_result = GetExecutionResult() != nullptr;
+
+  LocalVar dest;
+  if (caller_wants_result) {
+    dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  } else {
+    dest = GetCurrentFunction()->NewLocal(call->GetType());
+  }
+  LocalVar input = VisitExpressionForRValue(call->Arguments()[1]);
+
+  // Cast input->target.
+  const auto input_type = call->Arguments()[1]->GetType()->As<ast::BuiltinType>()->GetKind();
+  const auto target_type = call->GetType()->As<ast::BuiltinType>()->GetKind();
+
+  // clang-format off
+#define EMIT_CAST(type1, type2) GetEmitter()->Emit(Bytecode::Cast_##type1##_##type2, dest, input);
+
+#define DISPATCH(type)                                                         \
+  switch (target_type) {                                                       \
+    case ast::BuiltinType::Bool: EMIT_CAST(type, bool); break;                 \
+    case ast::BuiltinType::Int8: EMIT_CAST(type, int8_t); break;               \
+    case ast::BuiltinType::Int16:EMIT_CAST(type, int16_t); break;              \
+    case ast::BuiltinType::Int32: EMIT_CAST(type, int32_t); break;             \
+    case ast::BuiltinType::Int64: EMIT_CAST(type, int64_t); break;             \
+    case ast::BuiltinType::Uint8: EMIT_CAST(type, uint8_t); break;             \
+    case ast::BuiltinType::Uint16: EMIT_CAST(type, uint16_t); break;           \
+    case ast::BuiltinType::Uint32: EMIT_CAST(type, uint32_t); break;           \
+    case ast::BuiltinType::Uint64: EMIT_CAST(type, uint64_t); break;           \
+    default: UNREACHABLE("Impossible integer type.");                          \
+  }
+
+  switch (input_type) {
+    case ast::BuiltinType::Bool: DISPATCH(bool); break;
+    case ast::BuiltinType::Int8: DISPATCH(int8_t); break;
+    case ast::BuiltinType::Int16: DISPATCH(int16_t); break;
+    case ast::BuiltinType::Int32: DISPATCH(int32_t); break;
+    case ast::BuiltinType::Int64: DISPATCH(int64_t); break;
+    case ast::BuiltinType::Uint8: DISPATCH(uint8_t); break;
+    case ast::BuiltinType::Uint16: DISPATCH(uint16_t); break;
+    case ast::BuiltinType::Uint32: DISPATCH(uint32_t); break;
+    case ast::BuiltinType::Uint64: DISPATCH(uint64_t); break;
+    default: UNREACHABLE("Impossible integer type.");
+  }
+    // clang-format on
+
+#undef DISPATCH
+#undef EMIT
+
+  if (caller_wants_result) {
+    GetExecutionResult()->SetDestination(dest.ValueOf());
+  }
 }
 
 void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
@@ -1656,7 +1813,8 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitSqlConversionCall(call, builtin);
       break;
     }
-    case ast::Builtin::IsValNull: {
+    case ast::Builtin::IsValNull:
+    case ast::Builtin::InitSqlNull: {
       VisitNullValueCall(call, builtin);
       break;
     }
@@ -1725,6 +1883,29 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::VPISetDate:
     case ast::Builtin::VPISetString: {
       VisitBuiltinVPICall(call, builtin);
+      break;
+    }
+    case ast::Builtin::CompactStorageWriteBool:
+    case ast::Builtin::CompactStorageWriteTinyInt:
+    case ast::Builtin::CompactStorageWriteSmallInt:
+    case ast::Builtin::CompactStorageWriteInteger:
+    case ast::Builtin::CompactStorageWriteBigInt:
+    case ast::Builtin::CompactStorageWriteReal:
+    case ast::Builtin::CompactStorageWriteDouble:
+    case ast::Builtin::CompactStorageWriteDate:
+    case ast::Builtin::CompactStorageWriteTimestamp:
+    case ast::Builtin::CompactStorageWriteString:
+    case ast::Builtin::CompactStorageReadBool:
+    case ast::Builtin::CompactStorageReadTinyInt:
+    case ast::Builtin::CompactStorageReadSmallInt:
+    case ast::Builtin::CompactStorageReadInteger:
+    case ast::Builtin::CompactStorageReadBigInt:
+    case ast::Builtin::CompactStorageReadReal:
+    case ast::Builtin::CompactStorageReadDouble:
+    case ast::Builtin::CompactStorageReadDate:
+    case ast::Builtin::CompactStorageReadTimestamp:
+    case ast::Builtin::CompactStorageReadString: {
+      VisitBuiltinCompactStorageCall(call, builtin);
       break;
     }
     case ast::Builtin::Hash: {
@@ -1841,6 +2022,11 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinTrigCall(call, builtin);
       break;
     }
+    case ast::Builtin::Ctlz:
+    case ast::Builtin::Cttz: {
+      VisitBuiltinBitsCall(call, builtin);
+      break;
+    }
     case ast::Builtin::SizeOf: {
       VisitBuiltinSizeOfCall(call);
       break;
@@ -1851,6 +2037,10 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     }
     case ast::Builtin::PtrCast: {
       Visit(call->Arguments()[1]);
+      break;
+    }
+    case ast::Builtin::IntCast: {
+      VisitBuiltinIntCastCall(call);
       break;
     }
   }
@@ -1930,12 +2120,26 @@ void BytecodeGenerator::VisitLiteralExpr(ast::LiteralExpr *node) {
       break;
     }
     case ast::LiteralExpr::LiteralKind::Int: {
-      GetEmitter()->EmitAssignImm4(target, node->IntegerVal());
+      if (const auto size = node->GetType()->GetSize(); size == 1) {
+        GetEmitter()->EmitAssignImm1(target, node->IntegerVal());
+      } else if (size == 2) {
+        GetEmitter()->EmitAssignImm2(target, node->IntegerVal());
+      } else if (size == 4) {
+        GetEmitter()->EmitAssignImm4(target, node->IntegerVal());
+      } else {
+        TPL_ASSERT(size == 8, "Invalid integer literal size. Must be 1-, 2-, 4-, or 8-bytes.");
+        GetEmitter()->EmitAssignImm8(target, node->IntegerVal());
+      }
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
     case ast::LiteralExpr::LiteralKind::Float: {
-      GetEmitter()->EmitAssignImm4F(target, node->FloatVal());
+      if (const auto size = node->GetType()->GetSize(); size == 4) {
+        GetEmitter()->EmitAssignImm4F(target, node->FloatVal());
+      } else {
+        TPL_ASSERT(size == 8, "Invalid float literal size. Must be 4-, or 8-bytes.");
+        GetEmitter()->EmitAssignImm8F(target, node->FloatVal());
+      }
       GetExecutionResult()->SetDestination(target.ValueOf());
       break;
     }
@@ -1943,10 +2147,6 @@ void BytecodeGenerator::VisitLiteralExpr(ast::LiteralExpr *node) {
       LocalVar string = NewStaticString(node->GetType()->GetContext(), node->StringVal());
       GetEmitter()->EmitAssign(Bytecode::Assign8, target, string);
       GetExecutionResult()->SetDestination(string.ValueOf());
-    }
-    default: {
-      LOG_ERROR("Non-bool or non-integer literals not supported in bytecode");
-      break;
     }
   }
 }
@@ -2070,7 +2270,7 @@ void BytecodeGenerator::VisitSqlArithmeticExpr(ast::BinaryOpExpr *node) {
   LocalVar left = VisitExpressionForSQLValue(node->Left());
   LocalVar right = VisitExpressionForSQLValue(node->Right());
 
-  const bool is_integer_math = node->GetType()->IsSpecificBuiltin(ast::BuiltinType::Integer);
+  const bool is_integer_math = node->GetType()->IsSpecificBuiltin(ast::BuiltinType::IntegerVal);
 
   Bytecode bytecode;
   switch (node->Op()) {
@@ -2130,16 +2330,16 @@ void BytecodeGenerator::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
 
 #define SQL_COMPARISON_BYTECODE(CODE_RESULT, COMPARISON_TYPE, ARG_KIND) \
   switch (ARG_KIND) {                                                   \
-    case ast::BuiltinType::Kind::Boolean:                               \
+    case ast::BuiltinType::Kind::BooleanVal:                            \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Bool;                    \
       break;                                                            \
-    case ast::BuiltinType::Kind::Integer:                               \
+    case ast::BuiltinType::Kind::IntegerVal:                            \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Integer;                 \
       break;                                                            \
-    case ast::BuiltinType::Kind::Real:                                  \
+    case ast::BuiltinType::Kind::RealVal:                               \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Real;                    \
       break;                                                            \
-    case ast::BuiltinType::Kind::Date:                                  \
+    case ast::BuiltinType::Kind::DateVal:                               \
       CODE_RESULT = Bytecode::COMPARISON_TYPE##Date;                    \
       break;                                                            \
     case ast::BuiltinType::Kind::StringVal:                             \
@@ -2534,10 +2734,10 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *t
   }
 }
 
-Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode, ast::Type *type) {
+Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode, ast::Type *type, bool sign) {
   TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
   auto int_kind = type->SafeAs<ast::BuiltinType>()->GetKind();
-  auto kind_idx = static_cast<uint8_t>(int_kind - ast::BuiltinType::Int8);
+  auto kind_idx = int_kind - (sign ? ast::BuiltinType::Int8 : ast::BuiltinType::Uint8);
   return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }
 

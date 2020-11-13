@@ -3,8 +3,9 @@
 #include <cstdint>
 #include <string>
 
-#include "ast/identifier.h"
 #include "llvm/Support/Casting.h"
+
+#include "ast/identifier.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
@@ -56,7 +57,9 @@ class Context;
   NON_PRIM(AHTIterator, tpl::sql::AHTIterator)                                   \
   NON_PRIM(AHTVectorIterator, tpl::sql::AHTVectorIterator)                       \
   NON_PRIM(AHTOverflowPartitionIterator, tpl::sql::AHTOverflowPartitionIterator) \
+  NON_PRIM(CompactStorage, tpl::sql::CompactStorage)                             \
   NON_PRIM(CSVReader, tpl::util::CSVReader)                                      \
+  NON_PRIM(Date, tpl::sql::Date)                                                 \
   NON_PRIM(ExecutionContext, tpl::sql::ExecutionContext)                         \
   NON_PRIM(FilterManager, tpl::sql::FilterManager)                               \
   NON_PRIM(HashTableEntry, tpl::sql::HashTableEntry)                             \
@@ -66,7 +69,9 @@ class Context;
   NON_PRIM(SorterIterator, tpl::sql::SorterIterator)                             \
   NON_PRIM(TableVectorIterator, tpl::sql::TableVectorIterator)                   \
   NON_PRIM(ThreadStateContainer, tpl::sql::ThreadStateContainer)                 \
+  NON_PRIM(Timestamp, tpl::sql::Timestamp)                                       \
   NON_PRIM(TupleIdList, tpl::sql::TupleIdList)                                   \
+  NON_PRIM(VarlenEntry, tpl::sql::VarlenEntry)                                   \
   NON_PRIM(VectorProjection, tpl::sql::VectorProjection)                         \
   NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator)         \
                                                                                  \
@@ -86,13 +91,13 @@ class Context;
   NON_PRIM(StringMaxAggregate, tpl::sql::StringMaxAggregate)                     \
                                                                                  \
   /* Non-primitive SQL Runtime Values */                                         \
-  SQL(Boolean, tpl::sql::BoolVal)                                                \
-  SQL(Integer, tpl::sql::Integer)                                                \
-  SQL(Real, tpl::sql::Real)                                                      \
-  SQL(Decimal, tpl::sql::DecimalVal)                                             \
+  SQL(BooleanVal, tpl::sql::BoolVal)                                             \
+  SQL(IntegerVal, tpl::sql::Integer)                                             \
+  SQL(RealVal, tpl::sql::Real)                                                   \
+  SQL(DecimalVal, tpl::sql::DecimalVal)                                          \
   SQL(StringVal, tpl::sql::StringVal)                                            \
-  SQL(Date, tpl::sql::DateVal)                                                   \
-  SQL(Timestamp, tpl::sql::TimestampVal)
+  SQL(DateVal, tpl::sql::DateVal)                                                \
+  SQL(TimestampVal, tpl::sql::TimestampVal)
 
 // Ignore a builtin
 #define IGNORE_BUILTIN_TYPE (...)
@@ -289,13 +294,23 @@ class Type : public util::RegionObject {
 };
 
 /**
- * Builtin types (int32, float32, Integer, JoinHashTable etc.)
+ * Builtin types (int32, float32, Integer, JoinHashTable etc.). These types cannot be composed from
+ * any other TPL type.
  */
 class BuiltinType : public Type {
+#define F(BKind, ...) +1
+  static constexpr uint32_t kNumBuiltinKinds = BUILTIN_TYPE_LIST(F, F, F);
+#undef F
+
  public:
 #define F(BKind, ...) BKind,
   enum Kind : uint16_t { BUILTIN_TYPE_LIST(F, F, F) };
 #undef F
+
+  /**
+   * @return The number of builtin kinds.
+   */
+  static constexpr uint32_t GetNumBuiltinKinds() { return kNumBuiltinKinds; }
 
   /**
    * @return The name of the builtin as it appears in TPL code.
@@ -330,6 +345,11 @@ class BuiltinType : public Type {
   bool IsIntegral() const { return Kind::Int8 <= GetKind() && GetKind() <= Kind::Uint128; }
 
   /**
+   * @return True if this type is a signed type; false otherwise.
+   */
+  bool IsSigned() const { return kSignedFlags[static_cast<uint16_t>(kind_)]; }
+
+  /**
    * @return True if this type is a C/C++ primitive floating point number; false otherwise.
    */
   bool IsFloatingPoint() const { return kFloatingPointFlags[static_cast<uint16_t>(kind_)]; }
@@ -337,7 +357,9 @@ class BuiltinType : public Type {
   /**
    * @return True if this type is a SQL value type.
    */
-  bool IsSqlValue() const { return Kind::Boolean <= GetKind() && GetKind() <= Kind::Timestamp; }
+  bool IsSqlValue() const {
+    return Kind::BooleanVal <= GetKind() && GetKind() <= Kind::TimestampVal;
+  }
 
   /**
    * @return True if this type is a SQL aggregator type (i.e., IntegerSumAggregate,
@@ -352,8 +374,19 @@ class BuiltinType : public Type {
    */
   Kind GetKind() const { return kind_; }
 
+  /**
+   * Factory to create a builtin type of the given kind.
+   * @param ctx The context to create the type in.
+   * @param kind The kind of builtin to create.
+   * @return The builtin type.
+   */
   static BuiltinType *Get(Context *ctx, Kind kind);
 
+  /**
+   * Is the given type a builtin type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a builtin type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::BuiltinType; }
 
  private:
@@ -379,8 +412,18 @@ class BuiltinType : public Type {
  */
 class StringType : public Type {
  public:
+  /**
+   * Factory to create a string type.
+   * @param ctx The context to create the type in.
+   * @return The string type.
+   */
   static StringType *Get(Context *ctx);
 
+  /**
+   * Is the given type a string type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a string type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::StringType; }
 
  private:
@@ -394,10 +437,23 @@ class StringType : public Type {
  */
 class PointerType : public Type {
  public:
+  /**
+   * @return The type of element this pointer type points to.
+   */
   Type *GetBase() const { return base_; }
 
+  /**
+   * Factory to create a pointer type.
+   * @param ctx The context to create the type in.
+   * @return The string type.
+   */
   static PointerType *Get(Type *base);
 
+  /**
+   * Is the given type a pointer type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a pointer type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::PointerType; }
 
  private:
@@ -444,6 +500,11 @@ class ArrayType : public Type {
    */
   static ArrayType *Get(uint64_t length, Type *elem_type);
 
+  /**
+   * Is the given type an array type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is an array type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::ArrayType; }
 
  private:
@@ -495,13 +556,25 @@ class FunctionType : public Type {
   Type *GetReturnType() const { return ret_; }
 
   /**
+   * Create a zero-parameter function returning type @em ret.
+   * @param ret The return type of the function.
+   * @return The function type.
+   */
+  static FunctionType *Get(Type *ret);
+
+  /**
    * Create a function with parameters @em params and returning types of type @em ret.
    * @param params The parameters to the function.
-   * @param ret The type of the object the function returns.
+   * @param ret The return type of the function.
    * @return The function type.
    */
   static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
 
+  /**
+   * Is the given type a function type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a function type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::FunctionType; }
 
  private:
@@ -535,6 +608,11 @@ class MapType : public Type {
    */
   static MapType *Get(Type *key_type, Type *value_type);
 
+  /**
+   * Is the given type a map type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a map type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::MapType; }
 
  private:
@@ -599,14 +677,17 @@ class StructType : public Type {
 
   /**
    * Create a structure with the given fields.
-   *
    * @pre The fields vector cannot be empty!
-   *
    * @param fields The non-empty fields making up the struct.
    * @return The structure type.
    */
   static StructType *Get(util::RegionVector<Field> &&fields);
 
+  /**
+   * Is the given type a struct type? Needed as part of the custom type RTTI infrastructure.
+   * @param type The type to check.
+   * @return True if the given type is a struct type; false otherwise.
+   */
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::StructType; }
 
  private:
@@ -624,14 +705,14 @@ class StructType : public Type {
 // ---------------------------------------------------------
 
 inline Type *Type::GetPointeeType() const {
-  if (auto *ptr_type = SafeAs<PointerType>()) {
+  if (auto ptr_type = SafeAs<PointerType>()) {
     return ptr_type->GetBase();
   }
   return nullptr;
 }
 
 inline bool Type::IsSpecificBuiltin(uint16_t kind) const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->GetKind() == static_cast<BuiltinType::Kind>(kind);
   }
   return false;
@@ -642,28 +723,28 @@ inline bool Type::IsNilType() const { return IsSpecificBuiltin(BuiltinType::Nil)
 inline bool Type::IsBoolType() const { return IsSpecificBuiltin(BuiltinType::Bool); }
 
 inline bool Type::IsIntegerType() const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->IsIntegral();
   }
   return false;
 }
 
 inline bool Type::IsFloatType() const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->IsFloatingPoint();
   }
   return false;
 }
 
 inline bool Type::IsSqlValueType() const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->IsSqlValue();
   }
   return false;
 }
 
 inline bool Type::IsSqlAggregatorType() const {
-  if (auto *builtin_type = SafeAs<BuiltinType>()) {
+  if (auto builtin_type = SafeAs<BuiltinType>()) {
     return builtin_type->IsSqlAggregateType();
   }
   return false;

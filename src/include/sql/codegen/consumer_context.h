@@ -48,11 +48,6 @@ class ConsumerContext {
   void Consume(FunctionBuilder *function);
 
   /**
-   * Clear any cached expression result values.
-   */
-  void ClearExpressionCache();
-
-  /**
    * @return The operator the context is currently positioned at in the pipeline.
    */
   OperatorTranslator *CurrentOp() const { return *pipeline_iter_; }
@@ -87,23 +82,13 @@ class ConsumerContext {
    */
   bool IsForPipeline(const Pipeline &pipeline) const;
 
-  /**
-   * Controls whether expression caching is enabled in this context.
-   * @param val True if caching is enabled; false otherwise.
-   */
-  void SetExpressionCacheEnable(bool val) { cache_enabled_ = val; }
-
  private:
   // The compilation context.
   CompilationContext *compilation_context_;
   // The pipeline that this context flows through.
   const PipelineContext &pipeline_ctx_;
-  // Cache of expression results.
-  std::unordered_map<const planner::AbstractExpression *, ast::Expr *> cache_;
   // The current pipeline step and last pipeline step.
   Pipeline::Iterator pipeline_iter_, pipeline_end_;
-  // Whether to cache translated expressions
-  bool cache_enabled_;
 };
 
 }  // namespace tpl::sql::codegen

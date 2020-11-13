@@ -39,7 +39,7 @@ class Scope {
   void Init(Scope *outer, Kind scope_kind) {
     outer_ = outer;
     scope_kind_ = scope_kind;
-    decls_.clear();
+    declarations_.clear();
   }
 
   /**
@@ -69,7 +69,7 @@ class Scope {
   /**
    * @return The immediate outer scope.
    */
-  Scope *outer() const { return outer_; }
+  Scope *GetOuter() const { return outer_; }
 
  private:
   // The outer scope.
@@ -77,7 +77,7 @@ class Scope {
   // The scope kind.
   Kind scope_kind_;
   // The mapping of identifiers to their types.
-  llvm::DenseMap<ast::Identifier, ast::Type *> decls_;
+  llvm::DenseMap<ast::Identifier, ast::Type *> declarations_;
 };
 
 }  // namespace sema

@@ -1,8 +1,6 @@
 #include "vm/bytecode_function_info.h"
 
-#include <string>
-#include <utility>
-#include <vector>
+#include <algorithm>
 
 #include "ast/type.h"
 #include "util/math_util.h"
@@ -65,32 +63,27 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name) {
 }
 
 LocalVar FunctionInfo::GetReturnValueLocal() const {
-  // This invocation only makes sense if the function actually returns a value
+  // This invocation only makes sense if the function actually returns a value.
   TPL_ASSERT(!func_type_->GetReturnType()->IsNilType(),
              "Cannot lookup local slot for function that does not have return value");
   return LocalVar(0u, LocalVar::AddressMode::Address);
 }
 
 const LocalInfo *FunctionInfo::LookupLocalInfoByName(const std::string &name) const {
-  const auto iter = std::find_if(locals_.begin(), locals_.end(),
-                                 [&](const auto &info) { return info.GetName() == name; });
+  auto iter = std::ranges::find_if(locals_, [&](auto &info) { return info.GetName() == name; });
   return iter == locals_.end() ? nullptr : &*iter;
 }
 
 LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
-  const LocalInfo *local_info = LookupLocalInfoByName(name);
-  return local_info == nullptr ? LocalVar()
-                               : LocalVar(local_info->GetOffset(), LocalVar::AddressMode::Address);
+  if (const auto local_info = LookupLocalInfoByName(name)) {
+    return LocalVar(local_info->GetOffset(), LocalVar::AddressMode::Address);
+  }
+  return LocalVar();
 }
 
 const LocalInfo *FunctionInfo::LookupLocalInfoByOffset(uint32_t offset) const {
-  for (const auto &local_info : GetLocals()) {
-    if (local_info.GetOffset() == offset) {
-      return &local_info;
-    }
-  }
-
-  return nullptr;
+  auto iter = std::ranges::find_if(locals_, [&](auto &info) { return info.GetOffset() == offset; });
+  return iter == locals_.end() ? nullptr : &*iter;
 }
 
 }  // namespace tpl::vm

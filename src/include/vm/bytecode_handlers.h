@@ -7,6 +7,7 @@
 #include "common/macros.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
+#include "sql/compact_storage.h"
 #include "sql/execution_context.h"
 #include "sql/filter_manager.h"
 #include "sql/functions/arithmetic_functions.h"
@@ -20,6 +21,7 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector_filter_executor.h"
+#include "util/bit_util.h"
 #include "util/csv_reader.h"
 
 // All VM bytecode op handlers must use this macro
@@ -141,6 +143,34 @@ INT_TYPES(BIT_OPS);
 
 #undef BIT_OPS
 
+#define BIT_OPS(type, ...)                                          \
+  /* Primitive count-leading-zeros */                               \
+  VM_OP_HOT void OpBitCtlz##_##type(uint32_t *result, type input) { \
+    *result = tpl::util::BitUtil::CountLeadingZeros(input);         \
+  }                                                                 \
+                                                                    \
+  /* Primitive count-trailing-zeros */                              \
+  VM_OP_HOT void OpBitCttz##_##type(uint32_t *result, type input) { \
+    *result = tpl::util::BitUtil::CountTrailingZeros(input);        \
+  }
+
+FOR_EACH_UNSIGNED_INT_TYPE(BIT_OPS)
+
+#undef BIT_OPS
+
+// ---------------------------------------------------------
+// Primitive casts
+// ---------------------------------------------------------
+
+#define GEN_CAST_OP(from_type, to_type, ...)                                          \
+  VM_OP_HOT void OpCast_##from_type##_##to_type(to_type *dest, const from_type src) { \
+    *dest = static_cast<to_type>(src);                                                \
+  }
+
+ALL_TYPE_PAIRS(GEN_CAST_OP)
+
+#undef GEN_CAST_OP
+
 // ---------------------------------------------------------
 // Memory operations
 // ---------------------------------------------------------
@@ -157,7 +187,7 @@ VM_OP_HOT void OpDeref4(int32_t *dest, const int32_t *const src) { *dest = *src;
 
 VM_OP_HOT void OpDeref8(int64_t *dest, const int64_t *const src) { *dest = *src; }
 
-VM_OP_HOT void OpDerefN(byte *dest, const byte *const src, uint32_t len) {
+VM_OP_WARM void OpDerefN(byte *dest, const byte *const src, uint32_t len) {
   std::memcpy(dest, src, len);
 }
 
@@ -168,6 +198,10 @@ VM_OP_HOT void OpAssign2(int16_t *dest, int16_t src) { *dest = src; }
 VM_OP_HOT void OpAssign4(int32_t *dest, int32_t src) { *dest = src; }
 
 VM_OP_HOT void OpAssign8(int64_t *dest, int64_t src) { *dest = src; }
+
+VM_OP_WARM void OpAssignN(byte *dest, const byte *const src, uint32_t len) {
+  std::memmove(dest, src, len);
+}
 
 VM_OP_HOT void OpAssignImm1(int8_t *dest, int8_t src) { *dest = src; }
 
@@ -400,6 +434,48 @@ VM_OP_HOT void OpHashTimestamp(hash_t *const hash_val, const tpl::sql::Timestamp
 VM_OP_HOT void OpHashCombine(hash_t *hash_val, hash_t new_hash_val) {
   *hash_val = tpl::util::HashUtil::CombineHashes(*hash_val, new_hash_val);
 }
+
+// ---------------------------------------------------------
+// Compact Storage
+// ---------------------------------------------------------
+
+#define GEN_COMPACT_STORAGE_OPS(Name, SqlValueType, CppType)                                       \
+  VM_OP_HOT void OpCompactStorageWrite##Name(byte *ptr, byte *nulls, uint32_t idx,                 \
+                                             const tpl::sql::SqlValueType *input) {                \
+    tpl::sql::CompactStorage::Write<CppType, false>(ptr, nulls, idx,                               \
+                                                    static_cast<CppType>(input->val), false);      \
+  }                                                                                                \
+  VM_OP_HOT void OpCompactStorageWrite##Name##Null(byte *ptr, byte *nulls, uint32_t idx,           \
+                                                   const tpl::sql::SqlValueType *input) {          \
+    tpl::sql::CompactStorage::Write<CppType, true>(                                                \
+        ptr, nulls, idx, static_cast<CppType>(input->val), input->is_null);                        \
+  }                                                                                                \
+  VM_OP_HOT void OpCompactStorageRead##Name(tpl::sql::SqlValueType *output, const byte *ptr,       \
+                                            const byte *nulls, uint32_t idx) {                     \
+    const auto result = tpl::sql::CompactStorage::Read<CppType, false>(ptr, nulls, idx, nullptr);  \
+    output->is_null = false;                                                                       \
+    output->val = *result;                                                                         \
+  }                                                                                                \
+  VM_OP_HOT void OpCompactStorageRead##Name##Null(tpl::sql::SqlValueType *output, const byte *ptr, \
+                                                  const byte *nulls, uint32_t idx) {               \
+    const auto result =                                                                            \
+        tpl::sql::CompactStorage::Read<CppType, true>(ptr, nulls, idx, &output->is_null);          \
+    output->val = *result;                                                                         \
+  }
+
+GEN_COMPACT_STORAGE_OPS(Bool, BoolVal, bool);
+GEN_COMPACT_STORAGE_OPS(TinyInt, Integer, int8_t);
+GEN_COMPACT_STORAGE_OPS(SmallInt, Integer, int16_t);
+GEN_COMPACT_STORAGE_OPS(Integer, Integer, int32_t);
+GEN_COMPACT_STORAGE_OPS(BigInt, Integer, int64_t);
+GEN_COMPACT_STORAGE_OPS(Real, Real, float);
+GEN_COMPACT_STORAGE_OPS(Double, Real, double);
+GEN_COMPACT_STORAGE_OPS(Decimal, DecimalVal, tpl::sql::Decimal64);
+GEN_COMPACT_STORAGE_OPS(Date, DateVal, tpl::sql::Date);
+GEN_COMPACT_STORAGE_OPS(Timestamp, TimestampVal, tpl::sql::Timestamp);
+GEN_COMPACT_STORAGE_OPS(String, StringVal, tpl::sql::VarlenEntry);
+
+#undef GEN_COMPACT_STORAGE_OPS
 
 // ---------------------------------------------------------
 // Filter Manager

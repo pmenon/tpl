@@ -44,6 +44,7 @@ class BytecodeEmitter {
   // -------------------------------------------------------
 
   void EmitAssign(Bytecode bytecode, LocalVar dest, LocalVar src);
+  void EmitAssignN(LocalVar dest, LocalVar src, uint32_t len);
   void EmitAssignImm1(LocalVar dest, int8_t val);
   void EmitAssignImm2(LocalVar dest, int16_t val);
   void EmitAssignImm4(LocalVar dest, int32_t val);
@@ -148,11 +149,11 @@ class BytecodeEmitter {
   void EmitAggHashTableParallelPartitionedScan(LocalVar agg_ht, LocalVar context, LocalVar tls,
                                                FunctionId scan_part_fn);
 
-  // Initialize a sorter instance.
+  // Emit code to initialize a sorter instance.
   void EmitSorterInit(Bytecode bytecode, LocalVar sorter, LocalVar region, FunctionId cmp_fn,
                       LocalVar tuple_size);
 
-  // Initialize a CSV reader.
+  // Emit code to initialize a CSV reader.
   void EmitCSVReaderInit(LocalVar creader, LocalVar static_local_string, uint32_t string_len);
 
   // Invoke CONCAT(...).

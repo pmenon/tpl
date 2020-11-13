@@ -54,6 +54,12 @@ class TestAstBuilder {
 
   VariableDecl *DeclVar(Identifier name, Expr *init) { return DeclVar(name, nullptr, init); }
 
+  VariableDecl *DeclVar(std::string n, Expr *init) { return DeclVar(Ident(n), nullptr, init); }
+
+  VariableDecl *DeclVar(std::string n, std::string type_name, Expr *init) {
+    return DeclVar(Ident(n), IdentExpr(type_name), init);
+  }
+
   VariableDecl *DeclVar(Identifier name, Expr *type_repr, Expr *init) {
     return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
   }
@@ -90,8 +96,8 @@ class TestAstBuilder {
   Expr *PrimFloatTypeRepr() { return BuiltinTypeRepr<BuiltinType::Float32>(); }
   Expr *PrimBoolTypeRepr() { return BuiltinTypeRepr<BuiltinType::Bool>(); }
 
-  Expr *IntegerSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::Integer>(); }
-  Expr *RealSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::Real>(); }
+  Expr *IntegerSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::IntegerVal>(); }
+  Expr *RealSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::RealVal>(); }
   Expr *StringSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::StringVal>(); }
 
   Expr *ArrayTypeRepr(Expr *type) { return node_factory()->NewArrayType(empty_, nullptr, type); }

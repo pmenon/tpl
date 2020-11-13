@@ -185,6 +185,11 @@ class CodeGen {
   [[nodiscard]] ast::Expr *Int32Type() const;
 
   /**
+   * @return The type representation for an unsigned 32-bit integer (i.e., uint32)
+   */
+  [[nodiscard]] ast::Expr *UInt32Type() const;
+
+  /**
    * @return The type representation for an 64-bit signed integer (i.e., int64)
    */
   [[nodiscard]] ast::Expr *Int64Type() const;
@@ -198,6 +203,11 @@ class CodeGen {
    * @return The type representation for an 64-bit floating point number (i.e., float64)
    */
   [[nodiscard]] ast::Expr *Float64Type() const;
+
+  /**
+   * @return A type representation expression that is "[num_elems]kind".
+   */
+  [[nodiscard]] ast::Expr *ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind);
 
   /**
    * @return The type representation for the provided builtin type.
@@ -225,11 +235,28 @@ class CodeGen {
   [[nodiscard]] ast::Expr *PointerType(ast::BuiltinType::Kind builtin) const;
 
   /**
-   * Convert a SQL type into a type representation expression.
+   * Convert a SQL type into a runtime SQL value type representation expression.
+   *
+   * For example:
+   * TypeId::Boolean = sql::Boolean
+   * TypeId::BigInt = sql::Integer
+   *
    * @param type The SQL type.
    * @return The corresponding TPL type.
    */
   [[nodiscard]] ast::Expr *TplType(TypeId type);
+
+  /**
+   * Convert the given type into a primitive TPL type.
+   *
+   * For example:
+   * TypeId::Boolean = bool
+   * TypeId::SmallInt = int16
+   *
+   * @param type The SQL type.
+   * @return The corresponding primitive TPL type.
+   */
+  [[nodiscard]] ast::Expr *PrimitiveTplType(TypeId type);
 
   /**
    * Return the appropriate aggregate type for the given input aggregation expression.
@@ -426,6 +453,21 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *BitShiftRight(ast::Expr *val, ast::Expr *num_bits) const;
 
+  /**
+   * @return The result of left + right;
+   */
+  [[nodiscard]] ast::Expr *Add(ast::Expr *left, ast::Expr *right) const;
+
+  /**
+   * @return The result of left - right;
+   */
+  [[nodiscard]] ast::Expr *Sub(ast::Expr *left, ast::Expr *right) const;
+
+  /**
+   * @return The result of left * right;
+   */
+  [[nodiscard]] ast::Expr *Mul(ast::Expr *left, ast::Expr *right) const;
+
   // ---------------------------------------------------------------------------
   //
   // Struct/Array access
@@ -497,7 +539,7 @@ class CodeGen {
 
   // ---------------------------------------------------------------------------
   //
-  // Actual TPL builtins
+  // SQL Value Functions
   //
   // ---------------------------------------------------------------------------
 
@@ -546,7 +588,7 @@ class CodeGen {
   [[nodiscard]] ast::Expr *StringToSql(std::string_view str) const;
 
   /**
-   * Perform a SQLL cast.
+   * Perform a SQL cast.
    * @param input The input to the cast.
    * @param from_type The type of the input.
    * @param to_type The type to convert to.
@@ -554,6 +596,13 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *ConvertSql(ast::Expr *input, sql::TypeId from_type,
                                       sql::TypeId to_type) const;
+
+  /**
+   * Initialize the given SQL value as a SQL NULL.
+   * @param val The SQL value to set.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *InitSqlNull(ast::Expr *val) const;
 
   // -------------------------------------------------------
   //

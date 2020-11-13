@@ -6,8 +6,6 @@ namespace tpl::sql::planner {
 
 std::string PlanNodeTypeToString(PlanNodeType type) {
   switch (type) {
-    case PlanNodeType::INVALID:
-      return "Invalid";
     case PlanNodeType::SEQSCAN:
       return "SequentialScan";
     case PlanNodeType::INDEXSCAN:
@@ -72,8 +70,6 @@ std::string PlanNodeTypeToString(PlanNodeType type) {
       return "ExportExternalFile";
     case PlanNodeType::RESULT:
       return "Result";
-    case PlanNodeType::MOCK:
-      return "Mock";
   }
 
   UNREACHABLE("Impossible to reach. All plan node types handled.");
@@ -81,8 +77,6 @@ std::string PlanNodeTypeToString(PlanNodeType type) {
 
 std::string JoinTypeToString(LogicalJoinType type) {
   switch (type) {
-    case LogicalJoinType::INVALID:
-      return "Invalid";
     case LogicalJoinType::LEFT:
       return "Left";
     case LogicalJoinType::RIGHT:

@@ -37,7 +37,7 @@ struct Abs {
 
 template <typename T>
 struct Acos {
-  constexpr double operator()(T input) const {
+  constexpr T operator()(T input) const {
     TPL_ASSERT(input >= -1 && input <= 1, "Invalid input to acos()");
     return std::acos(input);
   }
@@ -45,7 +45,7 @@ struct Acos {
 
 template <typename T>
 struct Asin {
-  constexpr double operator()(T input) const {
+  constexpr T operator()(T input) const {
     TPL_ASSERT(input >= -1 && input <= 1, "Invalid input to asin()");
     return std::asin(input);
   }
@@ -53,17 +53,17 @@ struct Asin {
 
 template <typename T>
 struct Atan {
-  constexpr double operator()(T input) const { return std::atan(input); }
+  constexpr T operator()(T input) const { return std::atan(input); }
 };
 
 template <typename T>
 struct Atan2 {
-  constexpr double operator()(T a, T b) const { return std::atan2(a, b); }
+  constexpr T operator()(T a, T b) const { return std::atan2(a, b); }
 };
 
 template <typename T>
 struct Cbrt {
-  constexpr double operator()(T input) const { return std::cbrt(input); }
+  constexpr T operator()(T input) const { return std::cbrt(input); }
 };
 
 template <typename T>
@@ -73,27 +73,27 @@ struct Ceil {
 
 template <typename T>
 struct Cos {
-  constexpr double operator()(T input) const { return std::cos(input); }
+  constexpr T operator()(T input) const { return std::cos(input); }
 };
 
 template <typename T>
 struct Cosh {
-  constexpr double operator()(T input) const { return std::cosh(input); }
+  constexpr T operator()(T input) const { return std::cosh(input); }
 };
 
 template <typename T>
 struct Cot {
-  constexpr double operator()(T input) const { return (1.0 / std::tan(input)); }
+  constexpr T operator()(T input) const { return (1.0 / std::tan(input)); }
 };
 
 template <typename T>
 struct Degrees {
-  constexpr double operator()(T input) const { return input * 180.0 / M_PI; }
+  constexpr T operator()(T input) const { return input * 180.0 / M_PI; }
 };
 
 template <typename T>
 struct Exp {
-  constexpr double operator()(T input) const { return std::exp(input); }
+  constexpr T operator()(T input) const { return std::exp(input); }
 };
 
 template <typename T>
@@ -123,12 +123,12 @@ struct Log10 {
 
 template <typename T, typename U>
 struct Pow {
-  constexpr double operator()(T a, U b) { return std::pow(a, b); }
+  constexpr T operator()(T a, U b) { return std::pow(a, b); }
 };
 
 template <typename T>
 struct Radians {
-  constexpr double operator()(T input) const { return input * M_PI / 180.0; }
+  constexpr T operator()(T input) const { return input * M_PI / 180.0; }
 };
 
 template <typename T>
@@ -162,12 +162,12 @@ struct Sign {
 
 template <typename T>
 struct Sin {
-  constexpr double operator()(T input) const { return std::sin(input); }
+  constexpr T operator()(T input) const { return std::sin(input); }
 };
 
 template <typename T>
 struct Sinh {
-  constexpr double operator()(T input) const { return std::sinh(input); }
+  constexpr T operator()(T input) const { return std::sinh(input); }
 };
 
 template <typename T>
@@ -177,12 +177,12 @@ struct Sqrt {
 
 template <typename T>
 struct Tan {
-  constexpr double operator()(T input) const { return std::tan(input); }
+  constexpr T operator()(T input) const { return std::tan(input); }
 };
 
 template <typename T>
 struct Tanh {
-  constexpr double operator()(T input) const { return std::tanh(input); }
+  constexpr T operator()(T input) const { return std::tanh(input); }
 };
 
 template <typename T>

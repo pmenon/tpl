@@ -76,6 +76,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   void VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinTableIterParallelCall(ast::CallExpr *call);
   void VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinHashCall(ast::CallExpr *call);
   void VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinVectorFilterCall(ast::CallExpr *call, ast::Builtin builtin);
@@ -93,7 +94,9 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   void VisitBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin);
   void VisitBuiltinSizeOfCall(ast::CallExpr *call);
   void VisitBuiltinOffsetOfCall(ast::CallExpr *call);
+  void VisitBuiltinIntCastCall(ast::CallExpr *call);
   void VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitBuiltinBitsCall(ast::CallExpr *call, ast::Builtin builtin);
 
   // Dispatched from VisitCallExpr() for handling builtins
   void VisitBuiltinCallExpr(ast::CallExpr *call);
@@ -148,7 +151,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   void BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest_type);
   LocalVar BuildLoadPointer(LocalVar double_ptr, ast::Type *type);
 
-  Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
+  Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type, bool sign=true);
 
   Bytecode GetFloatTypedBytecode(Bytecode bytecode, ast::Type *type);
 

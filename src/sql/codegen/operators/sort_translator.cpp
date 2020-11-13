@@ -52,7 +52,6 @@ void SortTranslator::DeclarePipelineDependencies() const {
 void SortTranslator::GenerateComparisonLogic(FunctionBuilder *function) {
   PipelineContext pipeline_context(build_pipeline_);
   ConsumerContext context(GetCompilationContext(), pipeline_context);
-  context.SetExpressionCacheEnable(false);
 
   // For each sorting key, generate:
   //

@@ -151,7 +151,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
              Bytecodes::ToString(bytecode));                                \
   } while (false)
 #else
-#define DEBUG_TRACE_INSTRUCTIONS(op) (void)op
+#define DEBUG_TRACE_INSTRUCTIONS(op) /* No-op */
 #endif
 
   // TODO(pmenon): Should these READ/PEEK macros take in a vm::OperandType so
@@ -307,6 +307,39 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #undef GEN_NEG_OP
 #undef DO_GEN_BIT_OP
 
+#define DO_GEN_BIT_OP(type, ...)                              \
+  OP(BitCtlz##_##type) : {                                    \
+    auto *dest = frame->LocalAt<uint32_t *>(READ_LOCAL_ID()); \
+    auto input = frame->LocalAt<type>(READ_LOCAL_ID());       \
+    OpBitCtlz_##type(dest, input);                            \
+    DISPATCH_NEXT();                                          \
+  }                                                           \
+  OP(BitCttz##_##type) : {                                    \
+    auto *dest = frame->LocalAt<uint32_t *>(READ_LOCAL_ID()); \
+    auto input = frame->LocalAt<type>(READ_LOCAL_ID());       \
+    OpBitCttz_##type(dest, input);                            \
+    DISPATCH_NEXT();                                          \
+  }
+
+  FOR_EACH_UNSIGNED_INT_TYPE(DO_GEN_BIT_OP)
+#undef DO_GEN_BIT_OP
+
+  // -------------------------------------------------------
+  // Primitive casting.
+  // NOTE: This blows up into ~121 opcodes :(
+  // -------------------------------------------------------
+
+#define GEN_CAST_OP(from_type, to_type, ...)                 \
+  OP(Cast_##from_type##_##to_type) : {                       \
+    auto *dest = frame->LocalAt<to_type *>(READ_LOCAL_ID()); \
+    auto src = frame->LocalAt<from_type>(READ_LOCAL_ID());   \
+    OpCast_##from_type##_##to_type(dest, src);               \
+    DISPATCH_NEXT();                                         \
+  }
+
+  ALL_TYPE_PAIRS(GEN_CAST_OP)
+#undef GEN_CAST_OP
+
   OP(Not) : {
     auto *dest = frame->LocalAt<bool *>(READ_LOCAL_ID());
     auto input = frame->LocalAt<bool>(READ_LOCAL_ID());
@@ -404,6 +437,14 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_ASSIGN(int32_t, 4);
   GEN_ASSIGN(int64_t, 8);
 #undef GEN_ASSIGN
+
+  OP(AssignN) : {
+    auto *dest = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto len = READ_UIMM4();
+    OpAssignN(dest, src, len);
+    DISPATCH_NEXT();
+  }
 
   OP(AssignImm4F) : {
     auto *dest = frame->LocalAt<float *>(READ_LOCAL_ID());
@@ -709,6 +750,40 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     OpHashCombine(hash_val, new_hash_val);
     DISPATCH_NEXT();
   }
+
+  // ------------------------------------------------------
+  // Compact Storage
+  // ------------------------------------------------------
+
+#define GEN_COMPACT_STORAGE_OPS(NAME, VAL_CPP_TYPE, CPP_TYPE)           \
+  OP(CompactStorageWrite##NAME) : {                                     \
+    auto ptr = frame->LocalAt<byte *>(READ_LOCAL_ID());                 \
+    auto nulls = frame->LocalAt<byte *>(READ_LOCAL_ID());               \
+    auto col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());           \
+    auto input = frame->LocalAt<const VAL_CPP_TYPE *>(READ_LOCAL_ID()); \
+    OpCompactStorageWrite##NAME(ptr, nulls, col_idx, input);            \
+    DISPATCH_NEXT();                                                    \
+  }                                                                     \
+  OP(CompactStorageRead##NAME) : {                                      \
+    auto result = frame->LocalAt<VAL_CPP_TYPE *>(READ_LOCAL_ID());      \
+    auto ptr = frame->LocalAt<const byte *>(READ_LOCAL_ID());           \
+    auto nulls = frame->LocalAt<const byte *>(READ_LOCAL_ID());         \
+    auto col_idx = frame->LocalAt<uint32_t>(READ_LOCAL_ID());           \
+    OpCompactStorageRead##NAME(result, ptr, nulls, col_idx);            \
+    DISPATCH_NEXT();                                                    \
+  }
+  GEN_COMPACT_STORAGE_OPS(Bool, sql::BoolVal, bool)
+  GEN_COMPACT_STORAGE_OPS(TinyInt, sql::Integer, int8_t)
+  GEN_COMPACT_STORAGE_OPS(SmallInt, sql::Integer, int16_t)
+  GEN_COMPACT_STORAGE_OPS(Integer, sql::Integer, int32_t)
+  GEN_COMPACT_STORAGE_OPS(BigInt, sql::Integer, int64_t)
+  GEN_COMPACT_STORAGE_OPS(Real, sql::Real, float)
+  GEN_COMPACT_STORAGE_OPS(Double, sql::Real, double)
+  GEN_COMPACT_STORAGE_OPS(Decimal, sql::DecimalVal, sql::Decimal64)
+  GEN_COMPACT_STORAGE_OPS(Date, sql::DateVal, sql::Date)
+  GEN_COMPACT_STORAGE_OPS(Timestamp, sql::TimestampVal, sql::Timestamp)
+  GEN_COMPACT_STORAGE_OPS(String, sql::StringVal, sql::VarlenEntry)
+#undef GEN_COMPACT_STORAGE_OPS
 
   // ------------------------------------------------------
   // Filter Manager

@@ -15,6 +15,7 @@ namespace tpl::ast {
   F(StringToSql, stringToSql)                                   \
   F(SqlToBool, sqlToBool)                                       \
   F(IsValNull, isValNull)                                       \
+  F(InitSqlNull, initSqlNull)                                   \
                                                                 \
   /* SQL Conversions */                                         \
   F(ConvertBoolToInteger, convertBoolToInt)                     \
@@ -76,6 +77,28 @@ namespace tpl::ast {
   F(VPISetDate, vpiSetDate)                                     \
   F(VPISetString, vpiSetString)                                 \
   F(VPIFree, vpiFree)                                           \
+                                                                \
+  /* Compact Storage */                                         \
+  F(CompactStorageWriteBool, csWriteBool)                       \
+  F(CompactStorageWriteTinyInt, csWriteTinyInt)                 \
+  F(CompactStorageWriteSmallInt, csWriteSmallInt)               \
+  F(CompactStorageWriteInteger, csWriteInteger)                 \
+  F(CompactStorageWriteBigInt, csWriteBigInt)                   \
+  F(CompactStorageWriteReal, csWriteReal)                       \
+  F(CompactStorageWriteDouble, csWriteDouble)                   \
+  F(CompactStorageWriteDate, csWriteDate)                       \
+  F(CompactStorageWriteTimestamp, csWriteTimestamp)             \
+  F(CompactStorageWriteString, csWriteString)                   \
+  F(CompactStorageReadBool, csReadBool)                         \
+  F(CompactStorageReadTinyInt, csReadTinyInt)                   \
+  F(CompactStorageReadSmallInt, csReadSmallInt)                 \
+  F(CompactStorageReadInteger, csReadInteger)                   \
+  F(CompactStorageReadBigInt, csReadBigInt)                     \
+  F(CompactStorageReadReal, csReadReal)                         \
+  F(CompactStorageReadDouble, csReadDouble)                     \
+  F(CompactStorageReadDate, csReadDate)                         \
+  F(CompactStorageReadTimestamp, csReadTimestamp)               \
+  F(CompactStorageReadString, csReadString)                     \
                                                                 \
   /* Hashing */                                                 \
   F(Hash, hash)                                                 \
@@ -168,9 +191,14 @@ namespace tpl::ast {
   F(Sin, sin)                                                   \
   F(Tan, tan)                                                   \
                                                                 \
+  /* Bits */                                                    \
+  F(Ctlz, ctlz)                                                 \
+  F(Cttz, cttz)                                                 \
+                                                                \
   /* Generic */                                                 \
   F(SizeOf, sizeOf)                                             \
   F(OffsetOf, offsetOf)                                         \
+  F(IntCast, intCast)                                           \
   F(PtrCast, ptrCast)
 
 /**
