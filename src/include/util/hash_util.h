@@ -1,9 +1,6 @@
 #pragma once
 
-#include <x86intrin.h>
-#include <cstdint>
-#include <cstring>
-#include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "xxh3.h"  // NOLINT
@@ -114,8 +111,8 @@ class HashUtil : public AllStatic {
     // Thanks HyPer
     static constexpr hash_t kDefaultCRCSeed = 0x04c11db7ULL;
 
-    uint64_t result1 = _mm_crc32_u64(seed, static_cast<uint64_t>(val));
-    uint64_t result2 = _mm_crc32_u64(kDefaultCRCSeed, static_cast<uint64_t>(val));
+    uint64_t result1 = __builtin_ia32_crc32di(seed, static_cast<uint64_t>(val));
+    uint64_t result2 = __builtin_ia32_crc32di(kDefaultCRCSeed, static_cast<uint64_t>(val));
     return ((result2 << 32u) | result1) * 0x2545f4914f6cdd1dULL;
   }
 
