@@ -99,21 +99,21 @@ class Context;
   SQL(DateVal, tpl::sql::DateVal)                                                \
   SQL(TimestampVal, tpl::sql::TimestampVal)
 
-// Ignore a builtin
-#define IGNORE_BUILTIN_TYPE (...)
+// Ignore a builtin.
+#define IGNORE_BUILTIN_TYPE(...)
 
-// Only consider the primitive builtin types
+// Only consider the primitive builtin types.
 #define PRIMITIVE_BUILTIN_TYPE_LIST(F) \
   BUILTIN_TYPE_LIST(F, IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE)
 
-// Only consider the non-primitive builtin types
+// Only consider the non-primitive builtin types.
 #define NON_PRIMITIVE_BUILTIN_TYPE_LIST(F) \
   BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, F, IGNORE_BUILTIN_TYPE)
 
-// Only consider the SQL builtin types
+// Only consider the SQL builtin types.
 #define SQL_BUILTIN_TYPE_LIST(F) BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE, F)
 
-// Forward declare everything first
+// Forward declare all types first since some have circular dependencies.
 #define F(TypeClass) class TypeClass;
 TYPE_LIST(F)
 #undef F
