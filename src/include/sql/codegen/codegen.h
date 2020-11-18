@@ -53,7 +53,7 @@ class CodeGen {
     }
 
     // Get a fresh name in this scope.
-    std::string GetFreshName(const std::string &name);
+    std::string GetFreshName(std::string_view name);
 
     // Return the previous scope.
     LexicalScope *Previous() { return previous_; }
@@ -1310,7 +1310,7 @@ class CodeGen {
   /**
    * @return A new unique identifier using the given string as a prefix.
    */
-  ast::Identifier MakeFreshIdentifier(const std::string &str);
+  ast::Identifier MakeFreshIdentifier(std::string_view str);
 
   /**
    * @return An identifier whose contents are identical to the input string.

@@ -16,7 +16,7 @@ namespace tpl::sql::codegen {
 //
 //===----------------------------------------------------------------------===//
 
-std::string CodeGen::LexicalScope::GetFreshName(const std::string &name) {
+std::string CodeGen::LexicalScope::GetFreshName(std::string_view name) {
   // Attempt insert.
   auto insert_result = names_.insert(std::make_pair(name, 1));
   if (insert_result.second) {
@@ -25,7 +25,7 @@ std::string CodeGen::LexicalScope::GetFreshName(const std::string &name) {
   // Duplicate found. Find a new version that hasn't already been declared.
   uint64_t &id = insert_result.first->getValue();
   while (true) {
-    auto next_name = name + std::to_string(id++);
+    const std::string next_name = fmt::format("{}{}", name, id++);
     if (names_.find(next_name) == names_.end()) {
       return next_name;
     }
@@ -1110,12 +1110,12 @@ ast::Expr *CodeGen::CSVReaderClose(ast::Expr *reader) {
 // Extras
 // ---------------------------------------------------------
 
-ast::Identifier CodeGen::MakeFreshIdentifier(const std::string &str) {
+ast::Identifier CodeGen::MakeFreshIdentifier(std::string_view str) {
   return Context()->GetIdentifier(scope_->GetFreshName(str));
 }
 
 ast::Identifier CodeGen::MakeIdentifier(std::string_view str) const {
-  return Context()->GetIdentifier({str.data(), str.length()});
+  return Context()->GetIdentifier(str);
 }
 
 ast::Expr *CodeGen::MakeExpr(ast::Identifier ident) const {
