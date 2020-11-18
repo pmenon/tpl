@@ -70,12 +70,6 @@ class Identifier {
   std::string ToString() const { return entry_->getKey().str(); }
 
   /**
-   * Allows implicit conversions of Identifiers to string-views.
-   * @return String-view representation of this identifier.
-   */
-  operator std::string_view() const noexcept { return GetView(); }
-
-  /**
    * @return True if this identifier is equal to @em that; false otherwise.
    */
   bool operator==(const Identifier &that) const noexcept { return entry_ == that.entry_; }
