@@ -88,11 +88,11 @@ TEST_F(TypeTest, PrimitiveTypeCacheTest) {
   GEN_INT_TEST(Int32);
   GEN_INT_TEST(Int64);
   GEN_INT_TEST(Int128);
-  GEN_INT_TEST(Uint8);
-  GEN_INT_TEST(Uint16);
-  GEN_INT_TEST(Uint32);
-  GEN_INT_TEST(Uint64);
-  GEN_INT_TEST(Uint128);
+  GEN_INT_TEST(UInt8);
+  GEN_INT_TEST(UInt16);
+  GEN_INT_TEST(UInt32);
+  GEN_INT_TEST(UInt64);
+  GEN_INT_TEST(UInt128);
 #undef GEN_INT_TEST
 
   //
@@ -172,11 +172,11 @@ TEST_F(TypeTest, PointerTypeCacheTest) {
   GEN_INT_TEST(Int32);
   GEN_INT_TEST(Int64);
   GEN_INT_TEST(Int128);
-  GEN_INT_TEST(Uint8);
-  GEN_INT_TEST(Uint16);
-  GEN_INT_TEST(Uint32);
-  GEN_INT_TEST(Uint64);
-  GEN_INT_TEST(Uint128);
+  GEN_INT_TEST(UInt8);
+  GEN_INT_TEST(UInt16);
+  GEN_INT_TEST(UInt32);
+  GEN_INT_TEST(UInt64);
+  GEN_INT_TEST(UInt128);
 #undef GEN_INT_TEST
 
   //

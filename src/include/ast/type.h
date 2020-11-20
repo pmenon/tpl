@@ -43,12 +43,12 @@ class Context;
   PRIM(Int16, int16_t, "int16")                                                  \
   PRIM(Int32, int32_t, "int32")                                                  \
   PRIM(Int64, int64_t, "int64")                                                  \
-  PRIM(Uint8, uint8_t, "uint8")                                                  \
-  PRIM(Uint16, uint16_t, "uint16")                                               \
-  PRIM(Uint32, uint32_t, "uint32")                                               \
-  PRIM(Uint64, uint64_t, "uint64")                                               \
+  PRIM(UInt8, uint8_t, "uint8")                                                  \
+  PRIM(UInt16, uint16_t, "uint16")                                               \
+  PRIM(UInt32, uint32_t, "uint32")                                               \
+  PRIM(UInt64, uint64_t, "uint64")                                               \
   PRIM(Int128, int128_t, "int128")                                               \
-  PRIM(Uint128, uint128_t, "uint128")                                            \
+  PRIM(UInt128, uint128_t, "uint128")                                            \
   PRIM(Float32, float, "float32")                                                \
   PRIM(Float64, double, "float64")                                               \
                                                                                  \
@@ -342,7 +342,7 @@ class BuiltinType : public Type {
   /**
    * @return True if this type is a C/C++ primitive integer; false otherwise.
    */
-  bool IsIntegral() const { return Kind::Int8 <= GetKind() && GetKind() <= Kind::Uint128; }
+  bool IsIntegral() const { return Kind::Int8 <= GetKind() && GetKind() <= Kind::UInt128; }
 
   /**
    * @return True if this type is a signed type; false otherwise.

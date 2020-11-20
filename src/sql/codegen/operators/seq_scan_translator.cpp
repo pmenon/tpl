@@ -91,7 +91,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
       codegen_->MakeField(codegen_->MakeIdentifier("tids"),
                           codegen_->PointerType(ast::BuiltinType::TupleIdList)),
       codegen_->MakeField(codegen_->MakeIdentifier("context"),
-                          codegen_->PointerType(ast::BuiltinType::Uint8)),
+                          codegen_->PointerType(ast::BuiltinType::UInt8)),
   });
   FunctionBuilder builder(codegen_, fn_name, std::move(params), codegen_->Nil());
   {

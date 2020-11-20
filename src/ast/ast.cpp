@@ -137,10 +137,10 @@ bool LiteralExpr::IsRepresentable(ast::Type *type) const {
       case ast::BuiltinType::Kind::Int16: return INT16_MIN <= val && val <= INT16_MAX;
       case ast::BuiltinType::Kind::Int32: return INT32_MIN <= val && val <= INT32_MAX;
       case ast::BuiltinType::Kind::Int64: return true;
-      case ast::BuiltinType::Kind::Uint8: return 0 <= val && val <= int64_t(UINT8_MAX);
-      case ast::BuiltinType::Kind::Uint16: return 0 <= val && val <= int64_t(UINT16_MAX);
-      case ast::BuiltinType::Kind::Uint32: return 0 <= val && val <= int64_t(UINT32_MAX);
-      case ast::BuiltinType::Kind::Uint64: return 0 <= val;
+      case ast::BuiltinType::Kind::UInt8: return 0 <= val && val <= int64_t(UINT8_MAX);
+      case ast::BuiltinType::Kind::UInt16: return 0 <= val && val <= int64_t(UINT16_MAX);
+      case ast::BuiltinType::Kind::UInt32: return 0 <= val && val <= int64_t(UINT32_MAX);
+      case ast::BuiltinType::Kind::UInt64: return 0 <= val;
       default: UNREACHABLE("Impossible integer kind.");
     }
     // clang-format on

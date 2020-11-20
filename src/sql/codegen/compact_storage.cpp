@@ -44,16 +44,16 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
 
   // Generate the compact struct.
   util::RegionVector<ast::FieldDecl *> members = codegen_->MakeEmptyFieldList();
-  members.resize(schema.size() + 1);
+  members.resize(schema.size());
   for (uint32_t i = 0; i < schema.size(); i++) {
-    ast::Identifier name = codegen_->MakeIdentifier(fmt::format("_m{}", i));
+    ast::Identifier name = codegen_->MakeIdentifier(fmt::format("member{}", i));
     members[i] = codegen_->MakeField(name, codegen_->PrimitiveTplType(schema[reordered[i]]));
     col_info_[reordered[i]] = std::make_pair(schema[reordered[i]], name);
   }
   // Tack on the NULL indicators for all fields as a bitmap byte array.
-  const auto null_byte = ast::BuiltinType::Uint8;
+  const auto null_byte = ast::BuiltinType::UInt8;
   const auto num_null_bytes = util::MathUtil::DivRoundUp(schema.size(), 8);
-  members.back() = codegen_->MakeField(nulls_, codegen_->ArrayType(num_null_bytes, null_byte));
+  members.push_back(codegen_->MakeField(nulls_, codegen_->ArrayType(num_null_bytes, null_byte)));
 
   // Build the final type.
   codegen_->DeclareStruct(type_name_, std::move(members));

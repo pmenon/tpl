@@ -152,7 +152,7 @@ ast::Expr *CodeGen::Int16Type() const { return BuiltinType(ast::BuiltinType::Int
 
 ast::Expr *CodeGen::Int32Type() const { return BuiltinType(ast::BuiltinType::Int32); }
 
-ast::Expr *CodeGen::UInt32Type() const { return BuiltinType(ast::BuiltinType::Uint32); }
+ast::Expr *CodeGen::UInt32Type() const { return BuiltinType(ast::BuiltinType::UInt32); }
 
 ast::Expr *CodeGen::Int64Type() const { return BuiltinType(ast::BuiltinType::Int64); }
 
@@ -708,7 +708,7 @@ ast::Expr *CodeGen::ExecCtxGetTLS(ast::Expr *exec_ctx) {
 
 ast::Expr *CodeGen::TLSAccessCurrentThreadState(ast::Expr *tls, ast::Identifier state_type_name) {
   ast::Expr *call = CallBuiltin(ast::Builtin::ThreadStateContainerGetState, {tls});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(state_type_name, call);
 }
 
@@ -741,7 +741,7 @@ ast::Expr *CodeGen::TLSClear(ast::Expr *tls) {
 
 ast::Expr *CodeGen::Hash(const std::vector<ast::Expr *> &values) {
   ast::Expr *call = CallBuiltin(ast::Builtin::Hash, values);
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint64));
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt64));
   return call;
 }
 
@@ -793,13 +793,13 @@ ast::Expr *CodeGen::JoinHashTableFree(ast::Expr *join_hash_table) {
 
 ast::Expr *CodeGen::HTEntryGetHash(ast::Expr *entry) {
   ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryGetHash, {entry});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint64));
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt64));
   return call;
 }
 
 ast::Expr *CodeGen::HTEntryGetRow(ast::Expr *entry, ast::Identifier row_type) {
   ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryGetRow, {entry});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(row_type, call);
 }
 
@@ -826,7 +826,7 @@ ast::Expr *CodeGen::AggHashTableLookup(ast::Expr *agg_ht, ast::Expr *hash_val,
                                        ast::Identifier agg_payload_type) {
   ast::Expr *call =
       CallBuiltin(ast::Builtin::AggHashTableLookup, {agg_ht, hash_val, MakeExpr(key_check), input});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(agg_payload_type, call);
 }
 
@@ -834,7 +834,7 @@ ast::Expr *CodeGen::AggHashTableInsert(ast::Expr *agg_ht, ast::Expr *hash_val, b
                                        ast::Identifier agg_payload_type) {
   ast::Expr *call =
       CallBuiltin(ast::Builtin::AggHashTableInsert, {agg_ht, hash_val, ConstBool(partitioned)});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(agg_payload_type, call);
 }
 
@@ -887,13 +887,13 @@ ast::Expr *CodeGen::AggPartitionIteratorNext(ast::Expr *iter) {
 
 ast::Expr *CodeGen::AggPartitionIteratorGetHash(ast::Expr *iter) {
   ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterGetHash, {iter});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint64));
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt64));
   return call;
 }
 
 ast::Expr *CodeGen::AggPartitionIteratorGetRow(ast::Expr *iter, ast::Identifier agg_payload_type) {
   ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterGetRow, {iter});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(agg_payload_type, call);
 }
 
@@ -923,7 +923,7 @@ ast::Expr *CodeGen::AggHashTableIteratorNext(ast::Expr *iter) {
 
 ast::Expr *CodeGen::AggHashTableIteratorGetRow(ast::Expr *iter, ast::Identifier agg_payload_type) {
   ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterGetRow, {iter});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(agg_payload_type, call);
 }
 
@@ -975,7 +975,7 @@ ast::Expr *CodeGen::SorterInit(ast::Expr *sorter, ast::Expr *mem_pool,
 ast::Expr *CodeGen::SorterInsert(ast::Expr *sorter, ast::Identifier sort_row_type_name) {
   // @sorterInsert(sorter)
   ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsert, {sorter});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   // @ptrCast(sort_row_type, @sorterInsert())
   return PtrCast(sort_row_type_name, call);
 }
@@ -984,7 +984,7 @@ ast::Expr *CodeGen::SorterInsertTopK(ast::Expr *sorter, ast::Identifier sort_row
                                      uint64_t top_k) {
   // @sorterInsertTopK(sorter)
   ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsertTopK, {sorter, Const64(top_k)});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   // @ptrCast(sort_row_type, @sorterInsertTopK())
   return PtrCast(sort_row_type_name, call);
 }
@@ -1047,7 +1047,7 @@ ast::Expr *CodeGen::SorterIterSkipRows(ast::Expr *iter, uint32_t n) {
 
 ast::Expr *CodeGen::SorterIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) {
   ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterGetRow, {iter});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint8)->PointerTo());
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(row_type_name, call);
 }
 
@@ -1096,7 +1096,7 @@ ast::Expr *CodeGen::CSVReaderGetField(ast::Expr *reader, uint32_t field_index, a
 
 ast::Expr *CodeGen::CSVReaderGetRecordNumber(ast::Expr *reader) {
   ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderGetRecordNumber, {reader});
-  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Uint32));
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt32));
   return call;
 }
 

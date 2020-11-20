@@ -866,7 +866,7 @@ void BytecodeGenerator::VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast:
 }
 
 void BytecodeGenerator::VisitBuiltinHashCall(ast::CallExpr *call) {
-  TPL_ASSERT(call->GetType()->IsSpecificBuiltin(ast::BuiltinType::Uint64),
+  TPL_ASSERT(call->GetType()->IsSpecificBuiltin(ast::BuiltinType::UInt64),
              "Return type of @hash(...) expected to be 8-byte unsigned hash");
   TPL_ASSERT(!call->Arguments().empty(), "@hash() must contain at least one input argument");
   TPL_ASSERT(GetExecutionResult() != nullptr, "Caller of @hash() must use result");
@@ -1760,10 +1760,10 @@ void BytecodeGenerator::VisitBuiltinIntCastCall(ast::CallExpr *call) {
     case ast::BuiltinType::Int16:EMIT_CAST(type, int16_t); break;              \
     case ast::BuiltinType::Int32: EMIT_CAST(type, int32_t); break;             \
     case ast::BuiltinType::Int64: EMIT_CAST(type, int64_t); break;             \
-    case ast::BuiltinType::Uint8: EMIT_CAST(type, uint8_t); break;             \
-    case ast::BuiltinType::Uint16: EMIT_CAST(type, uint16_t); break;           \
-    case ast::BuiltinType::Uint32: EMIT_CAST(type, uint32_t); break;           \
-    case ast::BuiltinType::Uint64: EMIT_CAST(type, uint64_t); break;           \
+    case ast::BuiltinType::UInt8: EMIT_CAST(type, uint8_t); break;             \
+    case ast::BuiltinType::UInt16: EMIT_CAST(type, uint16_t); break;           \
+    case ast::BuiltinType::UInt32: EMIT_CAST(type, uint32_t); break;           \
+    case ast::BuiltinType::UInt64: EMIT_CAST(type, uint64_t); break;           \
     default: UNREACHABLE("Impossible integer type.");                          \
   }
 
@@ -1773,10 +1773,10 @@ void BytecodeGenerator::VisitBuiltinIntCastCall(ast::CallExpr *call) {
     case ast::BuiltinType::Int16: DISPATCH(int16_t); break;
     case ast::BuiltinType::Int32: DISPATCH(int32_t); break;
     case ast::BuiltinType::Int64: DISPATCH(int64_t); break;
-    case ast::BuiltinType::Uint8: DISPATCH(uint8_t); break;
-    case ast::BuiltinType::Uint16: DISPATCH(uint16_t); break;
-    case ast::BuiltinType::Uint32: DISPATCH(uint32_t); break;
-    case ast::BuiltinType::Uint64: DISPATCH(uint64_t); break;
+    case ast::BuiltinType::UInt8: DISPATCH(uint8_t); break;
+    case ast::BuiltinType::UInt16: DISPATCH(uint16_t); break;
+    case ast::BuiltinType::UInt32: DISPATCH(uint32_t); break;
+    case ast::BuiltinType::UInt64: DISPATCH(uint64_t); break;
     default: UNREACHABLE("Impossible integer type.");
   }
     // clang-format on
@@ -2681,7 +2681,7 @@ LocalVar BytecodeGenerator::NewStaticString(ast::Context *ctx, const ast::Identi
 
   // Create
   auto *type =
-      ast::ArrayType::Get(string.GetLength(), ast::BuiltinType::Get(ctx, ast::BuiltinType::Uint8));
+      ast::ArrayType::Get(string.GetLength(), ast::BuiltinType::Get(ctx, ast::BuiltinType::UInt8));
   auto static_local = NewStatic("stringConst", type, static_cast<const void *>(string.GetData()));
 
   // Cache
@@ -2737,7 +2737,7 @@ void BytecodeGenerator::VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *t
 Bytecode BytecodeGenerator::GetIntTypedBytecode(Bytecode bytecode, ast::Type *type, bool sign) {
   TPL_ASSERT(type->IsIntegerType(), "Type must be integer type");
   auto int_kind = type->SafeAs<ast::BuiltinType>()->GetKind();
-  auto kind_idx = int_kind - (sign ? ast::BuiltinType::Int8 : ast::BuiltinType::Uint8);
+  auto kind_idx = int_kind - (sign ? ast::BuiltinType::Int8 : ast::BuiltinType::UInt8);
   return Bytecodes::FromByte(Bytecodes::ToByte(bytecode) + kind_idx);
 }
 
