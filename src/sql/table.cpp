@@ -21,8 +21,8 @@ void Table::Insert(Block &&block) {
   TPL_ASSERT(block.num_cols() == schema_->GetColumnCount(), "Column count mismatch");
   for (uint32_t i = 0; i < schema_->GetColumnCount(); i++) {
     const auto &block_col_type = block.GetColumnData(i)->GetSqlType();
-    const auto &schema_col_type = GetSchema().GetColumnInfo(i)->sql_type;
-    TPL_ASSERT(schema_col_type.Equals(block_col_type), "Column type mismatch");
+    const auto &schema_col_type = GetSchema().GetColumnInfo(i)->type;
+    TPL_ASSERT(schema_col_type == block_col_type, "Column type mismatch");
   }
 #endif
 
@@ -32,13 +32,13 @@ void Table::Insert(Block &&block) {
 
 namespace {
 
-void DumpColValue(std::ostream &os, const SqlType &sql_type, const ColumnSegment &col,
+void DumpColValue(std::ostream &os, Type type, const ColumnSegment &col,
                   uint32_t row_idx) {
-  if (sql_type.IsNullable() && col.IsNullAt(row_idx)) {
+  if (type.IsNullable() && col.IsNullAt(row_idx)) {
     os << "NULL";
     return;
   }
-  switch (sql_type.GetId()) {
+  switch (type.GetTypeId()) {
     case SqlTypeId::Boolean:
       os << col.TypedAccessAt<bool>(row_idx);
       break;
@@ -86,7 +86,7 @@ void Table::Dump(std::ostream &stream) const {
           stream << ", ";
         }
         const auto *col_vector = block.GetColumnData(col_idx);
-        DumpColValue(stream, cols_meta[col_idx].sql_type, *col_vector, row_idx);
+        DumpColValue(stream, cols_meta[col_idx].type, *col_vector, row_idx);
       }
       stream << "\n";
     }

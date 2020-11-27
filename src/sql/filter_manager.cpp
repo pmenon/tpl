@@ -147,7 +147,6 @@ FilterManager::FilterManager(bool adapt, void *context)
 }
 
 void FilterManager::StartNewClause() {
-  TPL_ASSERT(!finalized_, "Cannot modify filter manager after finalization");
   double sample_freq =
       Settings::Instance()->GetDouble(Settings::Name::AdaptivePredicateOrderSamplingFrequency);
   if (!IsAdaptive()) sample_freq = 0.0;

@@ -89,8 +89,7 @@ class SorterVectorIteratorTest : public TplTest {
  public:
   SorterVectorIteratorTest()
       : memory_(nullptr),
-        schema_({{"key", BigIntType::InstanceNonNullable()},
-                 {"attributes", BigIntType::InstanceNullable()}}) {}
+        schema_({{"key", Type::BigIntType(false)}, {"attributes", Type::BigIntType(true)}}) {}
 
  protected:
   MemoryPool *memory() { return &memory_; }

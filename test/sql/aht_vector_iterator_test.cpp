@@ -70,10 +70,10 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
   AggregationHashTableVectorIteratorTest() {
     memory_ = std::make_unique<MemoryPool>(nullptr);
     std::vector<Schema::ColumnInfo> cols = {
-        {"key", BigIntType::InstanceNonNullable()},
-        {"count1", BigIntType::InstanceNonNullable()},
-        {"count2", BigIntType::InstanceNonNullable()},
-        {"count3", BigIntType::InstanceNonNullable()},
+        {"key", Type::BigIntType(false)},
+        {"count1", Type::BigIntType(false)},
+        {"count2", Type::BigIntType(false)},
+        {"count3", Type::BigIntType(false)},
     };
     schema_ = std::make_unique<Schema>(std::move(cols));
   }

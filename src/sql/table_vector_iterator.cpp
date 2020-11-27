@@ -65,7 +65,7 @@ bool TableVectorIterator::Init() {
   // Configure the vector projection
   std::vector<TypeId> col_types(column_indexes_.size());
   for (uint64_t idx = 0; idx < column_indexes_.size(); idx++) {
-    col_types[idx] = col_infos[idx]->sql_type.GetPrimitiveTypeId();
+    col_types[idx] = col_infos[idx]->type.GetPrimitiveTypeId();
   }
   vector_projection_.InitializeEmpty(col_types);
 

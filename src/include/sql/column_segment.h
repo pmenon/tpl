@@ -2,7 +2,7 @@
 
 #include "common/common.h"
 #include "common/macros.h"
-#include "sql/data_types.h"
+#include "sql/type.h"
 #include "util/bit_util.h"
 
 namespace tpl::sql {
@@ -21,16 +21,16 @@ class ColumnSegment {
    * @param null_bitmap The NULL bitmap for the column's values.
    * @param num_tuples The number of tuples in this segment.
    */
-  ColumnSegment(const SqlType &sql_type, byte *data, uint32_t *null_bitmap,
+  ColumnSegment(Type type, byte *data, uint32_t *null_bitmap,
                 uint32_t num_tuples) noexcept
-      : sql_type_(sql_type), data_(data), null_bitmap_(null_bitmap), num_tuples_(num_tuples) {}
+      : type_(type), data_(data), null_bitmap_(null_bitmap), num_tuples_(num_tuples) {}
 
   /**
    * Move constructor.
    * @param other The segment to move into this instance.
    */
   ColumnSegment(ColumnSegment &&other) noexcept
-      : sql_type_(other.sql_type_),
+      : type_(other.type_),
         data_(other.data_),
         null_bitmap_(other.null_bitmap_),
         num_tuples_(other.num_tuples_) {
@@ -76,7 +76,7 @@ class ColumnSegment {
   /**
    * @return The SQL type of the column.
    */
-  const SqlType &GetSqlType() const { return sql_type_; }
+  const Type &GetSqlType() const { return type_; }
 
   /**
    * @return The number of tuples in the column.
@@ -92,7 +92,7 @@ class ColumnSegment {
 
  private:
   // The SQL type
-  const SqlType &sql_type_;
+  Type type_;
 
   // The underlying data
   byte *data_;

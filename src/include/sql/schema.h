@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "sql/data_types.h"
+#include "sql/type.h"
 #include "sql/sql.h"
 
 namespace tpl::sql {
@@ -20,23 +20,23 @@ class Schema {
    */
   struct ColumnInfo {
     std::string name;
-    const SqlType &sql_type;
+    Type type;
     ColumnEncoding encoding;
     uint16_t oid{0};
 
-    ColumnInfo(std::string name, const SqlType &sql_type,
+    ColumnInfo(std::string name, Type type,
                ColumnEncoding encoding = ColumnEncoding::None)
-        : name(std::move(name)), sql_type(sql_type), encoding(encoding) {}
+        : name(std::move(name)), type(type), encoding(encoding) {}
 
     std::size_t GetStorageAlignment() const {
       TPL_ASSERT(encoding == ColumnEncoding::None, "Only supports uncompressed encodings");
-      const auto prim_type = sql_type.GetPrimitiveTypeId();
+      const auto prim_type = type.GetPrimitiveTypeId();
       return GetTypeIdAlignment(prim_type);
     }
 
     std::size_t GetStorageSize() const {
       TPL_ASSERT(encoding == ColumnEncoding::None, "Only supports uncompressed encodings");
-      const auto prim_type = sql_type.GetPrimitiveTypeId();
+      const auto prim_type = type.GetPrimitiveTypeId();
       return GetTypeIdSize(prim_type);
     }
 
@@ -98,7 +98,7 @@ class Schema {
     for (const auto &col : cols_) {
       if (!first) result += ",";
       first = false;
-      result += col.sql_type.GetName();
+      result += col.type.ToString();
     }
     result += "]";
     return result;
