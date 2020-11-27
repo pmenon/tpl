@@ -28,6 +28,8 @@ class CompactStorageTest : public CodegenBasedTest {
 };
 
 TEST_F(CompactStorageTest, OrderingCheck) {
+  static constexpr std::string_view kMemberName = "member";
+
   // Provide worst-ordering.
   CompactStorage storage(codegen_.get(), "Row",
                          {
@@ -45,13 +47,13 @@ TEST_F(CompactStorageTest, OrderingCheck) {
   //  slot: 0, 1, 2, 3, 4, 5, 6
   // ordered by descending size in stable order.
 
-  EXPECT_EQ("_m4", storage.FieldNameAtIndex(0).ToString());
-  EXPECT_EQ("_m6", storage.FieldNameAtIndex(1).ToString());
-  EXPECT_EQ("_m0", storage.FieldNameAtIndex(2).ToString());
-  EXPECT_EQ("_m2", storage.FieldNameAtIndex(3).ToString());
-  EXPECT_EQ("_m5", storage.FieldNameAtIndex(4).ToString());
-  EXPECT_EQ("_m1", storage.FieldNameAtIndex(5).ToString());
-  EXPECT_EQ("_m3", storage.FieldNameAtIndex(6).ToString());
+  EXPECT_EQ(fmt::format("{}4", kMemberName), storage.FieldNameAtIndex(0).ToString());
+  EXPECT_EQ(fmt::format("{}6", kMemberName), storage.FieldNameAtIndex(1).ToString());
+  EXPECT_EQ(fmt::format("{}0", kMemberName), storage.FieldNameAtIndex(2).ToString());
+  EXPECT_EQ(fmt::format("{}2", kMemberName), storage.FieldNameAtIndex(3).ToString());
+  EXPECT_EQ(fmt::format("{}5", kMemberName), storage.FieldNameAtIndex(4).ToString());
+  EXPECT_EQ(fmt::format("{}1", kMemberName), storage.FieldNameAtIndex(5).ToString());
+  EXPECT_EQ(fmt::format("{}3", kMemberName), storage.FieldNameAtIndex(6).ToString());
 }
 
 }  // namespace tpl::sql::codegen
