@@ -315,49 +315,53 @@ class BuiltinType : public Type {
   /**
    * @return The name of the builtin as it appears in TPL code.
    */
-  const char *GetTplName() const { return kTplNames[static_cast<uint16_t>(kind_)]; }
+  constexpr const char *GetTplName() const { return kTplNames[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return The name of the C++ type that backs this builtin. For primitive types like 32-bit
    *         integers, this will be 'int32'. For non-primitive types this will be the
    *         fully-qualified name of the class (i.e., the class name along with the namespace).
    */
-  const char *GetCppName() const { return kCppNames[static_cast<uint16_t>(kind_)]; }
+  constexpr const char *GetCppName() const { return kCppNames[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return The size of this type, in bytes.
    */
-  uint64_t GetSize() const { return kSizes[static_cast<uint16_t>(kind_)]; }
+  constexpr uint64_t GetSize() const { return kSizes[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return The alignment of this type, in bytes.
    */
-  uint64_t GetAlignment() const { return kAlignments[static_cast<uint16_t>(kind_)]; }
+  constexpr uint64_t GetAlignment() const { return kAlignments[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return True if this type is a C/C++ primitive; false otherwise.
    */
-  bool IsPrimitive() const { return kPrimitiveFlags[static_cast<uint16_t>(kind_)]; }
+  constexpr bool IsPrimitive() const { return kPrimitiveFlags[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return True if this type is a C/C++ primitive integer; false otherwise.
    */
-  bool IsIntegral() const { return Kind::Int8 <= GetKind() && GetKind() <= Kind::UInt128; }
+  constexpr bool IsIntegral() const {
+    return Kind::Int8 <= GetKind() && GetKind() <= Kind::UInt128;
+  }
 
   /**
    * @return True if this type is a signed type; false otherwise.
    */
-  bool IsSigned() const { return kSignedFlags[static_cast<uint16_t>(kind_)]; }
+  constexpr bool IsSigned() const { return kSignedFlags[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return True if this type is a C/C++ primitive floating point number; false otherwise.
    */
-  bool IsFloatingPoint() const { return kFloatingPointFlags[static_cast<uint16_t>(kind_)]; }
+  constexpr bool IsFloatingPoint() const {
+    return kFloatingPointFlags[static_cast<uint16_t>(kind_)];
+  }
 
   /**
    * @return True if this type is a SQL value type.
    */
-  bool IsSqlValue() const {
+  constexpr bool IsSqlValue() const noexcept {
     return Kind::BooleanVal <= GetKind() && GetKind() <= Kind::TimestampVal;
   }
 
@@ -365,14 +369,14 @@ class BuiltinType : public Type {
    * @return True if this type is a SQL aggregator type (i.e., IntegerSumAggregate,
    *         CountAggregate, etc.); false otherwise.
    */
-  bool IsSqlAggregateType() const {
+  constexpr bool IsSqlAggregateType() const noexcept {
     return Kind::CountAggregate <= GetKind() && GetKind() <= Kind::RealSumAggregate;
   }
 
   /**
    * @return The kind of this builtin.
    */
-  Kind GetKind() const { return kind_; }
+  constexpr Kind GetKind() const noexcept { return kind_; }
 
   /**
    * Factory to create a builtin type of the given kind.
