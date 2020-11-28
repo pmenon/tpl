@@ -65,8 +65,8 @@ void LoadTestTable(const TableMeta &meta, sql::Table *table) {
     auto *keys = reinterpret_cast<byte *>(GenColumnData(batch_size, 0, meta.num_aggregates - 1));
     auto *vals = reinterpret_cast<byte *>(GenColumnData(batch_size, 0, 10));
 
-    columns.emplace_back(sql::IntegerType::Instance(false), keys, nullptr, batch_size);
-    columns.emplace_back(sql::IntegerType::Instance(false), vals, nullptr, batch_size);
+    columns.emplace_back(sql::Type::IntegerType(false), keys, nullptr, batch_size);
+    columns.emplace_back(sql::Type::IntegerType(false), vals, nullptr, batch_size);
 
     // Insert into table
     table->Insert(sql::Table::Block(std::move(columns), batch_size));
@@ -78,8 +78,8 @@ void InitTestTables() {
   sql::Catalog *catalog = sql::Catalog::Instance();
   for (const auto &table_meta : kAggConfigs) {
     // Create the table instance.
-    std::vector<sql::Schema::ColumnInfo> cols = {{"key", sql::IntegerType::Instance(false)},
-                                                 {"val", sql::IntegerType::Instance(false)}};
+    std::vector<sql::Schema::ColumnInfo> cols = {{"key", sql::Type::IntegerType(false)},
+                                                 {"val", sql::Type::IntegerType(false)}};
     auto table = std::make_unique<sql::Table>(catalog->AllocateTableId(), table_meta.name,
                                               std::make_unique<sql::Schema>(std::move(cols)));
 
