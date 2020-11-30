@@ -21,7 +21,7 @@ class AstNodeFactory {
   }
 
   FunctionDeclaration *NewFunctionDeclaration(const SourcePosition &pos, Identifier name,
-                                              FunctionLiteralExpr *fun) {
+                                              FunctionLiteralExpression *fun) {
     return new (region_) FunctionDeclaration(pos, name, fun);
   }
 
@@ -31,7 +31,7 @@ class AstNodeFactory {
   }
 
   VariableDeclaration *NewVariableDeclaration(const SourcePosition &pos, Identifier name,
-                                              Expr *type_repr, Expr *init) {
+                                              Expression *type_repr, Expression *init) {
     return new (region_) VariableDeclaration(pos, name, type_repr, init);
   }
 
@@ -44,111 +44,117 @@ class AstNodeFactory {
     return new (region_) DeclarationStatement(decl);
   }
 
-  AssignmentStatement *NewAssignmentStatement(const SourcePosition &pos, Expr *dest, Expr *src) {
+  AssignmentStatement *NewAssignmentStatement(const SourcePosition &pos, Expression *dest,
+                                              Expression *src) {
     return new (region_) AssignmentStatement(pos, dest, src);
   }
 
-  ExpressionStatement *NewExpressionStatement(Expr *expression) {
+  ExpressionStatement *NewExpressionStatement(Expression *expression) {
     return new (region_) ExpressionStatement(expression);
   }
 
-  ForStatement *NewForStatement(const SourcePosition &pos, Statement *init, Expr *cond,
+  ForStatement *NewForStatement(const SourcePosition &pos, Statement *init, Expression *cond,
                                 Statement *next, BlockStatement *body) {
     return new (region_) ForStatement(pos, init, cond, next, body);
   }
 
-  ForInStatement *NewForInStatement(const SourcePosition &pos, Expr *target, Expr *iter,
+  ForInStatement *NewForInStatement(const SourcePosition &pos, Expression *target, Expression *iter,
                                     BlockStatement *body) {
     return new (region_) ForInStatement(pos, target, iter, body);
   }
 
-  IfStatement *NewIfStatement(const SourcePosition &pos, Expr *cond, BlockStatement *then_stmt,
-                              Statement *else_stmt) {
+  IfStatement *NewIfStatement(const SourcePosition &pos, Expression *cond,
+                              BlockStatement *then_stmt, Statement *else_stmt) {
     return new (region_) IfStatement(pos, cond, then_stmt, else_stmt);
   }
 
-  ReturnStatement *NewReturnStatement(const SourcePosition &pos, Expr *ret) {
+  ReturnStatement *NewReturnStatement(const SourcePosition &pos, Expression *ret) {
     return new (region_) ReturnStatement(pos, ret);
   }
 
-  BadExpr *NewBadExpr(const SourcePosition &pos) { return new (region_) BadExpr(pos); }
+  BadExpression *NewBadExpr(const SourcePosition &pos) { return new (region_) BadExpression(pos); }
 
-  BinaryOpExpr *NewBinaryOpExpr(const SourcePosition &pos, parsing::Token::Type op, Expr *left,
-                                Expr *right) {
-    return new (region_) BinaryOpExpr(pos, op, left, right);
+  BinaryOpExpression *NewBinaryOpExpr(const SourcePosition &pos, parsing::Token::Type op,
+                                      Expression *left, Expression *right) {
+    return new (region_) BinaryOpExpression(pos, op, left, right);
   }
 
-  ComparisonOpExpr *NewComparisonOpExpr(const SourcePosition &pos, parsing::Token::Type op,
-                                        Expr *left, Expr *right) {
-    return new (region_) ComparisonOpExpr(pos, op, left, right);
+  ComparisonOpExpression *NewComparisonOpExpr(const SourcePosition &pos, parsing::Token::Type op,
+                                              Expression *left, Expression *right) {
+    return new (region_) ComparisonOpExpression(pos, op, left, right);
   }
 
-  CallExpr *NewCallExpr(Expr *fun, util::RegionVector<Expr *> &&args) {
-    return new (region_) CallExpr(fun, std::move(args));
+  CallExpression *NewCallExpr(Expression *fun, util::RegionVector<Expression *> &&args) {
+    return new (region_) CallExpression(fun, std::move(args));
   }
 
-  CallExpr *NewBuiltinCallExpr(Expr *fun, util::RegionVector<Expr *> &&args) {
-    return new (region_) CallExpr(fun, std::move(args), CallExpr::CallKind::Builtin);
+  CallExpression *NewBuiltinCallExpr(Expression *fun, util::RegionVector<Expression *> &&args) {
+    return new (region_) CallExpression(fun, std::move(args), CallExpression::CallKind::Builtin);
   }
 
-  LiteralExpr *NewNilLiteral(const SourcePosition &pos) { return new (region_) LiteralExpr(pos); }
-
-  LiteralExpr *NewBoolLiteral(const SourcePosition &pos, bool val) {
-    return new (region_) LiteralExpr(pos, val);
+  LiteralExpression *NewNilLiteral(const SourcePosition &pos) {
+    return new (region_) LiteralExpression(pos);
   }
 
-  LiteralExpr *NewIntLiteral(const SourcePosition &pos, int64_t num) {
-    return new (region_) LiteralExpr(pos, num);
+  LiteralExpression *NewBoolLiteral(const SourcePosition &pos, bool val) {
+    return new (region_) LiteralExpression(pos, val);
   }
 
-  LiteralExpr *NewFloatLiteral(const SourcePosition &pos, float num) {
-    return new (region_) LiteralExpr(pos, num);
+  LiteralExpression *NewIntLiteral(const SourcePosition &pos, int64_t num) {
+    return new (region_) LiteralExpression(pos, num);
   }
 
-  LiteralExpr *NewStringLiteral(const SourcePosition &pos, Identifier str) {
-    return new (region_) LiteralExpr(pos, str);
+  LiteralExpression *NewFloatLiteral(const SourcePosition &pos, float num) {
+    return new (region_) LiteralExpression(pos, num);
   }
 
-  FunctionLiteralExpr *NewFunctionLitExpr(FunctionTypeRepr *type_repr, BlockStatement *body) {
-    return new (region_) FunctionLiteralExpr(type_repr, body);
+  LiteralExpression *NewStringLiteral(const SourcePosition &pos, Identifier str) {
+    return new (region_) LiteralExpression(pos, str);
   }
 
-  UnaryOpExpr *NewUnaryOpExpr(const SourcePosition &pos, parsing::Token::Type op, Expr *expr) {
-    return new (region_) UnaryOpExpr(pos, op, expr);
+  FunctionLiteralExpression *NewFunctionLitExpr(FunctionTypeRepr *type_repr, BlockStatement *body) {
+    return new (region_) FunctionLiteralExpression(type_repr, body);
   }
 
-  IdentifierExpr *NewIdentifierExpr(const SourcePosition &pos, Identifier name) {
-    return new (region_) IdentifierExpr(pos, name);
+  UnaryOpExpression *NewUnaryOpExpr(const SourcePosition &pos, parsing::Token::Type op,
+                                    Expression *expr) {
+    return new (region_) UnaryOpExpression(pos, op, expr);
   }
 
-  ImplicitCastExpr *NewImplicitCastExpr(const SourcePosition &pos, CastKind cast_kind,
-                                        Type *target_type, Expr *input) {
-    return new (region_) ImplicitCastExpr(pos, cast_kind, target_type, input);
+  IdentifierExpression *NewIdentifierExpr(const SourcePosition &pos, Identifier name) {
+    return new (region_) IdentifierExpression(pos, name);
   }
 
-  IndexExpr *NewIndexExpr(const SourcePosition &pos, Expr *object, Expr *index) {
-    return new (region_) IndexExpr(pos, object, index);
+  ImplicitCastExpression *NewImplicitCastExpr(const SourcePosition &pos, CastKind cast_kind,
+                                              Type *target_type, Expression *input) {
+    return new (region_) ImplicitCastExpression(pos, cast_kind, target_type, input);
   }
 
-  MemberExpr *NewMemberExpr(const SourcePosition &pos, Expr *object, Expr *member) {
-    return new (region_) MemberExpr(pos, object, member);
+  IndexExpression *NewIndexExpr(const SourcePosition &pos, Expression *object, Expression *index) {
+    return new (region_) IndexExpression(pos, object, index);
   }
 
-  ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expr *len, Expr *elem_type) {
+  MemberExpression *NewMemberExpr(const SourcePosition &pos, Expression *object,
+                                  Expression *member) {
+    return new (region_) MemberExpression(pos, object, member);
+  }
+
+  ArrayTypeRepr *NewArrayType(const SourcePosition &pos, Expression *len, Expression *elem_type) {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
   FieldDeclaration *NewFieldDeclaration(const SourcePosition &pos, Identifier name,
-                                        Expr *type_repr) {
+                                        Expression *type_repr) {
     return new (region_) FieldDeclaration(pos, name, type_repr);
   }
 
   FunctionTypeRepr *NewFunctionType(const SourcePosition &pos,
-                                    util::RegionVector<FieldDeclaration *> &&params, Expr *ret) {
+                                    util::RegionVector<FieldDeclaration *> &&params,
+                                    Expression *ret) {
     return new (region_) FunctionTypeRepr(pos, std::move(params), ret);
   }
 
-  PointerTypeRepr *NewPointerType(const SourcePosition &pos, Expr *base) {
+  PointerTypeRepr *NewPointerType(const SourcePosition &pos, Expression *base) {
     return new (region_) PointerTypeRepr(pos, base);
   }
 
@@ -157,7 +163,7 @@ class AstNodeFactory {
     return new (region_) StructTypeRepr(pos, std::move(fields));
   }
 
-  MapTypeRepr *NewMapType(const SourcePosition &pos, Expr *key_type, Expr *val_type) {
+  MapTypeRepr *NewMapType(const SourcePosition &pos, Expression *key_type, Expression *val_type) {
     return new (region_) MapTypeRepr(pos, key_type, val_type);
   }
 

@@ -91,13 +91,13 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
+  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                  uint32_t attr_idx) const override;
 
   /**
    * Static aggregations do not touch base table columns.
    */
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override {
+  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Static aggregations do not produce columns from base tables.");
   }
 
@@ -107,8 +107,8 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
     return GetPlanAs<planner::AggregatePlanNode>();
   }
 
-  ast::Expr *GetAggregateTerm(ast::Expr *agg_row, uint32_t attr_idx) const;
-  ast::Expr *GetAggregateTermPtr(ast::Expr *agg_row, uint32_t attr_idx) const;
+  ast::Expression *GetAggregateTerm(ast::Expression *agg_row, uint32_t attr_idx) const;
+  ast::Expression *GetAggregateTermPtr(ast::Expression *agg_row, uint32_t attr_idx) const;
 
   ast::StructDeclaration *GeneratePayloadStruct();
   ast::StructDeclaration *GenerateValuesStruct();

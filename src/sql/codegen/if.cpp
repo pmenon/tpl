@@ -6,7 +6,7 @@
 
 namespace tpl::sql::codegen {
 
-If::If(FunctionBuilder *function, ast::Expr *condition)
+If::If(FunctionBuilder *function, ast::Expression *condition)
     : function_(function),
       position_(function_->GetCodeGen()->GetPosition()),
       prev_func_stmt_list_(nullptr),

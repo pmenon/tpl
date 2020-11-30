@@ -103,13 +103,13 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
+  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                  uint32_t attr_idx) const override;
 
   /**
    * Hash-based aggregations do not produce columns from base tables.
    */
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override {
+  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Hash-based aggregations do not produce columns from base tables.");
   }
 
@@ -132,13 +132,13 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
 
   // Initialize and destroy the input aggregation hash table. These are called
   // from InitializeQueryState() and InitializePipelineState().
-  void InitializeAggregationHashTable(FunctionBuilder *function, ast::Expr *agg_ht) const;
-  void TearDownAggregationHashTable(FunctionBuilder *function, ast::Expr *agg_ht) const;
+  void InitializeAggregationHashTable(FunctionBuilder *function, ast::Expression *agg_ht) const;
+  void TearDownAggregationHashTable(FunctionBuilder *function, ast::Expression *agg_ht) const;
 
   // Access an attribute at the given index in the provided aggregate row.
-  ast::Expr *GetGroupByTerm(ast::Identifier agg_row, uint32_t attr_idx) const;
-  ast::Expr *GetAggregateTerm(ast::Identifier agg_row, uint32_t attr_idx) const;
-  ast::Expr *GetAggregateTermPtr(ast::Identifier agg_row, uint32_t attr_idx) const;
+  ast::Expression *GetGroupByTerm(ast::Identifier agg_row, uint32_t attr_idx) const;
+  ast::Expression *GetAggregateTerm(ast::Identifier agg_row, uint32_t attr_idx) const;
+  ast::Expression *GetAggregateTermPtr(ast::Identifier agg_row, uint32_t attr_idx) const;
 
   // These functions define steps in the "build" phase of the aggregation.
   // 1. Filling input values.

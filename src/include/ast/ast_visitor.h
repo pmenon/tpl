@@ -64,7 +64,7 @@ class AstVisitor {
    * @param expr The expression node.
    * @return No-arg constructed return.
    */
-  RetType VisitExpr(Expr *) { return RetType(); }
+  RetType VisitExpression(Expression *) { return RetType(); }
 
   // Generate default no-op visitors for all declaration nodes.
 #define T(DeclType) \
@@ -78,9 +78,9 @@ class AstVisitor {
   STATEMENT_NODES(T)
 #undef T
 
-  // Generate default visitors for expression nodes that dispatch to base Expr
+  // Generate default visitors for expression nodes that dispatch to base Expression
 #define T(ExprType) \
-  RetType Visit##ExprType(ExprType *node) { DISPATCH(Expr); }
+  RetType Visit##ExprType(ExprType *node) { DISPATCH(Expression); }
   EXPRESSION_NODES(T)
 #undef T
 

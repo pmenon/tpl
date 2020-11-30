@@ -53,7 +53,7 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
   }
 
   // Declare the global hash table.
-  ast::Expr *agg_ht_type = codegen_->BuiltinType(ast::BuiltinType::AggregationHashTable);
+  ast::Expression *agg_ht_type = codegen_->BuiltinType(ast::BuiltinType::AggregationHashTable);
   global_agg_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
       codegen_, "agg_hash_table", agg_ht_type);
 }
@@ -141,12 +141,12 @@ void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *functio
   {
     // Get hash from overflow entry.
     ast::Identifier hash_val = codegen_->MakeFreshIdentifier("hash_val");
-    ast::Expr *get_hash_call = codegen_->AggPartitionIteratorGetHash(iter_provider());
+    ast::Expression *get_hash_call = codegen_->AggPartitionIteratorGetHash(iter_provider());
     function->Append(codegen_->DeclareVarWithInit(hash_val, get_hash_call));
 
     // Get the partial aggregate row from the overflow entry.
     ast::Identifier partial_row = codegen_->MakeFreshIdentifier("partial_row");
-    ast::Expr *get_row_call =
+    ast::Expression *get_row_call =
         codegen_->AggPartitionIteratorGetRow(iter_provider(), agg_payload_type_);
     function->Append(codegen_->DeclareVarWithInit(partial_row, get_row_call));
 
@@ -161,7 +161,7 @@ void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *functio
     If check_found(function, codegen_->IsNilPointer(codegen_->MakeExpr(lookup_result)));
     {
       // Link entry.
-      ast::Expr *entry = codegen_->AggPartitionIteratorGetRowEntry(iter_provider());
+      ast::Expression *entry = codegen_->AggPartitionIteratorGetRowEntry(iter_provider());
       function->Append(codegen_->AggHashTableLinkEntry(hash_table_provider(), entry));
     }
     check_found.Else();
@@ -169,8 +169,8 @@ void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *functio
       // Merge partial aggregate.
       const auto &agg_terms = GetAggPlan().GetAggregateTerms();
       for (uint32_t term_idx = 0; term_idx < agg_terms.size(); term_idx++) {
-        ast::Expr *lhs = GetAggregateTermPtr(lookup_result, term_idx);
-        ast::Expr *rhs = GetAggregateTermPtr(partial_row, term_idx);
+        ast::Expression *lhs = GetAggregateTermPtr(lookup_result, term_idx);
+        ast::Expression *rhs = GetAggregateTermPtr(partial_row, term_idx);
         function->Append(codegen_->AggregatorMerge(lhs, rhs));
       }
     }
@@ -210,12 +210,12 @@ ast::FunctionDeclaration *HashAggregationTranslator::GenerateKeyCheckFunction() 
       codegen_->MakeField(agg_payload, codegen_->PointerType(agg_payload_type_)),
       codegen_->MakeField(agg_values, codegen_->PointerType(agg_values_type_)),
   });
-  ast::Expr *ret_type = codegen_->BuiltinType(ast::BuiltinType::Kind::Bool);
+  ast::Expression *ret_type = codegen_->BuiltinType(ast::BuiltinType::Kind::Bool);
   FunctionBuilder builder(codegen_, key_check_fn_, std::move(params), ret_type);
   {
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetGroupByTerms().size(); term_idx++) {
-      ast::Expr *lhs = GetGroupByTerm(agg_payload, term_idx);
-      ast::Expr *rhs = GetGroupByTerm(agg_values, term_idx);
+      ast::Expression *lhs = GetGroupByTerm(agg_payload, term_idx);
+      ast::Expression *rhs = GetGroupByTerm(agg_values, term_idx);
       If check_match(&builder, codegen_->Compare(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
       builder.Append(codegen_->Return(codegen_->ConstBool(false)));
     }
@@ -240,28 +240,28 @@ void HashAggregationTranslator::DefinePipelineFunctions(const PipelineContext &p
 }
 
 void HashAggregationTranslator::InitializeAggregationHashTable(FunctionBuilder *function,
-                                                               ast::Expr *agg_ht) const {
+                                                               ast::Expression *agg_ht) const {
   function->Append(codegen_->AggHashTableInit(agg_ht, GetMemoryPool(), agg_payload_type_));
 }
 
 void HashAggregationTranslator::TearDownAggregationHashTable(FunctionBuilder *function,
-                                                             ast::Expr *agg_ht) const {
+                                                             ast::Expression *agg_ht) const {
   function->Append(codegen_->AggHashTableFree(agg_ht));
 }
 
 void HashAggregationTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  ast::Expr *global_hash_table = GetQueryStateEntryPtr(global_agg_ht_);
+  ast::Expression *global_hash_table = GetQueryStateEntryPtr(global_agg_ht_);
   InitializeAggregationHashTable(function, global_hash_table);
 }
 
 void HashAggregationTranslator::TearDownQueryState(FunctionBuilder *function) const {
-  ast::Expr *global_hash_table = GetQueryStateEntryPtr(global_agg_ht_);
+  ast::Expression *global_hash_table = GetQueryStateEntryPtr(global_agg_ht_);
   TearDownAggregationHashTable(function, global_hash_table);
 }
 
 void HashAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (pipeline_ctx->IsForPipeline(build_pipeline_) && pipeline_ctx->IsParallel()) {
-    ast::Expr *agg_ht_type = codegen_->BuiltinType(ast::BuiltinType::AggregationHashTable);
+    ast::Expression *agg_ht_type = codegen_->BuiltinType(ast::BuiltinType::AggregationHashTable);
     local_agg_ht_ = pipeline_ctx->DeclarePipelineStateEntry("agg_hash_table", agg_ht_type);
   }
 }
@@ -269,7 +269,7 @@ void HashAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline_c
 void HashAggregationTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                                         FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    ast::Expr *local_hash_table = pipeline_ctx.GetStateEntryPtr(local_agg_ht_);
+    ast::Expression *local_hash_table = pipeline_ctx.GetStateEntryPtr(local_agg_ht_);
     InitializeAggregationHashTable(function, local_hash_table);
   }
 }
@@ -277,25 +277,25 @@ void HashAggregationTranslator::InitializePipelineState(const PipelineContext &p
 void HashAggregationTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                                       FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    ast::Expr *local_hash_table = pipeline_ctx.GetStateEntryPtr(local_agg_ht_);
+    ast::Expression *local_hash_table = pipeline_ctx.GetStateEntryPtr(local_agg_ht_);
     TearDownAggregationHashTable(function, local_hash_table);
   }
 }
 
-ast::Expr *HashAggregationTranslator::GetGroupByTerm(ast::Identifier agg_row,
-                                                     uint32_t attr_idx) const {
+ast::Expression *HashAggregationTranslator::GetGroupByTerm(ast::Identifier agg_row,
+                                                           uint32_t attr_idx) const {
   auto member = codegen_->MakeIdentifier(kGroupByKeyPrefix + std::to_string(attr_idx));
   return codegen_->AccessStructMember(codegen_->MakeExpr(agg_row), member);
 }
 
-ast::Expr *HashAggregationTranslator::GetAggregateTerm(ast::Identifier agg_row,
-                                                       uint32_t attr_idx) const {
+ast::Expression *HashAggregationTranslator::GetAggregateTerm(ast::Identifier agg_row,
+                                                             uint32_t attr_idx) const {
   auto member = codegen_->MakeIdentifier(kAggregateTermPrefix + std::to_string(attr_idx));
   return codegen_->AccessStructMember(codegen_->MakeExpr(agg_row), member);
 }
 
-ast::Expr *HashAggregationTranslator::GetAggregateTermPtr(ast::Identifier agg_row,
-                                                          uint32_t attr_idx) const {
+ast::Expression *HashAggregationTranslator::GetAggregateTermPtr(ast::Identifier agg_row,
+                                                                uint32_t attr_idx) const {
   return codegen_->AddressOf(GetAggregateTerm(agg_row, attr_idx));
 }
 
@@ -308,8 +308,8 @@ ast::Identifier HashAggregationTranslator::FillInputValues(FunctionBuilder *func
   // Populate the grouping terms.
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetGroupByTerms()) {
-    ast::Expr *lhs = GetGroupByTerm(agg_values, term_idx);
-    ast::Expr *rhs = context->DeriveValue(*term, this);
+    ast::Expression *lhs = GetGroupByTerm(agg_values, term_idx);
+    ast::Expression *rhs = context->DeriveValue(*term, this);
     function->Append(codegen_->Assign(lhs, rhs));
     term_idx++;
   }
@@ -317,8 +317,8 @@ ast::Identifier HashAggregationTranslator::FillInputValues(FunctionBuilder *func
   // Populate the raw aggregate values.
   term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    ast::Expr *lhs = GetAggregateTerm(agg_values, term_idx);
-    ast::Expr *rhs = context->DeriveValue(*term->GetChild(0), this);
+    ast::Expression *lhs = GetAggregateTerm(agg_values, term_idx);
+    ast::Expression *rhs = context->DeriveValue(*term->GetChild(0), this);
     function->Append(codegen_->Assign(lhs, rhs));
     term_idx++;
   }
@@ -328,7 +328,7 @@ ast::Identifier HashAggregationTranslator::FillInputValues(FunctionBuilder *func
 
 ast::Identifier HashAggregationTranslator::HashInputKeys(FunctionBuilder *function,
                                                          ast::Identifier agg_values) const {
-  std::vector<ast::Expr *> keys;
+  std::vector<ast::Expression *> keys;
   for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetGroupByTerms().size(); term_idx++) {
     keys.push_back(GetGroupByTerm(agg_values, term_idx));
   }
@@ -410,7 +410,7 @@ void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *contex
                                                          F agg_ht_provider) const {
   // var iter_base: AHTIterator
   ast::Identifier aht_iter_base_name = codegen_->MakeFreshIdentifier("iter_base");
-  ast::Expr *aht_iter_type = codegen_->BuiltinType(ast::BuiltinType::AHTIterator);
+  ast::Expression *aht_iter_type = codegen_->BuiltinType(ast::BuiltinType::AHTIterator);
   function->Append(codegen_->DeclareVarNoInit(aht_iter_base_name, aht_iter_type));
 
   // var aht_iter = &iter_base
@@ -426,7 +426,7 @@ void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *contex
       codegen_->MakeStatement(codegen_->AggHashTableIteratorNext(aht_iter())));
   {
     // var agg_row = @ahtIterGetRow()
-    ast::Expr *row = codegen_->AggHashTableIteratorGetRow(aht_iter(), agg_payload_type_);
+    ast::Expression *row = codegen_->AggHashTableIteratorGetRow(aht_iter(), agg_payload_type_);
     function->Append(codegen_->DeclareVarWithInit(agg_row_var_, row));
 
     // Check having clause.
@@ -470,16 +470,17 @@ void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilde
 void HashAggregationTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                                    FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    ast::Expr *global_agg_ht = GetQueryStateEntryPtr(global_agg_ht_);
-    ast::Expr *thread_state_container = GetThreadStateContainer();
-    ast::Expr *tl_agg_ht_offset = pipeline_ctx.GetStateEntryByteOffset(local_agg_ht_);
+    ast::Expression *global_agg_ht = GetQueryStateEntryPtr(global_agg_ht_);
+    ast::Expression *thread_state_container = GetThreadStateContainer();
+    ast::Expression *tl_agg_ht_offset = pipeline_ctx.GetStateEntryByteOffset(local_agg_ht_);
     function->Append(codegen_->AggHashTableMovePartitions(global_agg_ht, thread_state_container,
                                                           tl_agg_ht_offset, merge_partitions_fn_));
   }
 }
 
-ast::Expr *HashAggregationTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                                     uint32_t attr_idx) const {
+ast::Expression *HashAggregationTranslator::GetChildOutput(ConsumerContext *context,
+                                                           uint32_t child_idx,
+                                                           uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");
   if (context->IsForPipeline(*GetPipeline())) {
     if (child_idx == 0) {
@@ -495,9 +496,9 @@ void HashAggregationTranslator::DrivePipeline(const PipelineContext &pipeline_ct
   TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "Aggregation driving unknown pipeline!");
   if (pipeline_ctx.IsParallel()) {
     const auto dispatch = [&](FunctionBuilder *function, ast::Identifier work_func) {
-      ast::Expr *global_hash_table = GetQueryStateEntryPtr(global_agg_ht_);
-      ast::Expr *q_state = GetQueryStatePtr();
-      ast::Expr *thread_state_container = GetThreadStateContainer();
+      ast::Expression *global_hash_table = GetQueryStateEntryPtr(global_agg_ht_);
+      ast::Expression *q_state = GetQueryStatePtr();
+      ast::Expression *thread_state_container = GetThreadStateContainer();
       function->Append(codegen_->AggHashTableParallelScan(global_hash_table, q_state,
                                                           thread_state_container, work_func));
     };

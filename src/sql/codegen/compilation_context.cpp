@@ -395,12 +395,12 @@ std::string CompilationContext::GetFunctionPrefix() const {
 }
 
 util::RegionVector<ast::FieldDeclaration *> CompilationContext::QueryParams() const {
-  ast::Expr *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_));
+  ast::Expression *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_));
   ast::FieldDeclaration *field = codegen_.MakeField(query_state_var_, state_type);
   return codegen_.MakeFieldList({field});
 }
 
-ast::Expr *CompilationContext::GetExecutionContextPtrFromQueryState() {
+ast::Expression *CompilationContext::GetExecutionContextPtrFromQueryState() {
   return query_state_.GetStateEntry(&codegen_, exec_ctx_);
 }
 

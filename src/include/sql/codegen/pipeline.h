@@ -44,7 +44,8 @@ class PipelineContext {
    * @param type_repr The TPL type representation of the element.
    * @return The slot where the inserted state exists.
    */
-  StateDescriptor::Slot DeclarePipelineStateEntry(const std::string &name, ast::Expr *type_repr);
+  StateDescriptor::Slot DeclarePipelineStateEntry(const std::string &name,
+                                                  ast::Expression *type_repr);
 
   /**
    * @return The finalized and constructed state type.
@@ -54,17 +55,17 @@ class PipelineContext {
   /**
    * @return The value of the element at the given slot within this pipeline's state.
    */
-  ast::Expr *GetStateEntry(StateDescriptor::Slot slot) const;
+  ast::Expression *GetStateEntry(StateDescriptor::Slot slot) const;
 
   /**
    * @return A pointer to the element at the given slot within this pipeline's state.
    */
-  ast::Expr *GetStateEntryPtr(StateDescriptor::Slot slot) const;
+  ast::Expression *GetStateEntryPtr(StateDescriptor::Slot slot) const;
 
   /**
    * @return The byte offset of the element at the given slot in the pipeline state.
    */
-  ast::Expr *GetStateEntryByteOffset(StateDescriptor::Slot slot) const;
+  ast::Expression *GetStateEntryByteOffset(StateDescriptor::Slot slot) const;
 
   /**
    * @return True if this context is for the provided input pipeline; false otherwise.
@@ -87,7 +88,7 @@ class PipelineContext {
 
  private:
   // Access the current thread's pipeline state.
-  ast::Expr *AccessCurrentThreadState() const;
+  ast::Expression *AccessCurrentThreadState() const;
 
  private:
   // The pipeline.

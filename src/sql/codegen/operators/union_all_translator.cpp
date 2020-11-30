@@ -45,7 +45,8 @@ void UnionAllTranslator::DefinePipelineFunctions(const PipelineContext &pipeline
   }
 }
 
-ast::Expr *UnionAllTranslator::GetRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const {
+ast::Expression *UnionAllTranslator::GetRowAttribute(ast::Identifier sort_row,
+                                                     uint32_t attr_idx) const {
   ast::Identifier attr_name = codegen_->MakeIdentifier(kRowAttrPrefix + std::to_string(attr_idx));
   return codegen_->AccessStructMember(codegen_->MakeExpr(sort_row), attr_name);
 }
@@ -53,8 +54,8 @@ ast::Expr *UnionAllTranslator::GetRowAttribute(ast::Identifier sort_row, uint32_
 void UnionAllTranslator::FillRow(ConsumerContext *context, FunctionBuilder *function) const {
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
-    ast::Expr *lhs = GetRowAttribute(row_var_, attr_idx);
-    ast::Expr *rhs = GetChildOutput(context, 0, attr_idx);
+    ast::Expression *lhs = GetRowAttribute(row_var_, attr_idx);
+    ast::Expression *rhs = GetChildOutput(context, 0, attr_idx);
     function->Append(codegen_->Assign(lhs, rhs));
   }
 }
@@ -66,7 +67,7 @@ void UnionAllTranslator::Consume(ConsumerContext *context, FunctionBuilder *func
   function->Append(codegen_->DeclareVarNoInit(row_var_, codegen_->MakeExpr(row_type_name_)));
   FillRow(context, function);
   // Invoke the consumption function.
-  std::vector<ast::Expr *> args = {GetQueryStatePtr(), codegen_->MakeExpr(row_var_)};
+  std::vector<ast::Expression *> args = {GetQueryStatePtr(), codegen_->MakeExpr(row_var_)};
   function->Append(codegen_->Call(parent_fn_name_, args));
 }
 
@@ -78,8 +79,8 @@ void UnionAllTranslator::DefineRowStruct() {
 
 void UnionAllTranslator::DefineStructsAndFunctions() { DefineRowStruct(); }
 
-ast::Expr *UnionAllTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                              uint32_t attr_idx) const {
+ast::Expression *UnionAllTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                                    uint32_t attr_idx) const {
   if (context->IsForPipeline(*GetPipeline())) {
     return GetRowAttribute(row_var_, attr_idx);
   }

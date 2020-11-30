@@ -12,7 +12,7 @@ namespace tpl::ast {
 // ---------------------------------------------------------
 
 FunctionDeclaration::FunctionDeclaration(const SourcePosition &pos, Identifier name,
-                                         FunctionLiteralExpr *func)
+                                         FunctionLiteralExpression *func)
     : Declaration(Kind::FunctionDeclaration, pos, name, func->GetTypeRepr()), func_(func) {}
 
 // ---------------------------------------------------------
@@ -36,36 +36,36 @@ ast::FieldDeclaration *StructDeclaration::GetFieldAt(uint32_t field_idx) const {
 // Expression Statement
 // ---------------------------------------------------------
 
-ExpressionStatement::ExpressionStatement(Expr *expr)
+ExpressionStatement::ExpressionStatement(Expression *expr)
     : Statement(Kind::ExpressionStatement, expr->Position()), expr_(expr) {}
 
 // ---------------------------------------------------------
 // Expression
 // ---------------------------------------------------------
 
-bool Expr::IsNilLiteral() const {
-  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+bool Expression::IsNilLiteral() const {
+  if (auto literal = SafeAs<ast::LiteralExpression>()) {
     return literal->IsNilLiteral();
   }
   return false;
 }
 
-bool Expr::IsBoolLiteral() const {
-  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+bool Expression::IsBoolLiteral() const {
+  if (auto literal = SafeAs<ast::LiteralExpression>()) {
     return literal->IsBoolLiteral();
   }
   return false;
 }
 
-bool Expr::IsStringLiteral() const {
-  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+bool Expression::IsStringLiteral() const {
+  if (auto literal = SafeAs<ast::LiteralExpression>()) {
     return literal->IsStringLiteral();
   }
   return false;
 }
 
-bool Expr::IsIntegerLiteral() const {
-  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+bool Expression::IsIntegerLiteral() const {
+  if (auto literal = SafeAs<ast::LiteralExpression>()) {
     return literal->IsIntegerLiteral();
   }
   return false;
@@ -78,7 +78,8 @@ bool Expr::IsIntegerLiteral() const {
 namespace {
 
 // Catches: nil [ '==' | '!=' ] expr
-bool MatchIsLiteralCompareNil(Expr *left, parsing::Token::Type op, Expr *right, Expr **result) {
+bool MatchIsLiteralCompareNil(Expression *left, parsing::Token::Type op, Expression *right,
+                              Expression **result) {
   if (left->IsNilLiteral() && parsing::Token::IsCompareOp(op)) {
     *result = right;
     return true;
@@ -88,7 +89,7 @@ bool MatchIsLiteralCompareNil(Expr *left, parsing::Token::Type op, Expr *right, 
 
 }  // namespace
 
-bool ComparisonOpExpr::IsLiteralCompareNil(Expr **result) const {
+bool ComparisonOpExpression::IsLiteralCompareNil(Expression **result) const {
   return MatchIsLiteralCompareNil(left_, op_, right_, result) ||
          MatchIsLiteralCompareNil(right_, op_, left_, result);
 }
@@ -97,26 +98,31 @@ bool ComparisonOpExpr::IsLiteralCompareNil(Expr **result) const {
 // Function Literal Expressions
 // ---------------------------------------------------------
 
-FunctionLiteralExpr::FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStatement *body)
-    : Expr(Kind::FunctionLiteralExpr, type_repr->Position()), type_repr_(type_repr), body_(body) {}
+FunctionLiteralExpression::FunctionLiteralExpression(FunctionTypeRepr *type_repr,
+                                                     BlockStatement *body)
+    : Expression(Kind::FunctionLiteralExpression, type_repr->Position()),
+      type_repr_(type_repr),
+      body_(body) {}
 
 // ---------------------------------------------------------
 // Call Expression
 // ---------------------------------------------------------
 
-Identifier CallExpr::GetFuncName() const { return func_->As<IdentifierExpr>()->GetName(); }
+Identifier CallExpression::GetFuncName() const {
+  return func_->As<IdentifierExpression>()->GetName();
+}
 
 // ---------------------------------------------------------
 // Index Expressions
 // ---------------------------------------------------------
 
-bool IndexExpr::IsArrayAccess() const {
+bool IndexExpression::IsArrayAccess() const {
   TPL_ASSERT(GetObject() != nullptr, "Object cannot be NULL");
   TPL_ASSERT(GetObject() != nullptr, "Cannot determine object type before type checking!");
   return GetObject()->GetType()->IsArrayType();
 }
 
-bool IndexExpr::IsMapAccess() const {
+bool IndexExpression::IsMapAccess() const {
   TPL_ASSERT(GetObject() != nullptr, "Object cannot be NULL");
   TPL_ASSERT(GetObject() != nullptr, "Cannot determine object type before type checking!");
   return GetObject()->GetType()->IsMapType();
@@ -126,7 +132,7 @@ bool IndexExpr::IsMapAccess() const {
 // Literal Expressions
 // ---------------------------------------------------------
 
-bool LiteralExpr::IsRepresentable(ast::Type *type) const {
+bool LiteralExpression::IsRepresentable(ast::Type *type) const {
   // Integers.
   if (type->IsIntegerType()) {
     if (!IsIntegerLiteral()) {
@@ -190,7 +196,7 @@ bool LiteralExpr::IsRepresentable(ast::Type *type) const {
 // Member expression
 // ---------------------------------------------------------
 
-bool MemberExpr::IsSugaredArrow() const {
+bool MemberExpression::IsSugaredArrow() const {
   TPL_ASSERT(GetObject()->GetType() != nullptr,
              "Cannot determine sugared-arrow before type checking!");
   return GetObject()->GetType()->IsPointerType();

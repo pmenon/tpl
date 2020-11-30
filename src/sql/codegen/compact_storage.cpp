@@ -59,15 +59,15 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
   codegen_->DeclareStruct(type_name_, std::move(members));
 }
 
-ast::Expr *CompactStorage::Nulls(ast::Expr *ptr) const {
+ast::Expression *CompactStorage::Nulls(ast::Expression *ptr) const {
   return codegen_->AddressOf(codegen_->AccessStructMember(ptr, nulls_));
 }
 
-ast::Expr *CompactStorage::ColumnPtr(ast::Expr *ptr, uint32_t index) const {
+ast::Expression *CompactStorage::ColumnPtr(ast::Expression *ptr, uint32_t index) const {
   return codegen_->AddressOf(codegen_->AccessStructMember(ptr, col_info_[index].second));
 }
 
-void CompactStorage::WriteSQL(ast::Expr *ptr, uint32_t index, ast::Expr *val) const {
+void CompactStorage::WriteSQL(ast::Expression *ptr, uint32_t index, ast::Expression *val) const {
   TPL_ASSERT(ptr != nullptr, "Buffer pointer cannot be null.");
   TPL_ASSERT(val != nullptr, "Input value cannot be null.");
   TPL_ASSERT(index < col_info_.size(), "Out-of-bounds index access.");
@@ -87,12 +87,12 @@ void CompactStorage::WriteSQL(ast::Expr *ptr, uint32_t index, ast::Expr *val) co
 #undef GEN_CASE
 
   // Call.
-  ast::Expr *col_ptr = ColumnPtr(ptr, index);
-  ast::Expr *nulls = Nulls(ptr);
+  ast::Expression *col_ptr = ColumnPtr(ptr, index);
+  ast::Expression *nulls = Nulls(ptr);
   function->Append(codegen_->CallBuiltin(op, {col_ptr, nulls, codegen_->Const32(index), val}));
 }
 
-ast::Expr *CompactStorage::ReadSQL(ast::Expr *ptr, uint32_t index) const {
+ast::Expression *CompactStorage::ReadSQL(ast::Expression *ptr, uint32_t index) const {
   TPL_ASSERT(ptr != nullptr, "Buffer pointer cannot be null.");
   TPL_ASSERT(index < col_info_.size(), "Out-of-bounds index access.");
 

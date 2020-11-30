@@ -18,7 +18,7 @@ void Sema::VisitAssignmentStatement(ast::AssignmentStatement *node) {
   }
 
   // Check assignment
-  ast::Expr *source = node->GetSource();
+  ast::Expression *source = node->GetSource();
   if (!CheckAssignmentConstraints(dest_type, source)) {
     error_reporter_->Report(node->Position(), ErrorMessages::kInvalidAssignment, src_type,
                             dest_type);
@@ -97,7 +97,7 @@ void Sema::VisitIfStatement(ast::IfStatement *node) {
     auto *bool_type = ast::BuiltinType::Get(context_, ast::BuiltinType::Bool);
 
     // Perform implicit cast from SQL boolean to primitive boolean
-    ast::Expr *cond = node->GetCondition();
+    ast::Expression *cond = node->GetCondition();
     cond = context_->GetNodeFactory()->NewImplicitCastExpr(
         cond->Position(), ast::CastKind::SqlBoolToBool, bool_type, cond);
     cond->SetType(bool_type);
@@ -156,7 +156,7 @@ void Sema::VisitReturnStatement(ast::ReturnStatement *node) {
     return;
   }
 
-  ast::Expr *ret = node->GetReturnValue();
+  ast::Expression *ret = node->GetReturnValue();
   if (!CheckAssignmentConstraints(func_type->GetReturnType(), ret)) {
     error_reporter_->Report(node->Position(), ErrorMessages::kMismatchedReturnType, return_type,
                             func_type->GetReturnType());

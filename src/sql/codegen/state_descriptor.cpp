@@ -12,7 +12,7 @@ StateDescriptor::StateDescriptor(ast::Identifier name, StateDescriptor::Instance
     : name_(name), access_(std::move(access)), state_type_(nullptr) {}
 
 StateDescriptor::Slot StateDescriptor::DeclareStateEntry(CodeGen *codegen, const std::string &name,
-                                                         ast::Expr *type_repr) {
+                                                         ast::Expression *type_repr) {
   TPL_ASSERT(state_type_ == nullptr, "Cannot add to state after it's been finalized");
   ast::Identifier member = codegen->MakeFreshIdentifier(name);
   slots_.emplace_back(member, type_repr);
@@ -37,23 +37,25 @@ ast::StructDeclaration *StateDescriptor::ConstructFinalType(CodeGen *codegen) {
   return state_type_;
 }
 
-ast::Expr *StateDescriptor::GetStatePointer(CodeGen *codegen) const {
+ast::Expression *StateDescriptor::GetStatePointer(CodeGen *codegen) const {
   TPL_ASSERT(access_ != nullptr, "No instance accessor provided");
   return access_(codegen);
 }
 
-ast::Expr *StateDescriptor::GetStateEntry(CodeGen *codegen, StateDescriptor::Slot slot) const {
+ast::Expression *StateDescriptor::GetStateEntry(CodeGen *codegen,
+                                                StateDescriptor::Slot slot) const {
   TPL_ASSERT(slot < slots_.size(), "Invalid slot");
   return codegen->AccessStructMember(GetStatePointer(codegen), slots_[slot].name);
 }
 
-ast::Expr *StateDescriptor::GetStateEntryPtr(CodeGen *codegen, StateDescriptor::Slot slot) const {
+ast::Expression *StateDescriptor::GetStateEntryPtr(CodeGen *codegen,
+                                                   StateDescriptor::Slot slot) const {
   TPL_ASSERT(slot < slots_.size(), "Invalid slot");
   return codegen->AddressOf(GetStateEntry(codegen, slot));
 }
 
-ast::Expr *StateDescriptor::GetStateEntryOffset(CodeGen *codegen,
-                                                StateDescriptor::Slot slot) const {
+ast::Expression *StateDescriptor::GetStateEntryOffset(CodeGen *codegen,
+                                                      StateDescriptor::Slot slot) const {
   TPL_ASSERT(slot < slots_.size(), "Invalid slot");
   return codegen->OffsetOf(state_type_->GetName(), slots_[slot].name);
 }

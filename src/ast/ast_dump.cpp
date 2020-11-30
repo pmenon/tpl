@@ -68,7 +68,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     out_ << " ";
   }
 
-  void DumpExpressionCommon(Expr *expr) {
+  void DumpExpressionCommon(Expression *expr) {
     DumpNodeCommon(expr);
     if (expr->GetType() != nullptr) {
       DumpType(expr->GetType());
@@ -133,7 +133,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(decl); });
   }
 
-  void DumpExpr(Expr *expr) {
+  void DumpExpression(Expression *expr) {
     DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(expr); });
   }
 
@@ -170,13 +170,13 @@ void AstDumperImpl::VisitFile(File *node) {
 void AstDumperImpl::VisitFieldDeclaration(FieldDeclaration *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->GetName());
-  DumpExpr(node->GetTypeRepr());
+  DumpExpression(node->GetTypeRepr());
 }
 
 void AstDumperImpl::VisitFunctionDeclaration(FunctionDeclaration *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->GetName());
-  DumpExpr(node->GetFunctionLiteral());
+  DumpExpression(node->GetFunctionLiteral());
 }
 
 void AstDumperImpl::VisitVariableDeclaration(VariableDeclaration *node) {
@@ -186,7 +186,7 @@ void AstDumperImpl::VisitVariableDeclaration(VariableDeclaration *node) {
     DumpType(node->GetTypeRepr()->GetType());
   }
   if (node->HasInitialValue()) {
-    DumpExpr(node->GetInitialValue());
+    DumpExpression(node->GetInitialValue());
   }
 }
 
@@ -200,8 +200,8 @@ void AstDumperImpl::VisitStructDeclaration(StructDeclaration *node) {
 
 void AstDumperImpl::VisitAssignmentStatement(AssignmentStatement *node) {
   DumpNodeCommon(node);
-  DumpExpr(node->GetDestination());
-  DumpExpr(node->GetSource());
+  DumpExpression(node->GetDestination());
+  DumpExpression(node->GetSource());
 }
 
 void AstDumperImpl::VisitBlockStatement(BlockStatement *node) {
@@ -225,7 +225,7 @@ void AstDumperImpl::VisitForStatement(ForStatement *node) {
     DumpStatement(node->GetInit());
   }
   if (node->GetCondition() != nullptr) {
-    DumpExpr(node->GetCondition());
+    DumpExpression(node->GetCondition());
   }
   if (node->GetNext() != nullptr) {
     DumpStatement(node->GetNext());
@@ -235,14 +235,14 @@ void AstDumperImpl::VisitForStatement(ForStatement *node) {
 
 void AstDumperImpl::VisitForInStatement(ForInStatement *node) {
   DumpNodeCommon(node);
-  DumpExpr(node->Target());
-  DumpExpr(node->Iterable());
+  DumpExpression(node->Target());
+  DumpExpression(node->Iterable());
   DumpStatement(node->GetBody());
 }
 
 void AstDumperImpl::VisitIfStatement(IfStatement *node) {
   DumpNodeCommon(node);
-  DumpExpr(node->GetCondition());
+  DumpExpression(node->GetCondition());
   DumpStatement(node->GetThenStatement());
   if (node->HasElseStatement()) {
     DumpStatement(node->GetElseStatement());
@@ -252,59 +252,59 @@ void AstDumperImpl::VisitIfStatement(IfStatement *node) {
 void AstDumperImpl::VisitReturnStatement(ReturnStatement *node) {
   DumpNodeCommon(node);
   if (node->GetReturnValue() != nullptr) {
-    DumpExpr(node->GetReturnValue());
+    DumpExpression(node->GetReturnValue());
   }
 }
 
-void AstDumperImpl::VisitCallExpr(CallExpr *node) {
+void AstDumperImpl::VisitCallExpression(CallExpression *node) {
   DumpExpressionCommon(node);
 
   DumpPrimitive("<");
   {
     WithColor color(this, llvm::raw_ostream::Colors::RED);
     switch (node->GetCallKind()) {
-      case CallExpr::CallKind::Builtin: {
+      case CallExpression::CallKind::Builtin: {
         out_ << "Builtin";
         break;
       }
-      case CallExpr::CallKind::Regular: {
+      case CallExpression::CallKind::Regular: {
         out_ << "Regular";
       }
     }
   }
   DumpPrimitive("> ");
 
-  DumpExpr(node->GetFunction());
+  DumpExpression(node->GetFunction());
   for (auto *expr : node->GetArguments()) {
-    DumpExpr(expr);
+    DumpExpression(expr);
   }
 }
 
-void AstDumperImpl::VisitBinaryOpExpr(BinaryOpExpr *node) {
+void AstDumperImpl::VisitBinaryOpExpression(BinaryOpExpression *node) {
   DumpExpressionCommon(node);
   DumpToken(node->Op());
-  DumpExpr(node->GetLeft());
-  DumpExpr(node->GetRight());
+  DumpExpression(node->GetLeft());
+  DumpExpression(node->GetRight());
 }
 
-void AstDumperImpl::VisitComparisonOpExpr(ComparisonOpExpr *node) {
+void AstDumperImpl::VisitComparisonOpExpression(ComparisonOpExpression *node) {
   DumpExpressionCommon(node);
   DumpToken(node->Op());
-  DumpExpr(node->GetLeft());
-  DumpExpr(node->GetRight());
+  DumpExpression(node->GetLeft());
+  DumpExpression(node->GetRight());
 }
 
-void AstDumperImpl::VisitFunctionLiteralExpr(FunctionLiteralExpr *node) {
+void AstDumperImpl::VisitFunctionLiteralExpression(FunctionLiteralExpression *node) {
   DumpExpressionCommon(node);
   DumpStatement(node->GetBody());
 }
 
-void AstDumperImpl::VisitIdentifierExpr(IdentifierExpr *node) {
+void AstDumperImpl::VisitIdentifierExpression(IdentifierExpression *node) {
   DumpExpressionCommon(node);
   DumpIdentifier(node->GetName());
 }
 
-void AstDumperImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
+void AstDumperImpl::VisitImplicitCastExpression(ImplicitCastExpression *node) {
   DumpExpressionCommon(node);
   DumpPrimitive("<");
   {
@@ -312,49 +312,49 @@ void AstDumperImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
     DumpPrimitive(CastKindToString(node->GetCastKind()));
   }
   DumpPrimitive(">");
-  DumpExpr(node->GetInput());
+  DumpExpression(node->GetInput());
 }
 
-void AstDumperImpl::VisitIndexExpr(IndexExpr *node) {
+void AstDumperImpl::VisitIndexExpression(IndexExpression *node) {
   DumpExpressionCommon(node);
-  DumpExpr(node->GetObject());
-  DumpExpr(node->GetIndex());
+  DumpExpression(node->GetObject());
+  DumpExpression(node->GetIndex());
 }
 
-void AstDumperImpl::VisitLiteralExpr(LiteralExpr *node) {
+void AstDumperImpl::VisitLiteralExpression(LiteralExpression *node) {
   DumpExpressionCommon(node);
   switch (node->GetLiteralKind()) {
-    case LiteralExpr::LiteralKind::Nil:
+    case LiteralExpression::LiteralKind::Nil:
       DumpPrimitive("nil");
       break;
-    case LiteralExpr::LiteralKind::Boolean:
+    case LiteralExpression::LiteralKind::Boolean:
       DumpPrimitive(node->BoolVal() ? "'true'" : "'false'");
       break;
-    case LiteralExpr::LiteralKind::Int:
+    case LiteralExpression::LiteralKind::Int:
       DumpPrimitive(node->IntegerVal());
       break;
-    case LiteralExpr::LiteralKind::Float:
+    case LiteralExpression::LiteralKind::Float:
       DumpPrimitive(node->FloatVal());
       break;
-    case LiteralExpr::LiteralKind::String:
+    case LiteralExpression::LiteralKind::String:
       DumpIdentifier(node->StringVal());
       break;
   }
 }
 
-void AstDumperImpl::VisitMemberExpr(MemberExpr *node) {
+void AstDumperImpl::VisitMemberExpression(MemberExpression *node) {
   DumpExpressionCommon(node);
-  DumpExpr(node->GetObject());
-  DumpExpr(node->GetMember());
+  DumpExpression(node->GetObject());
+  DumpExpression(node->GetMember());
 }
 
-void AstDumperImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
+void AstDumperImpl::VisitUnaryOpExpression(UnaryOpExpression *node) {
   DumpExpressionCommon(node);
   DumpToken(node->Op());
-  DumpExpr(node->GetInput());
+  DumpExpression(node->GetInput());
 }
 
-void AstDumperImpl::VisitBadExpr(BadExpr *node) {
+void AstDumperImpl::VisitBadExpression(BadExpression *node) {
   DumpNodeCommon(node);
   DumpPrimitive("BAD EXPRESSION @ ");
   DumpPosition(node->Position());
@@ -367,7 +367,7 @@ void AstDumperImpl::VisitStructTypeRepr(StructTypeRepr *node) {
 
 void AstDumperImpl::VisitPointerTypeRepr(PointerTypeRepr *node) {
   DumpNodeCommon(node);
-  DumpExpr(node->GetBase());
+  DumpExpression(node->GetBase());
 }
 
 void AstDumperImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
@@ -377,14 +377,14 @@ void AstDumperImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
 
 void AstDumperImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
   DumpNodeCommon(node);
-  DumpExpr(node->GetLength());
-  DumpExpr(node->GetElementType());
+  DumpExpression(node->GetLength());
+  DumpExpression(node->GetElementType());
 }
 
 void AstDumperImpl::VisitMapTypeRepr(MapTypeRepr *node) {
   DumpNodeCommon(node);
-  DumpExpr(node->GetKeyType());
-  DumpExpr(node->GetValueType());
+  DumpExpression(node->GetKeyType());
+  DumpExpression(node->GetValueType());
 }
 
 void AstDump::Dump(std::ostream &os, AstNode *node) {

@@ -51,7 +51,7 @@ void AstPrettyPrintImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
   Visit(node->GetElementType());
 }
 
-void AstPrettyPrintImpl::VisitBadExpr(BadExpr *node) { TPL_ASSERT(false, "Invalid"); }
+void AstPrettyPrintImpl::VisitBadExpression(BadExpression *node) { TPL_ASSERT(false, "Invalid"); }
 
 void AstPrettyPrintImpl::VisitBlockStatement(BlockStatement *node) {
   if (node->IsEmpty()) {
@@ -75,7 +75,7 @@ void AstPrettyPrintImpl::VisitBlockStatement(BlockStatement *node) {
   os_ << "}";
 }
 
-void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
+void AstPrettyPrintImpl::VisitCallExpression(CallExpression *node) {
   if (node->IsBuiltinCall()) os_ << "@";
   Visit(node->GetFunction());
   os_ << "(";
@@ -99,11 +99,11 @@ void AstPrettyPrintImpl::VisitFunctionDeclaration(FunctionDeclaration *node) {
   NewLine();
 }
 
-void AstPrettyPrintImpl::VisitIdentifierExpr(IdentifierExpr *node) {
+void AstPrettyPrintImpl::VisitIdentifierExpression(IdentifierExpression *node) {
   os_ << node->GetName().GetView();
 }
 
-void AstPrettyPrintImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
+void AstPrettyPrintImpl::VisitImplicitCastExpression(ImplicitCastExpression *node) {
   os_ << CastKindToString(node->GetCastKind()) << "(";
   Visit(node->GetInput());
   os_ << ")";
@@ -128,7 +128,7 @@ void AstPrettyPrintImpl::VisitStructDeclaration(StructDeclaration *node) {
   NewLine();
 }
 
-void AstPrettyPrintImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
+void AstPrettyPrintImpl::VisitUnaryOpExpression(UnaryOpExpression *node) {
   os_ << parsing::Token::GetString(node->Op());
   Visit(node->GetInput());
 }
@@ -157,7 +157,7 @@ void AstPrettyPrintImpl::VisitFile(File *node) {
   }
 }
 
-void AstPrettyPrintImpl::VisitFunctionLiteralExpr(FunctionLiteralExpr *node) {
+void AstPrettyPrintImpl::VisitFunctionLiteralExpression(FunctionLiteralExpression *node) {
   Visit(node->GetTypeRepr());
   os_ << " ";
   Visit(node->GetBody());
@@ -192,7 +192,7 @@ void AstPrettyPrintImpl::VisitForInStatement(ForInStatement *node) {
   Visit(node->GetBody());
 }
 
-void AstPrettyPrintImpl::VisitBinaryOpExpr(BinaryOpExpr *node) {
+void AstPrettyPrintImpl::VisitBinaryOpExpression(BinaryOpExpression *node) {
   Visit(node->GetLeft());
   os_ << " " << parsing::Token::GetString(node->Op()) << " ";
   Visit(node->GetRight());
@@ -205,21 +205,21 @@ void AstPrettyPrintImpl::VisitMapTypeRepr(MapTypeRepr *node) {
   Visit(node->GetValueType());
 }
 
-void AstPrettyPrintImpl::VisitLiteralExpr(LiteralExpr *node) {
+void AstPrettyPrintImpl::VisitLiteralExpression(LiteralExpression *node) {
   switch (node->GetLiteralKind()) {
-    case LiteralExpr::LiteralKind::Nil:
+    case LiteralExpression::LiteralKind::Nil:
       os_ << "nil";
       break;
-    case LiteralExpr::LiteralKind::Boolean:
+    case LiteralExpression::LiteralKind::Boolean:
       os_ << (node->BoolVal() ? "true" : "false");
       break;
-    case LiteralExpr::LiteralKind::Int:
+    case LiteralExpression::LiteralKind::Int:
       os_ << node->IntegerVal();
       break;
-    case LiteralExpr::LiteralKind::Float:
+    case LiteralExpression::LiteralKind::Float:
       os_ << node->FloatVal();
       break;
-    case LiteralExpr::LiteralKind::String:
+    case LiteralExpression::LiteralKind::String:
       os_ << "\"" << node->StringVal().GetView() << "\"";
       break;
   }
@@ -249,7 +249,7 @@ void AstPrettyPrintImpl::VisitDeclarationStatement(DeclarationStatement *node) {
   Visit(node->GetDeclaration());
 }
 
-void AstPrettyPrintImpl::VisitMemberExpr(MemberExpr *node) {
+void AstPrettyPrintImpl::VisitMemberExpression(MemberExpression *node) {
   Visit(node->GetObject());
   os_ << ".";
   Visit(node->GetMember());
@@ -260,7 +260,7 @@ void AstPrettyPrintImpl::VisitPointerTypeRepr(PointerTypeRepr *node) {
   Visit(node->GetBase());
 }
 
-void AstPrettyPrintImpl::VisitComparisonOpExpr(ComparisonOpExpr *node) {
+void AstPrettyPrintImpl::VisitComparisonOpExpression(ComparisonOpExpression *node) {
   Visit(node->GetLeft());
   os_ << " " << parsing::Token::GetString(node->Op()) << " ";
   Visit(node->GetRight());
@@ -281,7 +281,7 @@ void AstPrettyPrintImpl::VisitExpressionStatement(ExpressionStatement *node) {
   Visit(node->GetExpression());
 }
 
-void AstPrettyPrintImpl::VisitIndexExpr(IndexExpr *node) {
+void AstPrettyPrintImpl::VisitIndexExpression(IndexExpression *node) {
   Visit(node->GetObject());
   os_ << "[";
   Visit(node->GetIndex());

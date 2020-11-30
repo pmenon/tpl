@@ -168,11 +168,11 @@ class FunctionFinder : public AstTraversalVisitor<FunctionFinder<CountLiterals>>
     AstTraversalVisitor<SelfT>::VisitFunctionDeclaration(decl);
   }
 
-  void VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *expr) {
+  void VisitFunctionLiteralExpression(ast::FunctionLiteralExpression *expr) {
     if constexpr (CountLiterals) {
       num_funcs_++;
     }
-    AstTraversalVisitor<SelfT>::VisitFunctionLiteralExpr(expr);
+    AstTraversalVisitor<SelfT>::VisitFunctionLiteralExpression(expr);
   }
 
   uint32_t NumFunctions() const { return num_funcs_; }

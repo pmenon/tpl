@@ -68,7 +68,7 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
    * @param col_oid The ID of the column to read.
    * @return The value of the column.
    */
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override;
+  ast::Expression *GetTableColumn(uint16_t col_oid) const override;
 
  private:
   // Return the plan.
@@ -77,9 +77,9 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
   }
 
   // Access the given field in the CSV row.
-  ast::Expr *GetField(ast::Identifier row, uint32_t field_index) const;
+  ast::Expression *GetField(ast::Identifier row, uint32_t field_index) const;
   // Access a pointer to the field in the CSV row.
-  ast::Expr *GetFieldPtr(ast::Identifier row, uint32_t field_index) const;
+  ast::Expression *GetFieldPtr(ast::Identifier row, uint32_t field_index) const;
 
  private:
   // The name of the CSV row type, and the CSV row.

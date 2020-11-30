@@ -28,7 +28,7 @@ class FunctionBuilder {
    * @param ret_type The return type representation of the function.
    */
   FunctionBuilder(CodeGen *codegen, ast::Identifier name,
-                  util::RegionVector<ast::FieldDeclaration *> &&params, ast::Expr *ret_type);
+                  util::RegionVector<ast::FieldDeclaration *> &&params, ast::Expression *ret_type);
 
   /**
    * Destructor.
@@ -38,7 +38,7 @@ class FunctionBuilder {
   /**
    * @return A reference to a function parameter by its ordinal position.
    */
-  ast::Expr *GetParameterByPosition(uint32_t param_idx);
+  ast::Expression *GetParameterByPosition(uint32_t param_idx);
 
   /**
    * Append a statement to the list of statements in this function.
@@ -50,7 +50,7 @@ class FunctionBuilder {
    * Append an expression as a statement to the list of statements in this function.
    * @param expr The expression to append as a statement.
    */
-  void Append(ast::Expr *expr);
+  void Append(ast::Expression *expr);
 
   /**
    * Append a variable declaration as a statement to the list of statements in this function.
@@ -63,7 +63,7 @@ class FunctionBuilder {
    * @param ret The value to return from the function. Use a null pointer to return nothing.
    * @return The build function declaration.
    */
-  ast::FunctionDeclaration *Finish(ast::Expr *ret = nullptr);
+  ast::FunctionDeclaration *Finish(ast::Expression *ret = nullptr);
 
   /**
    * @return The final constructed function; null if the builder hasn't been constructed through
@@ -86,7 +86,7 @@ class FunctionBuilder {
   // The function's arguments.
   util::RegionVector<ast::FieldDeclaration *> params_;
   // The return type of the function.
-  ast::Expr *ret_type_;
+  ast::Expression *ret_type_;
   // The start and stop position of statements in the function.
   SourcePosition start_;
   // The list of generated statements making up the function.

@@ -24,7 +24,7 @@ OperatorTranslator::OperatorTranslator(const planner::AbstractPlanNode &plan,
   }
 }
 
-ast::Expr *OperatorTranslator::GetOutput(ConsumerContext *context, uint32_t attr_idx) const {
+ast::Expression *OperatorTranslator::GetOutput(ConsumerContext *context, uint32_t attr_idx) const {
   // Check valid output column.
   const auto output_schema = plan_.GetOutputSchema();
   if (attr_idx >= output_schema->NumColumns()) {
@@ -38,8 +38,8 @@ ast::Expr *OperatorTranslator::GetOutput(ConsumerContext *context, uint32_t attr
   return context->DeriveValue(*output_expression, this);
 }
 
-ast::Expr *OperatorTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                              uint32_t attr_idx) const {
+ast::Expression *OperatorTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                                    uint32_t attr_idx) const {
   // Check valid child.
   if (child_idx >= plan_.GetChildrenSize()) {
     throw Exception(ExceptionType::CodeGen,
@@ -53,27 +53,27 @@ ast::Expr *OperatorTranslator::GetChildOutput(ConsumerContext *context, uint32_t
   return child_translator->GetOutput(context, attr_idx);
 }
 
-ast::Expr *OperatorTranslator::GetQueryStatePtr() const {
+ast::Expression *OperatorTranslator::GetQueryStatePtr() const {
   return compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
 }
 
-ast::Expr *OperatorTranslator::GetQueryStateEntry(StateDescriptor::Slot slot) const {
+ast::Expression *OperatorTranslator::GetQueryStateEntry(StateDescriptor::Slot slot) const {
   return compilation_ctx_->GetQueryState()->GetStateEntry(codegen_, slot);
 }
 
-ast::Expr *OperatorTranslator::GetQueryStateEntryPtr(StateDescriptor::Slot slot) const {
+ast::Expression *OperatorTranslator::GetQueryStateEntryPtr(StateDescriptor::Slot slot) const {
   return compilation_ctx_->GetQueryState()->GetStateEntryPtr(codegen_, slot);
 }
 
-ast::Expr *OperatorTranslator::GetExecutionContext() const {
+ast::Expression *OperatorTranslator::GetExecutionContext() const {
   return compilation_ctx_->GetExecutionContextPtrFromQueryState();
 }
 
-ast::Expr *OperatorTranslator::GetThreadStateContainer() const {
+ast::Expression *OperatorTranslator::GetThreadStateContainer() const {
   return codegen_->ExecCtxGetTLS(GetExecutionContext());
 }
 
-ast::Expr *OperatorTranslator::GetMemoryPool() const {
+ast::Expression *OperatorTranslator::GetMemoryPool() const {
   return codegen_->ExecCtxGetMemoryPool(GetExecutionContext());
 }
 

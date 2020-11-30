@@ -77,7 +77,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
    * @return The value (or value vector) of the column with the provided column OID in the table
    *         this sequential scan is operating over.
    */
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override;
+  ast::Expression *GetTableColumn(uint16_t col_oid) const override;
 
  private:
   // Does the scan have a predicate?
@@ -88,7 +88,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
 
   // Generate a generic filter term.
   void GenerateGenericTerm(FunctionBuilder *function, const planner::AbstractExpression *term,
-                           ast::Expr *vector_proj, ast::Expr *tid_list);
+                           ast::Expression *vector_proj, ast::Expression *tid_list);
 
   // Generate all filter clauses.
   void GenerateFilterClauseFunctions(const planner::AbstractExpression *predicate,

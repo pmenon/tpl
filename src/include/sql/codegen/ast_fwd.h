@@ -7,12 +7,12 @@ namespace tpl::ast {
 
 class BlockStatement;
 class Context;
-class Expr;
+class Expression;
 class Declaration;
 class FieldDeclaration;
 class File;
 class FunctionDeclaration;
-class IdentifierExpr;
+class IdentifierExpression;
 class Statement;
 class StructDeclaration;
 class VariableDeclaration;

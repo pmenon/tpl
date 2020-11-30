@@ -54,54 +54,55 @@ CodeGen::CodeGen(CompilationUnit *container)
 
 CodeGen::~CodeGen() { ExitScope(); }
 
-ast::Expr *CodeGen::ConstBool(bool val) const {
-  ast::Expr *expr = NodeFactory()->NewBoolLiteral(position_, val);
+ast::Expression *CodeGen::ConstBool(bool val) const {
+  ast::Expression *expr = NodeFactory()->NewBoolLiteral(position_, val);
   expr->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return expr;
 }
 
-ast::Expr *CodeGen::Const8(int8_t val) const {
-  ast::Expr *expr = NodeFactory()->NewIntLiteral(position_, val);
+ast::Expression *CodeGen::Const8(int8_t val) const {
+  ast::Expression *expr = NodeFactory()->NewIntLiteral(position_, val);
   expr->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Int8));
   return expr;
 }
 
-ast::Expr *CodeGen::Const16(int16_t val) const {
-  ast::Expr *expr = NodeFactory()->NewIntLiteral(position_, val);
+ast::Expression *CodeGen::Const16(int16_t val) const {
+  ast::Expression *expr = NodeFactory()->NewIntLiteral(position_, val);
   expr->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Int16));
   return expr;
 }
 
-ast::Expr *CodeGen::Const32(int32_t val) const {
-  ast::Expr *expr = NodeFactory()->NewIntLiteral(position_, val);
+ast::Expression *CodeGen::Const32(int32_t val) const {
+  ast::Expression *expr = NodeFactory()->NewIntLiteral(position_, val);
   expr->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Int32));
   return expr;
 }
 
-ast::Expr *CodeGen::Const64(int64_t val) const {
-  ast::Expr *expr = NodeFactory()->NewIntLiteral(position_, val);
+ast::Expression *CodeGen::Const64(int64_t val) const {
+  ast::Expression *expr = NodeFactory()->NewIntLiteral(position_, val);
   expr->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Int64));
   return expr;
 }
 
-ast::Expr *CodeGen::ConstDouble(double val) const {
-  ast::Expr *expr = NodeFactory()->NewFloatLiteral(position_, val);
+ast::Expression *CodeGen::ConstDouble(double val) const {
+  ast::Expression *expr = NodeFactory()->NewFloatLiteral(position_, val);
   expr->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Float32));
   return expr;
 }
 
-ast::Expr *CodeGen::ConstString(std::string_view str) const {
-  ast::Expr *expr = NodeFactory()->NewStringLiteral(position_, MakeIdentifier(str));
+ast::Expression *CodeGen::ConstString(std::string_view str) const {
+  ast::Expression *expr = NodeFactory()->NewStringLiteral(position_, MakeIdentifier(str));
   expr->SetType(ast::StringType::Get(Context()));
   return expr;
 }
 
-ast::VariableDeclaration *CodeGen::DeclareVar(ast::Identifier name, ast::Expr *type_repr,
-                                              ast::Expr *init) {
+ast::VariableDeclaration *CodeGen::DeclareVar(ast::Identifier name, ast::Expression *type_repr,
+                                              ast::Expression *init) {
   return NodeFactory()->NewVariableDeclaration(position_, name, type_repr, init);
 }
 
-ast::VariableDeclaration *CodeGen::DeclareVarNoInit(ast::Identifier name, ast::Expr *type_repr) {
+ast::VariableDeclaration *CodeGen::DeclareVarNoInit(ast::Identifier name,
+                                                    ast::Expression *type_repr) {
   return DeclareVar(name, type_repr, nullptr);
 }
 
@@ -110,7 +111,7 @@ ast::VariableDeclaration *CodeGen::DeclareVarNoInit(ast::Identifier name,
   return DeclareVarNoInit(name, BuiltinType(kind));
 }
 
-ast::VariableDeclaration *CodeGen::DeclareVarWithInit(ast::Identifier name, ast::Expr *init) {
+ast::VariableDeclaration *CodeGen::DeclareVarWithInit(ast::Identifier name, ast::Expression *init) {
   return DeclareVar(name, nullptr, init);
 }
 
@@ -122,7 +123,7 @@ ast::StructDeclaration *CodeGen::DeclareStruct(
   return decl;
 }
 
-ast::Statement *CodeGen::Assign(ast::Expr *dest, ast::Expr *value) {
+ast::Statement *CodeGen::Assign(ast::Expression *dest, ast::Expression *value) {
   // TODO(pmenon): Check types?
   // Set the type of the destination
   dest->SetType(value->GetType());
@@ -130,38 +131,38 @@ ast::Statement *CodeGen::Assign(ast::Expr *dest, ast::Expr *value) {
   return NodeFactory()->NewAssignmentStatement(position_, dest, value);
 }
 
-ast::Expr *CodeGen::ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind) {
+ast::Expression *CodeGen::ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind) {
   return NodeFactory()->NewArrayType(position_, Const64(num_elems), BuiltinType(kind));
 }
 
-ast::Expr *CodeGen::BuiltinType(ast::BuiltinType::Kind builtin_kind) const {
+ast::Expression *CodeGen::BuiltinType(ast::BuiltinType::Kind builtin_kind) const {
   // Lookup the builtin type. We'll use it to construct an identifier.
   ast::BuiltinType *type = ast::BuiltinType::Get(Context(), builtin_kind);
   // Build an identifier expression using the builtin's name
-  ast::Expr *expr = MakeExpr(Context()->GetIdentifier(type->GetTplName()));
+  ast::Expression *expr = MakeExpr(Context()->GetIdentifier(type->GetTplName()));
   // Set the type to avoid double-checking the type
   expr->SetType(type);
   // Done
   return expr;
 }
 
-ast::Expr *CodeGen::BoolType() const { return BuiltinType(ast::BuiltinType::Bool); }
+ast::Expression *CodeGen::BoolType() const { return BuiltinType(ast::BuiltinType::Bool); }
 
-ast::Expr *CodeGen::Int8Type() const { return BuiltinType(ast::BuiltinType::Int8); }
+ast::Expression *CodeGen::Int8Type() const { return BuiltinType(ast::BuiltinType::Int8); }
 
-ast::Expr *CodeGen::Int16Type() const { return BuiltinType(ast::BuiltinType::Int16); }
+ast::Expression *CodeGen::Int16Type() const { return BuiltinType(ast::BuiltinType::Int16); }
 
-ast::Expr *CodeGen::Int32Type() const { return BuiltinType(ast::BuiltinType::Int32); }
+ast::Expression *CodeGen::Int32Type() const { return BuiltinType(ast::BuiltinType::Int32); }
 
-ast::Expr *CodeGen::UInt32Type() const { return BuiltinType(ast::BuiltinType::UInt32); }
+ast::Expression *CodeGen::UInt32Type() const { return BuiltinType(ast::BuiltinType::UInt32); }
 
-ast::Expr *CodeGen::Int64Type() const { return BuiltinType(ast::BuiltinType::Int64); }
+ast::Expression *CodeGen::Int64Type() const { return BuiltinType(ast::BuiltinType::Int64); }
 
-ast::Expr *CodeGen::Float32Type() const { return BuiltinType(ast::BuiltinType::Float32); }
+ast::Expression *CodeGen::Float32Type() const { return BuiltinType(ast::BuiltinType::Float32); }
 
-ast::Expr *CodeGen::Float64Type() const { return BuiltinType(ast::BuiltinType::Float64); }
+ast::Expression *CodeGen::Float64Type() const { return BuiltinType(ast::BuiltinType::Float64); }
 
-ast::Expr *CodeGen::PointerType(ast::Expr *base_type_repr) const {
+ast::Expression *CodeGen::PointerType(ast::Expression *base_type_repr) const {
   // Create the type representation
   auto *type_repr = NodeFactory()->NewPointerType(position_, base_type_repr);
   // Set the actual TPL type
@@ -172,15 +173,15 @@ ast::Expr *CodeGen::PointerType(ast::Expr *base_type_repr) const {
   return type_repr;
 }
 
-ast::Expr *CodeGen::PointerType(ast::Identifier type_name) const {
+ast::Expression *CodeGen::PointerType(ast::Identifier type_name) const {
   return PointerType(MakeExpr(type_name));
 }
 
-ast::Expr *CodeGen::PointerType(ast::BuiltinType::Kind builtin) const {
+ast::Expression *CodeGen::PointerType(ast::BuiltinType::Kind builtin) const {
   return PointerType(BuiltinType(builtin));
 }
 
-ast::Expr *CodeGen::TplType(sql::TypeId type) {
+ast::Expression *CodeGen::TplType(sql::TypeId type) {
   switch (type) {
     case sql::TypeId::Boolean:
       return BuiltinType(ast::BuiltinType::BooleanVal);
@@ -203,7 +204,7 @@ ast::Expr *CodeGen::TplType(sql::TypeId type) {
   }
 }
 
-ast::Expr *CodeGen::PrimitiveTplType(TypeId type) {
+ast::Expression *CodeGen::PrimitiveTplType(TypeId type) {
   switch (type) {
     case sql::TypeId::Boolean:
       return BuiltinType(ast::BuiltinType::Bool);
@@ -230,7 +231,7 @@ ast::Expr *CodeGen::PrimitiveTplType(TypeId type) {
   }
 }
 
-ast::Expr *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId ret_type) const {
+ast::Expression *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId ret_type) const {
   switch (agg_type) {
     case planner::ExpressionType::AGGREGATE_COUNT:
       return BuiltinType(ast::BuiltinType::Kind::CountAggregate);
@@ -274,51 +275,53 @@ ast::Expr *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId ret_t
   }
 }
 
-ast::Expr *CodeGen::Nil() const {
-  ast::Expr *expr = NodeFactory()->NewNilLiteral(position_);
+ast::Expression *CodeGen::Nil() const {
+  ast::Expression *expr = NodeFactory()->NewNilLiteral(position_);
   expr->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return expr;
 }
 
-ast::Expr *CodeGen::AddressOf(ast::Expr *obj) const {
+ast::Expression *CodeGen::AddressOf(ast::Expression *obj) const {
   return UnaryOp(parsing::Token::Type::AMPERSAND, obj);
 }
 
-ast::Expr *CodeGen::AddressOf(ast::Identifier obj_name) const {
+ast::Expression *CodeGen::AddressOf(ast::Identifier obj_name) const {
   return UnaryOp(parsing::Token::Type::AMPERSAND, MakeExpr(obj_name));
 }
 
-ast::Expr *CodeGen::SizeOf(ast::Identifier type_name) const {
+ast::Expression *CodeGen::SizeOf(ast::Identifier type_name) const {
   return CallBuiltin(ast::Builtin::SizeOf, {MakeExpr(type_name)});
 }
 
-ast::Expr *CodeGen::OffsetOf(ast::Identifier obj, ast::Identifier member) const {
+ast::Expression *CodeGen::OffsetOf(ast::Identifier obj, ast::Identifier member) const {
   return CallBuiltin(ast::Builtin::OffsetOf, {MakeExpr(obj), MakeExpr(member)});
 }
 
-ast::Expr *CodeGen::PtrCast(ast::Expr *base, ast::Expr *arg) const {
-  ast::Expr *ptr = NodeFactory()->NewUnaryOpExpr(position_, parsing::Token::Type::STAR, base);
+ast::Expression *CodeGen::PtrCast(ast::Expression *base, ast::Expression *arg) const {
+  ast::Expression *ptr = NodeFactory()->NewUnaryOpExpr(position_, parsing::Token::Type::STAR, base);
   return CallBuiltin(ast::Builtin::PtrCast, {ptr, arg});
 }
 
-ast::Expr *CodeGen::PtrCast(ast::Identifier base_name, ast::Expr *arg) const {
+ast::Expression *CodeGen::PtrCast(ast::Identifier base_name, ast::Expression *arg) const {
   return PtrCast(MakeExpr(base_name), arg);
 }
 
-ast::Expr *CodeGen::BinaryOp(parsing::Token::Type op, ast::Expr *left, ast::Expr *right) const {
+ast::Expression *CodeGen::BinaryOp(parsing::Token::Type op, ast::Expression *left,
+                                   ast::Expression *right) const {
   TPL_ASSERT(parsing::Token::IsBinaryOp(op), "Provided operation isn't binary");
   return NodeFactory()->NewBinaryOpExpr(position_, op, left, right);
 }
 
-ast::Expr *CodeGen::Compare(parsing::Token::Type op, ast::Expr *left, ast::Expr *right) const {
+ast::Expression *CodeGen::Compare(parsing::Token::Type op, ast::Expression *left,
+                                  ast::Expression *right) const {
   return NodeFactory()->NewComparisonOpExpr(position_, op, left, right);
 }
 
-ast::Expr *CodeGen::IsNilPointer(ast::Expr *obj) const {
+ast::Expression *CodeGen::IsNilPointer(ast::Expression *obj) const {
   return Compare(parsing::Token::Type::EQUAL_EQUAL, obj, Nil());
 }
 
-ast::Expr *CodeGen::UnaryOp(parsing::Token::Type op, ast::Expr *input) const {
+ast::Expression *CodeGen::UnaryOp(parsing::Token::Type op, ast::Expression *input) const {
   return NodeFactory()->NewUnaryOpExpr(position_, op, input);
 }
 
@@ -326,110 +329,116 @@ ast::Expr *CodeGen::UnaryOp(parsing::Token::Type op, ast::Expr *input) const {
 // Bit Operations.
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::BitAnd(ast::Expr *lhs, ast::Expr *rhs) const {
+ast::Expression *CodeGen::BitAnd(ast::Expression *lhs, ast::Expression *rhs) const {
   return BinaryOp(parsing::Token::Type::AMPERSAND, lhs, rhs);
 }
 
-ast::Expr *CodeGen::BitOr(ast::Expr *lhs, ast::Expr *rhs) const {
+ast::Expression *CodeGen::BitOr(ast::Expression *lhs, ast::Expression *rhs) const {
   return BinaryOp(parsing::Token::Type::BIT_OR, lhs, rhs);
 }
 
-ast::Expr *CodeGen::BitShiftLeft(ast::Expr *val, ast::Expr *num_bits) const {
+ast::Expression *CodeGen::BitShiftLeft(ast::Expression *val, ast::Expression *num_bits) const {
   return BinaryOp(parsing::Token::Type::BIT_SHL, val, num_bits);
 }
 
-ast::Expr *CodeGen::BitShiftRight(ast::Expr *val, ast::Expr *num_bits) const {
+ast::Expression *CodeGen::BitShiftRight(ast::Expression *val, ast::Expression *num_bits) const {
   return BinaryOp(parsing::Token::Type::BIT_SHR, val, num_bits);
 }
 
-ast::Expr *CodeGen::Add(ast::Expr *left, ast::Expr *right) const {
+ast::Expression *CodeGen::Add(ast::Expression *left, ast::Expression *right) const {
   return BinaryOp(parsing::Token::Type::PLUS, left, right);
 }
 
-ast::Expr *CodeGen::Sub(ast::Expr *left, ast::Expr *right) const {
+ast::Expression *CodeGen::Sub(ast::Expression *left, ast::Expression *right) const {
   return BinaryOp(parsing::Token::Type::MINUS, left, right);
 }
 
-ast::Expr *CodeGen::Mul(ast::Expr *left, ast::Expr *right) const {
+ast::Expression *CodeGen::Mul(ast::Expression *left, ast::Expression *right) const {
   return BinaryOp(parsing::Token::Type::STAR, left, right);
 }
 
-ast::Expr *CodeGen::AccessStructMember(ast::Expr *object, ast::Identifier member) {
+ast::Expression *CodeGen::AccessStructMember(ast::Expression *object, ast::Identifier member) {
   return NodeFactory()->NewMemberExpr(position_, object, MakeExpr(member));
 }
 
 ast::Statement *CodeGen::Return() { return Return(nullptr); }
 
-ast::Statement *CodeGen::Return(ast::Expr *ret) {
+ast::Statement *CodeGen::Return(ast::Expression *ret) {
   ast::Statement *stmt = NodeFactory()->NewReturnStatement(position_, ret);
   NewLine();
   return stmt;
 }
 
-ast::Expr *CodeGen::Call(ast::Identifier func_name, std::initializer_list<ast::Expr *> args) const {
-  util::RegionVector<ast::Expr *> call_args(args, Context()->GetRegion());
+ast::Expression *CodeGen::Call(ast::Identifier func_name,
+                               std::initializer_list<ast::Expression *> args) const {
+  util::RegionVector<ast::Expression *> call_args(args, Context()->GetRegion());
   return NodeFactory()->NewCallExpr(MakeExpr(func_name), std::move(call_args));
 }
 
-ast::Expr *CodeGen::Call(ast::Identifier func_name, const std::vector<ast::Expr *> &args) const {
-  util::RegionVector<ast::Expr *> call_args(args.begin(), args.end(), Context()->GetRegion());
+ast::Expression *CodeGen::Call(ast::Identifier func_name,
+                               const std::vector<ast::Expression *> &args) const {
+  util::RegionVector<ast::Expression *> call_args(args.begin(), args.end(), Context()->GetRegion());
   return NodeFactory()->NewCallExpr(MakeExpr(func_name), std::move(call_args));
 }
 
-ast::Expr *CodeGen::CallBuiltin(ast::Builtin builtin,
-                                std::initializer_list<ast::Expr *> args) const {
-  util::RegionVector<ast::Expr *> call_args(args, Context()->GetRegion());
-  ast::Expr *func = MakeExpr(Context()->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
-  ast::Expr *call = NodeFactory()->NewBuiltinCallExpr(func, std::move(call_args));
+ast::Expression *CodeGen::CallBuiltin(ast::Builtin builtin,
+                                      std::initializer_list<ast::Expression *> args) const {
+  util::RegionVector<ast::Expression *> call_args(args, Context()->GetRegion());
+  ast::Expression *func =
+      MakeExpr(Context()->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
+  ast::Expression *call = NodeFactory()->NewBuiltinCallExpr(func, std::move(call_args));
   return call;
 }
 
 // This is copied from the overloaded function. But, we use initializer so often we keep it around.
-ast::Expr *CodeGen::CallBuiltin(ast::Builtin builtin, const std::vector<ast::Expr *> &args) const {
-  util::RegionVector<ast::Expr *> call_args(args.begin(), args.end(), Context()->GetRegion());
-  ast::Expr *func = MakeExpr(Context()->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
-  ast::Expr *call = NodeFactory()->NewBuiltinCallExpr(func, std::move(call_args));
+ast::Expression *CodeGen::CallBuiltin(ast::Builtin builtin,
+                                      const std::vector<ast::Expression *> &args) const {
+  util::RegionVector<ast::Expression *> call_args(args.begin(), args.end(), Context()->GetRegion());
+  ast::Expression *func =
+      MakeExpr(Context()->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
+  ast::Expression *call = NodeFactory()->NewBuiltinCallExpr(func, std::move(call_args));
   return call;
 }
 
-ast::Expr *CodeGen::BoolToSql(bool b) const {
-  ast::Expr *call = CallBuiltin(ast::Builtin::BoolToSql, {ConstBool(b)});
+ast::Expression *CodeGen::BoolToSql(bool b) const {
+  ast::Expression *call = CallBuiltin(ast::Builtin::BoolToSql, {ConstBool(b)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::BooleanVal));
   return call;
 }
 
-ast::Expr *CodeGen::IntToSql(int64_t num) const {
-  ast::Expr *call = CallBuiltin(ast::Builtin::IntToSql, {Const64(num)});
+ast::Expression *CodeGen::IntToSql(int64_t num) const {
+  ast::Expression *call = CallBuiltin(ast::Builtin::IntToSql, {Const64(num)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::IntegerVal));
   return call;
 }
 
-ast::Expr *CodeGen::FloatToSql(double num) const {
-  ast::Expr *call = CallBuiltin(ast::Builtin::FloatToSql, {ConstDouble(num)});
+ast::Expression *CodeGen::FloatToSql(double num) const {
+  ast::Expression *call = CallBuiltin(ast::Builtin::FloatToSql, {ConstDouble(num)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::RealVal));
   return call;
 }
 
-ast::Expr *CodeGen::DateToSql(Date date) const {
+ast::Expression *CodeGen::DateToSql(Date date) const {
   int32_t year, month, day;
   date.ExtractComponents(&year, &month, &day);
   return DateToSql(year, month, day);
 }
 
-ast::Expr *CodeGen::DateToSql(int32_t year, int32_t month, int32_t day) const {
-  ast::Expr *call =
+ast::Expression *CodeGen::DateToSql(int32_t year, int32_t month, int32_t day) const {
+  ast::Expression *call =
       CallBuiltin(ast::Builtin::DateToSql, {Const32(year), Const32(month), Const32(day)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::DateVal));
   return call;
 }
 
-ast::Expr *CodeGen::StringToSql(std::string_view str) const {
-  ast::Expr *call = CallBuiltin(ast::Builtin::StringToSql, {ConstString(str)});
+ast::Expression *CodeGen::StringToSql(std::string_view str) const {
+  ast::Expression *call = CallBuiltin(ast::Builtin::StringToSql, {ConstString(str)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::StringVal));
   return call;
 }
 
-ast::Expr *CodeGen::ConvertSql(ast::Expr *input, sql::TypeId from_type, sql::TypeId to_type) const {
+ast::Expression *CodeGen::ConvertSql(ast::Expression *input, sql::TypeId from_type,
+                                     sql::TypeId to_type) const {
   if (from_type == to_type) {
     return input;
   }
@@ -492,7 +501,7 @@ ast::Expr *CodeGen::ConvertSql(ast::Expr *input, sql::TypeId from_type, sql::Typ
                                         TypeIdToString(from_type), TypeIdToString(to_type)));
 }
 
-ast::Expr *CodeGen::InitSqlNull(ast::Expr *val) const {
+ast::Expression *CodeGen::InitSqlNull(ast::Expression *val) const {
   return CallBuiltin(ast::Builtin::InitSqlNull, {AddressOf(val)});
 }
 
@@ -500,35 +509,38 @@ ast::Expr *CodeGen::InitSqlNull(ast::Expr *val) const {
 // Table Vector Iterator
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::TableIterInit(ast::Expr *table_iter, std::string_view table_name) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::TableIterInit, {table_iter, ConstString(table_name)});
+ast::Expression *CodeGen::TableIterInit(ast::Expression *table_iter, std::string_view table_name) {
+  ast::Expression *call =
+      CallBuiltin(ast::Builtin::TableIterInit, {table_iter, ConstString(table_name)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::TableIterAdvance(ast::Expr *table_iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::TableIterAdvance, {table_iter});
+ast::Expression *CodeGen::TableIterAdvance(ast::Expression *table_iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::TableIterAdvance, {table_iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::TableIterGetVPI(ast::Expr *table_iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::TableIterGetVPI, {table_iter});
+ast::Expression *CodeGen::TableIterGetVPI(ast::Expression *table_iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::TableIterGetVPI, {table_iter});
   call->SetType(
       ast::BuiltinType::Get(Context(), ast::BuiltinType::VectorProjectionIterator)->PointerTo());
   return call;
 }
 
-ast::Expr *CodeGen::TableIterClose(ast::Expr *table_iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::TableIterClose, {table_iter});
+ast::Expression *CodeGen::TableIterClose(ast::Expression *table_iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::TableIterClose, {table_iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::IterateTableParallel(std::string_view table_name, ast::Expr *query_state,
-                                         ast::Expr *tls, ast::Identifier worker_name) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::TableIterParallel,
-                                {ConstString(table_name), query_state, tls, MakeExpr(worker_name)});
+ast::Expression *CodeGen::IterateTableParallel(std::string_view table_name,
+                                               ast::Expression *query_state, ast::Expression *tls,
+                                               ast::Identifier worker_name) {
+  ast::Expression *call =
+      CallBuiltin(ast::Builtin::TableIterParallel,
+                  {ConstString(table_name), query_state, tls, MakeExpr(worker_name)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
@@ -537,38 +549,39 @@ ast::Expr *CodeGen::IterateTableParallel(std::string_view table_name, ast::Expr 
 // Vector Projection Iterator
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::VPIIsFiltered(ast::Expr *vpi) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::VPIIsFiltered, {vpi});
+ast::Expression *CodeGen::VPIIsFiltered(ast::Expression *vpi) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::VPIIsFiltered, {vpi});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::VPIHasNext(ast::Expr *vpi) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::VPIHasNext, {vpi});
+ast::Expression *CodeGen::VPIHasNext(ast::Expression *vpi) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::VPIHasNext, {vpi});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::VPIAdvance(ast::Expr *vpi) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::VPIAdvance, {vpi});
+ast::Expression *CodeGen::VPIAdvance(ast::Expression *vpi) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::VPIAdvance, {vpi});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::VPIReset(ast::Expr *vpi) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::VPIReset, {vpi});
+ast::Expression *CodeGen::VPIReset(ast::Expression *vpi) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::VPIReset, {vpi});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::VPIMatch(ast::Expr *vpi, ast::Expr *cond) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::VPIMatch, {vpi, cond});
+ast::Expression *CodeGen::VPIMatch(ast::Expression *vpi, ast::Expression *cond) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::VPIMatch, {vpi, cond});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::VPIInit(ast::Expr *vpi, ast::Expr *vp, ast::Expr *tids) {
-  ast::Expr *call = nullptr;
+ast::Expression *CodeGen::VPIInit(ast::Expression *vpi, ast::Expression *vp,
+                                  ast::Expression *tids) {
+  ast::Expression *call = nullptr;
   if (tids != nullptr) {
     call = CallBuiltin(ast::Builtin::VPIInit, {vpi, vp, tids});
   } else {
@@ -578,7 +591,8 @@ ast::Expr *CodeGen::VPIInit(ast::Expr *vpi, ast::Expr *vp, ast::Expr *tids) {
   return call;
 }
 
-ast::Expr *CodeGen::VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, uint32_t idx) {
+ast::Expression *CodeGen::VPIGet(ast::Expression *vpi, sql::TypeId type_id, bool nullable,
+                                 uint32_t idx) {
   ast::Builtin builtin;
   ast::BuiltinType::Kind ret_kind;
   switch (type_id) {
@@ -622,13 +636,14 @@ ast::Expr *CodeGen::VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, u
       throw NotImplementedException(
           fmt::format("CodeGen: Reading type {} from VPI not supported.", TypeIdToString(type_id)));
   }
-  ast::Expr *call = CallBuiltin(builtin, {vpi, Const32(idx)});
+  ast::Expression *call = CallBuiltin(builtin, {vpi, Const32(idx)});
   call->SetType(ast::BuiltinType::Get(Context(), ret_kind));
   return call;
 }
 
-ast::Expr *CodeGen::VPIFilter(ast::Expr *vp, planner::ExpressionType comp_type, uint32_t col_idx,
-                              ast::Expr *filter_val, ast::Expr *tids) {
+ast::Expression *CodeGen::VPIFilter(ast::Expression *vp, planner::ExpressionType comp_type,
+                                    uint32_t col_idx, ast::Expression *filter_val,
+                                    ast::Expression *tids) {
   // Call @FilterComp(vpi, col_idx, col_type, filter_val)
   ast::Builtin builtin;
   switch (comp_type) {
@@ -655,7 +670,7 @@ ast::Expr *CodeGen::VPIFilter(ast::Expr *vp, planner::ExpressionType comp_type, 
           fmt::format("CodeGen: Vector filter type {} from VPI not supported.",
                       planner::ExpressionTypeToString(comp_type, true)));
   }
-  ast::Expr *call = CallBuiltin(builtin, {vp, Const32(col_idx), filter_val, tids});
+  ast::Expression *call = CallBuiltin(builtin, {vp, Const32(col_idx), filter_val, tids});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
@@ -664,74 +679,77 @@ ast::Expr *CodeGen::VPIFilter(ast::Expr *vp, planner::ExpressionType comp_type, 
 // Filter Manager
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::FilterManagerInit(ast::Expr *filter_manager) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerInit, {filter_manager});
+ast::Expression *CodeGen::FilterManagerInit(ast::Expression *filter_manager) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::FilterManagerInit, {filter_manager});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::FilterManagerFree(ast::Expr *filter_manager) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerFree, {filter_manager});
+ast::Expression *CodeGen::FilterManagerFree(ast::Expression *filter_manager) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::FilterManagerFree, {filter_manager});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::FilterManagerInsert(ast::Expr *filter_manager,
-                                        const std::vector<ast::Identifier> &clause_fn_names) {
-  std::vector<ast::Expr *> params(1 + clause_fn_names.size());
+ast::Expression *CodeGen::FilterManagerInsert(ast::Expression *filter_manager,
+                                              const std::vector<ast::Identifier> &clause_fn_names) {
+  std::vector<ast::Expression *> params(1 + clause_fn_names.size());
   params[0] = filter_manager;
   for (uint32_t i = 0; i < clause_fn_names.size(); i++) {
     params[i + 1] = MakeExpr(clause_fn_names[i]);
   }
-  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerInsertFilter, params);
+  ast::Expression *call = CallBuiltin(ast::Builtin::FilterManagerInsertFilter, params);
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::FilterManagerRunFilters(ast::Expr *filter_manager, ast::Expr *vpi) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::FilterManagerRunFilters, {filter_manager, vpi});
+ast::Expression *CodeGen::FilterManagerRunFilters(ast::Expression *filter_manager,
+                                                  ast::Expression *vpi) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::FilterManagerRunFilters, {filter_manager, vpi});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::ExecCtxGetMemoryPool(ast::Expr *exec_ctx) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::ExecutionContextGetMemoryPool, {exec_ctx});
+ast::Expression *CodeGen::ExecCtxGetMemoryPool(ast::Expression *exec_ctx) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::ExecutionContextGetMemoryPool, {exec_ctx});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::MemoryPool)->PointerTo());
   return call;
 }
 
-ast::Expr *CodeGen::ExecCtxGetTLS(ast::Expr *exec_ctx) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::ExecutionContextGetTLS, {exec_ctx});
+ast::Expression *CodeGen::ExecCtxGetTLS(ast::Expression *exec_ctx) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::ExecutionContextGetTLS, {exec_ctx});
   call->SetType(
       ast::BuiltinType::Get(Context(), ast::BuiltinType::ThreadStateContainer)->PointerTo());
   return call;
 }
 
-ast::Expr *CodeGen::TLSAccessCurrentThreadState(ast::Expr *tls, ast::Identifier state_type_name) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::ThreadStateContainerGetState, {tls});
+ast::Expression *CodeGen::TLSAccessCurrentThreadState(ast::Expression *tls,
+                                                      ast::Identifier state_type_name) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::ThreadStateContainerGetState, {tls});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(state_type_name, call);
 }
 
-ast::Expr *CodeGen::TLSIterate(ast::Expr *tls, ast::Expr *context, ast::Identifier func) {
-  ast::Expr *call =
+ast::Expression *CodeGen::TLSIterate(ast::Expression *tls, ast::Expression *context,
+                                     ast::Identifier func) {
+  ast::Expression *call =
       CallBuiltin(ast::Builtin::ThreadStateContainerIterate, {tls, context, MakeExpr(func)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
-                             ast::Identifier init_fn, ast::Identifier tear_down_fn,
-                             ast::Expr *context) {
-  ast::Expr *call = CallBuiltin(
+ast::Expression *CodeGen::TLSReset(ast::Expression *tls, ast::Identifier tls_state_name,
+                                   ast::Identifier init_fn, ast::Identifier tear_down_fn,
+                                   ast::Expression *context) {
+  ast::Expression *call = CallBuiltin(
       ast::Builtin::ThreadStateContainerReset,
       {tls, SizeOf(tls_state_name), MakeExpr(init_fn), MakeExpr(tear_down_fn), context});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::TLSClear(ast::Expr *tls) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::ThreadStateContainerClear, {tls});
+ast::Expression *CodeGen::TLSClear(ast::Expression *tls) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::ThreadStateContainerClear, {tls});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
@@ -740,8 +758,8 @@ ast::Expr *CodeGen::TLSClear(ast::Expr *tls) {
 // Hash
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::Hash(const std::vector<ast::Expr *> &values) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::Hash, values);
+ast::Expression *CodeGen::Hash(const std::vector<ast::Expression *> &values) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::Hash, values);
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt64));
   return call;
 }
@@ -750,62 +768,67 @@ ast::Expr *CodeGen::Hash(const std::vector<ast::Expr *> &values) {
 // Joins
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::JoinHashTableInit(ast::Expr *join_hash_table, ast::Expr *mem_pool,
-                                      ast::Identifier build_row_type_name) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableInit,
-                                {join_hash_table, mem_pool, SizeOf(build_row_type_name)});
+ast::Expression *CodeGen::JoinHashTableInit(ast::Expression *join_hash_table,
+                                            ast::Expression *mem_pool,
+                                            ast::Identifier build_row_type_name) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::JoinHashTableInit,
+                                      {join_hash_table, mem_pool, SizeOf(build_row_type_name)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableInsert(ast::Expr *join_hash_table, ast::Expr *hash_val,
-                                        ast::Identifier tuple_type_name) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableInsert, {join_hash_table, hash_val});
+ast::Expression *CodeGen::JoinHashTableInsert(ast::Expression *join_hash_table,
+                                              ast::Expression *hash_val,
+                                              ast::Identifier tuple_type_name) {
+  ast::Expression *call =
+      CallBuiltin(ast::Builtin::JoinHashTableInsert, {join_hash_table, hash_val});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return PtrCast(tuple_type_name, call);
 }
 
-ast::Expr *CodeGen::JoinHashTableBuild(ast::Expr *join_hash_table) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableBuild, {join_hash_table});
+ast::Expression *CodeGen::JoinHashTableBuild(ast::Expression *join_hash_table) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::JoinHashTableBuild, {join_hash_table});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableBuildParallel(ast::Expr *join_hash_table,
-                                               ast::Expr *thread_state_container,
-                                               ast::Expr *offset) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableBuildParallel,
-                                {join_hash_table, thread_state_container, offset});
+ast::Expression *CodeGen::JoinHashTableBuildParallel(ast::Expression *join_hash_table,
+                                                     ast::Expression *thread_state_container,
+                                                     ast::Expression *offset) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::JoinHashTableBuildParallel,
+                                      {join_hash_table, thread_state_container, offset});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableLookup(ast::Expr *join_hash_table, ast::Expr *hash_val) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableLookup, {join_hash_table, hash_val});
+ast::Expression *CodeGen::JoinHashTableLookup(ast::Expression *join_hash_table,
+                                              ast::Expression *hash_val) {
+  ast::Expression *call =
+      CallBuiltin(ast::Builtin::JoinHashTableLookup, {join_hash_table, hash_val});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::JoinHashTableFree(ast::Expr *join_hash_table) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::JoinHashTableFree, {join_hash_table});
+ast::Expression *CodeGen::JoinHashTableFree(ast::Expression *join_hash_table) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::JoinHashTableFree, {join_hash_table});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::HTEntryGetHash(ast::Expr *entry) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryGetHash, {entry});
+ast::Expression *CodeGen::HTEntryGetHash(ast::Expression *entry) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::HashTableEntryGetHash, {entry});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt64));
   return call;
 }
 
-ast::Expr *CodeGen::HTEntryGetRow(ast::Expr *entry, ast::Identifier row_type) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryGetRow, {entry});
+ast::Expression *CodeGen::HTEntryGetRow(ast::Expression *entry, ast::Identifier row_type) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::HashTableEntryGetRow, {entry});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(row_type, call);
 }
 
-ast::Expr *CodeGen::HTEntryGetNext(ast::Expr *entry) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::HashTableEntryGetNext, {entry});
+ast::Expression *CodeGen::HTEntryGetNext(ast::Expression *entry) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::HashTableEntryGetNext, {entry});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::HashTableEntry)->PointerTo());
   return call;
 }
@@ -814,58 +837,60 @@ ast::Expr *CodeGen::HTEntryGetNext(ast::Expr *entry) {
 // Hash aggregations
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::AggHashTableInit(ast::Expr *agg_ht, ast::Expr *mem_pool,
-                                     ast::Identifier agg_payload_type) {
-  ast::Expr *call =
+ast::Expression *CodeGen::AggHashTableInit(ast::Expression *agg_ht, ast::Expression *mem_pool,
+                                           ast::Identifier agg_payload_type) {
+  ast::Expression *call =
       CallBuiltin(ast::Builtin::AggHashTableInit, {agg_ht, mem_pool, SizeOf(agg_payload_type)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggHashTableLookup(ast::Expr *agg_ht, ast::Expr *hash_val,
-                                       ast::Identifier key_check, ast::Expr *input,
-                                       ast::Identifier agg_payload_type) {
-  ast::Expr *call =
+ast::Expression *CodeGen::AggHashTableLookup(ast::Expression *agg_ht, ast::Expression *hash_val,
+                                             ast::Identifier key_check, ast::Expression *input,
+                                             ast::Identifier agg_payload_type) {
+  ast::Expression *call =
       CallBuiltin(ast::Builtin::AggHashTableLookup, {agg_ht, hash_val, MakeExpr(key_check), input});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(agg_payload_type, call);
 }
 
-ast::Expr *CodeGen::AggHashTableInsert(ast::Expr *agg_ht, ast::Expr *hash_val, bool partitioned,
-                                       ast::Identifier agg_payload_type) {
-  ast::Expr *call =
+ast::Expression *CodeGen::AggHashTableInsert(ast::Expression *agg_ht, ast::Expression *hash_val,
+                                             bool partitioned, ast::Identifier agg_payload_type) {
+  ast::Expression *call =
       CallBuiltin(ast::Builtin::AggHashTableInsert, {agg_ht, hash_val, ConstBool(partitioned)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(agg_payload_type, call);
 }
 
-ast::Expr *CodeGen::AggHashTableLinkEntry(ast::Expr *agg_ht, ast::Expr *entry) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableLinkEntry, {agg_ht, entry});
+ast::Expression *CodeGen::AggHashTableLinkEntry(ast::Expression *agg_ht, ast::Expression *entry) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggHashTableLinkEntry, {agg_ht, entry});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggHashTableMovePartitions(ast::Expr *agg_ht, ast::Expr *tls,
-                                               ast::Expr *tl_agg_ht_offset,
-                                               ast::Identifier merge_partitions_fn_name) {
-  std::initializer_list<ast::Expr *> args = {agg_ht, tls, tl_agg_ht_offset,
-                                             MakeExpr(merge_partitions_fn_name)};
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableMovePartitions, args);
+ast::Expression *CodeGen::AggHashTableMovePartitions(ast::Expression *agg_ht, ast::Expression *tls,
+                                                     ast::Expression *tl_agg_ht_offset,
+                                                     ast::Identifier merge_partitions_fn_name) {
+  std::initializer_list<ast::Expression *> args = {agg_ht, tls, tl_agg_ht_offset,
+                                                   MakeExpr(merge_partitions_fn_name)};
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggHashTableMovePartitions, args);
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggHashTableParallelScan(ast::Expr *agg_ht, ast::Expr *query_state,
-                                             ast::Expr *thread_state_container,
-                                             ast::Identifier worker_fn) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableParallelPartitionedScan,
-                                {agg_ht, query_state, thread_state_container, MakeExpr(worker_fn)});
+ast::Expression *CodeGen::AggHashTableParallelScan(ast::Expression *agg_ht,
+                                                   ast::Expression *query_state,
+                                                   ast::Expression *thread_state_container,
+                                                   ast::Identifier worker_fn) {
+  ast::Expression *call =
+      CallBuiltin(ast::Builtin::AggHashTableParallelPartitionedScan,
+                  {agg_ht, query_state, thread_state_container, MakeExpr(worker_fn)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggHashTableFree(ast::Expr *agg_ht) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableFree, {agg_ht});
+ast::Expression *CodeGen::AggHashTableFree(ast::Expression *agg_ht) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggHashTableFree, {agg_ht});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
@@ -874,62 +899,64 @@ ast::Expr *CodeGen::AggHashTableFree(ast::Expr *agg_ht) {
 // Aggregation Hash Table Overflow Iterator
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::AggPartitionIteratorHasNext(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterHasNext, {iter});
+ast::Expression *CodeGen::AggPartitionIteratorHasNext(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggPartIterHasNext, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::AggPartitionIteratorNext(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterNext, {iter});
+ast::Expression *CodeGen::AggPartitionIteratorNext(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggPartIterNext, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggPartitionIteratorGetHash(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterGetHash, {iter});
+ast::Expression *CodeGen::AggPartitionIteratorGetHash(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggPartIterGetHash, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt64));
   return call;
 }
 
-ast::Expr *CodeGen::AggPartitionIteratorGetRow(ast::Expr *iter, ast::Identifier agg_payload_type) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterGetRow, {iter});
+ast::Expression *CodeGen::AggPartitionIteratorGetRow(ast::Expression *iter,
+                                                     ast::Identifier agg_payload_type) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggPartIterGetRow, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(agg_payload_type, call);
 }
 
-ast::Expr *CodeGen::AggPartitionIteratorGetRowEntry(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggPartIterGetRowEntry, {iter});
+ast::Expression *CodeGen::AggPartitionIteratorGetRowEntry(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggPartIterGetRowEntry, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::HashTableEntry)->PointerTo());
   return call;
 }
 
-ast::Expr *CodeGen::AggHashTableIteratorInit(ast::Expr *iter, ast::Expr *agg_ht) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterInit, {iter, agg_ht});
+ast::Expression *CodeGen::AggHashTableIteratorInit(ast::Expression *iter, ast::Expression *agg_ht) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggHashTableIterInit, {iter, agg_ht});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggHashTableIteratorHasNext(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterHasNext, {iter});
+ast::Expression *CodeGen::AggHashTableIteratorHasNext(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggHashTableIterHasNext, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::AggHashTableIteratorNext(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterNext, {iter});
+ast::Expression *CodeGen::AggHashTableIteratorNext(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggHashTableIterNext, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggHashTableIteratorGetRow(ast::Expr *iter, ast::Identifier agg_payload_type) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterGetRow, {iter});
+ast::Expression *CodeGen::AggHashTableIteratorGetRow(ast::Expression *iter,
+                                                     ast::Identifier agg_payload_type) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggHashTableIterGetRow, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(agg_payload_type, call);
 }
 
-ast::Expr *CodeGen::AggHashTableIteratorClose(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggHashTableIterClose, {iter});
+ast::Expression *CodeGen::AggHashTableIteratorClose(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggHashTableIterClose, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
@@ -938,25 +965,25 @@ ast::Expr *CodeGen::AggHashTableIteratorClose(ast::Expr *iter) {
 // Aggregators
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::AggregatorInit(ast::Expr *agg) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggInit, {agg});
+ast::Expression *CodeGen::AggregatorInit(ast::Expression *agg) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggInit, {agg});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggregatorAdvance(ast::Expr *agg, ast::Expr *val) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggAdvance, {agg, val});
+ast::Expression *CodeGen::AggregatorAdvance(ast::Expression *agg, ast::Expression *val) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggAdvance, {agg, val});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggregatorMerge(ast::Expr *agg1, ast::Expr *agg2) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::AggMerge, {agg1, agg2});
+ast::Expression *CodeGen::AggregatorMerge(ast::Expression *agg1, ast::Expression *agg2) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::AggMerge, {agg1, agg2});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::AggregatorResult(ast::Expr *agg) {
+ast::Expression *CodeGen::AggregatorResult(ast::Expression *agg) {
   return CallBuiltin(ast::Builtin::AggResult, {agg});
 }
 
@@ -964,96 +991,100 @@ ast::Expr *CodeGen::AggregatorResult(ast::Expr *agg) {
 // Sorters
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::SorterInit(ast::Expr *sorter, ast::Expr *mem_pool,
-                               ast::Identifier cmp_func_name, ast::Identifier sort_row_type_name) {
-  ast::Expr *call =
+ast::Expression *CodeGen::SorterInit(ast::Expression *sorter, ast::Expression *mem_pool,
+                                     ast::Identifier cmp_func_name,
+                                     ast::Identifier sort_row_type_name) {
+  ast::Expression *call =
       CallBuiltin(ast::Builtin::SorterInit,
                   {sorter, mem_pool, MakeExpr(cmp_func_name), SizeOf(sort_row_type_name)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SorterInsert(ast::Expr *sorter, ast::Identifier sort_row_type_name) {
+ast::Expression *CodeGen::SorterInsert(ast::Expression *sorter,
+                                       ast::Identifier sort_row_type_name) {
   // @sorterInsert(sorter)
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsert, {sorter});
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterInsert, {sorter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   // @ptrCast(sort_row_type, @sorterInsert())
   return PtrCast(sort_row_type_name, call);
 }
 
-ast::Expr *CodeGen::SorterInsertTopK(ast::Expr *sorter, ast::Identifier sort_row_type_name,
-                                     uint64_t top_k) {
+ast::Expression *CodeGen::SorterInsertTopK(ast::Expression *sorter,
+                                           ast::Identifier sort_row_type_name, uint64_t top_k) {
   // @sorterInsertTopK(sorter)
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsertTopK, {sorter, Const64(top_k)});
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterInsertTopK, {sorter, Const64(top_k)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   // @ptrCast(sort_row_type, @sorterInsertTopK())
   return PtrCast(sort_row_type_name, call);
 }
 
-ast::Expr *CodeGen::SorterInsertTopKFinish(ast::Expr *sorter, uint64_t top_k) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterInsertTopKFinish, {sorter, Const64(top_k)});
+ast::Expression *CodeGen::SorterInsertTopKFinish(ast::Expression *sorter, uint64_t top_k) {
+  ast::Expression *call =
+      CallBuiltin(ast::Builtin::SorterInsertTopKFinish, {sorter, Const64(top_k)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SorterSort(ast::Expr *sorter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterSort, {sorter});
+ast::Expression *CodeGen::SorterSort(ast::Expression *sorter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterSort, {sorter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SortParallel(ast::Expr *sorter, ast::Expr *tls, ast::Expr *offset) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterSortParallel, {sorter, tls, offset});
+ast::Expression *CodeGen::SortParallel(ast::Expression *sorter, ast::Expression *tls,
+                                       ast::Expression *offset) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterSortParallel, {sorter, tls, offset});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SortTopKParallel(ast::Expr *sorter, ast::Expr *tls, ast::Expr *offset,
-                                     std::size_t top_k) {
-  ast::Expr *call =
+ast::Expression *CodeGen::SortTopKParallel(ast::Expression *sorter, ast::Expression *tls,
+                                           ast::Expression *offset, std::size_t top_k) {
+  ast::Expression *call =
       CallBuiltin(ast::Builtin::SorterSortTopKParallel, {sorter, tls, offset, Const64(top_k)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SorterFree(ast::Expr *sorter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterFree, {sorter});
+ast::Expression *CodeGen::SorterFree(ast::Expression *sorter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterFree, {sorter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SorterIterInit(ast::Expr *iter, ast::Expr *sorter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterInit, {iter, sorter});
+ast::Expression *CodeGen::SorterIterInit(ast::Expression *iter, ast::Expression *sorter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterIterInit, {iter, sorter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SorterIterHasNext(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterHasNext, {iter});
+ast::Expression *CodeGen::SorterIterHasNext(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterIterHasNext, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::SorterIterNext(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterNext, {iter});
+ast::Expression *CodeGen::SorterIterNext(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterIterNext, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SorterIterSkipRows(ast::Expr *iter, uint32_t n) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterSkipRows, {iter, Const64(n)});
+ast::Expression *CodeGen::SorterIterSkipRows(ast::Expression *iter, uint32_t n) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterIterSkipRows, {iter, Const64(n)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::SorterIterGetRow(ast::Expr *iter, ast::Identifier row_type_name) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterGetRow, {iter});
+ast::Expression *CodeGen::SorterIterGetRow(ast::Expression *iter, ast::Identifier row_type_name) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterIterGetRow, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt8)->PointerTo());
   return PtrCast(row_type_name, call);
 }
 
-ast::Expr *CodeGen::SorterIterClose(ast::Expr *iter) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::SorterIterClose, {iter});
+ast::Expression *CodeGen::SorterIterClose(ast::Expression *iter) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::SorterIterClose, {iter});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
@@ -1062,13 +1093,13 @@ ast::Expr *CodeGen::SorterIterClose(ast::Expr *iter) {
 // SQL functions
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::Like(ast::Expr *str, ast::Expr *pattern) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::Like, {str, pattern});
+ast::Expression *CodeGen::Like(ast::Expression *str, ast::Expression *pattern) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::Like, {str, pattern});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::NotLike(ast::Expr *str, ast::Expr *pattern) {
+ast::Expression *CodeGen::NotLike(ast::Expression *str, ast::Expression *pattern) {
   return UnaryOp(parsing::Token::Type::BANG, Like(str, pattern));
 }
 
@@ -1076,33 +1107,35 @@ ast::Expr *CodeGen::NotLike(ast::Expr *str, ast::Expr *pattern) {
 // CSV
 // ---------------------------------------------------------
 
-ast::Expr *CodeGen::CSVReaderInit(ast::Expr *reader, std::string_view file_name) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderInit, {reader, ConstString(file_name)});
+ast::Expression *CodeGen::CSVReaderInit(ast::Expression *reader, std::string_view file_name) {
+  ast::Expression *call =
+      CallBuiltin(ast::Builtin::CSVReaderInit, {reader, ConstString(file_name)});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::CSVReaderAdvance(ast::Expr *reader) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderAdvance, {reader});
+ast::Expression *CodeGen::CSVReaderAdvance(ast::Expression *reader) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::CSVReaderAdvance, {reader});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
   return call;
 }
 
-ast::Expr *CodeGen::CSVReaderGetField(ast::Expr *reader, uint32_t field_index, ast::Expr *result) {
-  ast::Expr *call =
+ast::Expression *CodeGen::CSVReaderGetField(ast::Expression *reader, uint32_t field_index,
+                                            ast::Expression *result) {
+  ast::Expression *call =
       CallBuiltin(ast::Builtin::CSVReaderGetField, {reader, Const32(field_index), result});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
 
-ast::Expr *CodeGen::CSVReaderGetRecordNumber(ast::Expr *reader) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderGetRecordNumber, {reader});
+ast::Expression *CodeGen::CSVReaderGetRecordNumber(ast::Expression *reader) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::CSVReaderGetRecordNumber, {reader});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::UInt32));
   return call;
 }
 
-ast::Expr *CodeGen::CSVReaderClose(ast::Expr *reader) {
-  ast::Expr *call = CallBuiltin(ast::Builtin::CSVReaderClose, {reader});
+ast::Expression *CodeGen::CSVReaderClose(ast::Expression *reader) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::CSVReaderClose, {reader});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
   return call;
 }
@@ -1119,7 +1152,7 @@ ast::Identifier CodeGen::MakeIdentifier(std::string_view str) const {
   return Context()->GetIdentifier(str);
 }
 
-ast::Expr *CodeGen::MakeExpr(ast::Identifier ident) const {
+ast::Expression *CodeGen::MakeExpr(ast::Identifier ident) const {
   return NodeFactory()->NewIdentifierExpr(position_, ident);
 }
 
@@ -1127,7 +1160,7 @@ ast::Statement *CodeGen::MakeStatement(ast::VariableDeclaration *var) const {
   return NodeFactory()->NewDeclStatement(var);
 }
 
-ast::Statement *CodeGen::MakeStatement(ast::Expr *expr) const {
+ast::Statement *CodeGen::MakeStatement(ast::Expression *expr) const {
   return NodeFactory()->NewExpressionStatement(expr);
 }
 
@@ -1144,7 +1177,7 @@ util::RegionVector<ast::FieldDeclaration *> CodeGen::MakeFieldList(
   return util::RegionVector<ast::FieldDeclaration *>(fields, Context()->GetRegion());
 }
 
-ast::FieldDeclaration *CodeGen::MakeField(ast::Identifier name, ast::Expr *type) const {
+ast::FieldDeclaration *CodeGen::MakeField(ast::Identifier name, ast::Expression *type) const {
   return NodeFactory()->NewFieldDeclaration(position_, name, type);
 }
 

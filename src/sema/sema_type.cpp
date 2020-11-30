@@ -16,7 +16,7 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
       return;
     }
 
-    auto length = node->GetLength()->As<ast::LiteralExpr>()->IntegerVal();
+    auto length = node->GetLength()->As<ast::LiteralExpression>()->IntegerVal();
     if (length < 0) {
       error_reporter_->Report(node->GetLength()->Position(), ErrorMessages::kNegativeArrayLength);
       return;

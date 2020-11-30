@@ -17,8 +17,8 @@ ArithmeticTranslator::ArithmeticTranslator(const planner::OperatorExpression &ex
   compilation_context->Prepare(*expr.GetChild(1));
 }
 
-ast::Expr *ArithmeticTranslator::DeriveValue(ConsumerContext *context,
-                                             const ColumnValueProvider *provider) const {
+ast::Expression *ArithmeticTranslator::DeriveValue(ConsumerContext *context,
+                                                   const ColumnValueProvider *provider) const {
   auto left_val = context->DeriveValue(*GetExpression().GetChild(0), provider);
   auto right_val = context->DeriveValue(*GetExpression().GetChild(1), provider);
 

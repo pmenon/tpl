@@ -7,25 +7,25 @@
 
 namespace tpl::sema {
 
-void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, ast::Type *expected) {
+void Sema::ReportIncorrectCallArg(ast::CallExpression *call, uint32_t index, ast::Type *expected) {
   error_reporter_->Report(call->Position(), ErrorMessages::kIncorrectCallArgType,
                           call->GetFuncName(), expected, index,
                           call->GetArguments()[index]->GetType());
 }
 
-void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, const char *expected) {
+void Sema::ReportIncorrectCallArg(ast::CallExpression *call, uint32_t index, const char *expected) {
   error_reporter_->Report(call->Position(), ErrorMessages::kIncorrectCallArgType2,
                           call->GetFuncName(), expected, index,
                           call->GetArguments()[index]->GetType());
 }
 
-ast::Expr *Sema::ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,
-                                    ast::CastKind cast_kind) {
+ast::Expression *Sema::ImplCastExprToType(ast::Expression *expr, ast::Type *target_type,
+                                          ast::CastKind cast_kind) {
   return context_->GetNodeFactory()->NewImplicitCastExpr(expr->Position(), cast_kind, target_type,
                                                          expr);
 }
 
-bool Sema::CheckArgCount(ast::CallExpr *call, uint32_t expected_arg_count) {
+bool Sema::CheckArgCount(ast::CallExpression *call, uint32_t expected_arg_count) {
   if (call->NumArgs() != expected_arg_count) {
     error_reporter_->Report(call->Position(), ErrorMessages::kMismatchedCallArgs,
                             call->GetFuncName(), expected_arg_count, call->NumArgs());
@@ -35,7 +35,7 @@ bool Sema::CheckArgCount(ast::CallExpr *call, uint32_t expected_arg_count) {
   return true;
 }
 
-bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count) {
+bool Sema::CheckArgCountAtLeast(ast::CallExpression *call, uint32_t expected_arg_count) {
   if (call->NumArgs() < expected_arg_count) {
     error_reporter_->Report(call->Position(), ErrorMessages::kMismatchedCallArgs,
                             call->GetFuncName(), expected_arg_count, call->NumArgs());
@@ -47,7 +47,7 @@ bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count
 
 // Logical ops: and, or only.
 Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op, const SourcePosition &pos,
-                                             ast::Expr *left, ast::Expr *right) {
+                                             ast::Expression *left, ast::Expression *right) {
   // Both left and right types are either primitive booleans or SQL booleans. We
   // need both to be primitive booleans. Cast each expression as appropriate.
 
@@ -75,7 +75,7 @@ Sema::CheckResult Sema::CheckLogicalOperands(parsing::Token::Type op, const Sour
 
 // Arithmetic ops: +, -, *, etc.
 Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const SourcePosition &pos,
-                                                ast::Expr *left, ast::Expr *right) {
+                                                ast::Expression *left, ast::Expression *right) {
   // If neither inputs are arithmetic, fail early.
   if (!left->GetType()->IsArithmetic() || !right->GetType()->IsArithmetic()) {
     error_reporter_->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
@@ -103,7 +103,7 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
 
 // Comparisons: <, <=, >, >=, ==, !=
 Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const SourcePosition &pos,
-                                                ast::Expr *left, ast::Expr *right) {
+                                                ast::Expression *left, ast::Expression *right) {
   TPL_ASSERT(parsing::Token::IsCompareOp(op), "Input operation token isn't a comparison.");
   TPL_ASSERT(left->GetType(), "Left input does not have a resolved type.");
   TPL_ASSERT(right->GetType(), "Right input does not have a resolved type.");
@@ -155,7 +155,7 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
   return {ast::BuiltinType::Get(context_, ast::BuiltinType::Bool), left, right};
 }
 
-bool Sema::CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr) {
+bool Sema::CheckAssignmentConstraints(ast::Type *target_type, ast::Expression *&expr) {
   TPL_ASSERT(target_type != nullptr, "Target type cannot be null.");
   TPL_ASSERT(expr->GetType() != nullptr, "The input expression must have been type-checked.");
 
@@ -172,7 +172,7 @@ bool Sema::CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr) 
   }
 
   // Check assignment to a literal. This handles cases 2 and 3.
-  if (auto literal = expr->SafeAs<ast::LiteralExpr>()) {
+  if (auto literal = expr->SafeAs<ast::LiteralExpression>()) {
     if (literal->IsRepresentable(target_type)) {
       expr->SetType(target_type);
       return true;

@@ -78,7 +78,7 @@ class AstTraversalVisitor : public AstVisitor<Subclass> {
 #define RECURSE(call) this->Impl()->call
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitBadExpr(BadExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitBadExpression(BadExpression *node) {
   PROCESS_NODE(node);
 }
 
@@ -94,7 +94,7 @@ inline void AstTraversalVisitor<Subclass>::VisitFunctionDeclaration(FunctionDecl
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitIdentifierExpr(IdentifierExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitIdentifierExpression(IdentifierExpression *node) {
   PROCESS_NODE(node);
 }
 
@@ -133,7 +133,7 @@ inline void AstTraversalVisitor<Subclass>::VisitVariableDeclaration(VariableDecl
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitUnaryOpExpr(UnaryOpExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitUnaryOpExpression(UnaryOpExpression *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->GetInput()));
 }
@@ -147,7 +147,7 @@ inline void AstTraversalVisitor<Subclass>::VisitReturnStatement(ReturnStatement 
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitCallExpr(CallExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitCallExpression(CallExpression *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->GetFunction()));
   for (auto *arg : node->GetArguments()) {
@@ -156,7 +156,8 @@ inline void AstTraversalVisitor<Subclass>::VisitCallExpr(CallExpr *node) {
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitImplicitCastExpr(ImplicitCastExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitImplicitCastExpression(
+    ImplicitCastExpression *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->GetInput()));
 }
@@ -177,7 +178,8 @@ inline void AstTraversalVisitor<Subclass>::VisitFile(File *node) {
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitFunctionLiteralExpr(FunctionLiteralExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitFunctionLiteralExpression(
+    FunctionLiteralExpression *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->GetTypeRepr()));
   RECURSE(Visit(node->GetBody()));
@@ -207,7 +209,7 @@ inline void AstTraversalVisitor<Subclass>::VisitForInStatement(ForInStatement *n
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitBinaryOpExpr(BinaryOpExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitBinaryOpExpression(BinaryOpExpression *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->GetLeft()));
   RECURSE(Visit(node->GetRight()));
@@ -221,7 +223,7 @@ inline void AstTraversalVisitor<Subclass>::VisitMapTypeRepr(MapTypeRepr *node) {
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitLiteralExpr(LiteralExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitLiteralExpression(LiteralExpression *node) {
   PROCESS_NODE(node);
 }
 
@@ -240,7 +242,7 @@ inline void AstTraversalVisitor<Subclass>::VisitDeclarationStatement(Declaration
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitMemberExpr(MemberExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitMemberExpression(MemberExpression *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->GetObject()));
   RECURSE(Visit(node->GetMember()));
@@ -253,7 +255,8 @@ inline void AstTraversalVisitor<Subclass>::VisitPointerTypeRepr(PointerTypeRepr 
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitComparisonOpExpr(ComparisonOpExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitComparisonOpExpression(
+    ComparisonOpExpression *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->GetLeft()));
   RECURSE(Visit(node->GetRight()));
@@ -276,7 +279,7 @@ inline void AstTraversalVisitor<Subclass>::VisitExpressionStatement(ExpressionSt
 }
 
 template <typename Subclass>
-inline void AstTraversalVisitor<Subclass>::VisitIndexExpr(IndexExpr *node) {
+inline void AstTraversalVisitor<Subclass>::VisitIndexExpression(IndexExpression *node) {
   PROCESS_NODE(node);
   RECURSE(Visit(node->GetObject()));
   RECURSE(Visit(node->GetIndex()));

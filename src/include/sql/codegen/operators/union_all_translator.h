@@ -53,20 +53,20 @@ class UnionAllTranslator : public OperatorTranslator {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
+  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                  uint32_t attr_idx) const override;
 
   /**
    * UNION ALL doesn't produce table columns.
    */
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override {
+  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("UnionTranslator doesn't read table columns.");
   }
 
  private:
   void DefineRowStruct();
   // Get the value of an attribute in the given row.
-  ast::Expr *GetRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const;
+  ast::Expression *GetRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const;
   // Fill the input row's attributes with values from the provided context
   void FillRow(ConsumerContext *context, FunctionBuilder *function) const;
 

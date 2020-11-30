@@ -32,7 +32,7 @@ class If {
    * @param function The function this if statement is appended to.
    * @param condition The boolean condition.
    */
-  If(FunctionBuilder *function, ast::Expr *condition);
+  If(FunctionBuilder *function, ast::Expression *condition);
 
   /**
    * Destructor will complete the statement.
@@ -58,7 +58,7 @@ class If {
   // Previous function statement list.
   ast::BlockStatement *prev_func_stmt_list_;
   // The condition.
-  ast::Expr *condition_;
+  ast::Expression *condition_;
   // The statements in the "then" clause.
   ast::BlockStatement *then_stmts_;
   // The statements in the "else" clause.

@@ -6,7 +6,7 @@
 
 namespace tpl::sql::codegen {
 
-Loop::Loop(FunctionBuilder *function, ast::Statement *init, ast::Expr *condition,
+Loop::Loop(FunctionBuilder *function, ast::Statement *init, ast::Expression *condition,
            ast::Statement *next)
     : function_(function),
       position_(function_->GetCodeGen()->GetPosition()),
@@ -25,7 +25,7 @@ Loop::Loop(FunctionBuilder *function, ast::Statement *init, ast::Expr *condition
 }
 
 // Static cast to disambiguate constructor.
-Loop::Loop(FunctionBuilder *function, ast::Expr *condition)
+Loop::Loop(FunctionBuilder *function, ast::Expression *condition)
     : Loop(function, static_cast<ast::Statement *>(nullptr), condition, nullptr) {}
 
 // Static cast to disambiguate constructor.

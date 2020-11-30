@@ -45,7 +45,7 @@ class CompactStorage {
    * @param val The SQL value to store.
    * @return The generated invocation.
    */
-  void WriteSQL(ast::Expr *ptr, uint32_t index, ast::Expr *val) const;
+  void WriteSQL(ast::Expression *ptr, uint32_t index, ast::Expression *val) const;
 
   /**
    * Read the value of the column/attribute at index @em index in the row pointed to by @em ptr.
@@ -54,7 +54,7 @@ class CompactStorage {
    * @param index The index in the input schema whose attribute/column we're to read.
    * @return A pair storing the read value and NULL-indication flag.
    */
-  ast::Expr *ReadSQL(ast::Expr *ptr, uint32_t index) const;
+  ast::Expression *ReadSQL(ast::Expression *ptr, uint32_t index) const;
 
   /**
    * @return The name of the field at the given index in the compact struct.
@@ -64,11 +64,11 @@ class CompactStorage {
  private:
   // Given a pointer to the storage space, return a pointer to the NULL
   // indications array.
-  ast::Expr *Nulls(ast::Expr *ptr) const;
+  ast::Expression *Nulls(ast::Expression *ptr) const;
 
   // Given a pointer to the storage space and the index of the column
   // to access, return a pointer to the attribute's column data.
-  ast::Expr *ColumnPtr(ast::Expr *ptr, uint32_t index) const;
+  ast::Expression *ColumnPtr(ast::Expression *ptr, uint32_t index) const;
 
  private:
   // Code generation instance.

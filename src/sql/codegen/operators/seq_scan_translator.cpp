@@ -36,7 +36,8 @@ std::string_view SeqScanTranslator::GetTableName() const {
 
 void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
                                             const planner::AbstractExpression *term,
-                                            ast::Expr *vector_proj, ast::Expr *tid_list) {
+                                            ast::Expression *vector_proj,
+                                            ast::Expression *tid_list) {
   // var vpi_base: VectorProjectionIterator
   // var vpi = &vpi_base
   ast::Identifier vpi_base = codegen_->MakeFreshIdentifier("vpi_base");
@@ -95,8 +96,8 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
   });
   FunctionBuilder builder(codegen_, fn_name, std::move(params), codegen_->Nil());
   {
-    ast::Expr *vector_proj = builder.GetParameterByPosition(0);
-    ast::Expr *tid_list = builder.GetParameterByPosition(1);
+    ast::Expression *vector_proj = builder.GetParameterByPosition(0);
+    ast::Expression *tid_list = builder.GetParameterByPosition(1);
     if (planner::ExpressionUtil::IsColumnCompareWithConst(*predicate)) {
       auto cve = static_cast<const planner::ColumnValueExpression *>(predicate->GetChild(0));
       auto translator = GetCompilationContext()->LookupTranslator(*predicate->GetChild(1));
@@ -121,7 +122,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
 
 void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (HasPredicate()) {
-    ast::Expr *fm_type = codegen_->BuiltinType(ast::BuiltinType::FilterManager);
+    ast::Expression *fm_type = codegen_->BuiltinType(ast::BuiltinType::FilterManager);
     local_filter_ = pipeline_ctx->DeclarePipelineStateEntry("filter_manager", fm_type);
   }
 }
@@ -148,12 +149,12 @@ void SeqScanTranslator::ScanTable(ConsumerContext *context, FunctionBuilder *fun
   Loop tvi_loop(function, codegen_->TableIterAdvance(codegen_->MakeExpr(tvi_var_)));
   {
     // var vpi = @tableIterGetVPI()
-    ast::Expr *get_vpi_call = codegen_->TableIterGetVPI(codegen_->MakeExpr(tvi_var_));
+    ast::Expression *get_vpi_call = codegen_->TableIterGetVPI(codegen_->MakeExpr(tvi_var_));
     function->Append(codegen_->DeclareVarWithInit(vpi_var_, get_vpi_call));
 
     if (HasPredicate()) {
-      ast::Expr *vpi = codegen_->MakeExpr(vpi_var_);
-      ast::Expr *filter_manager = context->GetStateEntryPtr(local_filter_);
+      ast::Expression *vpi = codegen_->MakeExpr(vpi_var_);
+      ast::Expression *filter_manager = context->GetStateEntryPtr(local_filter_);
       function->Append(codegen_->FilterManagerRunFilters(filter_manager, vpi));
     }
 
@@ -174,7 +175,7 @@ void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_
     function->Append(codegen_->FilterManagerInit(pipeline_ctx.GetStateEntryPtr(local_filter_)));
     // @filterManagerInsert() for each clause.
     for (const auto &clause : filters_) {
-      ast::Expr *filter = pipeline_ctx.GetStateEntryPtr(local_filter_);
+      ast::Expression *filter = pipeline_ctx.GetStateEntryPtr(local_filter_);
       function->Append(codegen_->FilterManagerInsert(filter, clause));
     }
   }
@@ -183,7 +184,7 @@ void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_
 void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
   if (HasPredicate()) {
-    ast::Expr *filter = pipeline_ctx.GetStateEntryPtr(local_filter_);
+    ast::Expression *filter = pipeline_ctx.GetStateEntryPtr(local_filter_);
     function->Append(codegen_->FilterManagerFree(filter));
   }
 }
@@ -208,7 +209,7 @@ void SeqScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *funct
   }
 }
 
-ast::Expr *SeqScanTranslator::GetTableColumn(uint16_t col_oid) const {
+ast::Expression *SeqScanTranslator::GetTableColumn(uint16_t col_oid) const {
   const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
   const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
   auto type = schema->GetColumnInfo(col_oid)->type.GetPrimitiveTypeId();

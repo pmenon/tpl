@@ -89,7 +89,7 @@ class CompilationContext {
   /**
    * @return The slot in the query state where the execution context can be found.
    */
-  ast::Expr *GetExecutionContextPtrFromQueryState();
+  ast::Expression *GetExecutionContextPtrFromQueryState();
 
  private:
   // Private to force use of static Compile() function.

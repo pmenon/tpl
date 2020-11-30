@@ -7,7 +7,7 @@ namespace tpl::sql::codegen {
 
 FunctionBuilder::FunctionBuilder(CodeGen *codegen, ast::Identifier name,
                                  util::RegionVector<ast::FieldDeclaration *> &&params,
-                                 ast::Expr *ret_type)
+                                 ast::Expression *ret_type)
     : codegen_(codegen),
       prev_function_(nullptr),
       name_(name),
@@ -24,7 +24,7 @@ FunctionBuilder::FunctionBuilder(CodeGen *codegen, ast::Identifier name,
 
 FunctionBuilder::~FunctionBuilder() { Finish(); }
 
-ast::Expr *FunctionBuilder::GetParameterByPosition(uint32_t param_idx) {
+ast::Expression *FunctionBuilder::GetParameterByPosition(uint32_t param_idx) {
   if (param_idx < params_.size()) {
     return codegen_->MakeExpr(params_[param_idx]->GetName());
   }
@@ -38,7 +38,7 @@ void FunctionBuilder::Append(ast::Statement *stmt) {
   codegen_->NewLine();
 }
 
-void FunctionBuilder::Append(ast::Expr *expr) {
+void FunctionBuilder::Append(ast::Expression *expr) {
   Append(codegen_->NodeFactory()->NewExpressionStatement(expr));
 }
 
@@ -46,7 +46,7 @@ void FunctionBuilder::Append(ast::VariableDeclaration *decl) {
   Append(codegen_->NodeFactory()->NewDeclStatement(decl));
 }
 
-ast::FunctionDeclaration *FunctionBuilder::Finish(ast::Expr *ret) {
+ast::FunctionDeclaration *FunctionBuilder::Finish(ast::Expression *ret) {
   if (decl_ != nullptr) {
     return decl_;
   }

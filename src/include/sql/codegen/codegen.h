@@ -125,37 +125,37 @@ class CodeGen {
   /**
    * @return A literal whose value is the provided boolean value.
    */
-  [[nodiscard]] ast::Expr *ConstBool(bool val) const;
+  [[nodiscard]] ast::Expression *ConstBool(bool val) const;
 
   /**
    * @return A literal whose value is the provided 8-bit signed integer.
    */
-  [[nodiscard]] ast::Expr *Const8(int8_t val) const;
+  [[nodiscard]] ast::Expression *Const8(int8_t val) const;
 
   /**
    * @return A literal whose value is the provided 16-bit signed integer.
    */
-  [[nodiscard]] ast::Expr *Const16(int16_t val) const;
+  [[nodiscard]] ast::Expression *Const16(int16_t val) const;
 
   /**
    * @return A literal whose value is the provided 32-bit signed integer.
    */
-  [[nodiscard]] ast::Expr *Const32(int32_t val) const;
+  [[nodiscard]] ast::Expression *Const32(int32_t val) const;
 
   /**
    * @return A literal whose value is the provided 64-bit signed integer.
    */
-  [[nodiscard]] ast::Expr *Const64(int64_t val) const;
+  [[nodiscard]] ast::Expression *Const64(int64_t val) const;
 
   /**
    * @return A literal whose value is the provided 64-bit floating point.
    */
-  [[nodiscard]] ast::Expr *ConstDouble(double val) const;
+  [[nodiscard]] ast::Expression *ConstDouble(double val) const;
 
   /**
    * @return A literal whose value is identical to the provided string.
    */
-  [[nodiscard]] ast::Expr *ConstString(std::string_view str) const;
+  [[nodiscard]] ast::Expression *ConstString(std::string_view str) const;
 
   // ---------------------------------------------------------------------------
   //
@@ -167,72 +167,72 @@ class CodeGen {
    * @return The type representation for a primitive boolean value.
    */
 
-  [[nodiscard]] ast::Expr *BoolType() const;
+  [[nodiscard]] ast::Expression *BoolType() const;
 
   /**
    * @return The type representation for an 8-bit signed integer (i.e., int8)
    */
-  [[nodiscard]] ast::Expr *Int8Type() const;
+  [[nodiscard]] ast::Expression *Int8Type() const;
 
   /**
    * @return The type representation for an 16-bit signed integer (i.e., int16)
    */
-  [[nodiscard]] ast::Expr *Int16Type() const;
+  [[nodiscard]] ast::Expression *Int16Type() const;
 
   /**
    * @return The type representation for an 32-bit signed integer (i.e., int32)
    */
-  [[nodiscard]] ast::Expr *Int32Type() const;
+  [[nodiscard]] ast::Expression *Int32Type() const;
 
   /**
    * @return The type representation for an unsigned 32-bit integer (i.e., uint32)
    */
-  [[nodiscard]] ast::Expr *UInt32Type() const;
+  [[nodiscard]] ast::Expression *UInt32Type() const;
 
   /**
    * @return The type representation for an 64-bit signed integer (i.e., int64)
    */
-  [[nodiscard]] ast::Expr *Int64Type() const;
+  [[nodiscard]] ast::Expression *Int64Type() const;
 
   /**
    * @return The type representation for an 32-bit floating point number (i.e., float32)
    */
-  [[nodiscard]] ast::Expr *Float32Type() const;
+  [[nodiscard]] ast::Expression *Float32Type() const;
 
   /**
    * @return The type representation for an 64-bit floating point number (i.e., float64)
    */
-  [[nodiscard]] ast::Expr *Float64Type() const;
+  [[nodiscard]] ast::Expression *Float64Type() const;
 
   /**
    * @return A type representation expression that is "[num_elems]kind".
    */
-  [[nodiscard]] ast::Expr *ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind);
+  [[nodiscard]] ast::Expression *ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind);
 
   /**
    * @return The type representation for the provided builtin type.
    */
-  [[nodiscard]] ast::Expr *BuiltinType(ast::BuiltinType::Kind builtin_kind) const;
+  [[nodiscard]] ast::Expression *BuiltinType(ast::BuiltinType::Kind builtin_kind) const;
 
   /**
    * @return The type representation for a TPL nil type.
    */
-  [[nodiscard]] ast::Expr *Nil() const;
+  [[nodiscard]] ast::Expression *Nil() const;
 
   /**
    * @return A type representation expression that is a pointer to the provided type.
    */
-  [[nodiscard]] ast::Expr *PointerType(ast::Expr *base_type_repr) const;
+  [[nodiscard]] ast::Expression *PointerType(ast::Expression *base_type_repr) const;
 
   /**
    * @return A type representation expression that is a pointer to a named object.
    */
-  [[nodiscard]] ast::Expr *PointerType(ast::Identifier type_name) const;
+  [[nodiscard]] ast::Expression *PointerType(ast::Identifier type_name) const;
 
   /**
    * @return A type representation expression that is a pointer to the provided builtin type.
    */
-  [[nodiscard]] ast::Expr *PointerType(ast::BuiltinType::Kind builtin) const;
+  [[nodiscard]] ast::Expression *PointerType(ast::BuiltinType::Kind builtin) const;
 
   /**
    * Convert a SQL type into a runtime SQL value type representation expression.
@@ -244,7 +244,7 @@ class CodeGen {
    * @param type The SQL type.
    * @return The corresponding TPL type.
    */
-  [[nodiscard]] ast::Expr *TplType(TypeId type);
+  [[nodiscard]] ast::Expression *TplType(TypeId type);
 
   /**
    * Convert the given type into a primitive TPL type.
@@ -256,7 +256,7 @@ class CodeGen {
    * @param type The SQL type.
    * @return The corresponding primitive TPL type.
    */
-  [[nodiscard]] ast::Expr *PrimitiveTplType(TypeId type);
+  [[nodiscard]] ast::Expression *PrimitiveTplType(TypeId type);
 
   /**
    * Return the appropriate aggregate type for the given input aggregation expression.
@@ -264,27 +264,28 @@ class CodeGen {
    * @param ret_type The return type of the aggregate.
    * @return The corresponding TPL aggregate type.
    */
-  [[nodiscard]] ast::Expr *AggregateType(planner::ExpressionType agg_type, TypeId ret_type) const;
+  [[nodiscard]] ast::Expression *AggregateType(planner::ExpressionType agg_type,
+                                               TypeId ret_type) const;
 
   /**
    * @return An expression that represents the address of the provided object.
    */
-  [[nodiscard]] ast::Expr *AddressOf(ast::Expr *obj) const;
+  [[nodiscard]] ast::Expression *AddressOf(ast::Expression *obj) const;
 
   /**
    * @return An expression that represents the address of the provided object.
    */
-  [[nodiscard]] ast::Expr *AddressOf(ast::Identifier obj_name) const;
+  [[nodiscard]] ast::Expression *AddressOf(ast::Identifier obj_name) const;
 
   /**
    * @return An expression that represents the size of a type with the provided name, in bytes.
    */
-  [[nodiscard]] ast::Expr *SizeOf(ast::Identifier type_name) const;
+  [[nodiscard]] ast::Expression *SizeOf(ast::Identifier type_name) const;
 
   /**
    * @return The offset of the given member within the given object.
    */
-  [[nodiscard]] ast::Expr *OffsetOf(ast::Identifier obj, ast::Identifier member) const;
+  [[nodiscard]] ast::Expression *OffsetOf(ast::Identifier obj, ast::Identifier member) const;
 
   /**
    * Perform a pointer case of the given expression into the provided type representation.
@@ -292,7 +293,7 @@ class CodeGen {
    * @param arg The expression to cast.
    * @return The result of the cast.
    */
-  [[nodiscard]] ast::Expr *PtrCast(ast::Expr *base, ast::Expr *arg) const;
+  [[nodiscard]] ast::Expression *PtrCast(ast::Expression *base, ast::Expression *arg) const;
 
   /**
    * Perform a pointer case of the given argument into a pointer to the type with the provided
@@ -301,7 +302,7 @@ class CodeGen {
    * @param arg The argument to the cast.
    * @return The result of the cast.
    */
-  [[nodiscard]] ast::Expr *PtrCast(ast::Identifier base_name, ast::Expr *arg) const;
+  [[nodiscard]] ast::Expression *PtrCast(ast::Identifier base_name, ast::Expression *arg) const;
 
   // ---------------------------------------------------------------------------
   //
@@ -317,7 +318,7 @@ class CodeGen {
    * @return The variable declaration.
    */
   [[nodiscard]] ast::VariableDeclaration *DeclareVarNoInit(ast::Identifier name,
-                                                           ast::Expr *type_repr);
+                                                           ast::Expression *type_repr);
 
   /**
    * Declare a variable with the provided name and builtin kind, but with no initial value.
@@ -337,7 +338,8 @@ class CodeGen {
    * @param init The initial value to assign the variable.
    * @return The variable declaration.
    */
-  [[nodiscard]] ast::VariableDeclaration *DeclareVarWithInit(ast::Identifier name, ast::Expr *init);
+  [[nodiscard]] ast::VariableDeclaration *DeclareVarWithInit(ast::Identifier name,
+                                                             ast::Expression *init);
 
   /**
    * Declare a variable with the provided name, type representation, and initial value.
@@ -352,8 +354,9 @@ class CodeGen {
    * @param init The initial value to assign the variable.
    * @return The variable declaration.
    */
-  [[nodiscard]] ast::VariableDeclaration *DeclareVar(ast::Identifier name, ast::Expr *type_repr,
-                                                     ast::Expr *init);
+  [[nodiscard]] ast::VariableDeclaration *DeclareVar(ast::Identifier name,
+                                                     ast::Expression *type_repr,
+                                                     ast::Expression *init);
 
   /**
    * Declare a struct with the provided name and struct field elements.
@@ -378,7 +381,7 @@ class CodeGen {
    * @param value The value to assign.
    * @return The assignment statement.
    */
-  [[nodiscard]] ast::Statement *Assign(ast::Expr *dest, ast::Expr *value);
+  [[nodiscard]] ast::Statement *Assign(ast::Expression *dest, ast::Expression *value);
 
   // ---------------------------------------------------------------------------
   //
@@ -394,8 +397,8 @@ class CodeGen {
    * @param right The right input.
    * @return The result of the binary operation.
    */
-  [[nodiscard]] ast::Expr *BinaryOp(parsing::Token::Type op, ast::Expr *left,
-                                    ast::Expr *right) const;
+  [[nodiscard]] ast::Expression *BinaryOp(parsing::Token::Type op, ast::Expression *left,
+                                          ast::Expression *right) const;
 
   /**
    * Generate a comparison operation of the provided type between the provided left and right
@@ -405,8 +408,8 @@ class CodeGen {
    * @param right The right input.
    * @return The result of the comparison.
    */
-  [[nodiscard]] ast::Expr *Compare(parsing::Token::Type op, ast::Expr *left,
-                                   ast::Expr *right) const;
+  [[nodiscard]] ast::Expression *Compare(parsing::Token::Type op, ast::Expression *left,
+                                         ast::Expression *right) const;
 
   /**
    * Generate a comparison operation of the provided type between the provided left and right
@@ -415,7 +418,7 @@ class CodeGen {
    * @param right The right input.
    * @return The result of the comparison.
    */
-  [[nodiscard]] ast::Expr *CompareEq(ast::Expr *left, ast::Expr *right) const {
+  [[nodiscard]] ast::Expression *CompareEq(ast::Expression *left, ast::Expression *right) const {
     return Compare(parsing::Token::Type::EQUAL_EQUAL, left, right);
   }
 
@@ -424,7 +427,7 @@ class CodeGen {
    * @param obj The object to compare.
    * @return The boolean result of the comparison.
    */
-  [[nodiscard]] ast::Expr *IsNilPointer(ast::Expr *obj) const;
+  [[nodiscard]] ast::Expression *IsNilPointer(ast::Expression *obj) const;
 
   /**
    * Generate a unary operation of the provided operation type (<b>op</b>) on the provided input.
@@ -432,42 +435,44 @@ class CodeGen {
    * @param input The input.
    * @return The result of the unary operation.
    */
-  [[nodiscard]] ast::Expr *UnaryOp(parsing::Token::Type op, ast::Expr *input) const;
+  [[nodiscard]] ast::Expression *UnaryOp(parsing::Token::Type op, ast::Expression *input) const;
 
   /**
    * @return The result of lhs & rhs.
    */
-  [[nodiscard]] ast::Expr *BitAnd(ast::Expr *lhs, ast::Expr *rhs) const;
+  [[nodiscard]] ast::Expression *BitAnd(ast::Expression *lhs, ast::Expression *rhs) const;
 
   /**
    * @return The result of lhs | rhs.
    */
-  [[nodiscard]] ast::Expr *BitOr(ast::Expr *lhs, ast::Expr *rhs) const;
+  [[nodiscard]] ast::Expression *BitOr(ast::Expression *lhs, ast::Expression *rhs) const;
 
   /**
    * @return The result of val << num_bits.
    */
-  [[nodiscard]] ast::Expr *BitShiftLeft(ast::Expr *val, ast::Expr *num_bits) const;
+  [[nodiscard]] ast::Expression *BitShiftLeft(ast::Expression *val,
+                                              ast::Expression *num_bits) const;
 
   /**
    * @return The result of val >> num_bits.
    */
-  [[nodiscard]] ast::Expr *BitShiftRight(ast::Expr *val, ast::Expr *num_bits) const;
+  [[nodiscard]] ast::Expression *BitShiftRight(ast::Expression *val,
+                                               ast::Expression *num_bits) const;
 
   /**
    * @return The result of left + right;
    */
-  [[nodiscard]] ast::Expr *Add(ast::Expr *left, ast::Expr *right) const;
+  [[nodiscard]] ast::Expression *Add(ast::Expression *left, ast::Expression *right) const;
 
   /**
    * @return The result of left - right;
    */
-  [[nodiscard]] ast::Expr *Sub(ast::Expr *left, ast::Expr *right) const;
+  [[nodiscard]] ast::Expression *Sub(ast::Expression *left, ast::Expression *right) const;
 
   /**
    * @return The result of left * right;
    */
-  [[nodiscard]] ast::Expr *Mul(ast::Expr *left, ast::Expr *right) const;
+  [[nodiscard]] ast::Expression *Mul(ast::Expression *left, ast::Expression *right) const;
 
   // ---------------------------------------------------------------------------
   //
@@ -481,7 +486,8 @@ class CodeGen {
    * @param member The name of the struct member to access.
    * @return An expression accessing the desired struct member.
    */
-  [[nodiscard]] ast::Expr *AccessStructMember(ast::Expr *object, ast::Identifier member);
+  [[nodiscard]] ast::Expression *AccessStructMember(ast::Expression *object,
+                                                    ast::Identifier member);
 
   /**
    * Create a return statement without a return value.
@@ -494,7 +500,7 @@ class CodeGen {
    * @param ret The return value.
    * @return The statement.
    */
-  [[nodiscard]] ast::Statement *Return(ast::Expr *ret);
+  [[nodiscard]] ast::Statement *Return(ast::Expression *ret);
 
   // ---------------------------------------------------------------------------
   //
@@ -507,16 +513,16 @@ class CodeGen {
    * @param func_name The name of the function to call.
    * @param args The arguments to pass in the call.
    */
-  [[nodiscard]] ast::Expr *Call(ast::Identifier func_name,
-                                std::initializer_list<ast::Expr *> args) const;
+  [[nodiscard]] ast::Expression *Call(ast::Identifier func_name,
+                                      std::initializer_list<ast::Expression *> args) const;
 
   /**
    * Generate a call to the provided function by name and with the provided arguments.
    * @param func_name The name of the function to call.
    * @param args The arguments to pass in the call.
    */
-  [[nodiscard]] ast::Expr *Call(ast::Identifier func_name,
-                                const std::vector<ast::Expr *> &args) const;
+  [[nodiscard]] ast::Expression *Call(ast::Identifier func_name,
+                                      const std::vector<ast::Expression *> &args) const;
 
   /**
    * Generate a call to the provided builtin function and arguments.
@@ -524,8 +530,8 @@ class CodeGen {
    * @param args The arguments to pass in the call.
    * @return The expression representing the call.
    */
-  [[nodiscard]] ast::Expr *CallBuiltin(ast::Builtin builtin,
-                                       std::initializer_list<ast::Expr *> args) const;
+  [[nodiscard]] ast::Expression *CallBuiltin(ast::Builtin builtin,
+                                             std::initializer_list<ast::Expression *> args) const;
 
   /**
    * Generate a call to the provided function using the provided arguments. This function is almost
@@ -535,8 +541,8 @@ class CodeGen {
    * @param args The arguments to pass in the call.
    * @return The expression representing the call.
    */
-  [[nodiscard]] ast::Expr *CallBuiltin(ast::Builtin builtin,
-                                       const std::vector<ast::Expr *> &args) const;
+  [[nodiscard]] ast::Expression *CallBuiltin(ast::Builtin builtin,
+                                             const std::vector<ast::Expression *> &args) const;
 
   // ---------------------------------------------------------------------------
   //
@@ -549,28 +555,28 @@ class CodeGen {
    * @param b The constant bool.
    * @return The SQL bool.
    */
-  [[nodiscard]] ast::Expr *BoolToSql(bool b) const;
+  [[nodiscard]] ast::Expression *BoolToSql(bool b) const;
 
   /**
    * Call @intToSql(). Convert a 64-bit integer into a SQL integer.
    * @param num The number to convert.
    * @return The SQL integer.
    */
-  [[nodiscard]] ast::Expr *IntToSql(int64_t num) const;
+  [[nodiscard]] ast::Expression *IntToSql(int64_t num) const;
 
   /**
    * Call @floatToSql(). Convert a 64-bit floating point number into a SQL real.
    * @param num The number to convert.
    * @return The SQL real.
    */
-  [[nodiscard]] ast::Expr *FloatToSql(double num) const;
+  [[nodiscard]] ast::Expression *FloatToSql(double num) const;
 
   /**
    * Call @dateToSql(). Convert a date into a SQL date.
    * @param date The date.
    * @return The SQL date.
    */
-  [[nodiscard]] ast::Expr *DateToSql(Date date) const;
+  [[nodiscard]] ast::Expression *DateToSql(Date date) const;
 
   /**
    * Call @dateToSql(). Convert a date into a SQL date.
@@ -579,14 +585,14 @@ class CodeGen {
    * @param day The number to convert.
    * @return The SQL date.
    */
-  [[nodiscard]] ast::Expr *DateToSql(int32_t year, int32_t month, int32_t day) const;
+  [[nodiscard]] ast::Expression *DateToSql(int32_t year, int32_t month, int32_t day) const;
 
   /**
    * Call @stringToSql(). Convert a string literal into a SQL string.
    * @param str The string.
    * @return The SQL varlen.
    */
-  [[nodiscard]] ast::Expr *StringToSql(std::string_view str) const;
+  [[nodiscard]] ast::Expression *StringToSql(std::string_view str) const;
 
   /**
    * Perform a SQL cast.
@@ -595,15 +601,15 @@ class CodeGen {
    * @param to_type The type to convert to.
    * @return
    */
-  [[nodiscard]] ast::Expr *ConvertSql(ast::Expr *input, sql::TypeId from_type,
-                                      sql::TypeId to_type) const;
+  [[nodiscard]] ast::Expression *ConvertSql(ast::Expression *input, sql::TypeId from_type,
+                                            sql::TypeId to_type) const;
 
   /**
    * Initialize the given SQL value as a SQL NULL.
    * @param val The SQL value to set.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *InitSqlNull(ast::Expr *val) const;
+  [[nodiscard]] ast::Expression *InitSqlNull(ast::Expression *val) const;
 
   // -------------------------------------------------------
   //
@@ -617,7 +623,7 @@ class CodeGen {
    * @param table_name The name of the table to scan.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *TableIterInit(ast::Expr *tvi, std::string_view table_name);
+  [[nodiscard]] ast::Expression *TableIterInit(ast::Expression *tvi, std::string_view table_name);
 
   /**
    * Call @tableIterAdvance(). Attempt to advance the iterator, returning true if successful and
@@ -625,21 +631,21 @@ class CodeGen {
    * @param tvi The table vector iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *TableIterAdvance(ast::Expr *tvi);
+  [[nodiscard]] ast::Expression *TableIterAdvance(ast::Expression *tvi);
 
   /**
    * Call @tableIterGetVPI(). Retrieve the vector projection iterator from a table vector iterator.
    * @param tvi The table vector iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *TableIterGetVPI(ast::Expr *tvi);
+  [[nodiscard]] ast::Expression *TableIterGetVPI(ast::Expression *tvi);
 
   /**
    * Call @tableIterClose(). Close and destroy a table vector iterator.
    * @param tvi The table vector iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *TableIterClose(ast::Expr *tvi);
+  [[nodiscard]] ast::Expression *TableIterClose(ast::Expression *tvi);
 
   /**
    * Call @iterateTableParallel(). Performs a parallel scan over the table with the provided name,
@@ -651,8 +657,10 @@ class CodeGen {
    * @param worker_name The work function name.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *IterateTableParallel(std::string_view table_name, ast::Expr *query_state,
-                                                ast::Expr *tls, ast::Identifier worker_name);
+  [[nodiscard]] ast::Expression *IterateTableParallel(std::string_view table_name,
+                                                      ast::Expression *query_state,
+                                                      ast::Expression *tls,
+                                                      ast::Identifier worker_name);
 
   // -------------------------------------------------------
   //
@@ -665,28 +673,28 @@ class CodeGen {
    * @param vpi The vector projection iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *VPIIsFiltered(ast::Expr *vpi);
+  [[nodiscard]] ast::Expression *VPIIsFiltered(ast::Expression *vpi);
 
   /**
    * Call @vpiHasNext(). Check if the provided VPI has more tuple data to iterate over.
    * @param vpi The vector projection iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *VPIHasNext(ast::Expr *vpi);
+  [[nodiscard]] ast::Expression *VPIHasNext(ast::Expression *vpi);
 
   /**
    * Call @vpiAdvance(). Advance the provided VPI to the next valid tuple.
    * @param vpi The vector projection iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *VPIAdvance(ast::Expr *vpi);
+  [[nodiscard]] ast::Expression *VPIAdvance(ast::Expression *vpi);
 
   /**
    * Call @vpiReset(). Reset the iterator.
    * @param vpi The vector projection iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *VPIReset(ast::Expr *vpi);
+  [[nodiscard]] ast::Expression *VPIReset(ast::Expression *vpi);
 
   /**
    * Call @vpiInit(). Initialize a new VPI using the provided vector projection. The last TID list
@@ -696,7 +704,8 @@ class CodeGen {
    * @param tids The TID list.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *VPIInit(ast::Expr *vpi, ast::Expr *vp, ast::Expr *tids);
+  [[nodiscard]] ast::Expression *VPIInit(ast::Expression *vpi, ast::Expression *vp,
+                                         ast::Expression *tids);
 
   /**
    * Call @vpiMatch(). Mark the current tuple the provided vector projection iterator is positioned
@@ -705,7 +714,7 @@ class CodeGen {
    * @param cond The boolean condition setting the current tuples filtration state.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *VPIMatch(ast::Expr *vpi, ast::Expr *cond);
+  [[nodiscard]] ast::Expression *VPIMatch(ast::Expression *vpi, ast::Expression *cond);
 
   /**
    * Call @vpiGet[Type][Nullable](). Reads a value from the provided vector projection iterator of
@@ -715,7 +724,8 @@ class CodeGen {
    * @param nullable NULL-ability flag.
    * @param idx The index of the column in the VPI to read.
    */
-  [[nodiscard]] ast::Expr *VPIGet(ast::Expr *vpi, sql::TypeId type_id, bool nullable, uint32_t idx);
+  [[nodiscard]] ast::Expression *VPIGet(ast::Expression *vpi, sql::TypeId type_id, bool nullable,
+                                        uint32_t idx);
 
   /**
    * Call @filter[Comparison](). Invokes the vectorized filter on the provided vector projection
@@ -726,8 +736,8 @@ class CodeGen {
    * @param filter_val The filtering value.
    * @param The TID list.
    */
-  ast::Expr *VPIFilter(ast::Expr *vp, planner::ExpressionType comp_type, uint32_t col_idx,
-                       ast::Expr *filter_val, ast::Expr *tids);
+  ast::Expression *VPIFilter(ast::Expression *vp, planner::ExpressionType comp_type,
+                             uint32_t col_idx, ast::Expression *filter_val, ast::Expression *tids);
 
   // -------------------------------------------------------
   //
@@ -739,41 +749,42 @@ class CodeGen {
    * Call @filterManagerInit(). Initialize the provided filter manager instance.
    * @param fm The filter manager pointer.
    */
-  [[nodiscard]] ast::Expr *FilterManagerInit(ast::Expr *filter_manager);
+  [[nodiscard]] ast::Expression *FilterManagerInit(ast::Expression *filter_manager);
 
   /**
    * Call @filterManagerFree(). Destroy and clean up the provided filter manager instance.
    * @param fm The filter manager pointer.
    */
-  [[nodiscard]] ast::Expr *FilterManagerFree(ast::Expr *filter_manager);
+  [[nodiscard]] ast::Expression *FilterManagerFree(ast::Expression *filter_manager);
 
   /**
    * Call @filterManagerInsert(). Insert a list of clauses.
    * @param fm The filter manager pointer.
    */
-  [[nodiscard]] ast::Expr *FilterManagerInsert(ast::Expr *filter_manager,
-                                               const std::vector<ast::Identifier> &clause_fn_names);
+  [[nodiscard]] ast::Expression *FilterManagerInsert(
+      ast::Expression *filter_manager, const std::vector<ast::Identifier> &clause_fn_names);
 
   /**
    * Call @filterManagerRun(). Runs all filters on the input vector projection iterator.
    * @param fm The filter manager pointer.
    * @param vpi The input vector projection iterator.
    */
-  [[nodiscard]] ast::Expr *FilterManagerRunFilters(ast::Expr *filter_manager, ast::Expr *vpi);
+  [[nodiscard]] ast::Expression *FilterManagerRunFilters(ast::Expression *filter_manager,
+                                                         ast::Expression *vpi);
 
   /**
    * Call @execCtxGetMemPool(). Return the memory pool within an execution context.
    * @param exec_ctx The execution context variable.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *ExecCtxGetMemoryPool(ast::Expr *exec_ctx);
+  [[nodiscard]] ast::Expression *ExecCtxGetMemoryPool(ast::Expression *exec_ctx);
 
   /**
    * Call @execCtxGetTLS(). Return the thread state container within an execution context.
    * @param exec_ctx The name of the execution context variable.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *ExecCtxGetTLS(ast::Expr *exec_ctx);
+  [[nodiscard]] ast::Expression *ExecCtxGetTLS(ast::Expression *exec_ctx);
 
   /**
    * Call @tlsGetCurrentThreadState(). Retrieves the current threads state in the state container.
@@ -782,8 +793,8 @@ class CodeGen {
    * @param state_type_name The name of the expected state type to cast the result to.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *TLSAccessCurrentThreadState(ast::Expr *tls,
-                                                       ast::Identifier state_type_name);
+  [[nodiscard]] ast::Expression *TLSAccessCurrentThreadState(ast::Expression *tls,
+                                                             ast::Identifier state_type_name);
 
   /**
    * Call @tlsIterate(). Invokes the provided callback function for all thread-local state objects.
@@ -793,7 +804,8 @@ class CodeGen {
    * @param func The callback function.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *TLSIterate(ast::Expr *tls, ast::Expr *context, ast::Identifier func);
+  [[nodiscard]] ast::Expression *TLSIterate(ast::Expression *tls, ast::Expression *context,
+                                            ast::Identifier func);
 
   /**
    * Call @tlsReset(). Reset the thread state container to a new state type with its own
@@ -805,16 +817,16 @@ class CodeGen {
    * @param context A context to pass along to each of the init and tear-down functions.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *TLSReset(ast::Expr *tls, ast::Identifier tls_state_name,
-                                    ast::Identifier init_fn, ast::Identifier tear_down_fn,
-                                    ast::Expr *context);
+  [[nodiscard]] ast::Expression *TLSReset(ast::Expression *tls, ast::Identifier tls_state_name,
+                                          ast::Identifier init_fn, ast::Identifier tear_down_fn,
+                                          ast::Expression *context);
 
   /**
    * Call @tlsClear(). Clears all thread-local states.
    * @param tls The name of the thread state container variable.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *TLSClear(ast::Expr *tls);
+  [[nodiscard]] ast::Expression *TLSClear(ast::Expression *tls);
 
   // -------------------------------------------------------
   //
@@ -827,7 +839,7 @@ class CodeGen {
    * @param values The values to hash.
    * @return The result of the hash.
    */
-  [[nodiscard]] ast::Expr *Hash(const std::vector<ast::Expr *> &values);
+  [[nodiscard]] ast::Expression *Hash(const std::vector<ast::Expression *> &values);
 
   // -------------------------------------------------------
   //
@@ -843,8 +855,9 @@ class CodeGen {
    * @param build_row_type_name The name of the materialized build-side row in the hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableInit(ast::Expr *join_hash_table, ast::Expr *mem_pool,
-                                             ast::Identifier build_row_type_name);
+  [[nodiscard]] ast::Expression *JoinHashTableInit(ast::Expression *join_hash_table,
+                                                   ast::Expression *mem_pool,
+                                                   ast::Identifier build_row_type_name);
 
   /**
    * Call @joinHTInsert(). Allocates a new tuple in the join hash table with the given hash value.
@@ -854,8 +867,9 @@ class CodeGen {
    * @param tuple_type_name The name of the struct type representing the tuple to be inserted.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableInsert(ast::Expr *join_hash_table, ast::Expr *hash_val,
-                                               ast::Identifier tuple_type_name);
+  [[nodiscard]] ast::Expression *JoinHashTableInsert(ast::Expression *join_hash_table,
+                                                     ast::Expression *hash_val,
+                                                     ast::Identifier tuple_type_name);
 
   /**
    * Call @joinHTBuild(). Performs the hash table build step of a hash join. Called on the provided
@@ -863,7 +877,7 @@ class CodeGen {
    * @param join_hash_table The pointer to the join hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableBuild(ast::Expr *join_hash_table);
+  [[nodiscard]] ast::Expression *JoinHashTableBuild(ast::Expression *join_hash_table);
 
   /**
    * Call @joinHTBuildParallel(). Performs the parallel hash table build step of a hash join. Called
@@ -874,9 +888,9 @@ class CodeGen {
    * @param offset The offset in the thread state container where thread-local tables are.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableBuildParallel(ast::Expr *join_hash_table,
-                                                      ast::Expr *thread_state_container,
-                                                      ast::Expr *offset);
+  [[nodiscard]] ast::Expression *JoinHashTableBuildParallel(ast::Expression *join_hash_table,
+                                                            ast::Expression *thread_state_container,
+                                                            ast::Expression *offset);
 
   /**
    * Call @joinHTLookup(). Performs a single lookup into the hash table with a tuple with the
@@ -886,35 +900,36 @@ class CodeGen {
    * @param hash_val The hash value of the probe key.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableLookup(ast::Expr *join_hash_table, ast::Expr *hash_val);
+  [[nodiscard]] ast::Expression *JoinHashTableLookup(ast::Expression *join_hash_table,
+                                                     ast::Expression *hash_val);
 
   /**
    * Call @joinHTFree(). Cleanup and destroy the provided join hash table instance.
    * @param join_hash_table The join hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableFree(ast::Expr *join_hash_table);
+  [[nodiscard]] ast::Expression *JoinHashTableFree(ast::Expression *join_hash_table);
 
   /**
    * Call @htEntryGetHash(). Retrieves the hash value of the hash table entry.
    * @param entry The hash table entry.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *HTEntryGetHash(ast::Expr *entry);
+  [[nodiscard]] ast::Expression *HTEntryGetHash(ast::Expression *entry);
 
   /**
    * Call @htEntryGetRow(). Retrieves a pointer to contents of the entry.
    * @param entry The hash table entry.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *HTEntryGetRow(ast::Expr *entry, ast::Identifier row_type);
+  [[nodiscard]] ast::Expression *HTEntryGetRow(ast::Expression *entry, ast::Identifier row_type);
 
   /**
    * Call @htEntryGetNext(). Return the next entry in the bucket chain.
    * @param entry The hash table entry.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *HTEntryGetNext(ast::Expr *entry);
+  [[nodiscard]] ast::Expression *HTEntryGetNext(ast::Expression *entry);
 
   // -------------------------------------------------------
   //
@@ -929,8 +944,9 @@ class CodeGen {
    * @param agg_payload_type The name of the struct representing the aggregation payload.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableInit(ast::Expr *agg_ht, ast::Expr *mem_pool,
-                                            ast::Identifier agg_payload_type);
+  [[nodiscard]] ast::Expression *AggHashTableInit(ast::Expression *agg_ht,
+                                                  ast::Expression *mem_pool,
+                                                  ast::Identifier agg_payload_type);
 
   /**
    * Call @aggHTLookup(). Performs a single key lookup in an aggregation hash table. The hash value
@@ -943,9 +959,11 @@ class CodeGen {
    * @param agg_payload_type The name of the struct representing the aggregation payload.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableLookup(ast::Expr *agg_ht, ast::Expr *hash_val,
-                                              ast::Identifier key_check, ast::Expr *input,
-                                              ast::Identifier agg_payload_type);
+  [[nodiscard]] ast::Expression *AggHashTableLookup(ast::Expression *agg_ht,
+                                                    ast::Expression *hash_val,
+                                                    ast::Identifier key_check,
+                                                    ast::Expression *input,
+                                                    ast::Identifier agg_payload_type);
 
   /**
    * Call @aggHTInsert(). Inserts a new entry into the aggregation hash table. The result of the
@@ -956,8 +974,9 @@ class CodeGen {
    * @param agg_payload_type The name of the struct representing the aggregation payload.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableInsert(ast::Expr *agg_ht, ast::Expr *hash_val,
-                                              bool partitioned, ast::Identifier agg_payload_type);
+  [[nodiscard]] ast::Expression *AggHashTableInsert(ast::Expression *agg_ht,
+                                                    ast::Expression *hash_val, bool partitioned,
+                                                    ast::Identifier agg_payload_type);
 
   /**
    * Call @aggHTLink(). Directly inserts a new partial aggregate into the provided aggregation hash
@@ -966,7 +985,8 @@ class CodeGen {
    * @param entry A pointer to the hash table entry storing the partial aggregate data.
    * @retur The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableLinkEntry(ast::Expr *agg_ht, ast::Expr *entry);
+  [[nodiscard]] ast::Expression *AggHashTableLinkEntry(ast::Expression *agg_ht,
+                                                       ast::Expression *entry);
 
   /**
    * Call @aggHTMoveParts(). Move all overflow partitions stored in thread-local aggregation hash
@@ -980,9 +1000,9 @@ class CodeGen {
    *                                 into the global hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableMovePartitions(ast::Expr *agg_ht, ast::Expr *tls,
-                                                      ast::Expr *tl_agg_ht_offset,
-                                                      ast::Identifier merge_partitions_fn_name);
+  [[nodiscard]] ast::Expression *AggHashTableMovePartitions(
+      ast::Expression *agg_ht, ast::Expression *tls, ast::Expression *tl_agg_ht_offset,
+      ast::Identifier merge_partitions_fn_name);
 
   /**
    * Call @aggHTParallelPartScan(). Performs a parallel partitioned scan over an aggregation hash
@@ -993,16 +1013,17 @@ class CodeGen {
    * @param worker_fn The name of the function used to scan over a partition of the hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableParallelScan(ast::Expr *agg_ht, ast::Expr *query_state,
-                                                    ast::Expr *thread_state_container,
-                                                    ast::Identifier worker_fn);
+  [[nodiscard]] ast::Expression *AggHashTableParallelScan(ast::Expression *agg_ht,
+                                                          ast::Expression *query_state,
+                                                          ast::Expression *thread_state_container,
+                                                          ast::Identifier worker_fn);
 
   /**
    * Call @aggHTFree(). Cleans up and destroys the provided aggregation hash table.
    * @param agg_ht A pointer to the aggregation hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableFree(ast::Expr *agg_ht);
+  [[nodiscard]] ast::Expression *AggHashTableFree(ast::Expression *agg_ht);
 
   /**
    * Call @aggHTPartIterHasNext(). Determines if the provided overflow partition iterator has more
@@ -1010,14 +1031,14 @@ class CodeGen {
    * @param iter A pointer to the overflow partition iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggPartitionIteratorHasNext(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *AggPartitionIteratorHasNext(ast::Expression *iter);
 
   /**
    * Call @aggHTPartIterNext(). Advanced the iterator by one element.
    * @param iter A pointer to the overflow partition iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggPartitionIteratorNext(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *AggPartitionIteratorNext(ast::Expression *iter);
 
   /**
    * Call @aggHTPartIterGetHash(). Returns the hash value of the entry the iterator is currently
@@ -1025,7 +1046,7 @@ class CodeGen {
    * @param iter A pointer to the overflow partition iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggPartitionIteratorGetHash(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *AggPartitionIteratorGetHash(ast::Expression *iter);
 
   /**
    * Call @aggHTPartIterGetRow(). Returns a pointer to the aggregate payload struct of the entry the
@@ -1034,15 +1055,15 @@ class CodeGen {
    * @param agg_payload_type The type of aggregate payload.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggPartitionIteratorGetRow(ast::Expr *iter,
-                                                      ast::Identifier agg_payload_type);
+  [[nodiscard]] ast::Expression *AggPartitionIteratorGetRow(ast::Expression *iter,
+                                                            ast::Identifier agg_payload_type);
 
   /**
    * Call @aggHTPartIterGetRowEntry(). Returns a pointer to the current hash table entry.
    * @param iter A pointer to the overflow partition iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggPartitionIteratorGetRowEntry(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *AggPartitionIteratorGetRowEntry(ast::Expression *iter);
 
   /**
    * Call @aggHTIterInit(). Initializes an aggregation hash table iterator.
@@ -1050,21 +1071,22 @@ class CodeGen {
    * @param agg_ht A pointer to the hash table to iterate over.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableIteratorInit(ast::Expr *iter, ast::Expr *agg_ht);
+  [[nodiscard]] ast::Expression *AggHashTableIteratorInit(ast::Expression *iter,
+                                                          ast::Expression *agg_ht);
 
   /**
    * Call @aggHTIterHasNExt(). Determines if the given iterator has more data.
    * @param iter A pointer to the iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableIteratorHasNext(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *AggHashTableIteratorHasNext(ast::Expression *iter);
 
   /**
    * Call @aggHTIterNext(). Advances the iterator by one element.
    * @param iter A pointer to the iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableIteratorNext(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *AggHashTableIteratorNext(ast::Expression *iter);
 
   /**
    * Call @aggHTIterGetRow(). Returns a pointer to the aggregate payload the iterator is currently
@@ -1072,22 +1094,22 @@ class CodeGen {
    * @param iter A pointer to the iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableIteratorGetRow(ast::Expr *iter,
-                                                      ast::Identifier agg_payload_type);
+  [[nodiscard]] ast::Expression *AggHashTableIteratorGetRow(ast::Expression *iter,
+                                                            ast::Identifier agg_payload_type);
 
   /**
    * Call @aggHTIterClose(). Cleans up and destroys the given iterator.
    * @param iter A pointer to the iterator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableIteratorClose(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *AggHashTableIteratorClose(ast::Expression *iter);
 
   /**
    * Call @aggInit(). Initializes and aggregator.
    * @param agg A pointer to the aggregator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggregatorInit(ast::Expr *agg);
+  [[nodiscard]] ast::Expression *AggregatorInit(ast::Expression *agg);
 
   /**
    * Call @aggAdvance(). Advanced an aggregator with the provided input value.
@@ -1095,7 +1117,7 @@ class CodeGen {
    * @param val The input value.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggregatorAdvance(ast::Expr *agg, ast::Expr *val);
+  [[nodiscard]] ast::Expression *AggregatorAdvance(ast::Expression *agg, ast::Expression *val);
 
   /**
    * Call @aggMerge(). Merges two aggregators storing the result in the first argument.
@@ -1103,14 +1125,14 @@ class CodeGen {
    * @param agg2 A pointer to the aggregator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggregatorMerge(ast::Expr *agg1, ast::Expr *agg2);
+  [[nodiscard]] ast::Expression *AggregatorMerge(ast::Expression *agg1, ast::Expression *agg2);
 
   /**
    * Call @aggResult(). Finalizes and returns the result of the aggregation.
    * @param agg A pointer to the aggregator.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggregatorResult(ast::Expr *agg);
+  [[nodiscard]] ast::Expression *AggregatorResult(ast::Expression *agg);
 
   // -------------------------------------------------------
   //
@@ -1127,9 +1149,9 @@ class CodeGen {
    * @param sort_row_type_name The name of the materialized sort-row type.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SorterInit(ast::Expr *sorter, ast::Expr *mem_pool,
-                                      ast::Identifier cmp_func_name,
-                                      ast::Identifier sort_row_type_name);
+  [[nodiscard]] ast::Expression *SorterInit(ast::Expression *sorter, ast::Expression *mem_pool,
+                                            ast::Identifier cmp_func_name,
+                                            ast::Identifier sort_row_type_name);
 
   /**
    * Call @sorterInsert(). Prepare an insert into the provided sorter whose type is the given type.
@@ -1137,7 +1159,8 @@ class CodeGen {
    * @param sort_row_type_name The name of the TPL type that will be stored in the sorter.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SorterInsert(ast::Expr *sorter, ast::Identifier sort_row_type_name);
+  [[nodiscard]] ast::Expression *SorterInsert(ast::Expression *sorter,
+                                              ast::Identifier sort_row_type_name);
 
   /**
    * Call @sorterInsertTopK(). Prepare a top-k insert into the provided sorter whose type is the
@@ -1147,8 +1170,9 @@ class CodeGen {
    * @param top_k The top-k value.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SorterInsertTopK(ast::Expr *sorter, ast::Identifier sort_row_type_name,
-                                            uint64_t top_k);
+  [[nodiscard]] ast::Expression *SorterInsertTopK(ast::Expression *sorter,
+                                                  ast::Identifier sort_row_type_name,
+                                                  uint64_t top_k);
 
   /**
    * Call @sorterInsertTopK(). Complete a previous top-k insert into the provided sorter.
@@ -1156,14 +1180,14 @@ class CodeGen {
    * @param top_k The top-k value.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SorterInsertTopKFinish(ast::Expr *sorter, uint64_t top_k);
+  [[nodiscard]] ast::Expression *SorterInsertTopKFinish(ast::Expression *sorter, uint64_t top_k);
 
   /**
    * Call @sorterSort().  Sort the provided sorter instance.
    * @param sorter The sorter instance.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SorterSort(ast::Expr *sorter);
+  [[nodiscard]] ast::Expression *SorterSort(ast::Expression *sorter);
 
   /**
    * Call @sorterSortParallel(). Perform a parallel sort of all sorter instances contained in the
@@ -1174,7 +1198,8 @@ class CodeGen {
    * @param offset The offset within the container where the thread-local sorter is.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SortParallel(ast::Expr *sorter, ast::Expr *tls, ast::Expr *offset);
+  [[nodiscard]] ast::Expression *SortParallel(ast::Expression *sorter, ast::Expression *tls,
+                                              ast::Expression *offset);
 
   /**
    * Call @sorterSortTopKParallel(). Perform a parallel top-k sort of all sorter instances contained
@@ -1185,15 +1210,15 @@ class CodeGen {
    * @param top_k The top-K value.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SortTopKParallel(ast::Expr *sorter, ast::Expr *tls, ast::Expr *offset,
-                                            std::size_t top_k);
+  [[nodiscard]] ast::Expression *SortTopKParallel(ast::Expression *sorter, ast::Expression *tls,
+                                                  ast::Expression *offset, std::size_t top_k);
 
   /**
    * Call @sorterFree(). Destroy the provided sorter instance.
    * @param sorter The sorter instance.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SorterFree(ast::Expr *sorter);
+  [[nodiscard]] ast::Expression *SorterFree(ast::Expression *sorter);
 
   /**
    * Call @sorterIterInit(). Initialize the provided sorter iterator over the given sorter.
@@ -1201,21 +1226,21 @@ class CodeGen {
    * @param sorter The sorter instance to iterate.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterInit(ast::Expr *iter, ast::Expr *sorter);
+  [[nodiscard]] ast::Expression *SorterIterInit(ast::Expression *iter, ast::Expression *sorter);
 
   /**
    * Call @sorterIterHasNext(). Check if the sorter iterator has more data.
    * @param iter The iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterHasNext(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *SorterIterHasNext(ast::Expression *iter);
 
   /**
    * Call @sorterIterNext(). Advances the sorter iterator one tuple.
    * @param iter The iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterNext(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *SorterIterNext(ast::Expression *iter);
 
   /**
    * Call @sorterIterSkipRows(). Skips N rows in the provided sorter iterator.
@@ -1223,7 +1248,7 @@ class CodeGen {
    * @param n The number of rows to skip.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterSkipRows(ast::Expr *iter, uint32_t n);
+  [[nodiscard]] ast::Expression *SorterIterSkipRows(ast::Expression *iter, uint32_t n);
 
   /**
    * Call @sorterIterGetRow(). Retrieves a pointer to the current iterator row casted to the
@@ -1232,14 +1257,15 @@ class CodeGen {
    * @param row_type_name The name of the TPL type that will be stored in the sorter.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterGetRow(ast::Expr *iter, ast::Identifier row_type_name);
+  [[nodiscard]] ast::Expression *SorterIterGetRow(ast::Expression *iter,
+                                                  ast::Identifier row_type_name);
 
   /**
    * Call @sorterIterClose(). Destroy and cleanup the provided sorter iterator instance.
    * @param iter The sorter iterator.
    * @return The call expression.
    */
-  [[nodiscard]] ast::Expr *SorterIterClose(ast::Expr *iter);
+  [[nodiscard]] ast::Expression *SorterIterClose(ast::Expression *iter);
 
   /**
    * Call @like(). Implements the SQL LIKE() operation.
@@ -1247,7 +1273,7 @@ class CodeGen {
    * @param pattern The input pattern.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *Like(ast::Expr *str, ast::Expr *pattern);
+  [[nodiscard]] ast::Expression *Like(ast::Expression *str, ast::Expression *pattern);
 
   /**
    * Invoke !@like(). Implements the SQL NOT LIKE() operation.
@@ -1255,7 +1281,7 @@ class CodeGen {
    * @param pattern The input pattern.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *NotLike(ast::Expr *str, ast::Expr *pattern);
+  [[nodiscard]] ast::Expression *NotLike(ast::Expression *str, ast::Expression *pattern);
 
   // ---------------------------------------------------------------------------
   //
@@ -1269,14 +1295,14 @@ class CodeGen {
    * @param file_name The filename.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *CSVReaderInit(ast::Expr *reader, std::string_view file_name);
+  [[nodiscard]] ast::Expression *CSVReaderInit(ast::Expression *reader, std::string_view file_name);
 
   /**
    * Call @csvReaderAdvance(). Advance the reader one row.
    * @param reader The reader.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *CSVReaderAdvance(ast::Expr *reader);
+  [[nodiscard]] ast::Expression *CSVReaderAdvance(ast::Expression *reader);
 
   /**
    * Call @csvReaderGetField(). Read the field at the given index in the current row.
@@ -1285,22 +1311,22 @@ class CodeGen {
    * @param result Where the result is written to.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *CSVReaderGetField(ast::Expr *reader, uint32_t field_index,
-                                             ast::Expr *result);
+  [[nodiscard]] ast::Expression *CSVReaderGetField(ast::Expression *reader, uint32_t field_index,
+                                                   ast::Expression *result);
 
   /**
    * Call @csvReaderGetRecordNumber(). Get the current record number.
    * @param reader The reader.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *CSVReaderGetRecordNumber(ast::Expr *reader);
+  [[nodiscard]] ast::Expression *CSVReaderGetRecordNumber(ast::Expression *reader);
 
   /**
    * Call @csvReaderClose(). Destroy a CSV reader.
    * @param reader The reader.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *CSVReaderClose(ast::Expr *reader);
+  [[nodiscard]] ast::Expression *CSVReaderClose(ast::Expression *reader);
 
   // ---------------------------------------------------------------------------
   //
@@ -1327,7 +1353,7 @@ class CodeGen {
   /**
    * @return A new identifier expression representing the given identifier.
    */
-  ast::Expr *MakeExpr(ast::Identifier ident) const;
+  ast::Expression *MakeExpr(ast::Identifier ident) const;
 
   /**
    * @return The variable declaration as a standalone statement.
@@ -1337,7 +1363,7 @@ class CodeGen {
   /**
    * @return The expression as a standalone statement.
    */
-  ast::Statement *MakeStatement(ast::Expr *expr) const;
+  ast::Statement *MakeStatement(ast::Expression *expr) const;
 
   /**
    * @return An empty list of statements.
@@ -1361,7 +1387,7 @@ class CodeGen {
    * @param type The type representation of the field.
    * @return The field declaration.
    */
-  ast::FieldDeclaration *MakeField(ast::Identifier name, ast::Expr *type) const;
+  ast::FieldDeclaration *MakeField(ast::Identifier name, ast::Expression *type) const;
 
   /**
    * @return The current (potentially null) function being built.

@@ -8,11 +8,11 @@
 
 namespace tpl::sema {
 
-void Sema::VisitBadExpr(ast::BadExpr *node) {
+void Sema::VisitBadExpression(ast::BadExpression *node) {
   TPL_ASSERT(false, "Bad expression in type checker!");
 }
 
-void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
+void Sema::VisitBinaryOpExpression(ast::BinaryOpExpression *node) {
   ast::Type *left_type = Resolve(node->GetLeft());
   ast::Type *right_type = Resolve(node->GetRight());
 
@@ -54,7 +54,7 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
   }
 }
 
-void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
+void Sema::VisitComparisonOpExpression(ast::ComparisonOpExpression *node) {
   ast::Type *left_type = Resolve(node->GetLeft());
   ast::Type *right_type = Resolve(node->GetRight());
 
@@ -83,9 +83,9 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
   }
 }
 
-void Sema::VisitCallExpr(ast::CallExpr *node) {
+void Sema::VisitCallExpression(ast::CallExpression *node) {
   // If the call claims to be to a builtin, validate it
-  if (node->GetCallKind() == ast::CallExpr::CallKind::Builtin) {
+  if (node->GetCallKind() == ast::CallExpression::CallKind::Builtin) {
     CheckBuiltinCall(node);
     return;
   }
@@ -122,7 +122,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   const auto &actual_args = node->GetArguments();
   for (uint32_t arg_num = 0; arg_num < actual_args.size(); arg_num++) {
     ast::Type *expected_type = func_type->GetParams()[arg_num].type;
-    ast::Expr *arg = actual_args[arg_num];
+    ast::Expression *arg = actual_args[arg_num];
 
     // Function application simplifies to performing an assignment of the
     // actual call arguments to the function parameters. Do the check now, which
@@ -148,7 +148,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   node->SetType(func_type->GetReturnType());
 }
 
-void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
+void Sema::VisitFunctionLiteralExpression(ast::FunctionLiteralExpression *node) {
   // Resolve the type, if not resolved already
   if (auto *type = node->GetTypeRepr()->GetType(); type == nullptr) {
     type = Resolve(node->GetTypeRepr());
@@ -188,7 +188,7 @@ void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
   }
 }
 
-void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
+void Sema::VisitIdentifierExpression(ast::IdentifierExpression *node) {
   // Check the current context
   if (auto *type = scope_->Lookup(node->GetName())) {
     node->SetType(type);
@@ -205,11 +205,11 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   error_reporter_->Report(node->Position(), ErrorMessages::kUndefinedVariable, node->GetName());
 }
 
-void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
+void Sema::VisitImplicitCastExpression(ast::ImplicitCastExpression *node) {
   throw std::runtime_error("Should never perform semantic checking on implicit cast expressions");
 }
 
-void Sema::VisitIndexExpr(ast::IndexExpr *node) {
+void Sema::VisitIndexExpression(ast::IndexExpression *node) {
   ast::Type *obj_type = Resolve(node->GetObject());
   ast::Type *index_type = Resolve(node->GetIndex());
 
@@ -228,7 +228,7 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 
   if (auto arr_type = obj_type->SafeAs<ast::ArrayType>()) {
-    if (auto index = node->GetIndex()->SafeAs<ast::LiteralExpr>()) {
+    if (auto index = node->GetIndex()->SafeAs<ast::LiteralExpression>()) {
       const int64_t index_val = index->IntegerVal();
       // Check negative array indices.
       if (index_val < 0) {
@@ -249,17 +249,17 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 }
 
-void Sema::VisitLiteralExpr(ast::LiteralExpr *node) {
+void Sema::VisitLiteralExpression(ast::LiteralExpression *node) {
   switch (node->GetLiteralKind()) {
-    case ast::LiteralExpr::LiteralKind::Nil: {
+    case ast::LiteralExpression::LiteralKind::Nil: {
       node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Nil));
       break;
     }
-    case ast::LiteralExpr::LiteralKind::Boolean: {
+    case ast::LiteralExpression::LiteralKind::Boolean: {
       node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Bool));
       break;
     }
-    case ast::LiteralExpr::LiteralKind::Float: {
+    case ast::LiteralExpression::LiteralKind::Float: {
       // Initially try to fit it as a 32-bit float, otherwise a 64-bit double.
       if (node->IsRepresentable(GetBuiltinType(ast::BuiltinType::Float32))) {
         node->SetType(ast::BuiltinType::Get(context_, ast::BuiltinType::Float32));
@@ -268,7 +268,7 @@ void Sema::VisitLiteralExpr(ast::LiteralExpr *node) {
       }
       break;
     }
-    case ast::LiteralExpr::LiteralKind::Int: {
+    case ast::LiteralExpression::LiteralKind::Int: {
       // Initially try to fit the literal as a 32-bit signed integer. If the
       // value is not representable with 32 bits, use 64-bits. There isn't
       // another option because TPL does not currently support big integers.
@@ -279,14 +279,14 @@ void Sema::VisitLiteralExpr(ast::LiteralExpr *node) {
       }
       break;
     }
-    case ast::LiteralExpr::LiteralKind::String: {
+    case ast::LiteralExpression::LiteralKind::String: {
       node->SetType(ast::StringType::Get(context_));
       break;
     }
   }
 }
 
-void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
+void Sema::VisitUnaryOpExpression(ast::UnaryOpExpression *node) {
   // Resolve the type of the sub expression
   ast::Type *expr_type = Resolve(node->GetInput());
 
@@ -342,7 +342,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   }
 }
 
-void Sema::VisitMemberExpr(ast::MemberExpr *node) {
+void Sema::VisitMemberExpression(ast::MemberExpression *node) {
   ast::Type *obj_type = Resolve(node->GetObject());
 
   if (obj_type == nullptr) {
@@ -359,13 +359,13 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
     return;
   }
 
-  if (!node->GetMember()->IsIdentifierExpr()) {
+  if (!node->GetMember()->IsIdentifierExpression()) {
     error_reporter_->Report(node->GetMember()->Position(),
                             ErrorMessages::kExpectedIdentifierForMember);
     return;
   }
 
-  ast::Identifier member = node->GetMember()->As<ast::IdentifierExpr>()->GetName();
+  ast::Identifier member = node->GetMember()->As<ast::IdentifierExpression>()->GetName();
 
   ast::Type *member_type = obj_type->As<ast::StructType>()->LookupFieldByName(member);
 

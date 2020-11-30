@@ -29,7 +29,7 @@ class Loop {
    * @param condition The loop condition.
    * @param next The next statements.
    */
-  explicit Loop(FunctionBuilder *function, ast::Statement *init, ast::Expr *condition,
+  explicit Loop(FunctionBuilder *function, ast::Statement *init, ast::Expression *condition,
                 ast::Statement *next);
 
   /**
@@ -37,7 +37,7 @@ class Loop {
    * @param codegen The code generator instance.
    * @param condition The loop condition.
    */
-  explicit Loop(FunctionBuilder *function, ast::Expr *condition);
+  explicit Loop(FunctionBuilder *function, ast::Expression *condition);
 
   /**
    * Create an infinite loop.
@@ -64,7 +64,7 @@ class Loop {
   ast::BlockStatement *prev_statements_;
   // The initial statements, loop condition, and next statements.
   ast::Statement *init_;
-  ast::Expr *condition_;
+  ast::Expression *condition_;
   ast::Statement *next_;
   // The loop body.
   ast::BlockStatement *loop_body_;

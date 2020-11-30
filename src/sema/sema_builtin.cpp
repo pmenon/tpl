@@ -37,7 +37,7 @@ bool AreAllFunctions(const ArgTypes... type) {
 
 }  // namespace
 
-void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckSqlConversionCall(ast::CallExpression *call, ast::Builtin builtin) {
   // Handle this builtin because it's API is different than the other builtins; we expect three
   // 32-bit integer arguments.
   if (builtin == ast::Builtin::DateToSql) {
@@ -89,7 +89,7 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
       break;
     }
     case ast::Builtin::StringToSql: {
-      if (!input_type->IsStringType() || !call->GetArguments()[0]->IsLiteralExpr()) {
+      if (!input_type->IsStringType() || !call->GetArguments()[0]->IsLiteralExpression()) {
         ReportIncorrectCallArg(call, 0, "string literal");
       }
       call->SetType(GetBuiltinType(ast::BuiltinType::StringVal));
@@ -129,7 +129,7 @@ void Sema::CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
-void Sema::CheckNullValueCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckNullValueCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -161,7 +161,7 @@ void Sema::CheckNullValueCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
-void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
+void Sema::CheckBuiltinStringLikeCall(ast::CallExpression *call) {
   if (!CheckArgCount(call, 2)) {
     return;
   }
@@ -181,7 +181,7 @@ void Sema::CheckBuiltinStringLikeCall(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::BooleanVal));
 }
 
-void Sema::CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinDateFunctionCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -201,7 +201,7 @@ void Sema::CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builti
   }
 }
 
-void Sema::CheckBuiltinConcat(ast::CallExpr *call) {
+void Sema::CheckBuiltinConcat(ast::CallExpression *call) {
   if (!CheckArgCountAtLeast(call, 3)) {
     return;
   }
@@ -227,7 +227,7 @@ void Sema::CheckBuiltinConcat(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(string_val));
 }
 
-void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -272,7 +272,7 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
         return;
       }
       // If there's a third argument indicating regular or partitioned insertion, it must be a bool
-      if (args.size() > 2 && (!args[2]->IsLiteralExpr() ||
+      if (args.size() > 2 && (!args[2]->IsLiteralExpression() ||
                               !args[2]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Bool))) {
         ReportIncorrectCallArg(call, 2, GetBuiltinType(ast::BuiltinType::Bool));
         return;
@@ -402,7 +402,7 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builti
   }
 }
 
-void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -463,7 +463,7 @@ void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin bu
   }
 }
 
-void Sema::CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinAggPartIterCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -503,7 +503,7 @@ void Sema::CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin
   }
 }
 
-void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinAggregatorCall(ast::CallExpression *call, ast::Builtin builtin) {
   const auto &args = call->GetArguments();
   switch (builtin) {
     case ast::Builtin::AggInit:
@@ -590,7 +590,7 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin)
   }
 }
 
-void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
+void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpression *call) {
   if (!CheckArgCount(call, 3)) {
     return;
   }
@@ -621,7 +621,7 @@ void Sema::CheckBuiltinJoinHashTableInit(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
+void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpression *call) {
   if (!CheckArgCount(call, 2)) {
     return;
   }
@@ -646,7 +646,7 @@ void Sema::CheckBuiltinJoinHashTableInsert(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(byte_kind)->PointerTo());
 }
 
-void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -691,7 +691,7 @@ void Sema::CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin buil
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinJoinHashTableLookup(ast::CallExpr *call) {
+void Sema::CheckBuiltinJoinHashTableLookup(ast::CallExpression *call) {
   if (!CheckArgCount(call, 2)) {
     return;
   }
@@ -712,7 +712,7 @@ void Sema::CheckBuiltinJoinHashTableLookup(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::HashTableEntry)->PointerTo());
 }
 
-void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
+void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpression *call) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -730,7 +730,7 @@ void Sema::CheckBuiltinJoinHashTableFree(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinHashTableEntryCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -761,7 +761,7 @@ void Sema::CheckBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin buil
   }
 }
 
-void Sema::CheckBuiltinExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinExecutionContextCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -788,7 +788,7 @@ void Sema::CheckBuiltinExecutionContextCall(ast::CallExpr *call, ast::Builtin bu
   }
 }
 
-void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -858,7 +858,7 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builti
   }
 }
 
-void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinTableIterCall(ast::CallExpression *call, ast::Builtin builtin) {
   const auto &call_args = call->GetArguments();
 
   const auto tvi_kind = ast::BuiltinType::TableVectorIterator;
@@ -899,7 +899,7 @@ void Sema::CheckBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin) 
   }
 }
 
-void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
+void Sema::CheckBuiltinTableIterParCall(ast::CallExpression *call) {
   if (!CheckArgCount(call, 4)) {
     return;
   }
@@ -947,7 +947,7 @@ void Sema::CheckBuiltinTableIterParCall(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinVPICall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -1024,7 +1024,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
         return;
       }
       // If the match argument is a SQL boolean, implicitly cast to native
-      ast::Expr *match_arg = call_args[1];
+      ast::Expression *match_arg = call_args[1];
       if (match_arg->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
         match_arg = ImplCastExprToType(match_arg, GetBuiltinType(ast::BuiltinType::Bool),
                                        ast::CastKind::SqlBoolToBool);
@@ -1119,7 +1119,7 @@ void Sema::CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
-void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 4)) return;
 
   // First argument must be a pointer to where to store the value.
@@ -1180,7 +1180,7 @@ void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpr *call, ast::Builtin
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinCompactStorageReadCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinCompactStorageReadCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 3)) return;
 
   // First argument must be a pointer to where the value is stored.
@@ -1234,7 +1234,7 @@ void Sema::CheckBuiltinCompactStorageReadCall(ast::CallExpr *call, ast::Builtin 
   call->SetType(GetBuiltinType(return_type));
 }
 
-void Sema::CheckBuiltinHashCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+void Sema::CheckBuiltinHashCall(ast::CallExpression *call, UNUSED ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -1251,7 +1251,8 @@ void Sema::CheckBuiltinHashCall(ast::CallExpr *call, UNUSED ast::Builtin builtin
   call->SetType(GetBuiltinType(ast::BuiltinType::UInt64));
 }
 
-void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::Builtin builtin) {
+void Sema::CheckBuiltinFilterManagerCall(ast::CallExpression *const call,
+                                         const ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -1304,7 +1305,7 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpr *const call, const ast::B
   }
 }
 
-void Sema::CheckBuiltinVectorFilterCall(ast::CallExpr *call) {
+void Sema::CheckBuiltinVectorFilterCall(ast::CallExpression *call) {
   if (!CheckArgCount(call, 4)) {
     return;
   }
@@ -1344,7 +1345,7 @@ void Sema::CheckBuiltinVectorFilterCall(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckMathTrigCall(ast::CallExpression *call, ast::Builtin builtin) {
   const auto real_kind = ast::BuiltinType::RealVal;
 
   const auto &call_args = call->GetArguments();
@@ -1385,7 +1386,7 @@ void Sema::CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin) {
   call->SetType(GetBuiltinType(real_kind));
 }
 
-void Sema::CheckBuiltinBitsCall(ast::CallExpr *call, UNUSED ast::Builtin builtin) {
+void Sema::CheckBuiltinBitsCall(ast::CallExpression *call, UNUSED ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -1397,7 +1398,7 @@ void Sema::CheckBuiltinBitsCall(ast::CallExpr *call, UNUSED ast::Builtin builtin
   call->SetType(GetBuiltinType(ast::BuiltinType::UInt32));
 }
 
-void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckResultBufferCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -1415,7 +1416,7 @@ void Sema::CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
-void Sema::CheckCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckCSVReaderCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -1486,7 +1487,7 @@ void Sema::CheckCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
-void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
+void Sema::CheckBuiltinSizeOfCall(ast::CallExpression *call) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -1495,7 +1496,7 @@ void Sema::CheckBuiltinSizeOfCall(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::UInt32));
 }
 
-void Sema::CheckBuiltinOffsetOfCall(ast::CallExpr *call) {
+void Sema::CheckBuiltinOffsetOfCall(ast::CallExpression *call) {
   if (!CheckArgCount(call, 2)) {
     return;
   }
@@ -1508,7 +1509,7 @@ void Sema::CheckBuiltinOffsetOfCall(ast::CallExpr *call) {
   }
 
   // Second argument must be an identifier expression
-  auto field = call->GetArguments()[1]->SafeAs<ast::IdentifierExpr>();
+  auto field = call->GetArguments()[1]->SafeAs<ast::IdentifierExpression>();
   if (field == nullptr) {
     ReportIncorrectCallArg(call, 1, "identifier expression");
     return;
@@ -1525,7 +1526,7 @@ void Sema::CheckBuiltinOffsetOfCall(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::UInt32));
 }
 
-void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
+void Sema::CheckBuiltinPtrCastCall(ast::CallExpression *call) {
   if (!CheckArgCount(call, 2)) {
     return;
   }
@@ -1536,7 +1537,7 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
   // get parsed as a dereference expression before a type expression.
   // TODO(pmenon): Fix the above to parse correctly
 
-  auto unary_op = call->GetArguments()[0]->SafeAs<ast::UnaryOpExpr>();
+  auto unary_op = call->GetArguments()[0]->SafeAs<ast::UnaryOpExpression>();
   if (unary_op == nullptr || unary_op->Op() != parsing::Token::Type::STAR) {
     error_reporter_->Report(call->Position(), ErrorMessages::kBadArgToPtrCast,
                             call->GetArguments()[0]->GetType(), 1);
@@ -1566,7 +1567,7 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
   call->SetType(call->GetArguments()[0]->GetType());
 }
 
-void Sema::CheckBuiltinIntCast(ast::CallExpr *call) {
+void Sema::CheckBuiltinIntCast(ast::CallExpression *call) {
   // This function is expected to be called BEFORE resolving arguments.
 
   if (!CheckArgCount(call, 2)) {
@@ -1574,7 +1575,7 @@ void Sema::CheckBuiltinIntCast(ast::CallExpr *call) {
   }
 
   // The first argument must be an identifier of a primitive integer type.
-  auto type_expr = call->GetArguments()[0]->SafeAs<ast::IdentifierExpr>();
+  auto type_expr = call->GetArguments()[0]->SafeAs<ast::IdentifierExpression>();
   if (type_expr == nullptr) {
     error_reporter_->Report(call->Position(), ErrorMessages::kBadArgToIntCast);
     return;
@@ -1600,7 +1601,7 @@ void Sema::CheckBuiltinIntCast(ast::CallExpr *call) {
   call->SetType(type);
 }
 
-void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
+void Sema::CheckBuiltinSorterInit(ast::CallExpression *call) {
   if (!CheckArgCount(call, 4)) {
     return;
   }
@@ -1643,7 +1644,7 @@ void Sema::CheckBuiltinSorterInit(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinSorterInsert(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -1683,7 +1684,7 @@ void Sema::CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin) {
   call->SetType(GetBuiltinType(ast::BuiltinType::UInt8)->PointerTo());
 }
 
-void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinSorterSort(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -1749,7 +1750,7 @@ void Sema::CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin) {
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
+void Sema::CheckBuiltinSorterFree(ast::CallExpression *call) {
   if (!CheckArgCount(call, 1)) {
     return;
   }
@@ -1765,7 +1766,7 @@ void Sema::CheckBuiltinSorterFree(ast::CallExpr *call) {
   call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
 }
 
-void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin) {
+void Sema::CheckBuiltinSorterIterCall(ast::CallExpression *call, ast::Builtin builtin) {
   if (!CheckArgCountAtLeast(call, 1)) {
     return;
   }
@@ -1827,7 +1828,7 @@ void Sema::CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin)
   }
 }
 
-void Sema::CheckBuiltinCall(ast::CallExpr *call) {
+void Sema::CheckBuiltinCall(ast::CallExpression *call) {
   ast::Builtin builtin;
   if (!context_->IsBuiltinFunction(call->GetFuncName(), &builtin)) {
     error_reporter_->Report(call->GetFunction()->Position(), ErrorMessages::kInvalidBuiltinFunction,
