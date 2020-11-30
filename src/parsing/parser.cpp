@@ -396,9 +396,9 @@ ast::Expression *Parser::ParseBinaryOpExpression(uint32_t min_prec) {
       ast::Expression *right = ParseBinaryOpExpression(prec);
 
       if (Token::IsCompareOp(op)) {
-        left = node_factory_->NewComparisonOpExpr(position, op, left, right);
+        left = node_factory_->NewComparisonOpExpression(position, op, left, right);
       } else {
-        left = node_factory_->NewBinaryOpExpr(position, op, left, right);
+        left = node_factory_->NewBinaryOpExpression(position, op, left, right);
       }
     }
   }
@@ -440,7 +440,7 @@ ast::Expression *Parser::ParseUnaryOpExpression() {
         }
       }
 
-      return node_factory_->NewUnaryOpExpr(pos, op, expression);
+      return node_factory_->NewUnaryOpExpression(pos, op, expression);
     }
     default: {
       break;
@@ -472,14 +472,14 @@ ast::Expression *Parser::ParsePrimaryExpression() {
           }
         }
         Expect(Token::Type::RIGHT_PAREN);
-        result = node_factory_->NewCallExpr(result, std::move(args));
+        result = node_factory_->NewCallExpression(result, std::move(args));
         break;
       }
       case Token::Type::DOT: {
         // Member expression
         Consume(Token::Type::DOT);
         ast::Expression *member = ParseOperand();
-        result = node_factory_->NewMemberExpr(result->Position(), result, member);
+        result = node_factory_->NewMemberExpression(result->Position(), result, member);
         break;
         // @ptrCast(*Row, expr)
       }
@@ -488,7 +488,7 @@ ast::Expression *Parser::ParsePrimaryExpression() {
         Consume(Token::Type::LEFT_BRACKET);
         ast::Expression *index = ParseExpression();
         Expect(Token::Type::RIGHT_BRACKET);
-        result = node_factory_->NewIndexExpr(result->Position(), result, index);
+        result = node_factory_->NewIndexExpression(result->Position(), result, index);
         break;
       }
       default: {
@@ -519,7 +519,7 @@ ast::Expression *Parser::ParseOperand() {
       // Builtin call expression
       Next();
       ast::Expression *func_name =
-          node_factory_->NewIdentifierExpr(scanner_->CurrentPosition(), GetSymbol());
+          node_factory_->NewIdentifierExpression(scanner_->CurrentPosition(), GetSymbol());
       Consume(Token::Type::LEFT_PAREN);
       util::RegionVector<ast::Expression *> args(Region());
       while (Peek() != Token::Type::RIGHT_PAREN) {
@@ -530,11 +530,11 @@ ast::Expression *Parser::ParseOperand() {
         }
       }
       Expect(Token::Type::RIGHT_PAREN);
-      return node_factory_->NewBuiltinCallExpr(func_name, std::move(args));
+      return node_factory_->NewBuiltinCallExpression(func_name, std::move(args));
     }
     case Token::Type::IDENTIFIER: {
       Next();
-      return node_factory_->NewIdentifierExpr(scanner_->CurrentPosition(), GetSymbol());
+      return node_factory_->NewIdentifierExpression(scanner_->CurrentPosition(), GetSymbol());
     }
     case Token::Type::INTEGER: {
       Next();
@@ -570,7 +570,7 @@ ast::Expression *Parser::ParseOperand() {
   // Error
   error_reporter_->Report(scanner_->CurrentPosition(), sema::ErrorMessages::kExpectingExpression);
   Next();
-  return node_factory_->NewBadExpr(scanner_->CurrentPosition());
+  return node_factory_->NewBadExpression(scanner_->CurrentPosition());
 }
 
 ast::Expression *Parser::ParseFunctionLiteralExpression() {
@@ -585,7 +585,7 @@ ast::Expression *Parser::ParseFunctionLiteralExpression() {
   auto *body = ParseBlockStatement()->As<ast::BlockStatement>();
 
   // Done
-  return node_factory_->NewFunctionLitExpr(func_type, body);
+  return node_factory_->NewFunctionLiteralExpression(func_type, body);
 }
 
 ast::Expression *Parser::ParseType() {
@@ -594,7 +594,7 @@ ast::Expression *Parser::ParseType() {
     case Token::Type::IDENTIFIER: {
       Next();
       const SourcePosition &position = scanner_->CurrentPosition();
-      return node_factory_->NewIdentifierExpr(position, GetSymbol());
+      return node_factory_->NewIdentifierExpression(position, GetSymbol());
     }
     case Token::Type::MAP: {
       return ParseMapType();
@@ -647,7 +647,7 @@ ast::Expression *Parser::ParseFunctionType() {
     if (Matches(Token::Type::COLON) || ident.IsEmpty()) {
       type = ParseType();
     } else {
-      type = node_factory_->NewIdentifierExpr(field_position, ident);
+      type = node_factory_->NewIdentifierExpression(field_position, ident);
       ident = ast::Identifier();
     }
 

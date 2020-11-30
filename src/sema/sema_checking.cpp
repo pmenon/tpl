@@ -21,8 +21,8 @@ void Sema::ReportIncorrectCallArg(ast::CallExpression *call, uint32_t index, con
 
 ast::Expression *Sema::ImplCastExprToType(ast::Expression *expr, ast::Type *target_type,
                                           ast::CastKind cast_kind) {
-  return context_->GetNodeFactory()->NewImplicitCastExpr(expr->Position(), cast_kind, target_type,
-                                                         expr);
+  return context_->GetNodeFactory()->NewImplicitCastExpression(expr->Position(), cast_kind,
+                                                               target_type, expr);
 }
 
 bool Sema::CheckArgCount(ast::CallExpression *call, uint32_t expected_arg_count) {

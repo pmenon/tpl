@@ -72,23 +72,27 @@ class AstNodeFactory {
     return new (region_) ReturnStatement(pos, ret);
   }
 
-  BadExpression *NewBadExpr(const SourcePosition &pos) { return new (region_) BadExpression(pos); }
+  BadExpression *NewBadExpression(const SourcePosition &pos) {
+    return new (region_) BadExpression(pos);
+  }
 
-  BinaryOpExpression *NewBinaryOpExpr(const SourcePosition &pos, parsing::Token::Type op,
-                                      Expression *left, Expression *right) {
+  BinaryOpExpression *NewBinaryOpExpression(const SourcePosition &pos, parsing::Token::Type op,
+                                            Expression *left, Expression *right) {
     return new (region_) BinaryOpExpression(pos, op, left, right);
   }
 
-  ComparisonOpExpression *NewComparisonOpExpr(const SourcePosition &pos, parsing::Token::Type op,
-                                              Expression *left, Expression *right) {
+  ComparisonOpExpression *NewComparisonOpExpression(const SourcePosition &pos,
+                                                    parsing::Token::Type op, Expression *left,
+                                                    Expression *right) {
     return new (region_) ComparisonOpExpression(pos, op, left, right);
   }
 
-  CallExpression *NewCallExpr(Expression *fun, util::RegionVector<Expression *> &&args) {
+  CallExpression *NewCallExpression(Expression *fun, util::RegionVector<Expression *> &&args) {
     return new (region_) CallExpression(fun, std::move(args));
   }
 
-  CallExpression *NewBuiltinCallExpr(Expression *fun, util::RegionVector<Expression *> &&args) {
+  CallExpression *NewBuiltinCallExpression(Expression *fun,
+                                           util::RegionVector<Expression *> &&args) {
     return new (region_) CallExpression(fun, std::move(args), CallExpression::CallKind::Builtin);
   }
 
@@ -112,30 +116,32 @@ class AstNodeFactory {
     return new (region_) LiteralExpression(pos, str);
   }
 
-  FunctionLiteralExpression *NewFunctionLitExpr(FunctionTypeRepr *type_repr, BlockStatement *body) {
+  FunctionLiteralExpression *NewFunctionLiteralExpression(FunctionTypeRepr *type_repr,
+                                                          BlockStatement *body) {
     return new (region_) FunctionLiteralExpression(type_repr, body);
   }
 
-  UnaryOpExpression *NewUnaryOpExpr(const SourcePosition &pos, parsing::Token::Type op,
-                                    Expression *expr) {
+  UnaryOpExpression *NewUnaryOpExpression(const SourcePosition &pos, parsing::Token::Type op,
+                                          Expression *expr) {
     return new (region_) UnaryOpExpression(pos, op, expr);
   }
 
-  IdentifierExpression *NewIdentifierExpr(const SourcePosition &pos, Identifier name) {
+  IdentifierExpression *NewIdentifierExpression(const SourcePosition &pos, Identifier name) {
     return new (region_) IdentifierExpression(pos, name);
   }
 
-  ImplicitCastExpression *NewImplicitCastExpr(const SourcePosition &pos, CastKind cast_kind,
-                                              Type *target_type, Expression *input) {
+  ImplicitCastExpression *NewImplicitCastExpression(const SourcePosition &pos, CastKind cast_kind,
+                                                    Type *target_type, Expression *input) {
     return new (region_) ImplicitCastExpression(pos, cast_kind, target_type, input);
   }
 
-  IndexExpression *NewIndexExpr(const SourcePosition &pos, Expression *object, Expression *index) {
+  IndexExpression *NewIndexExpression(const SourcePosition &pos, Expression *object,
+                                      Expression *index) {
     return new (region_) IndexExpression(pos, object, index);
   }
 
-  MemberExpression *NewMemberExpr(const SourcePosition &pos, Expression *object,
-                                  Expression *member) {
+  MemberExpression *NewMemberExpression(const SourcePosition &pos, Expression *object,
+                                        Expression *member) {
     return new (region_) MemberExpression(pos, object, member);
   }
 

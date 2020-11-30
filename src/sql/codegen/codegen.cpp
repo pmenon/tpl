@@ -298,7 +298,8 @@ ast::Expression *CodeGen::OffsetOf(ast::Identifier obj, ast::Identifier member) 
 }
 
 ast::Expression *CodeGen::PtrCast(ast::Expression *base, ast::Expression *arg) const {
-  ast::Expression *ptr = NodeFactory()->NewUnaryOpExpr(position_, parsing::Token::Type::STAR, base);
+  ast::Expression *ptr =
+      NodeFactory()->NewUnaryOpExpression(position_, parsing::Token::Type::STAR, base);
   return CallBuiltin(ast::Builtin::PtrCast, {ptr, arg});
 }
 
@@ -309,12 +310,12 @@ ast::Expression *CodeGen::PtrCast(ast::Identifier base_name, ast::Expression *ar
 ast::Expression *CodeGen::BinaryOp(parsing::Token::Type op, ast::Expression *left,
                                    ast::Expression *right) const {
   TPL_ASSERT(parsing::Token::IsBinaryOp(op), "Provided operation isn't binary");
-  return NodeFactory()->NewBinaryOpExpr(position_, op, left, right);
+  return NodeFactory()->NewBinaryOpExpression(position_, op, left, right);
 }
 
 ast::Expression *CodeGen::Compare(parsing::Token::Type op, ast::Expression *left,
                                   ast::Expression *right) const {
-  return NodeFactory()->NewComparisonOpExpr(position_, op, left, right);
+  return NodeFactory()->NewComparisonOpExpression(position_, op, left, right);
 }
 
 ast::Expression *CodeGen::IsNilPointer(ast::Expression *obj) const {
@@ -322,7 +323,7 @@ ast::Expression *CodeGen::IsNilPointer(ast::Expression *obj) const {
 }
 
 ast::Expression *CodeGen::UnaryOp(parsing::Token::Type op, ast::Expression *input) const {
-  return NodeFactory()->NewUnaryOpExpr(position_, op, input);
+  return NodeFactory()->NewUnaryOpExpression(position_, op, input);
 }
 
 // ---------------------------------------------------------
@@ -358,7 +359,7 @@ ast::Expression *CodeGen::Mul(ast::Expression *left, ast::Expression *right) con
 }
 
 ast::Expression *CodeGen::AccessStructMember(ast::Expression *object, ast::Identifier member) {
-  return NodeFactory()->NewMemberExpr(position_, object, MakeExpr(member));
+  return NodeFactory()->NewMemberExpression(position_, object, MakeExpr(member));
 }
 
 ast::Statement *CodeGen::Return() { return Return(nullptr); }
@@ -372,13 +373,13 @@ ast::Statement *CodeGen::Return(ast::Expression *ret) {
 ast::Expression *CodeGen::Call(ast::Identifier func_name,
                                std::initializer_list<ast::Expression *> args) const {
   util::RegionVector<ast::Expression *> call_args(args, Context()->GetRegion());
-  return NodeFactory()->NewCallExpr(MakeExpr(func_name), std::move(call_args));
+  return NodeFactory()->NewCallExpression(MakeExpr(func_name), std::move(call_args));
 }
 
 ast::Expression *CodeGen::Call(ast::Identifier func_name,
                                const std::vector<ast::Expression *> &args) const {
   util::RegionVector<ast::Expression *> call_args(args.begin(), args.end(), Context()->GetRegion());
-  return NodeFactory()->NewCallExpr(MakeExpr(func_name), std::move(call_args));
+  return NodeFactory()->NewCallExpression(MakeExpr(func_name), std::move(call_args));
 }
 
 ast::Expression *CodeGen::CallBuiltin(ast::Builtin builtin,
@@ -386,7 +387,7 @@ ast::Expression *CodeGen::CallBuiltin(ast::Builtin builtin,
   util::RegionVector<ast::Expression *> call_args(args, Context()->GetRegion());
   ast::Expression *func =
       MakeExpr(Context()->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
-  ast::Expression *call = NodeFactory()->NewBuiltinCallExpr(func, std::move(call_args));
+  ast::Expression *call = NodeFactory()->NewBuiltinCallExpression(func, std::move(call_args));
   return call;
 }
 
@@ -396,7 +397,7 @@ ast::Expression *CodeGen::CallBuiltin(ast::Builtin builtin,
   util::RegionVector<ast::Expression *> call_args(args.begin(), args.end(), Context()->GetRegion());
   ast::Expression *func =
       MakeExpr(Context()->GetIdentifier(ast::Builtins::GetFunctionName(builtin)));
-  ast::Expression *call = NodeFactory()->NewBuiltinCallExpr(func, std::move(call_args));
+  ast::Expression *call = NodeFactory()->NewBuiltinCallExpression(func, std::move(call_args));
   return call;
 }
 
@@ -1153,7 +1154,7 @@ ast::Identifier CodeGen::MakeIdentifier(std::string_view str) const {
 }
 
 ast::Expression *CodeGen::MakeExpr(ast::Identifier ident) const {
-  return NodeFactory()->NewIdentifierExpr(position_, ident);
+  return NodeFactory()->NewIdentifierExpression(position_, ident);
 }
 
 ast::Statement *CodeGen::MakeStatement(ast::VariableDeclaration *var) const {

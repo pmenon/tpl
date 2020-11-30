@@ -34,7 +34,7 @@ TEST_F(AstTest, HierechyTest) {
         factory.NewFieldDeclaration(empty_pos(), Identifier(), nullptr),
         factory.NewFunctionDeclaration(
             empty_pos(), Identifier(),
-            factory.NewFunctionLitExpr(
+            factory.NewFunctionLiteralExpression(
                 factory.NewFunctionType(empty_pos(),
                                         util::RegionVector<FieldDeclaration *>(region()), nullptr),
                 nullptr)),
@@ -61,16 +61,16 @@ TEST_F(AstTest, HierechyTest) {
   /// Test expressions
   {
     AstNode *all_exprs[] = {
-        factory.NewBinaryOpExpr(empty_pos(), parsing::Token::Type::PLUS, nullptr, nullptr),
-        factory.NewCallExpr(factory.NewNilLiteral(empty_pos()),
-                            util::RegionVector<Expression *>(region())),
-        factory.NewFunctionLitExpr(
+        factory.NewBinaryOpExpression(empty_pos(), parsing::Token::Type::PLUS, nullptr, nullptr),
+        factory.NewCallExpression(factory.NewNilLiteral(empty_pos()),
+                                  util::RegionVector<Expression *>(region())),
+        factory.NewFunctionLiteralExpression(
             factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDeclaration *>(region()),
                                     nullptr),
             nullptr),
         factory.NewNilLiteral(empty_pos()),
-        factory.NewUnaryOpExpr(empty_pos(), parsing::Token::Type::MINUS, nullptr),
-        factory.NewIdentifierExpr(empty_pos(), Identifier()),
+        factory.NewUnaryOpExpression(empty_pos(), parsing::Token::Type::MINUS, nullptr),
+        factory.NewIdentifierExpression(empty_pos(), Identifier()),
         factory.NewArrayType(empty_pos(), nullptr, nullptr),
         factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDeclaration *>(region()),
                                 nullptr),

@@ -69,7 +69,7 @@ ast::FunctionDeclaration *FunctionBuilder::Finish(ast::Expression *ret) {
   auto func_type = codegen_->NodeFactory()->NewFunctionType(start_, std::move(params_), ret_type_);
 
   // Create the declaration.
-  auto func_lit = codegen_->NodeFactory()->NewFunctionLitExpr(func_type, statements_);
+  auto func_lit = codegen_->NodeFactory()->NewFunctionLiteralExpression(func_type, statements_);
   decl_ = codegen_->NodeFactory()->NewFunctionDeclaration(start_, name_, func_lit);
 
   // Register the function in the container.

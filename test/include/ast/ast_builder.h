@@ -22,7 +22,7 @@ class TestAstBuilder {
   Identifier Ident(const std::string &s) { return ctx()->GetIdentifier(s); }
 
   Expression *IdentExpr(Identifier ident) {
-    return node_factory()->NewIdentifierExpr(empty_, ident);
+    return node_factory()->NewIdentifierExpression(empty_, ident);
   }
 
   Expression *IdentExpr(const std::string &s) { return IdentExpr(Ident(s)); }
@@ -35,13 +35,13 @@ class TestAstBuilder {
 
   template <parsing::Token::Type OP>
   Expression *BinOp(Expression *left, Expression *right) {
-    return node_factory()->NewBinaryOpExpr(empty_, OP, left, right);
+    return node_factory()->NewBinaryOpExpression(empty_, OP, left, right);
   }
 
   template <parsing::Token::Type OP>
   Expression *Cmp(Expression *left, Expression *right) {
     TPL_ASSERT(parsing::Token::IsCompareOp(OP), "Not a comparison");
-    return node_factory()->NewComparisonOpExpr(empty_, OP, left, right);
+    return node_factory()->NewComparisonOpExpression(empty_, OP, left, right);
   }
 
   Expression *CmpEq(Expression *left, Expression *right) {
@@ -55,7 +55,7 @@ class TestAstBuilder {
   }
 
   Expression *Field(Expression *obj, Expression *field) {
-    return node_factory()->NewMemberExpr(empty_, obj, field);
+    return node_factory()->NewMemberExpression(empty_, obj, field);
   }
 
   VariableDeclaration *DeclVar(Identifier name, Expression *init) {
@@ -119,7 +119,7 @@ class TestAstBuilder {
   }
 
   Expression *ArrayIndex(Expression *arr, Expression *idx) {
-    return node_factory()->NewIndexExpr(empty_, arr, idx);
+    return node_factory()->NewIndexExpression(empty_, arr, idx);
   }
 
   template <Builtin BUILTIN, typename... Args>
@@ -127,7 +127,7 @@ class TestAstBuilder {
     auto fn = IdentExpr(Builtins::GetFunctionName(BUILTIN));
     auto call_args =
         util::RegionVector<Expression *>({std::forward<Args>(args)...}, ctx()->GetRegion());
-    return node_factory()->NewBuiltinCallExpr(fn, std::move(call_args));
+    return node_factory()->NewBuiltinCallExpression(fn, std::move(call_args));
   }
 
   File *GenFile(std::initializer_list<ast::Declaration *> decls) {
