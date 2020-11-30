@@ -50,7 +50,7 @@ void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
   function->Append(codegen_->VPIInit(vpi(), vector_proj, tid_list));
 
   Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(vpi()),
-                codegen_->MakeStmt(codegen_->VPIAdvance(vpi())));
+                codegen_->MakeStatement(codegen_->VPIAdvance(vpi())));
   {
     PipelineContext pipeline_context(*GetPipeline());
     ConsumerContext context(GetCompilationContext(), pipeline_context);
@@ -137,7 +137,7 @@ void SeqScanTranslator::DefinePipelineFunctions(UNUSED const PipelineContext &pi
 
 void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, FunctionBuilder *function) const {
   Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(codegen_->MakeExpr(vpi_var_)),
-                codegen_->MakeStmt(codegen_->VPIAdvance(codegen_->MakeExpr(vpi_var_))));
+                codegen_->MakeStatement(codegen_->VPIAdvance(codegen_->MakeExpr(vpi_var_))));
   {  // Tuple-at-a-time scan over the VPI.
     ctx->Consume(function);
   }

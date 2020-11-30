@@ -54,36 +54,39 @@ class TestAstBuilder {
 
   VariableDeclaration *DeclVar(Identifier name, Expr *init) { return DeclVar(name, nullptr, init); }
 
-  VariableDeclaration *DeclVar(std::string n, Expr *init) { return DeclVar(Ident(n), nullptr, init); }
+  VariableDeclaration *DeclVar(std::string n, Expr *init) {
+    return DeclVar(Ident(n), nullptr, init);
+  }
 
   VariableDeclaration *DeclVar(std::string n, std::string type_name, Expr *init) {
     return DeclVar(Ident(n), IdentExpr(type_name), init);
   }
 
   VariableDeclaration *DeclVar(Identifier name, Expr *type_repr, Expr *init) {
-    return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
+    return node_factory()->NewVariableDeclaration(empty_, name, type_repr, init);
   }
 
   FieldDeclaration *GenFieldDecl(Identifier name, ast::Expr *type_repr) {
-    return node_factory()->NewFieldDecl(empty_, name, type_repr);
+    return node_factory()->NewFieldDeclaration(empty_, name, type_repr);
   }
 
-  StructDeclaration *DeclStruct(Identifier name, std::initializer_list<ast::FieldDeclaration *> fields) {
+  StructDeclaration *DeclStruct(Identifier name,
+                                std::initializer_list<ast::FieldDeclaration *> fields) {
     util::RegionVector<FieldDeclaration *> f(fields.begin(), fields.end(), ctx()->GetRegion());
     ast::StructTypeRepr *type = node_factory()->NewStructType(empty_, std::move(f));
-    return node_factory()->NewStructDecl(empty_, name, type);
+    return node_factory()->NewStructDeclaration(empty_, name, type);
   }
 
   Expr *DeclRef(Declaration *decl) { return IdentExpr(decl->GetName()); }
 
-  Stmt *DeclStmt(Declaration *decl) { return node_factory()->NewDeclStmt(decl); }
+  Statement *DeclStmt(Declaration *decl) { return node_factory()->NewDeclStatement(decl); }
 
-  Stmt *Block(std::initializer_list<Stmt *> stmts) {
-    util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(), ctx()->GetRegion());
-    return node_factory()->NewBlockStmt(empty_, empty_, std::move(region_stmts));
+  Statement *Block(std::initializer_list<Statement *> stmts) {
+    util::RegionVector<Statement *> region_stmts(stmts.begin(), stmts.end(), ctx()->GetRegion());
+    return node_factory()->NewBlockStatement(empty_, empty_, std::move(region_stmts));
   }
 
-  Stmt *ExprStmt(Expr *expr) { return node_factory()->NewExpressionStmt(expr); }
+  Statement *ExprStmt(Expr *expr) { return node_factory()->NewExpressionStatement(expr); }
 
   Expr *PtrType(Expr *base) { return node_factory()->NewPointerType(empty_, base); }
 

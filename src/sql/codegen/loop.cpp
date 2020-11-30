@@ -6,7 +6,8 @@
 
 namespace tpl::sql::codegen {
 
-Loop::Loop(FunctionBuilder *function, ast::Stmt *init, ast::Expr *condition, ast::Stmt *next)
+Loop::Loop(FunctionBuilder *function, ast::Statement *init, ast::Expr *condition,
+           ast::Statement *next)
     : function_(function),
       position_(function_->GetCodeGen()->GetPosition()),
       prev_statements_(nullptr),
@@ -25,11 +26,11 @@ Loop::Loop(FunctionBuilder *function, ast::Stmt *init, ast::Expr *condition, ast
 
 // Static cast to disambiguate constructor.
 Loop::Loop(FunctionBuilder *function, ast::Expr *condition)
-    : Loop(function, static_cast<ast::Stmt *>(nullptr), condition, nullptr) {}
+    : Loop(function, static_cast<ast::Statement *>(nullptr), condition, nullptr) {}
 
 // Static cast to disambiguate constructor.
 Loop::Loop(FunctionBuilder *function)
-    : Loop(function, static_cast<ast::Stmt *>(nullptr), nullptr, nullptr) {}
+    : Loop(function, static_cast<ast::Statement *>(nullptr), nullptr, nullptr) {}
 
 Loop::~Loop() { EndLoop(); }
 
@@ -43,7 +44,8 @@ void Loop::EndLoop() {
 
   // Create and append the if statement.
   auto codegen = function_->GetCodeGen();
-  auto loop = codegen->NodeFactory()->NewForStmt(position_, init_, condition_, next_, loop_body_);
+  auto loop =
+      codegen->NodeFactory()->NewForStatement(position_, init_, condition_, next_, loop_body_);
   function_->Append(loop);
 
   // Bump line.

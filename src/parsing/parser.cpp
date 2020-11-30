@@ -22,7 +22,7 @@ ast::AstNode *Parser::Parse() {
   const SourcePosition &start_pos = scanner_->CurrentPosition();
 
   while (Peek() != Token::Type::EOS) {
-    if (ast::Declaration *decl = ParseDecl()) {
+    if (ast::Declaration *decl = ParseDeclaration()) {
       decls.push_back(decl);
     }
   }
@@ -45,7 +45,7 @@ ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
     return nullptr;
   }
 
-  if (auto *expr_stmt = node->SafeAs<ast::ExpressionStmt>()) {
+  if (auto *expr_stmt = node->SafeAs<ast::ExpressionStatement>()) {
     return expr_stmt->GetExpression();
   }
 
@@ -54,14 +54,14 @@ ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
   return nullptr;
 }
 
-ast::Declaration *Parser::ParseDecl() {
+ast::Declaration *Parser::ParseDeclaration() {
   // At the top-level, we only allow structs and functions
   switch (Peek()) {
     case Token::Type::STRUCT: {
-      return ParseStructDecl();
+      return ParseStructDeclaration();
     }
     case Token::Type::FUN: {
-      return ParseFunctionDecl();
+      return ParseFunctionDeclaration();
     }
     default: {
       break;
@@ -74,7 +74,7 @@ ast::Declaration *Parser::ParseDecl() {
   return nullptr;
 }
 
-ast::Declaration *Parser::ParseFunctionDecl() {
+ast::Declaration *Parser::ParseFunctionDeclaration() {
   Expect(Token::Type::FUN);
 
   const SourcePosition &position = scanner_->CurrentPosition();
@@ -87,13 +87,13 @@ ast::Declaration *Parser::ParseFunctionDecl() {
   auto *fun = ParseFunctionLitExpr()->As<ast::FunctionLiteralExpr>();
 
   // Create declaration
-  ast::FunctionDeclaration *decl = node_factory_->NewFunctionDecl(position, name, fun);
+  ast::FunctionDeclaration *decl = node_factory_->NewFunctionDeclaration(position, name, fun);
 
   // Done
   return decl;
 }
 
-ast::Declaration *Parser::ParseStructDecl() {
+ast::Declaration *Parser::ParseStructDeclaration() {
   Expect(Token::Type::STRUCT);
 
   const SourcePosition &position = scanner_->CurrentPosition();
@@ -106,13 +106,13 @@ ast::Declaration *Parser::ParseStructDecl() {
   auto *struct_type = ParseStructType()->As<ast::StructTypeRepr>();
 
   // The declaration object
-  ast::StructDeclaration *decl = node_factory_->NewStructDecl(position, name, struct_type);
+  ast::StructDeclaration *decl = node_factory_->NewStructDeclaration(position, name, struct_type);
 
   // Done
   return decl;
 }
 
-ast::Declaration *Parser::ParseVariableDecl() {
+ast::Declaration *Parser::ParseVariableDeclaration() {
   // VariableDecl = 'var' Ident ':' Type [ '=' Expr ] ;
 
   Expect(Token::Type::VAR);
@@ -143,68 +143,69 @@ ast::Declaration *Parser::ParseVariableDecl() {
   }
 
   // Create declaration object
-  ast::VariableDeclaration *decl = node_factory_->NewVariableDecl(position, name, type, init);
+  ast::VariableDeclaration *decl =
+      node_factory_->NewVariableDeclaration(position, name, type, init);
 
   // Done
   return decl;
 }
 
-ast::Stmt *Parser::ParseStmt() {
-  // Statement = Block | ExpressionStmt | ForStmt | IfStmt | ReturnStmt |
-  //             SimpleStmt | VariableDecl ;
+ast::Statement *Parser::ParseStatement() {
+  // Statement = Block | ExpressionStatement | ForStatement | IfStatement | ReturnStatement |
+  //             SimpleStatement | VariableDecl ;
 
   switch (Peek()) {
     case Token::Type::LEFT_BRACE: {
-      return ParseBlockStmt();
+      return ParseBlockStatement();
     }
     case Token::Type::FOR: {
-      return ParseForStmt();
+      return ParseForStatement();
     }
     case Token::Type::IF: {
-      return ParseIfStmt();
+      return ParseIfStatement();
     }
     case Token::Type::RETURN: {
-      return ParseReturnStmt();
+      return ParseReturnStatement();
     }
     case Token::Type::VAR: {
-      ast::Declaration *var_decl = ParseVariableDecl();
-      return node_factory_->NewDeclStmt(var_decl);
+      ast::Declaration *var_decl = ParseVariableDeclaration();
+      return node_factory_->NewDeclStatement(var_decl);
     }
     default: {
-      return ParseSimpleStmt();
+      return ParseSimpleStatement();
     }
   }
 }
 
-ast::Stmt *Parser::ParseSimpleStmt() {
-  // SimpleStmt = AssignmentStmt | ExpressionStmt ;
-  // AssignmentStmt = Expr '=' Expr ;
-  // ExpressionStmt = Expr ;
+ast::Statement *Parser::ParseSimpleStatement() {
+  // SimpleStatement = AssignmentStatement | ExpressionStatement ;
+  // AssignmentStatement = Expr '=' Expr ;
+  // ExpressionStatement = Expr ;
   ast::Expr *left = ParseExpr();
 
   if (Matches(Token::Type::EQUAL)) {
     const SourcePosition &pos = scanner_->CurrentPosition();
     ast::Expr *right = ParseExpr();
-    return node_factory_->NewAssignmentStmt(pos, left, right);
+    return node_factory_->NewAssignmentStatement(pos, left, right);
   }
 
-  return node_factory_->NewExpressionStmt(left);
+  return node_factory_->NewExpressionStatement(left);
 }
 
-ast::Stmt *Parser::ParseBlockStmt() {
-  // BlockStmt = '{' { Stmt } '}' ;
+ast::Statement *Parser::ParseBlockStatement() {
+  // BlockStatement = '{' { Statement } '}' ;
 
   // Eat the left brace
   Expect(Token::Type::LEFT_BRACE);
   const SourcePosition &start_position = scanner_->CurrentPosition();
 
   // Where we store all the statements in the block
-  util::RegionVector<ast::Stmt *> statements(Region());
+  util::RegionVector<ast::Statement *> statements(Region());
   statements.reserve(16);
 
   // Loop while we don't see the right brace
   while (Peek() != Token::Type::RIGHT_BRACE && Peek() != Token::Type::EOS) {
-    ast::Stmt *stmt = ParseStmt();
+    ast::Statement *stmt = ParseStatement();
     statements.emplace_back(stmt);
   }
 
@@ -212,7 +213,7 @@ ast::Stmt *Parser::ParseBlockStmt() {
   Expect(Token::Type::RIGHT_BRACE);
   const SourcePosition &end_position = scanner_->CurrentPosition();
 
-  return node_factory_->NewBlockStmt(start_position, end_position, std::move(statements));
+  return node_factory_->NewBlockStatement(start_position, end_position, std::move(statements));
 }
 
 class Parser::ForHeader {
@@ -221,7 +222,7 @@ class Parser::ForHeader {
   static ForHeader Infinite() { return ForHeader(); }
 
   // Header for standard for-loops
-  static ForHeader Standard(ast::Stmt *init, ast::Expr *cond, ast::Stmt *next) {
+  static ForHeader Standard(ast::Statement *init, ast::Expr *cond, ast::Statement *next) {
     return ForHeader(init, cond, next, nullptr, nullptr);
   }
 
@@ -234,7 +235,7 @@ class Parser::ForHeader {
 
   bool IsStandard() const { return !IsForIn(); }
 
-  std::tuple<ast::Stmt *, ast::Expr *, ast::Stmt *> GetForElements() const {
+  std::tuple<ast::Statement *, ast::Expr *, ast::Statement *> GetForElements() const {
     TPL_ASSERT(IsStandard(), "Loop isn't a standard for-loop");
     return {init_, cond_, next_};
   }
@@ -245,15 +246,16 @@ class Parser::ForHeader {
   }
 
  private:
-  ForHeader(ast::Stmt *init, ast::Expr *cond, ast::Stmt *next, ast::Expr *target, ast::Expr *iter)
+  ForHeader(ast::Statement *init, ast::Expr *cond, ast::Statement *next, ast::Expr *target,
+            ast::Expr *iter)
       : init_(init), cond_(cond), next_(next), target_(target), iter_(iter) {}
 
   ForHeader() : ForHeader(nullptr, nullptr, nullptr, nullptr, nullptr) {}
 
  private:
-  ast::Stmt *init_;
+  ast::Statement *init_;
   ast::Expr *cond_;
-  ast::Stmt *next_;
+  ast::Statement *next_;
 
   ast::Expr *target_;
   ast::Expr *iter_;
@@ -262,7 +264,7 @@ class Parser::ForHeader {
 Parser::ForHeader Parser::ParseForHeader() {
   // ForHeader = [ '(' ForWhile ')' | '(' ForReg ')' | '(' ForIn ')' ] .
   // ForWhile = Expr .
-  // ForReg = [ Stmt ] ';' [ Expr ] ';' [ Stmt ] .
+  // ForReg = [ Statement ] ';' [ Expr ] ';' [ Statement ] .
   // ForIn = Expr 'in' Expr [ '[' Attributes ']' ] .
   // Attributes = { Ident '=' Expr } .
 
@@ -273,17 +275,17 @@ Parser::ForHeader Parser::ParseForHeader() {
 
   Expect(Token::Type::LEFT_PAREN);
 
-  ast::Stmt *init = nullptr, *cond = nullptr, *next = nullptr;
+  ast::Statement *init = nullptr, *cond = nullptr, *next = nullptr;
 
   if (Peek() != Token::Type::SEMI) {
-    cond = ParseStmt();
+    cond = ParseStatement();
   }
 
   // If we see an 'in', it's a for-in loop
   if (Matches(Token::Type::IN)) {
     TPL_ASSERT(cond != nullptr, "Must have parsed can't be null");
     ast::Expr *target = MakeExpr(cond);
-    ast::Expr *iter = MakeExpr(ParseStmt());
+    ast::Expr *iter = MakeExpr(ParseStatement());
     Expect(Token::Type::RIGHT_PAREN);
     return ForHeader::ForIn(target, iter);
   }
@@ -293,11 +295,11 @@ Parser::ForHeader Parser::ParseForHeader() {
     init = cond;
     cond = nullptr;
     if (Peek() != Token::Type::SEMI) {
-      cond = ParseStmt();
+      cond = ParseStatement();
     }
     Expect(Token::Type::SEMI);
     if (Peek() != Token::Type::RIGHT_PAREN) {
-      next = ParseStmt();
+      next = ParseStatement();
     }
   }
 
@@ -306,8 +308,8 @@ Parser::ForHeader Parser::ParseForHeader() {
   return ForHeader::Standard(init, MakeExpr(cond), next);
 }
 
-ast::Stmt *Parser::ParseForStmt() {
-  // ForStmt = 'for' ForHeader Block ;
+ast::Statement *Parser::ParseForStatement() {
+  // ForStatement = 'for' ForHeader Block ;
   Expect(Token::Type::FOR);
 
   const SourcePosition &position = scanner_->CurrentPosition();
@@ -317,19 +319,19 @@ ast::Stmt *Parser::ParseForStmt() {
   const ForHeader header = ParseForHeader();
 
   // Now the loop body
-  auto *body = ParseBlockStmt()->As<ast::BlockStmt>();
+  auto *body = ParseBlockStatement()->As<ast::BlockStatement>();
 
   if (header.IsStandard()) {
     const auto &[init, cond, next] = header.GetForElements();
-    return node_factory_->NewForStmt(position, init, cond, next, body);
+    return node_factory_->NewForStatement(position, init, cond, next, body);
   }
 
   const auto &[target, iter] = header.GetForInElements();
-  return node_factory_->NewForInStmt(position, target, iter, body);
+  return node_factory_->NewForInStatement(position, target, iter, body);
 }
 
-ast::Stmt *Parser::ParseIfStmt() {
-  // IfStmt = 'if' '(' Expr ')' Block [ 'else' ( IfStmt | Block ) ] ;
+ast::Statement *Parser::ParseIfStatement() {
+  // IfStatement = 'if' '(' Expr ')' Block [ 'else' ( IfStatement | Block ) ] ;
 
   Expect(Token::Type::IF);
 
@@ -341,22 +343,22 @@ ast::Stmt *Parser::ParseIfStmt() {
   Expect(Token::Type::RIGHT_PAREN);
 
   // Handle 'then' statement
-  auto *then_stmt = ParseBlockStmt()->As<ast::BlockStmt>();
+  auto *then_stmt = ParseBlockStatement()->As<ast::BlockStatement>();
 
   // Handle 'else' statement, if one exists
-  ast::Stmt *else_stmt = nullptr;
+  ast::Statement *else_stmt = nullptr;
   if (Matches(Token::Type::ELSE)) {
     if (Peek() == Token::Type::IF) {
-      else_stmt = ParseIfStmt();
+      else_stmt = ParseIfStatement();
     } else {
-      else_stmt = ParseBlockStmt();
+      else_stmt = ParseBlockStatement();
     }
   }
 
-  return node_factory_->NewIfStmt(position, cond, then_stmt, else_stmt);
+  return node_factory_->NewIfStatement(position, cond, then_stmt, else_stmt);
 }
 
-ast::Stmt *Parser::ParseReturnStmt() {
+ast::Statement *Parser::ParseReturnStatement() {
   Expect(Token::Type::RETURN);
 
   const SourcePosition &position = scanner_->CurrentPosition();
@@ -366,7 +368,7 @@ ast::Stmt *Parser::ParseReturnStmt() {
     ret = ParseExpr();
   }
 
-  return node_factory_->NewReturnStmt(position, ret);
+  return node_factory_->NewReturnStatement(position, ret);
 }
 
 ast::Expr *Parser::ParseExpr() { return ParseBinaryOpExpr(Token::LowestPrecedence() + 1); }
@@ -578,7 +580,7 @@ ast::Expr *Parser::ParseFunctionLitExpr() {
   auto *func_type = ParseFunctionType()->As<ast::FunctionTypeRepr>();
 
   // Parse the body
-  auto *body = ParseBlockStmt()->As<ast::BlockStmt>();
+  auto *body = ParseBlockStatement()->As<ast::BlockStatement>();
 
   // Done
   return node_factory_->NewFunctionLitExpr(func_type, body);
@@ -648,7 +650,7 @@ ast::Expr *Parser::ParseFunctionType() {
     }
 
     // That's it
-    params.push_back(node_factory_->NewFieldDecl(field_position, ident, type));
+    params.push_back(node_factory_->NewFieldDeclaration(field_position, ident, type));
 
     if (!Matches(Token::Type::COMMA)) {
       break;
@@ -725,7 +727,7 @@ ast::Expr *Parser::ParseStructType() {
     ast::Expr *type = ParseType();
 
     // That's it
-    fields.push_back(node_factory_->NewFieldDecl(field_position, name, type));
+    fields.push_back(node_factory_->NewFieldDeclaration(field_position, name, type));
   }
 
   Consume(Token::Type::RIGHT_BRACE);

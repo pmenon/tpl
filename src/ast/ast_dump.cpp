@@ -129,7 +129,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     first_child_ = false;
   }
 
-  void DumpDecl(Declaration *decl) {
+  void DumpDeclaration(Declaration *decl) {
     DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(decl); });
   }
 
@@ -137,7 +137,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(expr); });
   }
 
-  void DumpStmt(Stmt *stmt) {
+  void DumpStatement(Statement *stmt) {
     DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(stmt); });
   }
 
@@ -162,7 +162,7 @@ void AstDumperImpl::VisitFile(File *node) {
   DumpNodeCommon(node);
   DumpChild([=, this] {
     for (auto *decl : node->GetDeclarations()) {
-      DumpDecl(decl);
+      DumpDeclaration(decl);
     }
   });
 }
@@ -194,62 +194,62 @@ void AstDumperImpl::VisitStructDeclaration(StructDeclaration *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->GetName());
   for (auto *field : node->GetTypeRepr()->As<StructTypeRepr>()->GetFields()) {
-    DumpDecl(field);
+    DumpDeclaration(field);
   }
 }
 
-void AstDumperImpl::VisitAssignmentStmt(AssignmentStmt *node) {
+void AstDumperImpl::VisitAssignmentStatement(AssignmentStatement *node) {
   DumpNodeCommon(node);
   DumpExpr(node->GetDestination());
   DumpExpr(node->GetSource());
 }
 
-void AstDumperImpl::VisitBlockStmt(BlockStmt *node) {
+void AstDumperImpl::VisitBlockStatement(BlockStatement *node) {
   DumpNodeCommon(node);
   for (auto *stmt : node->GetStatements()) {
-    DumpStmt(stmt);
+    DumpStatement(stmt);
   }
 }
 
-void AstDumperImpl::VisitDeclStmt(DeclStmt *node) {
+void AstDumperImpl::VisitDeclarationStatement(DeclarationStatement *node) {
   AstVisitor<AstDumperImpl>::Visit(node->GetDeclaration());
 }
 
-void AstDumperImpl::VisitExpressionStmt(ExpressionStmt *node) {
+void AstDumperImpl::VisitExpressionStatement(ExpressionStatement *node) {
   AstVisitor<AstDumperImpl>::Visit(node->GetExpression());
 }
 
-void AstDumperImpl::VisitForStmt(ForStmt *node) {
+void AstDumperImpl::VisitForStatement(ForStatement *node) {
   DumpNodeCommon(node);
   if (node->GetInit() != nullptr) {
-    DumpStmt(node->GetInit());
+    DumpStatement(node->GetInit());
   }
   if (node->GetCondition() != nullptr) {
     DumpExpr(node->GetCondition());
   }
   if (node->GetNext() != nullptr) {
-    DumpStmt(node->GetNext());
+    DumpStatement(node->GetNext());
   }
-  DumpStmt(node->GetBody());
+  DumpStatement(node->GetBody());
 }
 
-void AstDumperImpl::VisitForInStmt(ForInStmt *node) {
+void AstDumperImpl::VisitForInStatement(ForInStatement *node) {
   DumpNodeCommon(node);
   DumpExpr(node->Target());
   DumpExpr(node->Iterable());
-  DumpStmt(node->GetBody());
+  DumpStatement(node->GetBody());
 }
 
-void AstDumperImpl::VisitIfStmt(IfStmt *node) {
+void AstDumperImpl::VisitIfStatement(IfStatement *node) {
   DumpNodeCommon(node);
   DumpExpr(node->GetCondition());
-  DumpStmt(node->GetThenStmt());
-  if (node->HasElseStmt()) {
-    DumpStmt(node->GetElseStmt());
+  DumpStatement(node->GetThenStatement());
+  if (node->HasElseStatement()) {
+    DumpStatement(node->GetElseStatement());
   }
 }
 
-void AstDumperImpl::VisitReturnStmt(ReturnStmt *node) {
+void AstDumperImpl::VisitReturnStatement(ReturnStatement *node) {
   DumpNodeCommon(node);
   if (node->GetReturnValue() != nullptr) {
     DumpExpr(node->GetReturnValue());
@@ -296,7 +296,7 @@ void AstDumperImpl::VisitComparisonOpExpr(ComparisonOpExpr *node) {
 
 void AstDumperImpl::VisitFunctionLiteralExpr(FunctionLiteralExpr *node) {
   DumpExpressionCommon(node);
-  DumpStmt(node->GetBody());
+  DumpStatement(node->GetBody());
 }
 
 void AstDumperImpl::VisitIdentifierExpr(IdentifierExpr *node) {

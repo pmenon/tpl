@@ -9,7 +9,7 @@
 
 namespace tpl::sema {
 
-void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
+void Sema::VisitAssignmentStatement(ast::AssignmentStatement *node) {
   ast::Type *src_type = Resolve(node->GetSource());
   ast::Type *dest_type = Resolve(node->GetDestination());
 
@@ -31,7 +31,7 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   }
 }
 
-void Sema::VisitBlockStmt(ast::BlockStmt *node) {
+void Sema::VisitBlockStatement(ast::BlockStatement *node) {
   SemaScope block_scope(this, Scope::Kind::Block);
 
   for (auto *stmt : node->GetStatements()) {
@@ -47,7 +47,7 @@ void Sema::VisitFile(ast::File *node) {
   }
 }
 
-void Sema::VisitForStmt(ast::ForStmt *node) {
+void Sema::VisitForStatement(ast::ForStatement *node) {
   // Create a new scope for variables introduced in initialization block
   SemaScope for_scope(this, Scope::Kind::Loop);
 
@@ -76,11 +76,13 @@ void Sema::VisitForStmt(ast::ForStmt *node) {
   Visit(node->GetBody());
 }
 
-void Sema::VisitForInStmt(ast::ForInStmt *node) { TPL_ASSERT(false, "Not supported"); }
+void Sema::VisitForInStatement(ast::ForInStatement *node) { TPL_ASSERT(false, "Not supported"); }
 
-void Sema::VisitExpressionStmt(ast::ExpressionStmt *node) { Visit(node->GetExpression()); }
+void Sema::VisitExpressionStatement(ast::ExpressionStatement *node) {
+  Visit(node->GetExpression());
+}
 
-void Sema::VisitIfStmt(ast::IfStmt *node) {
+void Sema::VisitIfStatement(ast::IfStatement *node) {
   if (ast::Type *cond_type = Resolve(node->GetCondition()); cond_type == nullptr) {
     // Error
     return;
@@ -107,16 +109,18 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
     error_reporter_->Report(node->GetCondition()->Position(), ErrorMessages::kNonBoolIfCondition);
   }
 
-  Visit(node->GetThenStmt());
+  Visit(node->GetThenStatement());
 
-  if (node->GetElseStmt() != nullptr) {
-    Visit(node->GetElseStmt());
+  if (node->GetElseStatement() != nullptr) {
+    Visit(node->GetElseStatement());
   }
 }
 
-void Sema::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->GetDeclaration()); }
+void Sema::VisitDeclarationStatement(ast::DeclarationStatement *node) {
+  Visit(node->GetDeclaration());
+}
 
-void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
+void Sema::VisitReturnStatement(ast::ReturnStatement *node) {
   if (GetCurrentFunction() == nullptr) {
     error_reporter_->Report(node->Position(), ErrorMessages::kReturnOutsideFunction);
     return;

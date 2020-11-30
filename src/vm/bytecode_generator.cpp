@@ -143,7 +143,7 @@ class BytecodeGenerator::BytecodePositionScope {
 
 BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_), execution_result_(nullptr) {}
 
-void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
+void BytecodeGenerator::VisitIfStatement(ast::IfStatement *node) {
   IfThenElseBuilder if_builder(this);
 
   // Generate condition check code
@@ -152,25 +152,25 @@ void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
 
   // Generate code in "then" block
   if_builder.Then();
-  Visit(node->GetThenStmt());
+  Visit(node->GetThenStatement());
 
   // If there's an "else" block, handle it now
-  if (node->GetElseStmt() != nullptr) {
-    if (!ast::Stmt::IsTerminating(node->GetThenStmt())) {
+  if (node->GetElseStatement() != nullptr) {
+    if (!ast::Statement::IsTerminating(node->GetThenStatement())) {
       if_builder.JumpToEnd();
     }
     if_builder.Else();
-    Visit(node->GetElseStmt());
+    Visit(node->GetElseStatement());
   }
 }
 
-void BytecodeGenerator::VisitIterationStatement(ast::IterationStmt *iteration,
+void BytecodeGenerator::VisitIterationStatement(ast::IterationStatement *iteration,
                                                 LoopBuilder *loop_builder) {
   Visit(iteration->GetBody());
   loop_builder->BindContinueTarget();
 }
 
-void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
+void BytecodeGenerator::VisitForStatement(ast::ForStatement *node) {
   LoopBuilder loop_builder(this);
 
   if (node->GetInit() != nullptr) {
@@ -194,7 +194,7 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   loop_builder.JumpToHeader();
 }
 
-void BytecodeGenerator::VisitForInStmt(UNUSED ast::ForInStmt *node) {
+void BytecodeGenerator::VisitForInStatement(UNUSED ast::ForInStatement *node) {
   TPL_ASSERT(false, "For-in statements not supported");
 }
 
@@ -373,7 +373,7 @@ void BytecodeGenerator::VisitIndexExpr(ast::IndexExpr *node) {
   }
 }
 
-void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
+void BytecodeGenerator::VisitBlockStatement(ast::BlockStatement *node) {
   for (auto *stmt : node->GetStatements()) {
     Visit(stmt);
   }
@@ -487,7 +487,7 @@ void BytecodeGenerator::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   }
 }
 
-void BytecodeGenerator::VisitReturnStmt(ast::ReturnStmt *node) {
+void BytecodeGenerator::VisitReturnStatement(ast::ReturnStatement *node) {
   if (node->GetReturnValue() != nullptr) {
     LocalVar rv = GetCurrentFunction()->GetReturnValueLocal();
     // The return value 'rv' is the address of the return value in the frame.
@@ -2095,7 +2095,7 @@ void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
   }
 }
 
-void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
+void BytecodeGenerator::VisitAssignmentStatement(ast::AssignmentStatement *node) {
   LocalVar dest = VisitExpressionForLValue(node->GetDestination());
   VisitExpressionForRValue(node->GetSource(), dest);
 }
@@ -2597,9 +2597,11 @@ void BytecodeGenerator::VisitMemberExpr(ast::MemberExpr *node) {
   GetExecutionResult()->SetDestination(dest.ValueOf());
 }
 
-void BytecodeGenerator::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->GetDeclaration()); }
+void BytecodeGenerator::VisitDeclarationStatement(ast::DeclarationStatement *node) {
+  Visit(node->GetDeclaration());
+}
 
-void BytecodeGenerator::VisitExpressionStmt(ast::ExpressionStmt *node) {
+void BytecodeGenerator::VisitExpressionStatement(ast::ExpressionStatement *node) {
   Visit(node->GetExpression());
 }
 

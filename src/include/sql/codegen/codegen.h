@@ -316,7 +316,8 @@ class CodeGen {
    * @param type_repr The provided type representation.
    * @return The variable declaration.
    */
-  [[nodiscard]] ast::VariableDeclaration *DeclareVarNoInit(ast::Identifier name, ast::Expr *type_repr);
+  [[nodiscard]] ast::VariableDeclaration *DeclareVarNoInit(ast::Identifier name,
+                                                           ast::Expr *type_repr);
 
   /**
    * Declare a variable with the provided name and builtin kind, but with no initial value.
@@ -326,7 +327,7 @@ class CodeGen {
    * @return The variable declaration.
    */
   [[nodiscard]] ast::VariableDeclaration *DeclareVarNoInit(ast::Identifier name,
-                                                    ast::BuiltinType::Kind kind);
+                                                           ast::BuiltinType::Kind kind);
 
   /**
    * Declare a variable with the provided name and initial value. The variable's type will be
@@ -352,7 +353,7 @@ class CodeGen {
    * @return The variable declaration.
    */
   [[nodiscard]] ast::VariableDeclaration *DeclareVar(ast::Identifier name, ast::Expr *type_repr,
-                                              ast::Expr *init);
+                                                     ast::Expr *init);
 
   /**
    * Declare a struct with the provided name and struct field elements.
@@ -362,7 +363,7 @@ class CodeGen {
    * @return The structure declaration.
    */
   ast::StructDeclaration *DeclareStruct(ast::Identifier name,
-                                 util::RegionVector<ast::FieldDeclaration *> &&fields) const;
+                                        util::RegionVector<ast::FieldDeclaration *> &&fields) const;
 
   // ---------------------------------------------------------------------------
   //
@@ -377,7 +378,7 @@ class CodeGen {
    * @param value The value to assign.
    * @return The assignment statement.
    */
-  [[nodiscard]] ast::Stmt *Assign(ast::Expr *dest, ast::Expr *value);
+  [[nodiscard]] ast::Statement *Assign(ast::Expr *dest, ast::Expr *value);
 
   // ---------------------------------------------------------------------------
   //
@@ -486,14 +487,14 @@ class CodeGen {
    * Create a return statement without a return value.
    * @return The statement.
    */
-  [[nodiscard]] ast::Stmt *Return();
+  [[nodiscard]] ast::Statement *Return();
 
   /**
    * Create a return statement that returns the given value.
    * @param ret The return value.
    * @return The statement.
    */
-  [[nodiscard]] ast::Stmt *Return(ast::Expr *ret);
+  [[nodiscard]] ast::Statement *Return(ast::Expr *ret);
 
   // ---------------------------------------------------------------------------
   //
@@ -1331,17 +1332,17 @@ class CodeGen {
   /**
    * @return The variable declaration as a standalone statement.
    */
-  ast::Stmt *MakeStmt(ast::VariableDeclaration *var) const;
+  ast::Statement *MakeStatement(ast::VariableDeclaration *var) const;
 
   /**
    * @return The expression as a standalone statement.
    */
-  ast::Stmt *MakeStmt(ast::Expr *expr) const;
+  ast::Statement *MakeStatement(ast::Expr *expr) const;
 
   /**
    * @return An empty list of statements.
    */
-  ast::BlockStmt *MakeEmptyBlock() const;
+  ast::BlockStatement *MakeEmptyBlock() const;
 
   /**
    * @return An empty list of fields.

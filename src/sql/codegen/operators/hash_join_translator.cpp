@@ -167,7 +167,7 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
   // var entry = @jhtLookup(hash)
   ast::Identifier entry_var = codegen_->MakeFreshIdentifier("entry");
   const auto entry = [&]() { return codegen_->MakeExpr(entry_var); };
-  auto lookup_call = codegen_->MakeStmt(codegen_->DeclareVarWithInit(
+  auto lookup_call = codegen_->MakeStatement(codegen_->DeclareVarWithInit(
       entry_var, codegen_->JoinHashTableLookup(GetQueryStateEntryPtr(global_join_ht_),
                                                codegen_->MakeExpr(hash_val))));
 

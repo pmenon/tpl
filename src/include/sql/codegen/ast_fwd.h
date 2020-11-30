@@ -5,7 +5,7 @@
 
 namespace tpl::ast {
 
-class BlockStmt;
+class BlockStatement;
 class Context;
 class Expr;
 class Declaration;
@@ -13,7 +13,7 @@ class FieldDeclaration;
 class File;
 class FunctionDeclaration;
 class IdentifierExpr;
-class Stmt;
+class Statement;
 class StructDeclaration;
 class VariableDeclaration;
 

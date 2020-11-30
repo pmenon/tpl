@@ -50,11 +50,14 @@ TEST_F(ParserTest, RegularForStmtTest) {
 
   // Only one for statement, all elements are non-null
   auto *for_stmt =
-      func_decl->GetFunctionLiteral()->GetBody()->GetStatements()[0]->SafeAs<ast::ForStmt>();
+      func_decl->GetFunctionLiteral()->GetBody()->GetStatements()[0]->SafeAs<ast::ForStatement>();
   ASSERT_NE(nullptr, for_stmt);
   ASSERT_NE(nullptr, for_stmt->GetInit());
-  ASSERT_TRUE(for_stmt->GetInit()->IsDeclStmt());
-  ASSERT_TRUE(for_stmt->GetInit()->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDeclaration());
+  ASSERT_TRUE(for_stmt->GetInit()->IsDeclarationStatement());
+  ASSERT_TRUE(for_stmt->GetInit()
+                  ->As<ast::DeclarationStatement>()
+                  ->GetDeclaration()
+                  ->IsVariableDeclaration());
   ASSERT_NE(nullptr, for_stmt->GetCondition());
   ASSERT_NE(nullptr, for_stmt->GetNext());
 }
@@ -108,7 +111,7 @@ TEST_F(ParserTest, ExhaustiveForStmtTest) {
 
     // Only one for statement, all elements are non-null
     auto *for_stmt =
-        func_decl->GetFunctionLiteral()->GetBody()->GetStatements()[0]->SafeAs<ast::ForStmt>();
+        func_decl->GetFunctionLiteral()->GetBody()->GetStatements()[0]->SafeAs<ast::ForStatement>();
     ASSERT_NE(nullptr, for_stmt);
     ASSERT_EQ(test.init_null, for_stmt->GetInit() == nullptr);
     ASSERT_EQ(test.cond_null, for_stmt->GetCondition() == nullptr);
@@ -148,11 +151,11 @@ TEST_F(ParserTest, RegularForStmt_NoInitTest) {
 
   // First is the variable declaration
   auto &block = func_decl->GetFunctionLiteral()->GetBody()->GetStatements();
-  ASSERT_TRUE(block[0]->IsDeclStmt());
-  ASSERT_TRUE(block[0]->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDeclaration());
+  ASSERT_TRUE(block[0]->IsDeclarationStatement());
+  ASSERT_TRUE(block[0]->As<ast::DeclarationStatement>()->GetDeclaration()->IsVariableDeclaration());
 
   // Next is the for statement
-  auto *for_stmt = block[1]->SafeAs<ast::ForStmt>();
+  auto *for_stmt = block[1]->SafeAs<ast::ForStatement>();
   ASSERT_NE(nullptr, for_stmt);
   ASSERT_EQ(nullptr, for_stmt->GetInit());
   ASSERT_NE(nullptr, for_stmt->GetCondition());
@@ -201,11 +204,12 @@ TEST_F(ParserTest, RegularForStmt_WhileTest) {
 
     // First is the variable declaration
     auto &block = func_decl->GetFunctionLiteral()->GetBody()->GetStatements();
-    ASSERT_TRUE(block[0]->IsDeclStmt());
-    ASSERT_TRUE(block[0]->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDeclaration());
+    ASSERT_TRUE(block[0]->IsDeclarationStatement());
+    ASSERT_TRUE(
+        block[0]->As<ast::DeclarationStatement>()->GetDeclaration()->IsVariableDeclaration());
 
     // Next is the for statement
-    auto *for_stmt = block[1]->SafeAs<ast::ForStmt>();
+    auto *for_stmt = block[1]->SafeAs<ast::ForStatement>();
     ASSERT_NE(nullptr, for_stmt);
     ASSERT_EQ(nullptr, for_stmt->GetInit());
     ASSERT_NE(nullptr, for_stmt->GetCondition());
@@ -242,7 +246,7 @@ TEST_F(ParserTest, RegularForInStmtTest) {
 
   // Only statement is the for-in statement
   auto &block = func_decl->GetFunctionLiteral()->GetBody()->GetStatements();
-  auto *for_in_stmt = block[0]->SafeAs<ast::ForInStmt>();
+  auto *for_in_stmt = block[0]->SafeAs<ast::ForInStatement>();
   ASSERT_NE(nullptr, for_in_stmt);
   ASSERT_NE(nullptr, for_in_stmt->Target());
   ASSERT_NE(nullptr, for_in_stmt->Iterable());

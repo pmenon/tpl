@@ -6,7 +6,8 @@
 namespace tpl::sql::codegen {
 
 FunctionBuilder::FunctionBuilder(CodeGen *codegen, ast::Identifier name,
-                                 util::RegionVector<ast::FieldDeclaration *> &&params, ast::Expr *ret_type)
+                                 util::RegionVector<ast::FieldDeclaration *> &&params,
+                                 ast::Expr *ret_type)
     : codegen_(codegen),
       prev_function_(nullptr),
       name_(name),
@@ -30,7 +31,7 @@ ast::Expr *FunctionBuilder::GetParameterByPosition(uint32_t param_idx) {
   return nullptr;
 }
 
-void FunctionBuilder::Append(ast::Stmt *stmt) {
+void FunctionBuilder::Append(ast::Statement *stmt) {
   // Append the statement to the block.
   statements_->AppendStatement(stmt);
   // Bump line number.
@@ -38,11 +39,11 @@ void FunctionBuilder::Append(ast::Stmt *stmt) {
 }
 
 void FunctionBuilder::Append(ast::Expr *expr) {
-  Append(codegen_->NodeFactory()->NewExpressionStmt(expr));
+  Append(codegen_->NodeFactory()->NewExpressionStatement(expr));
 }
 
 void FunctionBuilder::Append(ast::VariableDeclaration *decl) {
-  Append(codegen_->NodeFactory()->NewDeclStmt(decl));
+  Append(codegen_->NodeFactory()->NewDeclStatement(decl));
 }
 
 ast::FunctionDeclaration *FunctionBuilder::Finish(ast::Expr *ret) {
@@ -50,14 +51,15 @@ ast::FunctionDeclaration *FunctionBuilder::Finish(ast::Expr *ret) {
     return decl_;
   }
 
-  TPL_ASSERT(ret == nullptr || statements_->IsEmpty() || !statements_->GetLast()->IsReturnStmt(),
-             "Double-return at end of function. You should either call FunctionBuilder::Finish() "
-             "with an explicit return expression, or use the factory to manually append a return "
-             "statement and call FunctionBuilder::Finish() with a null return.");
+  TPL_ASSERT(
+      ret == nullptr || statements_->IsEmpty() || !statements_->GetLast()->IsReturnStatement(),
+      "Double-return at end of function. You should either call FunctionBuilder::Finish() "
+      "with an explicit return expression, or use the factory to manually append a return "
+      "statement and call FunctionBuilder::Finish() with a null return.");
 
   // Add the return.
-  if (!statements_->IsEmpty() && !statements_->GetLast()->IsReturnStmt()) {
-    Append(codegen_->NodeFactory()->NewReturnStmt(codegen_->GetPosition(), ret));
+  if (!statements_->IsEmpty() && !statements_->GetLast()->IsReturnStatement()) {
+    Append(codegen_->NodeFactory()->NewReturnStatement(codegen_->GetPosition(), ret));
   }
 
   // Finalize everything.
@@ -68,7 +70,7 @@ ast::FunctionDeclaration *FunctionBuilder::Finish(ast::Expr *ret) {
 
   // Create the declaration.
   auto func_lit = codegen_->NodeFactory()->NewFunctionLitExpr(func_type, statements_);
-  decl_ = codegen_->NodeFactory()->NewFunctionDecl(start_, name_, func_lit);
+  decl_ = codegen_->NodeFactory()->NewFunctionDeclaration(start_, name_, func_lit);
 
   // Register the function in the container.
   codegen_->container_->RegisterFunction(decl_);

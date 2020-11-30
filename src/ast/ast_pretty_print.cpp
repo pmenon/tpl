@@ -53,7 +53,7 @@ void AstPrettyPrintImpl::VisitArrayTypeRepr(ArrayTypeRepr *node) {
 
 void AstPrettyPrintImpl::VisitBadExpr(BadExpr *node) { TPL_ASSERT(false, "Invalid"); }
 
-void AstPrettyPrintImpl::VisitBlockStmt(BlockStmt *node) {
+void AstPrettyPrintImpl::VisitBlockStatement(BlockStatement *node) {
   if (node->IsEmpty()) {
     os_ << "{ }";
     return;
@@ -109,7 +109,7 @@ void AstPrettyPrintImpl::VisitImplicitCastExpr(ImplicitCastExpr *node) {
   os_ << ")";
 }
 
-void AstPrettyPrintImpl::VisitReturnStmt(ReturnStmt *node) {
+void AstPrettyPrintImpl::VisitReturnStatement(ReturnStatement *node) {
   os_ << "return";
   if (node->GetReturnValue() != nullptr) {
     os_ << " ";
@@ -145,7 +145,7 @@ void AstPrettyPrintImpl::VisitVariableDeclaration(VariableDeclaration *node) {
   }
 }
 
-void AstPrettyPrintImpl::VisitAssignmentStmt(AssignmentStmt *node) {
+void AstPrettyPrintImpl::VisitAssignmentStatement(AssignmentStatement *node) {
   Visit(node->GetDestination());
   os_ << " = ";
   Visit(node->GetSource());
@@ -164,7 +164,7 @@ void AstPrettyPrintImpl::VisitFunctionLiteralExpr(FunctionLiteralExpr *node) {
   NewLine();
 }
 
-void AstPrettyPrintImpl::VisitForStmt(ForStmt *node) {
+void AstPrettyPrintImpl::VisitForStatement(ForStatement *node) {
   os_ << "for (";
   if (node->GetInit() != nullptr || node->GetNext() != nullptr) {
     // Standard
@@ -183,7 +183,7 @@ void AstPrettyPrintImpl::VisitForStmt(ForStmt *node) {
   Visit(node->GetBody());
 }
 
-void AstPrettyPrintImpl::VisitForInStmt(ForInStmt *node) {
+void AstPrettyPrintImpl::VisitForInStatement(ForInStatement *node) {
   os_ << "for (";
   Visit(node->Target());
   os_ << " in ";
@@ -245,7 +245,9 @@ void AstPrettyPrintImpl::VisitStructTypeRepr(StructTypeRepr *node) {
   }
 }
 
-void AstPrettyPrintImpl::VisitDeclStmt(DeclStmt *node) { Visit(node->GetDeclaration()); }
+void AstPrettyPrintImpl::VisitDeclarationStatement(DeclarationStatement *node) {
+  Visit(node->GetDeclaration());
+}
 
 void AstPrettyPrintImpl::VisitMemberExpr(MemberExpr *node) {
   Visit(node->GetObject());
@@ -264,18 +266,20 @@ void AstPrettyPrintImpl::VisitComparisonOpExpr(ComparisonOpExpr *node) {
   Visit(node->GetRight());
 }
 
-void AstPrettyPrintImpl::VisitIfStmt(IfStmt *node) {
+void AstPrettyPrintImpl::VisitIfStatement(IfStatement *node) {
   os_ << "if (";
   Visit(node->GetCondition());
   os_ << ") ";
-  Visit(node->GetThenStmt());
-  if (node->GetElseStmt()) {
+  Visit(node->GetThenStatement());
+  if (node->GetElseStatement()) {
     os_ << " else ";
-    Visit(node->GetElseStmt());
+    Visit(node->GetElseStatement());
   }
 }
 
-void AstPrettyPrintImpl::VisitExpressionStmt(ExpressionStmt *node) { Visit(node->GetExpression()); }
+void AstPrettyPrintImpl::VisitExpressionStatement(ExpressionStatement *node) {
+  Visit(node->GetExpression());
+}
 
 void AstPrettyPrintImpl::VisitIndexExpr(IndexExpr *node) {
   Visit(node->GetObject());

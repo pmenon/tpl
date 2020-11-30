@@ -57,7 +57,7 @@ class AstVisitor {
    * @param stmt The statement node.
    * @return No-arg constructed return.
    */
-  RetType VisitStmt(Stmt *) { return RetType(); }
+  RetType VisitStatement(Statement *) { return RetType(); }
 
   /**
    * No-op base implementation for all expression nodes.
@@ -74,7 +74,7 @@ class AstVisitor {
 
   // Generate default visitors for statement nodes that dispatch to base Stmt
 #define T(StmtType) \
-  RetType Visit##StmtType(StmtType *node) { DISPATCH(Stmt); }
+  RetType Visit##StmtType(StmtType *node) { DISPATCH(Statement); }
   STATEMENT_NODES(T)
 #undef T
 

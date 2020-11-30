@@ -36,8 +36,8 @@ ast::FieldDeclaration *StructDeclaration::GetFieldAt(uint32_t field_idx) const {
 // Expression Statement
 // ---------------------------------------------------------
 
-ExpressionStmt::ExpressionStmt(Expr *expr)
-    : Stmt(Kind::ExpressionStmt, expr->Position()), expr_(expr) {}
+ExpressionStatement::ExpressionStatement(Expr *expr)
+    : Statement(Kind::ExpressionStatement, expr->Position()), expr_(expr) {}
 
 // ---------------------------------------------------------
 // Expression
@@ -97,7 +97,7 @@ bool ComparisonOpExpr::IsLiteralCompareNil(Expr **result) const {
 // Function Literal Expressions
 // ---------------------------------------------------------
 
-FunctionLiteralExpr::FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStmt *body)
+FunctionLiteralExpr::FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStatement *body)
     : Expr(Kind::FunctionLiteralExpr, type_repr->Position()), type_repr_(type_repr), body_(body) {}
 
 // ---------------------------------------------------------
@@ -200,17 +200,17 @@ bool MemberExpr::IsSugaredArrow() const {
 // Statement
 // ---------------------------------------------------------
 
-bool Stmt::IsTerminating(Stmt *stmt) {
+bool Statement::IsTerminating(Statement *stmt) {
   switch (stmt->GetKind()) {
-    case AstNode::Kind::BlockStmt: {
-      return IsTerminating(stmt->As<BlockStmt>()->GetStatements().back());
+    case AstNode::Kind::BlockStatement: {
+      return IsTerminating(stmt->As<BlockStatement>()->GetStatements().back());
     }
-    case AstNode::Kind::IfStmt: {
-      auto *if_stmt = stmt->As<IfStmt>();
-      return (if_stmt->HasElseStmt() &&
-              (IsTerminating(if_stmt->GetThenStmt()) && IsTerminating(if_stmt->GetElseStmt())));
+    case AstNode::Kind::IfStatement: {
+      auto *if_stmt = stmt->As<IfStatement>();
+      return (if_stmt->HasElseStatement() && (IsTerminating(if_stmt->GetThenStatement()) &&
+                                              IsTerminating(if_stmt->GetElseStatement())));
     }
-    case AstNode::Kind::ReturnStmt: {
+    case AstNode::Kind::ReturnStatement: {
       return true;
     }
     default: {

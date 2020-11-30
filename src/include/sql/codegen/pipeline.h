@@ -313,7 +313,8 @@ class Pipeline {
   ast::FunctionDeclaration *GenerateSetupPipelineStateFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate the pipeline state cleanup logic.
-  ast::FunctionDeclaration *GenerateTearDownPipelineStateFunction(PipelineContext *pipeline_ctx) const;
+  ast::FunctionDeclaration *GenerateTearDownPipelineStateFunction(
+      PipelineContext *pipeline_ctx) const;
 
   // Generate pipeline initialization logic.
   ast::FunctionDeclaration *GenerateInitPipelineFunction(PipelineContext *pipeline_ctx) const;

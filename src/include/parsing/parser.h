@@ -92,29 +92,29 @@ class Parser {
   // Parsing productions
   // -------------------------------------------------------
 
-  ast::Declaration *ParseDecl();
+  ast::Declaration *ParseDeclaration();
 
-  ast::Declaration *ParseFunctionDecl();
+  ast::Declaration *ParseFunctionDeclaration();
 
-  ast::Declaration *ParseStructDecl();
+  ast::Declaration *ParseStructDeclaration();
 
-  ast::Declaration *ParseVariableDecl();
+  ast::Declaration *ParseVariableDeclaration();
 
-  ast::Stmt *ParseStmt();
+  ast::Statement *ParseStatement();
 
-  ast::Stmt *ParseSimpleStmt();
+  ast::Statement *ParseSimpleStatement();
 
-  ast::Stmt *ParseBlockStmt();
+  ast::Statement *ParseBlockStatement();
 
   class ForHeader;
 
   ForHeader ParseForHeader();
 
-  ast::Stmt *ParseForStmt();
+  ast::Statement *ParseForStatement();
 
-  ast::Stmt *ParseIfStmt();
+  ast::Statement *ParseIfStatement();
 
-  ast::Stmt *ParseReturnStmt();
+  ast::Statement *ParseReturnStatement();
 
   ast::Expr *ParseExpr();
 

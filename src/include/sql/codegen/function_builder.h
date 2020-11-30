@@ -44,7 +44,7 @@ class FunctionBuilder {
    * Append a statement to the list of statements in this function.
    * @param stmt The statement to append.
    */
-  void Append(ast::Stmt *stmt);
+  void Append(ast::Statement *stmt);
 
   /**
    * Append an expression as a statement to the list of statements in this function.
@@ -90,7 +90,7 @@ class FunctionBuilder {
   // The start and stop position of statements in the function.
   SourcePosition start_;
   // The list of generated statements making up the function.
-  ast::BlockStmt *statements_;
+  ast::BlockStatement *statements_;
   // The cached function declaration. Constructed once in Finish().
   ast::FunctionDeclaration *decl_;
 };

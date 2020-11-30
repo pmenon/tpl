@@ -141,7 +141,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
                               TestFallthrough fallthrough);
 
   // Visit the body of an iteration statement
-  void VisitIterationStatement(ast::IterationStmt *iteration, LoopBuilder *loop_builder);
+  void VisitIterationStatement(ast::IterationStatement *iteration, LoopBuilder *loop_builder);
 
   // Dispatched from VisitCompareOp for SQL vs. primitive comparisons
   void VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare);

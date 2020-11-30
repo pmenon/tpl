@@ -20,50 +20,55 @@ class AstNodeFactory {
     return new (region_) File(pos, std::move(declarations));
   }
 
-  FunctionDeclaration *NewFunctionDecl(const SourcePosition &pos, Identifier name,
-                                FunctionLiteralExpr *fun) {
+  FunctionDeclaration *NewFunctionDeclaration(const SourcePosition &pos, Identifier name,
+                                              FunctionLiteralExpr *fun) {
     return new (region_) FunctionDeclaration(pos, name, fun);
   }
 
-  StructDeclaration *NewStructDecl(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr) {
+  StructDeclaration *NewStructDeclaration(const SourcePosition &pos, Identifier name,
+                                          StructTypeRepr *type_repr) {
     return new (region_) StructDeclaration(pos, name, type_repr);
   }
 
-  VariableDeclaration *NewVariableDecl(const SourcePosition &pos, Identifier name, Expr *type_repr,
-                                Expr *init) {
+  VariableDeclaration *NewVariableDeclaration(const SourcePosition &pos, Identifier name,
+                                              Expr *type_repr, Expr *init) {
     return new (region_) VariableDeclaration(pos, name, type_repr, init);
   }
 
-  BlockStmt *NewBlockStmt(const SourcePosition &start_pos, const SourcePosition &end_pos,
-                          util::RegionVector<Stmt *> &&statements) {
-    return new (region_) BlockStmt(start_pos, end_pos, std::move(statements));
+  BlockStatement *NewBlockStatement(const SourcePosition &start_pos, const SourcePosition &end_pos,
+                                    util::RegionVector<Statement *> &&statements) {
+    return new (region_) BlockStatement(start_pos, end_pos, std::move(statements));
   }
 
-  DeclStmt *NewDeclStmt(Declaration *decl) { return new (region_) DeclStmt(decl); }
-
-  AssignmentStmt *NewAssignmentStmt(const SourcePosition &pos, Expr *dest, Expr *src) {
-    return new (region_) AssignmentStmt(pos, dest, src);
+  DeclarationStatement *NewDeclStatement(Declaration *decl) {
+    return new (region_) DeclarationStatement(decl);
   }
 
-  ExpressionStmt *NewExpressionStmt(Expr *expression) {
-    return new (region_) ExpressionStmt(expression);
+  AssignmentStatement *NewAssignmentStatement(const SourcePosition &pos, Expr *dest, Expr *src) {
+    return new (region_) AssignmentStatement(pos, dest, src);
   }
 
-  ForStmt *NewForStmt(const SourcePosition &pos, Stmt *init, Expr *cond, Stmt *next,
-                      BlockStmt *body) {
-    return new (region_) ForStmt(pos, init, cond, next, body);
+  ExpressionStatement *NewExpressionStatement(Expr *expression) {
+    return new (region_) ExpressionStatement(expression);
   }
 
-  ForInStmt *NewForInStmt(const SourcePosition &pos, Expr *target, Expr *iter, BlockStmt *body) {
-    return new (region_) ForInStmt(pos, target, iter, body);
+  ForStatement *NewForStatement(const SourcePosition &pos, Statement *init, Expr *cond,
+                                Statement *next, BlockStatement *body) {
+    return new (region_) ForStatement(pos, init, cond, next, body);
   }
 
-  IfStmt *NewIfStmt(const SourcePosition &pos, Expr *cond, BlockStmt *then_stmt, Stmt *else_stmt) {
-    return new (region_) IfStmt(pos, cond, then_stmt, else_stmt);
+  ForInStatement *NewForInStatement(const SourcePosition &pos, Expr *target, Expr *iter,
+                                    BlockStatement *body) {
+    return new (region_) ForInStatement(pos, target, iter, body);
   }
 
-  ReturnStmt *NewReturnStmt(const SourcePosition &pos, Expr *ret) {
-    return new (region_) ReturnStmt(pos, ret);
+  IfStatement *NewIfStatement(const SourcePosition &pos, Expr *cond, BlockStatement *then_stmt,
+                              Statement *else_stmt) {
+    return new (region_) IfStatement(pos, cond, then_stmt, else_stmt);
+  }
+
+  ReturnStatement *NewReturnStatement(const SourcePosition &pos, Expr *ret) {
+    return new (region_) ReturnStatement(pos, ret);
   }
 
   BadExpr *NewBadExpr(const SourcePosition &pos) { return new (region_) BadExpr(pos); }
@@ -104,7 +109,7 @@ class AstNodeFactory {
     return new (region_) LiteralExpr(pos, str);
   }
 
-  FunctionLiteralExpr *NewFunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body) {
+  FunctionLiteralExpr *NewFunctionLitExpr(FunctionTypeRepr *type_repr, BlockStatement *body) {
     return new (region_) FunctionLiteralExpr(type_repr, body);
   }
 
@@ -133,7 +138,8 @@ class AstNodeFactory {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
-  FieldDeclaration *NewFieldDecl(const SourcePosition &pos, Identifier name, Expr *type_repr) {
+  FieldDeclaration *NewFieldDeclaration(const SourcePosition &pos, Identifier name,
+                                        Expr *type_repr) {
     return new (region_) FieldDeclaration(pos, name, type_repr);
   }
 

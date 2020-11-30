@@ -193,7 +193,8 @@ ast::FunctionDeclaration *Pipeline::GenerateTearDownPipelineStateFunction(
   return builder.Finish();
 }
 
-ast::FunctionDeclaration *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipeline_ctx) const {
+ast::FunctionDeclaration *Pipeline::GenerateInitPipelineFunction(
+    PipelineContext *pipeline_ctx) const {
   ast::FunctionDeclaration *setup_state_fn = GenerateSetupPipelineStateFunction(pipeline_ctx);
   ast::FunctionDeclaration *cleanup_state_fn = GenerateTearDownPipelineStateFunction(pipeline_ctx);
 
@@ -216,7 +217,8 @@ ast::FunctionDeclaration *Pipeline::GenerateInitPipelineFunction(PipelineContext
   return builder.Finish();
 }
 
-ast::FunctionDeclaration *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeline_ctx) const {
+ast::FunctionDeclaration *Pipeline::GenerateRunPipelineFunction(
+    PipelineContext *pipeline_ctx) const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
   FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(), codegen_->Nil());
   {

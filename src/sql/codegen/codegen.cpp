@@ -97,15 +97,16 @@ ast::Expr *CodeGen::ConstString(std::string_view str) const {
 }
 
 ast::VariableDeclaration *CodeGen::DeclareVar(ast::Identifier name, ast::Expr *type_repr,
-                                       ast::Expr *init) {
-  return NodeFactory()->NewVariableDecl(position_, name, type_repr, init);
+                                              ast::Expr *init) {
+  return NodeFactory()->NewVariableDeclaration(position_, name, type_repr, init);
 }
 
 ast::VariableDeclaration *CodeGen::DeclareVarNoInit(ast::Identifier name, ast::Expr *type_repr) {
   return DeclareVar(name, type_repr, nullptr);
 }
 
-ast::VariableDeclaration *CodeGen::DeclareVarNoInit(ast::Identifier name, ast::BuiltinType::Kind kind) {
+ast::VariableDeclaration *CodeGen::DeclareVarNoInit(ast::Identifier name,
+                                                    ast::BuiltinType::Kind kind) {
   return DeclareVarNoInit(name, BuiltinType(kind));
 }
 
@@ -113,20 +114,20 @@ ast::VariableDeclaration *CodeGen::DeclareVarWithInit(ast::Identifier name, ast:
   return DeclareVar(name, nullptr, init);
 }
 
-ast::StructDeclaration *CodeGen::DeclareStruct(ast::Identifier name,
-                                        util::RegionVector<ast::FieldDeclaration *> &&fields) const {
+ast::StructDeclaration *CodeGen::DeclareStruct(
+    ast::Identifier name, util::RegionVector<ast::FieldDeclaration *> &&fields) const {
   auto type_repr = NodeFactory()->NewStructType(position_, std::move(fields));
-  auto decl = NodeFactory()->NewStructDecl(position_, name, type_repr);
+  auto decl = NodeFactory()->NewStructDeclaration(position_, name, type_repr);
   container_->RegisterStruct(decl);
   return decl;
 }
 
-ast::Stmt *CodeGen::Assign(ast::Expr *dest, ast::Expr *value) {
+ast::Statement *CodeGen::Assign(ast::Expr *dest, ast::Expr *value) {
   // TODO(pmenon): Check types?
   // Set the type of the destination
   dest->SetType(value->GetType());
   // Done.
-  return NodeFactory()->NewAssignmentStmt(position_, dest, value);
+  return NodeFactory()->NewAssignmentStatement(position_, dest, value);
 }
 
 ast::Expr *CodeGen::ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind) {
@@ -357,10 +358,10 @@ ast::Expr *CodeGen::AccessStructMember(ast::Expr *object, ast::Identifier member
   return NodeFactory()->NewMemberExpr(position_, object, MakeExpr(member));
 }
 
-ast::Stmt *CodeGen::Return() { return Return(nullptr); }
+ast::Statement *CodeGen::Return() { return Return(nullptr); }
 
-ast::Stmt *CodeGen::Return(ast::Expr *ret) {
-  ast::Stmt *stmt = NodeFactory()->NewReturnStmt(position_, ret);
+ast::Statement *CodeGen::Return(ast::Expr *ret) {
+  ast::Statement *stmt = NodeFactory()->NewReturnStatement(position_, ret);
   NewLine();
   return stmt;
 }
@@ -1122,16 +1123,16 @@ ast::Expr *CodeGen::MakeExpr(ast::Identifier ident) const {
   return NodeFactory()->NewIdentifierExpr(position_, ident);
 }
 
-ast::Stmt *CodeGen::MakeStmt(ast::VariableDeclaration *var) const {
-  return NodeFactory()->NewDeclStmt(var);
+ast::Statement *CodeGen::MakeStatement(ast::VariableDeclaration *var) const {
+  return NodeFactory()->NewDeclStatement(var);
 }
 
-ast::Stmt *CodeGen::MakeStmt(ast::Expr *expr) const {
-  return NodeFactory()->NewExpressionStmt(expr);
+ast::Statement *CodeGen::MakeStatement(ast::Expr *expr) const {
+  return NodeFactory()->NewExpressionStatement(expr);
 }
 
-ast::BlockStmt *CodeGen::MakeEmptyBlock() const {
-  return NodeFactory()->NewBlockStmt(position_, position_, {{}, Context()->GetRegion()});
+ast::BlockStatement *CodeGen::MakeEmptyBlock() const {
+  return NodeFactory()->NewBlockStatement(position_, position_, {{}, Context()->GetRegion()});
 }
 
 util::RegionVector<ast::FieldDeclaration *> CodeGen::MakeEmptyFieldList() const {
@@ -1144,7 +1145,7 @@ util::RegionVector<ast::FieldDeclaration *> CodeGen::MakeFieldList(
 }
 
 ast::FieldDeclaration *CodeGen::MakeField(ast::Identifier name, ast::Expr *type) const {
-  return NodeFactory()->NewFieldDecl(position_, name, type);
+  return NodeFactory()->NewFieldDeclaration(position_, name, type);
 }
 
 ast::AstNodeFactory *CodeGen::NodeFactory() const { return Context()->GetNodeFactory(); }

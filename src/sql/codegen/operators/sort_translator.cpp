@@ -204,9 +204,9 @@ void SortTranslator::ScanSorter(ConsumerContext *context, FunctionBuilder *funct
     init = codegen_->SorterIterSkipRows(iter(), offset);
   }
   Loop loop(function,
-            init == nullptr ? nullptr : codegen_->MakeStmt(init),   // @sorterIterSkipRows();
-            codegen_->SorterIterHasNext(iter()),                    // @sorterIterHasNext();
-            codegen_->MakeStmt(codegen_->SorterIterNext(iter())));  // @sorterIterNext()
+            init == nullptr ? nullptr : codegen_->MakeStatement(init),   // @sorterIterSkipRows();
+            codegen_->SorterIterHasNext(iter()),                         // @sorterIterHasNext();
+            codegen_->MakeStatement(codegen_->SorterIterNext(iter())));  // @sorterIterNext()
   {
     // var sortRow = @ptrCast(SortRow*, @sorterIterGetRow(sorter))
     auto row = codegen_->SorterIterGetRow(iter(), sort_row_type_);

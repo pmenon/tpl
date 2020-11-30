@@ -27,8 +27,8 @@ namespace ast {
 
 /**
  * All possible declaration types.
- * NOTE: If you add a new declaration node to either the beginning or end of
- * the list, remember to modify Declaration::classof() to update the bounds check.
+ * NOTE: If you add a new declaration node to either the beginning or end of the list, remember to
+ *       modify Declaration::classof() to update the bounds check.
  */
 #define DECLARATION_NODES(T) \
   T(FieldDeclaration)        \
@@ -38,18 +38,18 @@ namespace ast {
 
 /**
  * All possible statements
- * NOTE: If you add a new statement node to either the beginning or end of the
- * list, remember to modify Stmt::classof() to update the bounds check.
+ * NOTE: If you add a new statement node to either the beginning or end of the list, remember to
+ *       modify Statement::classof() to update the bounds check.
  */
 #define STATEMENT_NODES(T) \
-  T(AssignmentStmt)        \
-  T(BlockStmt)             \
-  T(DeclStmt)              \
-  T(ExpressionStmt)        \
-  T(ForStmt)               \
-  T(ForInStmt)             \
-  T(IfStmt)                \
-  T(ReturnStmt)
+  T(AssignmentStatement)   \
+  T(BlockStatement)        \
+  T(DeclarationStatement)  \
+  T(ExpressionStatement)   \
+  T(ForStatement)          \
+  T(ForInStatement)        \
+  T(IfStatement)           \
+  T(ReturnStatement)
 
 /**
  * All possible expressions
@@ -87,7 +87,7 @@ namespace ast {
 // Forward declare some base classes
 class Declaration;
 class Expr;
-class Stmt;
+class Statement;
 class Type;
 
 // Forward declare all nodes
@@ -396,14 +396,14 @@ class VariableDeclaration : public Declaration {
 /**
  * Base class for all statement nodes.
  */
-class Stmt : public AstNode {
+class Statement : public AstNode {
  public:
   /**
    * Determines if the provided statement, the last in a statement list, is terminating.
    * @param stmt The statement node to check.
    * @return True if statement has a terminator; false otherwise.
    */
-  static bool IsTerminating(Stmt *stmt);
+  static bool IsTerminating(Statement *stmt);
 
   /**
    * Is the given node an AST statement? Needed as part of the custom AST RTTI infrastructure.
@@ -411,18 +411,18 @@ class Stmt : public AstNode {
    * @return True if the node is a statement; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->GetKind() >= Kind::AssignmentStmt && node->GetKind() <= Kind::ReturnStmt;
+    return node->GetKind() >= Kind::AssignmentStatement && node->GetKind() <= Kind::ReturnStatement;
   }
 
  protected:
   // Protected to force usage of concrete subclass.
-  Stmt(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
+  Statement(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
 };
 
 /**
  * An assignment, dest = source.
  */
-class AssignmentStmt : public Stmt {
+class AssignmentStatement : public Statement {
  public:
   /**
    * @return The target/destination of the assignment.
@@ -439,15 +439,15 @@ class AssignmentStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is a assignment; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::AssignmentStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::AssignmentStatement; }
 
  private:
   friend class AstNodeFactory;
   friend class sema::Sema;
 
   // Private to force factory usage.
-  AssignmentStmt(const SourcePosition &pos, Expr *dest, Expr *src)
-      : Stmt(AstNode::Kind::AssignmentStmt, pos), dest_(dest), src_(src) {}
+  AssignmentStatement(const SourcePosition &pos, Expr *dest, Expr *src)
+      : Statement(AstNode::Kind::AssignmentStatement, pos), dest_(dest), src_(src) {}
 
   // Used for implicit casts
   void SetSource(Expr *source) { src_ = source; }
@@ -462,18 +462,18 @@ class AssignmentStmt : public Stmt {
 /**
  * A list statements all within one block scope.
  */
-class BlockStmt : public Stmt {
+class BlockStatement : public Statement {
  public:
   /**
    * @return The statements making up the block.
    */
-  const util::RegionVector<Stmt *> &GetStatements() const { return statements_; }
+  const util::RegionVector<Statement *> &GetStatements() const { return statements_; }
 
   /**
    * Append a new statement to the list of statements.
    * @param stmt The statement to append.
    */
-  void AppendStatement(Stmt *stmt) { statements_.push_back(stmt); }
+  void AppendStatement(Statement *stmt) { statements_.push_back(stmt); }
 
   /**
    * @return The position of the right-brace.
@@ -494,34 +494,36 @@ class BlockStmt : public Stmt {
   /**
    * @return The last statement in the block; null if the block is empty;
    */
-  Stmt *GetLast() const { return (IsEmpty() ? nullptr : statements_.back()); }
+  Statement *GetLast() const { return (IsEmpty() ? nullptr : statements_.back()); }
 
   /**
    * Is the given node an AST statement list? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a statement list; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BlockStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BlockStatement; }
 
  private:
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  BlockStmt(const SourcePosition &pos, const SourcePosition &rbrace_pos,
-            util::RegionVector<Stmt *> &&statements)
-      : Stmt(Kind::BlockStmt, pos), rbrace_pos_(rbrace_pos), statements_(std::move(statements)) {}
+  BlockStatement(const SourcePosition &pos, const SourcePosition &rbrace_pos,
+                 util::RegionVector<Statement *> &&statements)
+      : Statement(Kind::BlockStatement, pos),
+        rbrace_pos_(rbrace_pos),
+        statements_(std::move(statements)) {}
 
  private:
   // The right brace position.
   SourcePosition rbrace_pos_;
   // The list of statements.
-  util::RegionVector<Stmt *> statements_;
+  util::RegionVector<Statement *> statements_;
 };
 
 /**
  * The bridge between statements and declarations.
  */
-class DeclStmt : public Stmt {
+class DeclarationStatement : public Statement {
  public:
   /**
    * @return The wrapped declaration.
@@ -533,13 +535,14 @@ class DeclStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is a declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::DeclStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::DeclarationStatement; }
 
  private:
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  explicit DeclStmt(Declaration *decl) : Stmt(Kind::DeclStmt, decl->Position()), decl_(decl) {}
+  explicit DeclarationStatement(Declaration *decl)
+      : Statement(Kind::DeclarationStatement, decl->Position()), decl_(decl) {}
 
  private:
   // The wrapped declaration.
@@ -549,7 +552,7 @@ class DeclStmt : public Stmt {
 /**
  * The bridge between statements and expressions.
  */
-class ExpressionStmt : public Stmt {
+class ExpressionStatement : public Statement {
  public:
   /**
    * @return The wrapped expression.
@@ -561,13 +564,13 @@ class ExpressionStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is an expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ExpressionStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ExpressionStatement; }
 
  private:
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  explicit ExpressionStmt(Expr *expr);
+  explicit ExpressionStatement(Expr *expr);
 
  private:
   // The wrapped expression.
@@ -577,12 +580,12 @@ class ExpressionStmt : public Stmt {
 /**
  * Base class for all iteration-based statements
  */
-class IterationStmt : public Stmt {
+class IterationStatement : public Statement {
  public:
   /**
    * @return The block making up the body of the iteration.
    */
-  BlockStmt *GetBody() const { return body_; }
+  BlockStatement *GetBody() const { return body_; }
 
   /**
    * Is the given node an AST iteration? Needed as part of the custom AST RTTI infrastructure.
@@ -590,28 +593,28 @@ class IterationStmt : public Stmt {
    * @return True if the node is an iteration; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->GetKind() >= Kind::ForStmt && node->GetKind() <= Kind::ForInStmt;
+    return node->GetKind() >= Kind::ForStatement && node->GetKind() <= Kind::ForInStatement;
   }
 
  protected:
   // Protected to force usage of concrete subclass.
-  IterationStmt(const SourcePosition &pos, AstNode::Kind kind, BlockStmt *body)
-      : Stmt(kind, pos), body_(body) {}
+  IterationStatement(const SourcePosition &pos, AstNode::Kind kind, BlockStatement *body)
+      : Statement(kind, pos), body_(body) {}
 
  private:
   // The body of the iteration.
-  BlockStmt *body_;
+  BlockStatement *body_;
 };
 
 /**
  * A vanilla for-statement.
  */
-class ForStmt : public IterationStmt {
+class ForStatement : public IterationStatement {
  public:
   /**
    * @return The initialization statement(s). Can be null.
    */
-  Stmt *GetInit() const { return init_; }
+  Statement *GetInit() const { return init_; }
 
   /**
    * @return The loop condition. Can be null if infinite loop.
@@ -621,26 +624,30 @@ class ForStmt : public IterationStmt {
   /**
    * @return The advancement statement(s). Can be null.
    */
-  Stmt *GetNext() const { return next_; }
+  Statement *GetNext() const { return next_; }
 
   /**
    * Is the given node an AST for loop? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a for loop; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForStatement; }
 
  private:
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  ForStmt(const SourcePosition &pos, Stmt *init, Expr *cond, Stmt *next, BlockStmt *body)
-      : IterationStmt(pos, AstNode::Kind::ForStmt, body), init_(init), cond_(cond), next_(next) {}
+  ForStatement(const SourcePosition &pos, Statement *init, Expr *cond, Statement *next,
+               BlockStatement *body)
+      : IterationStatement(pos, AstNode::Kind::ForStatement, body),
+        init_(init),
+        cond_(cond),
+        next_(next) {}
 
  private:
-  Stmt *init_;
+  Statement *init_;
   Expr *cond_;
-  Stmt *next_;
+  Statement *next_;
 };
 
 /**
@@ -654,7 +661,7 @@ class ForStmt : public IterationStmt {
  *
  * 'row' is the target and 'table' is the iterable object in a for-in statement.
  */
-class ForInStmt : public IterationStmt {
+class ForInStatement : public IterationStatement {
  public:
   /**
    * @return The loop iteration variable.
@@ -671,14 +678,16 @@ class ForInStmt : public IterationStmt {
    * @param node The node to check.
    * @return True if the node is a for-in loop; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForInStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForInStatement; }
 
  private:
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  ForInStmt(const SourcePosition &pos, Expr *target, Expr *iter, BlockStmt *body)
-      : IterationStmt(pos, AstNode::Kind::ForInStmt, body), target_(target), iter_(iter) {}
+  ForInStatement(const SourcePosition &pos, Expr *target, Expr *iter, BlockStatement *body)
+      : IterationStatement(pos, AstNode::Kind::ForInStatement, body),
+        target_(target),
+        iter_(iter) {}
 
  private:
   Expr *target_;
@@ -688,7 +697,7 @@ class ForInStmt : public IterationStmt {
 /**
  * An if-then-else statement.
  */
-class IfStmt : public Stmt {
+class IfStatement : public Statement {
  public:
   /**
    * @return The if-condition.
@@ -698,32 +707,36 @@ class IfStmt : public Stmt {
   /**
    * @return The block of statements if the condition is true.
    */
-  BlockStmt *GetThenStmt() const { return then_stmt_; }
+  BlockStatement *GetThenStatement() const { return then_stmt_; }
 
   /**
    * @return The else statement.
    */
-  Stmt *GetElseStmt() const { return else_stmt_; }
+  Statement *GetElseStatement() const { return else_stmt_; }
 
   /**
    * @return True if there is an else statement; false otherwise.
    */
-  bool HasElseStmt() const { return else_stmt_ != nullptr; }
+  bool HasElseStatement() const { return else_stmt_ != nullptr; }
 
   /**
    * Is the given node an AST if statement? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is an if statement; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IfStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IfStatement; }
 
  private:
   friend class AstNodeFactory;
   friend class sema::Sema;
 
   // Private to force factory usage.
-  IfStmt(const SourcePosition &pos, Expr *cond, BlockStmt *then_stmt, Stmt *else_stmt)
-      : Stmt(Kind::IfStmt, pos), cond_(cond), then_stmt_(then_stmt), else_stmt_(else_stmt) {}
+  IfStatement(const SourcePosition &pos, Expr *cond, BlockStatement *then_stmt,
+              Statement *else_stmt)
+      : Statement(Kind::IfStatement, pos),
+        cond_(cond),
+        then_stmt_(then_stmt),
+        else_stmt_(else_stmt) {}
 
   // Set only during semantic analysis.
   void SetCondition(Expr *cond) {
@@ -735,15 +748,15 @@ class IfStmt : public Stmt {
   // The if condition.
   Expr *cond_;
   // The block of statements if the condition is true.
-  BlockStmt *then_stmt_;
+  BlockStatement *then_stmt_;
   // The else statement.
-  Stmt *else_stmt_;
+  Statement *else_stmt_;
 };
 
 /**
  * A return statement.
  */
-class ReturnStmt : public Stmt {
+class ReturnStatement : public Statement {
  public:
   /**
    * @return The expression representing the value that's to be returned.
@@ -755,14 +768,15 @@ class ReturnStmt : public Stmt {
    * @param node The node to check.
    * @return True if the node is a return statement; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ReturnStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ReturnStatement; }
 
  private:
   friend class AstNodeFactory;
   friend class sema::Sema;
 
   // Private to force factory usage.
-  ReturnStmt(const SourcePosition &pos, Expr *ret) : Stmt(Kind::ReturnStmt, pos), ret_(ret) {}
+  ReturnStatement(const SourcePosition &pos, Expr *ret)
+      : Statement(Kind::ReturnStatement, pos), ret_(ret) {}
 
   // Set only during semantic analysis.
   void SetReturnValue(Expr *ret) { ret_ = ret; }
@@ -1069,7 +1083,7 @@ class FunctionLiteralExpr : public Expr {
   /**
    * @return The statements making up the body of the function.
    */
-  BlockStmt *GetBody() const { return body_; }
+  BlockStatement *GetBody() const { return body_; }
 
   /**
    * @return True if the function has no statements; false otherwise.
@@ -1087,13 +1101,13 @@ class FunctionLiteralExpr : public Expr {
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStmt *body);
+  FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStatement *body);
 
  private:
   // The function's signature.
   FunctionTypeRepr *type_repr_;
   // The body of the function.
-  BlockStmt *body_;
+  BlockStatement *body_;
 };
 
 /**

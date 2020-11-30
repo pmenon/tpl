@@ -137,7 +137,7 @@ template <typename F1, typename F2>
 void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *function,
                                                         F1 hash_table_provider, F2 iter_provider) {
   Loop loop(function, nullptr, codegen_->AggPartitionIteratorHasNext(iter_provider()),
-            codegen_->MakeStmt(codegen_->AggPartitionIteratorNext(iter_provider())));
+            codegen_->MakeStatement(codegen_->AggPartitionIteratorNext(iter_provider())));
   {
     // Get hash from overflow entry.
     ast::Identifier hash_val = codegen_->MakeFreshIdentifier("hash_val");
@@ -419,10 +419,11 @@ void HashAggregationTranslator::ScanAggregationHashTable(ConsumerContext *contex
   function->Append(codegen_->DeclareVarWithInit(
       aht_iter_name, codegen_->AddressOf(codegen_->MakeExpr(aht_iter_base_name))));
 
-  Loop loop(function,
-            codegen_->MakeStmt(codegen_->AggHashTableIteratorInit(aht_iter(), agg_ht_provider())),
-            codegen_->AggHashTableIteratorHasNext(aht_iter()),
-            codegen_->MakeStmt(codegen_->AggHashTableIteratorNext(aht_iter())));
+  Loop loop(
+      function,
+      codegen_->MakeStatement(codegen_->AggHashTableIteratorInit(aht_iter(), agg_ht_provider())),
+      codegen_->AggHashTableIteratorHasNext(aht_iter()),
+      codegen_->MakeStatement(codegen_->AggHashTableIteratorNext(aht_iter())));
   {
     // var agg_row = @ahtIterGetRow()
     ast::Expr *row = codegen_->AggHashTableIteratorGetRow(aht_iter(), agg_payload_type_);

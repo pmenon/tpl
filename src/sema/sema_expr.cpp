@@ -176,14 +176,14 @@ void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
   // Check the return value. We allow functions to be empty or elide a final
   // "return" statement only if the function has a "nil" return type. In this
   // case, we automatically insert a "return" statement.
-  if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->GetBody())) {
+  if (node->IsEmpty() || !ast::Statement::IsTerminating(node->GetBody())) {
     if (!func_type->GetReturnType()->IsNilType()) {
       error_reporter_->Report(node->GetBody()->GetRightBracePosition(),
                               ErrorMessages::kMissingReturn);
       return;
     }
 
-    auto *empty_ret = context_->GetNodeFactory()->NewReturnStmt(node->Position(), nullptr);
+    auto *empty_ret = context_->GetNodeFactory()->NewReturnStatement(node->Position(), nullptr);
     node->GetBody()->AppendStatement(empty_ret);
   }
 }

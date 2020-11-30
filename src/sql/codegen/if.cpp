@@ -45,7 +45,8 @@ void If::EndIf() {
   function_->statements_ = prev_func_stmt_list_;
 
   // Create and append the if statement.
-  auto if_stmt = codegen->NodeFactory()->NewIfStmt(position_, condition_, then_stmts_, else_stmts_);
+  auto if_stmt =
+      codegen->NodeFactory()->NewIfStatement(position_, condition_, then_stmts_, else_stmts_);
   function_->Append(if_stmt);
 
   // Un-indent and bump line.
