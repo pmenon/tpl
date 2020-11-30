@@ -161,11 +161,11 @@ class FunctionFinder : public AstTraversalVisitor<FunctionFinder<CountLiterals>>
  public:
   explicit FunctionFinder(ast::AstNode *root) : AstTraversalVisitor<SelfT>(root), num_funcs_(0) {}
 
-  void VisitFunctionDecl(ast::FunctionDecl *decl) {
+  void VisitFunctionDeclaration(ast::FunctionDeclaration *decl) {
     if constexpr (!CountLiterals) {
       num_funcs_++;
     }
-    AstTraversalVisitor<SelfT>::VisitFunctionDecl(decl);
+    AstTraversalVisitor<SelfT>::VisitFunctionDeclaration(decl);
   }
 
   void VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *expr) {

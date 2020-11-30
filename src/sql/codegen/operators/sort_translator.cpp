@@ -89,13 +89,13 @@ void SortTranslator::GenerateComparisonLogic(FunctionBuilder *function) {
   current_row_ = CurrentRow::Child;
 }
 
-ast::StructDecl *SortTranslator::GenerateSortRowStructType() const {
+ast::StructDeclaration *SortTranslator::GenerateSortRowStructType() const {
   auto fields = codegen_->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kSortRowAttrPrefix, &fields);
   return codegen_->DeclareStruct(sort_row_type_, std::move(fields));
 }
 
-ast::FunctionDecl *SortTranslator::GenerateComparisonFunction() {
+ast::FunctionDeclaration *SortTranslator::GenerateComparisonFunction() {
   auto params = codegen_->MakeFieldList({
       codegen_->MakeField(lhs_row_, codegen_->PointerType(sort_row_type_)),
       codegen_->MakeField(rhs_row_, codegen_->PointerType(sort_row_type_)),

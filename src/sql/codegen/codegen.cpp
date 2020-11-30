@@ -96,25 +96,25 @@ ast::Expr *CodeGen::ConstString(std::string_view str) const {
   return expr;
 }
 
-ast::VariableDecl *CodeGen::DeclareVar(ast::Identifier name, ast::Expr *type_repr,
+ast::VariableDeclaration *CodeGen::DeclareVar(ast::Identifier name, ast::Expr *type_repr,
                                        ast::Expr *init) {
   return NodeFactory()->NewVariableDecl(position_, name, type_repr, init);
 }
 
-ast::VariableDecl *CodeGen::DeclareVarNoInit(ast::Identifier name, ast::Expr *type_repr) {
+ast::VariableDeclaration *CodeGen::DeclareVarNoInit(ast::Identifier name, ast::Expr *type_repr) {
   return DeclareVar(name, type_repr, nullptr);
 }
 
-ast::VariableDecl *CodeGen::DeclareVarNoInit(ast::Identifier name, ast::BuiltinType::Kind kind) {
+ast::VariableDeclaration *CodeGen::DeclareVarNoInit(ast::Identifier name, ast::BuiltinType::Kind kind) {
   return DeclareVarNoInit(name, BuiltinType(kind));
 }
 
-ast::VariableDecl *CodeGen::DeclareVarWithInit(ast::Identifier name, ast::Expr *init) {
+ast::VariableDeclaration *CodeGen::DeclareVarWithInit(ast::Identifier name, ast::Expr *init) {
   return DeclareVar(name, nullptr, init);
 }
 
-ast::StructDecl *CodeGen::DeclareStruct(ast::Identifier name,
-                                        util::RegionVector<ast::FieldDecl *> &&fields) const {
+ast::StructDeclaration *CodeGen::DeclareStruct(ast::Identifier name,
+                                        util::RegionVector<ast::FieldDeclaration *> &&fields) const {
   auto type_repr = NodeFactory()->NewStructType(position_, std::move(fields));
   auto decl = NodeFactory()->NewStructDecl(position_, name, type_repr);
   container_->RegisterStruct(decl);
@@ -1122,7 +1122,7 @@ ast::Expr *CodeGen::MakeExpr(ast::Identifier ident) const {
   return NodeFactory()->NewIdentifierExpr(position_, ident);
 }
 
-ast::Stmt *CodeGen::MakeStmt(ast::VariableDecl *var) const {
+ast::Stmt *CodeGen::MakeStmt(ast::VariableDeclaration *var) const {
   return NodeFactory()->NewDeclStmt(var);
 }
 
@@ -1134,16 +1134,16 @@ ast::BlockStmt *CodeGen::MakeEmptyBlock() const {
   return NodeFactory()->NewBlockStmt(position_, position_, {{}, Context()->GetRegion()});
 }
 
-util::RegionVector<ast::FieldDecl *> CodeGen::MakeEmptyFieldList() const {
-  return util::RegionVector<ast::FieldDecl *>(Context()->GetRegion());
+util::RegionVector<ast::FieldDeclaration *> CodeGen::MakeEmptyFieldList() const {
+  return util::RegionVector<ast::FieldDeclaration *>(Context()->GetRegion());
 }
 
-util::RegionVector<ast::FieldDecl *> CodeGen::MakeFieldList(
-    std::initializer_list<ast::FieldDecl *> fields) const {
-  return util::RegionVector<ast::FieldDecl *>(fields, Context()->GetRegion());
+util::RegionVector<ast::FieldDeclaration *> CodeGen::MakeFieldList(
+    std::initializer_list<ast::FieldDeclaration *> fields) const {
+  return util::RegionVector<ast::FieldDeclaration *>(fields, Context()->GetRegion());
 }
 
-ast::FieldDecl *CodeGen::MakeField(ast::Identifier name, ast::Expr *type) const {
+ast::FieldDeclaration *CodeGen::MakeField(ast::Identifier name, ast::Expr *type) const {
   return NodeFactory()->NewFieldDecl(position_, name, type);
 }
 

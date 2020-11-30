@@ -11,22 +11,24 @@ namespace tpl::ast {
 // Function Declaration
 // ---------------------------------------------------------
 
-FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLiteralExpr *func)
-    : Decl(Kind::FunctionDecl, pos, name, func->GetTypeRepr()), func_(func) {}
+FunctionDeclaration::FunctionDeclaration(const SourcePosition &pos, Identifier name,
+                                         FunctionLiteralExpr *func)
+    : Declaration(Kind::FunctionDeclaration, pos, name, func->GetTypeRepr()), func_(func) {}
 
 // ---------------------------------------------------------
 // Structure Declaration
 // ---------------------------------------------------------
 
-StructDecl::StructDecl(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr)
-    : Decl(Kind::StructDecl, pos, name, type_repr) {}
+StructDeclaration::StructDeclaration(const SourcePosition &pos, Identifier name,
+                                     StructTypeRepr *type_repr)
+    : Declaration(Kind::StructDeclaration, pos, name, type_repr) {}
 
-uint32_t StructDecl::NumFields() const {
+uint32_t StructDeclaration::NumFields() const {
   const auto &fields = GetTypeRepr()->As<ast::StructTypeRepr>()->GetFields();
   return fields.size();
 }
 
-ast::FieldDecl *StructDecl::GetFieldAt(uint32_t field_idx) const {
+ast::FieldDeclaration *StructDeclaration::GetFieldAt(uint32_t field_idx) const {
   return GetTypeRepr()->As<ast::StructTypeRepr>()->GetFieldAt(field_idx);
 }
 

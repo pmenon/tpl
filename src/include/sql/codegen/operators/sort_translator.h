@@ -128,10 +128,10 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
                         F sorter_provider) const;
 
   // Generate the struct used to represent the sorting row.
-  ast::StructDecl *GenerateSortRowStructType() const;
+  ast::StructDeclaration *GenerateSortRowStructType() const;
 
   // Generate the sorting function.
-  ast::FunctionDecl *GenerateComparisonFunction();
+  ast::FunctionDeclaration *GenerateComparisonFunction();
   void GenerateComparisonLogic(FunctionBuilder *function);
 
  private:

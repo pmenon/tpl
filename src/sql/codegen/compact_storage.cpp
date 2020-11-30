@@ -43,7 +43,7 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
   col_info_.resize(schema.size());
 
   // Generate the compact struct.
-  util::RegionVector<ast::FieldDecl *> members = codegen_->MakeEmptyFieldList();
+  util::RegionVector<ast::FieldDeclaration *> members = codegen_->MakeEmptyFieldList();
   members.resize(schema.size());
   for (uint32_t i = 0; i < schema.size(); i++) {
     ast::Identifier name = codegen_->MakeIdentifier(fmt::format("member{}", i));

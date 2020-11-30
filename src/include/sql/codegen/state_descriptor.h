@@ -54,7 +54,7 @@ class StateDescriptor {
    * @param codegen The code generation instance.
    * @return The finalized structure declaration.
    */
-  ast::StructDecl *ConstructFinalType(CodeGen *codegen);
+  ast::StructDeclaration *ConstructFinalType(CodeGen *codegen);
 
   /**
    * @return The query state pointer from the current code generation context.
@@ -88,7 +88,7 @@ class StateDescriptor {
   /**
    * @return The finalized type of the runtime query state; null if the state hasn't been finalized.
    */
-  ast::StructDecl *GetType() const { return state_type_; }
+  ast::StructDeclaration *GetType() const { return state_type_; }
 
   /**
    * @return The name of the state's type.
@@ -119,7 +119,7 @@ class StateDescriptor {
   // All state metadata
   std::vector<SlotInfo> slots_;
   // The finalized type
-  ast::StructDecl *state_type_;
+  ast::StructDeclaration *state_type_;
 };
 
 }  // namespace tpl::sql::codegen

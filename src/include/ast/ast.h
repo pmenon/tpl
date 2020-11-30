@@ -28,13 +28,13 @@ namespace ast {
 /**
  * All possible declaration types.
  * NOTE: If you add a new declaration node to either the beginning or end of
- * the list, remember to modify Decl::classof() to update the bounds check.
+ * the list, remember to modify Declaration::classof() to update the bounds check.
  */
 #define DECLARATION_NODES(T) \
-  T(FieldDecl)               \
-  T(FunctionDecl)            \
-  T(StructDecl)              \
-  T(VariableDecl)
+  T(FieldDeclaration)        \
+  T(FunctionDeclaration)     \
+  T(StructDeclaration)       \
+  T(VariableDeclaration)
 
 /**
  * All possible statements
@@ -85,7 +85,7 @@ namespace ast {
   STATEMENT_NODES(T)
 
 // Forward declare some base classes
-class Decl;
+class Declaration;
 class Expr;
 class Stmt;
 class Type;
@@ -204,7 +204,7 @@ class File : public AstNode {
   /**
    * @return A const-view of the declarations making up the file.
    */
-  const util::RegionVector<Decl *> &GetDeclarations() const { return decls_; }
+  const util::RegionVector<Declaration *> &GetDeclarations() const { return decls_; }
 
   /**
    * Is the given node an AST File? Needed as part of the custom AST RTTI infrastructure.
@@ -217,12 +217,12 @@ class File : public AstNode {
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  File(const SourcePosition &pos, util::RegionVector<Decl *> &&decls)
+  File(const SourcePosition &pos, util::RegionVector<Declaration *> &&decls)
       : AstNode(Kind::File, pos), decls_(std::move(decls)) {}
 
  private:
   // The declarations.
-  util::RegionVector<Decl *> decls_;
+  util::RegionVector<Declaration *> decls_;
 };
 
 // ---------------------------------------------------------
@@ -233,7 +233,7 @@ class File : public AstNode {
  * Base class for all declarations in TPL. All declarations have a name, and an optional type
  * representation. Structure and function declarations have an explicit type, but variables may not.
  */
-class Decl : public AstNode {
+class Declaration : public AstNode {
  public:
   /**
    * @return The name of the declaration as it appears in code.
@@ -251,12 +251,13 @@ class Decl : public AstNode {
    * @return True if the node is a declaration; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->GetKind() >= Kind::FieldDecl && node->GetKind() <= Kind::VariableDecl;
+    return node->GetKind() >= Kind::FieldDeclaration &&
+           node->GetKind() <= Kind::VariableDeclaration;
   }
 
  protected:
   // Protected to force usage of concrete subclass.
-  Decl(Kind kind, const SourcePosition &pos, Identifier name, Expr *type_repr)
+  Declaration(Kind kind, const SourcePosition &pos, Identifier name, Expr *type_repr)
       : AstNode(kind, pos), name_(name), type_repr_(type_repr) {}
 
  private:
@@ -269,27 +270,27 @@ class Decl : public AstNode {
 /**
  * A generic declaration of a function argument or a field in a struct.
  */
-class FieldDecl : public Decl {
+class FieldDeclaration : public Declaration {
  public:
   /**
    * Is the given node an AST field? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a field; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FieldDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FieldDeclaration; }
 
  private:
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  FieldDecl(const SourcePosition &pos, Identifier name, Expr *type_repr)
-      : Decl(Kind::FieldDecl, pos, name, type_repr) {}
+  FieldDeclaration(const SourcePosition &pos, Identifier name, Expr *type_repr)
+      : Declaration(Kind::FieldDeclaration, pos, name, type_repr) {}
 };
 
 /**
  * A function declaration.
  */
-class FunctionDecl : public Decl {
+class FunctionDeclaration : public Declaration {
  public:
   /**
    * @return The function literal defining the body of the function declaration.
@@ -301,13 +302,13 @@ class FunctionDecl : public Decl {
    * @param node The node to check.
    * @return True if the node is a function declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionDeclaration; }
 
  private:
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLiteralExpr *func);
+  FunctionDeclaration(const SourcePosition &pos, Identifier name, FunctionLiteralExpr *func);
 
  private:
   // The function definition (signature and body).
@@ -317,7 +318,7 @@ class FunctionDecl : public Decl {
 /**
  * A structure declaration.
  */
-class StructDecl : public Decl {
+class StructDeclaration : public Declaration {
  public:
   /**
    * @return The number of fields in the declaration.
@@ -329,26 +330,26 @@ class StructDecl : public Decl {
    *         not perform any bounds checking. It is the responsibility of the caller to access only
    *         valid fields.
    */
-  ast::FieldDecl *GetFieldAt(uint32_t field_idx) const;
+  FieldDeclaration *GetFieldAt(uint32_t field_idx) const;
 
   /**
    * Is the given node a struct declaration? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a struct declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::StructDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::StructDeclaration; }
 
  private:
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  StructDecl(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr);
+  StructDeclaration(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr);
 };
 
 /**
  * A variable declaration.
  */
-class VariableDecl : public Decl {
+class VariableDeclaration : public Declaration {
  public:
   /**
    * @return The initial value assigned to the variable, if one was provided; null otherwise.
@@ -359,7 +360,7 @@ class VariableDecl : public Decl {
    * @return True if the variable declaration came with an explicit type, i.e., var v: int = 0.
    *         False if no explicit type was provided.
    */
-  bool HasTypeDecl() const { return GetTypeRepr() != nullptr; }
+  bool HasDeclaredType() const { return GetTypeRepr() != nullptr; }
 
   /**
    * @return True if the variable is assigned an initial value; false otherwise.
@@ -371,18 +372,18 @@ class VariableDecl : public Decl {
    * @param node The node to check.
    * @return True if the node is a variable declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::VariableDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::VariableDeclaration; }
 
  private:
   friend class AstNodeFactory;
   friend class sema::Sema;
 
   // Private to force factory usage.
-  VariableDecl(const SourcePosition &pos, Identifier name, Expr *type_repr, Expr *init)
-      : Decl(Kind::VariableDecl, pos, name, type_repr), init_(init) {}
+  VariableDeclaration(const SourcePosition &pos, Identifier name, Expr *type_repr, Expr *init)
+      : Declaration(Kind::VariableDeclaration, pos, name, type_repr), init_(init) {}
 
   // Only set during semantic analysis.
-  void SetInitialValue(ast::Expr *initial) { init_ = initial; }
+  void SetInitialValue(Expr *initial) { init_ = initial; }
 
  private:
   Expr *init_;
@@ -472,7 +473,7 @@ class BlockStmt : public Stmt {
    * Append a new statement to the list of statements.
    * @param stmt The statement to append.
    */
-  void AppendStatement(ast::Stmt *stmt) { statements_.push_back(stmt); }
+  void AppendStatement(Stmt *stmt) { statements_.push_back(stmt); }
 
   /**
    * @return The position of the right-brace.
@@ -525,7 +526,7 @@ class DeclStmt : public Stmt {
   /**
    * @return The wrapped declaration.
    */
-  Decl *GetDeclaration() const { return decl_; }
+  Declaration *GetDeclaration() const { return decl_; }
 
   /**
    * Is the given node an AST declaration? Needed as part of the custom AST RTTI infrastructure.
@@ -538,11 +539,11 @@ class DeclStmt : public Stmt {
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  explicit DeclStmt(Decl *decl) : Stmt(Kind::DeclStmt, decl->Position()), decl_(decl) {}
+  explicit DeclStmt(Declaration *decl) : Stmt(Kind::DeclStmt, decl->Position()), decl_(decl) {}
 
  private:
   // The wrapped declaration.
-  Decl *decl_;
+  Declaration *decl_;
 };
 
 /**
@@ -764,7 +765,7 @@ class ReturnStmt : public Stmt {
   ReturnStmt(const SourcePosition &pos, Expr *ret) : Stmt(Kind::ReturnStmt, pos), ret_(ret) {}
 
   // Set only during semantic analysis.
-  void SetReturnValue(ast::Expr *ret) { ret_ = ret; }
+  void SetReturnValue(Expr *ret) { ret_ = ret; }
 
  private:
   // The expression representing the value that's returned.
@@ -1109,7 +1110,7 @@ class IdentifierExpr : public Expr {
    * Bind an identifier to a source declaration.
    * @param decl The declaration to bind this identifier to.
    */
-  void BindTo(Decl *decl) { decl_ = decl; }
+  void BindTo(Declaration *decl) { decl_ = decl; }
 
   /**
    * @return True if the expression has been bound; false otherwise.
@@ -1135,7 +1136,7 @@ class IdentifierExpr : public Expr {
   // TODO(pmenon) Should these two be a union since only one should be active?
   // Pre-binding, 'name_' is used, and post-binding 'decl_' should be used.
   Identifier name_;
-  Decl *decl_;
+  Declaration *decl_;
 };
 
 /**
@@ -1334,7 +1335,7 @@ class LiteralExpr : public Expr {
   /**
    * @return True if this expression is representable as the given type; false otherwise.
    */
-  bool IsRepresentable(ast::Type *type) const;
+  bool IsRepresentable(Type *type) const;
 
   /**
    * Is the given node a literal? Needed as part of the custom AST RTTI infrastructure.
@@ -1526,7 +1527,7 @@ class FunctionTypeRepr : public Expr {
   /**
    * @return The parameters to the function.
    */
-  const util::RegionVector<FieldDecl *> &GetParameters() const { return param_types_; }
+  const util::RegionVector<FieldDeclaration *> &GetParameters() const { return param_types_; }
 
   /**
    * @return The return type of the function.
@@ -1544,7 +1545,7 @@ class FunctionTypeRepr : public Expr {
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  FunctionTypeRepr(const SourcePosition &pos, util::RegionVector<FieldDecl *> &&param_types,
+  FunctionTypeRepr(const SourcePosition &pos, util::RegionVector<FieldDeclaration *> &&param_types,
                    Expr *ret_type)
       : Expr(Kind::FunctionTypeRepr, pos),
         param_types_(std::move(param_types)),
@@ -1552,7 +1553,7 @@ class FunctionTypeRepr : public Expr {
 
  private:
   // The parameters to the function.
-  util::RegionVector<FieldDecl *> param_types_;
+  util::RegionVector<FieldDeclaration *> param_types_;
   // The return type.
   Expr *ret_type_;
 };
@@ -1630,12 +1631,12 @@ class StructTypeRepr : public Expr {
   /**
    * @return The fields of the struct.
    */
-  const util::RegionVector<FieldDecl *> &GetFields() const { return fields_; }
+  const util::RegionVector<FieldDeclaration *> &GetFields() const { return fields_; }
 
   /**
    * @return The field at the provided index. No bounds checking is performed!
    */
-  FieldDecl *GetFieldAt(uint32_t field_idx) const {
+  FieldDeclaration *GetFieldAt(uint32_t field_idx) const {
     TPL_ASSERT(field_idx < fields_.size(), "Out-of-bounds field access");
     return fields_[field_idx];
   }
@@ -1651,12 +1652,12 @@ class StructTypeRepr : public Expr {
   friend class AstNodeFactory;
 
   // Private to force factory usage.
-  StructTypeRepr(const SourcePosition &pos, util::RegionVector<FieldDecl *> &&fields)
+  StructTypeRepr(const SourcePosition &pos, util::RegionVector<FieldDeclaration *> &&fields)
       : Expr(Kind::StructTypeRepr, pos), fields_(std::move(fields)) {}
 
  private:
   // The fields of the struct.
-  util::RegionVector<FieldDecl *> fields_;
+  util::RegionVector<FieldDeclaration *> fields_;
 };
 
 }  // namespace ast

@@ -65,7 +65,7 @@ class Callbacks : public compiler::Compiler::Callbacks {
 std::unique_ptr<vm::Module> CompilationUnit::Compile() {
   // Build up the declaration list for the file. This is just the concatenation
   // of all the structure and function definitions, in that order.
-  util::RegionVector<ast::Decl *> declarations(ctx_->GetRegion());
+  util::RegionVector<ast::Declaration *> declarations(ctx_->GetRegion());
   declarations.reserve(structs_.size() + functions_.size());
   declarations.insert(declarations.end(), structs_.begin(), structs_.end());
   declarations.insert(declarations.end(), functions_.begin(), functions_.end());

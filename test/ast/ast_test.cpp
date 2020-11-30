@@ -35,7 +35,7 @@ TEST_F(AstTest, HierechyTest) {
         factory.NewFunctionDecl(
             empty_pos(), Identifier(),
             factory.NewFunctionLitExpr(
-                factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDecl *>(region()),
+                factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDeclaration *>(region()),
                                         nullptr),
                 nullptr)),
         factory.NewStructDecl(empty_pos(), Identifier(), nullptr),
@@ -48,7 +48,7 @@ TEST_F(AstTest, HierechyTest) {
       EXPRESSION_NODES(CHECK_NODE_IS_NOT_KIND)
 
       // Ensure concrete declarations are also a base declaration type
-      EXPECT_TRUE(node->Is<Decl>()) << "Node " << node->KindName()
+      EXPECT_TRUE(node->Is<Declaration>()) << "Node " << node->KindName()
                                     << " isn't an Decl? Ensure Decl::classof() handles all "
                                        "cases if you've added a new Decl node.";
 
@@ -65,16 +65,16 @@ TEST_F(AstTest, HierechyTest) {
         factory.NewCallExpr(factory.NewNilLiteral(empty_pos()),
                             util::RegionVector<Expr *>(region())),
         factory.NewFunctionLitExpr(
-            factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDecl *>(region()),
+            factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDeclaration *>(region()),
                                     nullptr),
             nullptr),
         factory.NewNilLiteral(empty_pos()),
         factory.NewUnaryOpExpr(empty_pos(), parsing::Token::Type::MINUS, nullptr),
         factory.NewIdentifierExpr(empty_pos(), Identifier()),
         factory.NewArrayType(empty_pos(), nullptr, nullptr),
-        factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDecl *>(region()), nullptr),
+        factory.NewFunctionType(empty_pos(), util::RegionVector<FieldDeclaration *>(region()), nullptr),
         factory.NewPointerType(empty_pos(), nullptr),
-        factory.NewStructType(empty_pos(), util::RegionVector<FieldDecl *>(region())),
+        factory.NewStructType(empty_pos(), util::RegionVector<FieldDeclaration *>(region())),
     };
 
     for (const auto *node : all_exprs) {

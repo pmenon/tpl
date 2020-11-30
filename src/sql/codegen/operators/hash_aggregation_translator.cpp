@@ -62,7 +62,7 @@ void HashAggregationTranslator::DeclarePipelineDependencies() const {
   GetPipeline()->AddDependency(build_pipeline_);
 }
 
-ast::StructDecl *HashAggregationTranslator::GeneratePayloadStruct() {
+ast::StructDeclaration *HashAggregationTranslator::GeneratePayloadStruct() {
   auto fields = codegen_->MakeEmptyFieldList();
   fields.reserve(GetAggPlan().GetGroupByTerms().size() + GetAggPlan().GetAggregateTerms().size());
 
@@ -87,7 +87,7 @@ ast::StructDecl *HashAggregationTranslator::GeneratePayloadStruct() {
   return codegen_->DeclareStruct(agg_payload_type_, std::move(fields));
 }
 
-ast::StructDecl *HashAggregationTranslator::GenerateInputValuesStruct() {
+ast::StructDeclaration *HashAggregationTranslator::GenerateInputValuesStruct() {
   auto fields = codegen_->MakeEmptyFieldList();
   fields.reserve(GetAggPlan().GetGroupByTerms().size() + GetAggPlan().GetAggregateTerms().size());
 
@@ -112,7 +112,7 @@ ast::StructDecl *HashAggregationTranslator::GenerateInputValuesStruct() {
   return codegen_->DeclareStruct(agg_values_type_, std::move(fields));
 }
 
-ast::FunctionDecl *HashAggregationTranslator::GeneratePartialKeyCheckFunction() {
+ast::FunctionDeclaration *HashAggregationTranslator::GeneratePartialKeyCheckFunction() {
   auto lhs_arg = codegen_->MakeIdentifier("lhs");
   auto rhs_arg = codegen_->MakeIdentifier("rhs");
   auto params = codegen_->MakeFieldList({
@@ -178,7 +178,7 @@ void HashAggregationTranslator::MergeOverflowPartitions(FunctionBuilder *functio
   }
 }
 
-ast::FunctionDecl *HashAggregationTranslator::GenerateMergeOverflowPartitionsFunction() {
+ast::FunctionDeclaration *HashAggregationTranslator::GenerateMergeOverflowPartitionsFunction() {
   // The partition merge function has the following signature:
   // (*QueryState, *AggregationHashTable, *AHTOverflowPartitionIterator) -> nil
 
@@ -203,7 +203,7 @@ ast::FunctionDecl *HashAggregationTranslator::GenerateMergeOverflowPartitionsFun
   return builder.Finish();
 }
 
-ast::FunctionDecl *HashAggregationTranslator::GenerateKeyCheckFunction() {
+ast::FunctionDeclaration *HashAggregationTranslator::GenerateKeyCheckFunction() {
   ast::Identifier agg_payload = codegen_->MakeIdentifier("agg_payload");
   ast::Identifier agg_values = codegen_->MakeIdentifier("agg_values");
   auto params = codegen_->MakeFieldList({
@@ -500,7 +500,7 @@ void HashAggregationTranslator::DrivePipeline(const PipelineContext &pipeline_ct
       function->Append(codegen_->AggHashTableParallelScan(global_hash_table, q_state,
                                                           thread_state_container, work_func));
     };
-    std::vector<ast::FieldDecl *> params = {
+    std::vector<ast::FieldDeclaration *> params = {
         codegen_->MakeField(codegen_->MakeIdentifier("agg_hash_table"),
                             codegen_->PointerType(ast::BuiltinType::AggregationHashTable))};
     GetPipeline()->LaunchParallel(pipeline_ctx, dispatch, std::move(params));

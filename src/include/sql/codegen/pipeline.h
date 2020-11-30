@@ -49,7 +49,7 @@ class PipelineContext {
   /**
    * @return The finalized and constructed state type.
    */
-  ast::StructDecl *ConstructPipelineStateType();
+  ast::StructDeclaration *ConstructPipelineStateType();
 
   /**
    * @return The value of the element at the given slot within this pipeline's state.
@@ -83,7 +83,7 @@ class PipelineContext {
 
   // TODO(pmenon): Make private and use PipelineFunctionBuilder.
   // Pipeline function arguments.
-  util::RegionVector<ast::FieldDecl *> PipelineParams() const;
+  util::RegionVector<ast::FieldDeclaration *> PipelineParams() const;
 
  private:
   // Access the current thread's pipeline state.
@@ -195,7 +195,7 @@ class Pipeline {
    * Generate all functions to execute this pipeline in the provided container.
    * @param container The code container.
    */
-  std::vector<ast::FunctionDecl *> GeneratePipelineLogic() const;
+  std::vector<ast::FunctionDeclaration *> GeneratePipelineLogic() const;
 
   /**
    * @return The unique ID of this pipeline.
@@ -300,7 +300,7 @@ class Pipeline {
    */
   void LaunchParallel(const PipelineContext &pipeline_ctx,
                       std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
-                      std::vector<ast::FieldDecl *> &&additional_params) const;
+                      std::vector<ast::FieldDeclaration *> &&additional_params) const;
 
  private:
   // Declare all pipeline state.
@@ -310,24 +310,24 @@ class Pipeline {
   void DefinePipelineFunctions(PipelineContext *pipeline_ctx) const;
 
   // Generate the pipeline state initialization logic.
-  ast::FunctionDecl *GenerateSetupPipelineStateFunction(PipelineContext *pipeline_ctx) const;
+  ast::FunctionDeclaration *GenerateSetupPipelineStateFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate the pipeline state cleanup logic.
-  ast::FunctionDecl *GenerateTearDownPipelineStateFunction(PipelineContext *pipeline_ctx) const;
+  ast::FunctionDeclaration *GenerateTearDownPipelineStateFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate pipeline initialization logic.
-  ast::FunctionDecl *GenerateInitPipelineFunction(PipelineContext *pipeline_ctx) const;
+  ast::FunctionDeclaration *GenerateInitPipelineFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate the main pipeline logic.
-  ast::FunctionDecl *GenerateRunPipelineFunction(PipelineContext *pipeline_ctx) const;
+  ast::FunctionDeclaration *GenerateRunPipelineFunction(PipelineContext *pipeline_ctx) const;
 
   // Generate pipeline tear-down logic.
-  ast::FunctionDecl *GenerateTearDownPipelineFunction() const;
+  ast::FunctionDeclaration *GenerateTearDownPipelineFunction() const;
 
   // Common launch logic.
   void LaunchInternal(const PipelineContext &pipeline_ctx,
                       std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
-                      std::vector<ast::FieldDecl *> &&additional_params) const;
+                      std::vector<ast::FieldDeclaration *> &&additional_params) const;
 
  private:
   // A unique pipeline ID.

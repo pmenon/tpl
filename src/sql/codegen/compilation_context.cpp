@@ -75,7 +75,7 @@ CompilationContext::CompilationContext(ExecutableQuery *query)
       query_state_(query_state_type_,
                    [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }) {}
 
-ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
+ast::FunctionDeclaration *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
   {
@@ -88,7 +88,7 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   return builder.Finish();
 }
 
-ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
+ast::FunctionDeclaration *CompilationContext::GenerateTearDownFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_TearDown");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
   {
@@ -126,8 +126,8 @@ void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
                                             const Pipeline &main_pipeline) {
   // Now we're ready to generate some code.
   // First, generate the query state initialization and tear-down logic.
-  ast::FunctionDecl *init_fn = GenerateInitFunction();
-  ast::FunctionDecl *tear_down_fn = GenerateTearDownFunction();
+  ast::FunctionDeclaration *init_fn = GenerateInitFunction();
+  ast::FunctionDeclaration *tear_down_fn = GenerateTearDownFunction();
 
   // Next, generate all pipeline code.
   // Optimize (prematurely?) by reserving now.
@@ -394,9 +394,9 @@ std::string CompilationContext::GetFunctionPrefix() const {
   return "Query" + std::to_string(unique_id_);
 }
 
-util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {
+util::RegionVector<ast::FieldDeclaration *> CompilationContext::QueryParams() const {
   ast::Expr *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_));
-  ast::FieldDecl *field = codegen_.MakeField(query_state_var_, state_type);
+  ast::FieldDeclaration *field = codegen_.MakeField(query_state_var_, state_type);
   return codegen_.MakeFieldList({field});
 }
 

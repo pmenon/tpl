@@ -120,13 +120,13 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   }
 
   // Declare the payload and input structures. Called from DefineHelperStructs().
-  ast::StructDecl *GeneratePayloadStruct();
-  ast::StructDecl *GenerateInputValuesStruct();
+  ast::StructDeclaration *GeneratePayloadStruct();
+  ast::StructDeclaration *GenerateInputValuesStruct();
 
   // Generate the overflow partition merging process.
-  ast::FunctionDecl *GenerateKeyCheckFunction();
-  ast::FunctionDecl *GeneratePartialKeyCheckFunction();
-  ast::FunctionDecl *GenerateMergeOverflowPartitionsFunction();
+  ast::FunctionDeclaration *GenerateKeyCheckFunction();
+  ast::FunctionDeclaration *GeneratePartialKeyCheckFunction();
+  ast::FunctionDeclaration *GenerateMergeOverflowPartitionsFunction();
   template <typename F1, typename F2>
   void MergeOverflowPartitions(FunctionBuilder *function, F1 hash_table_provider, F2 iter_provider);
 

@@ -88,12 +88,12 @@ void AstPrettyPrintImpl::VisitCallExpr(CallExpr *node) {
   os_ << ")";
 }
 
-void AstPrettyPrintImpl::VisitFieldDecl(FieldDecl *node) {
+void AstPrettyPrintImpl::VisitFieldDeclaration(FieldDeclaration *node) {
   os_ << node->GetName().GetView() << ": ";
   Visit(node->GetTypeRepr());
 }
 
-void AstPrettyPrintImpl::VisitFunctionDecl(FunctionDecl *node) {
+void AstPrettyPrintImpl::VisitFunctionDeclaration(FunctionDeclaration *node) {
   os_ << "fun " << node->GetName().GetView();
   Visit(node->GetFunctionLiteral());
   NewLine();
@@ -117,7 +117,7 @@ void AstPrettyPrintImpl::VisitReturnStmt(ReturnStmt *node) {
   }
 }
 
-void AstPrettyPrintImpl::VisitStructDecl(StructDecl *node) {
+void AstPrettyPrintImpl::VisitStructDeclaration(StructDeclaration *node) {
   os_ << "struct " << node->GetName().GetView() << " {";
   IncreaseIndent();
   NewLine();
@@ -133,7 +133,7 @@ void AstPrettyPrintImpl::VisitUnaryOpExpr(UnaryOpExpr *node) {
   Visit(node->GetInput());
 }
 
-void AstPrettyPrintImpl::VisitVariableDecl(VariableDecl *node) {
+void AstPrettyPrintImpl::VisitVariableDeclaration(VariableDeclaration *node) {
   os_ << "var " << node->GetName().GetView();
   if (node->GetTypeRepr() != nullptr) {
     os_ << ": ";

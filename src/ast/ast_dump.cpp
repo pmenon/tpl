@@ -129,7 +129,7 @@ class AstDumperImpl : public AstVisitor<AstDumperImpl> {
     first_child_ = false;
   }
 
-  void DumpDecl(Decl *decl) {
+  void DumpDecl(Declaration *decl) {
     DumpChild([=, this] { AstVisitor<AstDumperImpl>::Visit(decl); });
   }
 
@@ -167,22 +167,22 @@ void AstDumperImpl::VisitFile(File *node) {
   });
 }
 
-void AstDumperImpl::VisitFieldDecl(FieldDecl *node) {
+void AstDumperImpl::VisitFieldDeclaration(FieldDeclaration *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->GetName());
   DumpExpr(node->GetTypeRepr());
 }
 
-void AstDumperImpl::VisitFunctionDecl(FunctionDecl *node) {
+void AstDumperImpl::VisitFunctionDeclaration(FunctionDeclaration *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->GetName());
   DumpExpr(node->GetFunctionLiteral());
 }
 
-void AstDumperImpl::VisitVariableDecl(VariableDecl *node) {
+void AstDumperImpl::VisitVariableDeclaration(VariableDeclaration *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->GetName());
-  if (node->HasTypeDecl()) {
+  if (node->HasDeclaredType()) {
     DumpType(node->GetTypeRepr()->GetType());
   }
   if (node->HasInitialValue()) {
@@ -190,7 +190,7 @@ void AstDumperImpl::VisitVariableDecl(VariableDecl *node) {
   }
 }
 
-void AstDumperImpl::VisitStructDecl(StructDecl *node) {
+void AstDumperImpl::VisitStructDeclaration(StructDeclaration *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->GetName());
   for (auto *field : node->GetTypeRepr()->As<StructTypeRepr>()->GetFields()) {

@@ -92,13 +92,13 @@ class Parser {
   // Parsing productions
   // -------------------------------------------------------
 
-  ast::Decl *ParseDecl();
+  ast::Declaration *ParseDecl();
 
-  ast::Decl *ParseFunctionDecl();
+  ast::Declaration *ParseFunctionDecl();
 
-  ast::Decl *ParseStructDecl();
+  ast::Declaration *ParseStructDecl();
 
-  ast::Decl *ParseVariableDecl();
+  ast::Declaration *ParseVariableDecl();
 
   ast::Stmt *ParseStmt();
 

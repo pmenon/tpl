@@ -8,13 +8,13 @@ namespace tpl::ast {
 class BlockStmt;
 class Context;
 class Expr;
-class Decl;
-class FieldDecl;
+class Declaration;
+class FieldDeclaration;
 class File;
-class FunctionDecl;
+class FunctionDeclaration;
 class IdentifierExpr;
 class Stmt;
-class StructDecl;
-class VariableDecl;
+class StructDeclaration;
+class VariableDeclaration;
 
 }  // namespace tpl::ast

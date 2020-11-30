@@ -62,8 +62,8 @@ TEST_F(CompilerTest, CompileToAst) {
 
   EXPECT_NE(nullptr, callback.root);
   EXPECT_TRUE(callback.root->IsFile());
-  EXPECT_TRUE(callback.root->As<ast::File>()->GetDeclarations()[0]->IsFunctionDecl());
-  auto *decl = callback.root->As<ast::File>()->GetDeclarations()[0]->As<ast::FunctionDecl>();
+  EXPECT_TRUE(callback.root->As<ast::File>()->GetDeclarations()[0]->IsFunctionDeclaration());
+  auto *decl = callback.root->As<ast::File>()->GetDeclarations()[0]->As<ast::FunctionDeclaration>();
 
   // Check name
   EXPECT_EQ(Context()->GetIdentifier("BLAH"), decl->GetName());

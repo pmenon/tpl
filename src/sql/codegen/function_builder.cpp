@@ -6,7 +6,7 @@
 namespace tpl::sql::codegen {
 
 FunctionBuilder::FunctionBuilder(CodeGen *codegen, ast::Identifier name,
-                                 util::RegionVector<ast::FieldDecl *> &&params, ast::Expr *ret_type)
+                                 util::RegionVector<ast::FieldDeclaration *> &&params, ast::Expr *ret_type)
     : codegen_(codegen),
       prev_function_(nullptr),
       name_(name),
@@ -41,11 +41,11 @@ void FunctionBuilder::Append(ast::Expr *expr) {
   Append(codegen_->NodeFactory()->NewExpressionStmt(expr));
 }
 
-void FunctionBuilder::Append(ast::VariableDecl *decl) {
+void FunctionBuilder::Append(ast::VariableDeclaration *decl) {
   Append(codegen_->NodeFactory()->NewDeclStmt(decl));
 }
 
-ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
+ast::FunctionDeclaration *FunctionBuilder::Finish(ast::Expr *ret) {
   if (decl_ != nullptr) {
     return decl_;
   }

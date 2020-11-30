@@ -52,31 +52,31 @@ class TestAstBuilder {
 
   Expr *Field(Expr *obj, Expr *field) { return node_factory()->NewMemberExpr(empty_, obj, field); }
 
-  VariableDecl *DeclVar(Identifier name, Expr *init) { return DeclVar(name, nullptr, init); }
+  VariableDeclaration *DeclVar(Identifier name, Expr *init) { return DeclVar(name, nullptr, init); }
 
-  VariableDecl *DeclVar(std::string n, Expr *init) { return DeclVar(Ident(n), nullptr, init); }
+  VariableDeclaration *DeclVar(std::string n, Expr *init) { return DeclVar(Ident(n), nullptr, init); }
 
-  VariableDecl *DeclVar(std::string n, std::string type_name, Expr *init) {
+  VariableDeclaration *DeclVar(std::string n, std::string type_name, Expr *init) {
     return DeclVar(Ident(n), IdentExpr(type_name), init);
   }
 
-  VariableDecl *DeclVar(Identifier name, Expr *type_repr, Expr *init) {
+  VariableDeclaration *DeclVar(Identifier name, Expr *type_repr, Expr *init) {
     return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
   }
 
-  FieldDecl *GenFieldDecl(Identifier name, ast::Expr *type_repr) {
+  FieldDeclaration *GenFieldDecl(Identifier name, ast::Expr *type_repr) {
     return node_factory()->NewFieldDecl(empty_, name, type_repr);
   }
 
-  StructDecl *DeclStruct(Identifier name, std::initializer_list<ast::FieldDecl *> fields) {
-    util::RegionVector<FieldDecl *> f(fields.begin(), fields.end(), ctx()->GetRegion());
+  StructDeclaration *DeclStruct(Identifier name, std::initializer_list<ast::FieldDeclaration *> fields) {
+    util::RegionVector<FieldDeclaration *> f(fields.begin(), fields.end(), ctx()->GetRegion());
     ast::StructTypeRepr *type = node_factory()->NewStructType(empty_, std::move(f));
     return node_factory()->NewStructDecl(empty_, name, type);
   }
 
-  Expr *DeclRef(Decl *decl) { return IdentExpr(decl->GetName()); }
+  Expr *DeclRef(Declaration *decl) { return IdentExpr(decl->GetName()); }
 
-  Stmt *DeclStmt(Decl *decl) { return node_factory()->NewDeclStmt(decl); }
+  Stmt *DeclStmt(Declaration *decl) { return node_factory()->NewDeclStmt(decl); }
 
   Stmt *Block(std::initializer_list<Stmt *> stmts) {
     util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(), ctx()->GetRegion());
@@ -114,8 +114,8 @@ class TestAstBuilder {
     return node_factory()->NewBuiltinCallExpr(fn, std::move(call_args));
   }
 
-  File *GenFile(std::initializer_list<ast::Decl *> decls) {
-    util::RegionVector<Decl *> d(decls.begin(), decls.end(), ctx()->GetRegion());
+  File *GenFile(std::initializer_list<ast::Declaration *> decls) {
+    util::RegionVector<Declaration *> d(decls.begin(), decls.end(), ctx()->GetRegion());
     return node_factory()->NewFile(empty_, std::move(d));
   }
 

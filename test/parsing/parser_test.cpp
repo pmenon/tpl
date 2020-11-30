@@ -41,9 +41,9 @@ TEST_F(ParserTest, RegularForStmtTest) {
 
   // Only one function decl
   auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
-  ASSERT_TRUE(decl->IsFunctionDecl());
+  ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-  auto *func_decl = decl->As<ast::FunctionDecl>();
+  auto *func_decl = decl->As<ast::FunctionDeclaration>();
   ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
   ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
   ASSERT_EQ(std::size_t{1}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
@@ -54,7 +54,7 @@ TEST_F(ParserTest, RegularForStmtTest) {
   ASSERT_NE(nullptr, for_stmt);
   ASSERT_NE(nullptr, for_stmt->GetInit());
   ASSERT_TRUE(for_stmt->GetInit()->IsDeclStmt());
-  ASSERT_TRUE(for_stmt->GetInit()->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDecl());
+  ASSERT_TRUE(for_stmt->GetInit()->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDeclaration());
   ASSERT_NE(nullptr, for_stmt->GetCondition());
   ASSERT_NE(nullptr, for_stmt->GetNext());
 }
@@ -99,9 +99,9 @@ TEST_F(ParserTest, ExhaustiveForStmtTest) {
 
     // Only one function decl
     auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
-    ASSERT_TRUE(decl->IsFunctionDecl());
+    ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-    auto *func_decl = decl->As<ast::FunctionDecl>();
+    auto *func_decl = decl->As<ast::FunctionDeclaration>();
     ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
     ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
     ASSERT_EQ(std::size_t{1}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
@@ -137,9 +137,9 @@ TEST_F(ParserTest, RegularForStmt_NoInitTest) {
 
   // Only one function decl
   auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
-  ASSERT_TRUE(decl->IsFunctionDecl());
+  ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-  auto *func_decl = decl->As<ast::FunctionDecl>();
+  auto *func_decl = decl->As<ast::FunctionDeclaration>();
   ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
   ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
   ASSERT_EQ(std::size_t{2}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
@@ -149,7 +149,7 @@ TEST_F(ParserTest, RegularForStmt_NoInitTest) {
   // First is the variable declaration
   auto &block = func_decl->GetFunctionLiteral()->GetBody()->GetStatements();
   ASSERT_TRUE(block[0]->IsDeclStmt());
-  ASSERT_TRUE(block[0]->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDecl());
+  ASSERT_TRUE(block[0]->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDeclaration());
 
   // Next is the for statement
   auto *for_stmt = block[1]->SafeAs<ast::ForStmt>();
@@ -190,9 +190,9 @@ TEST_F(ParserTest, RegularForStmt_WhileTest) {
 
     // Only one function decl
     auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
-    ASSERT_TRUE(decl->IsFunctionDecl());
+    ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-    auto *func_decl = decl->As<ast::FunctionDecl>();
+    auto *func_decl = decl->As<ast::FunctionDeclaration>();
     ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
     ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
     ASSERT_EQ(std::size_t{2}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
@@ -202,7 +202,7 @@ TEST_F(ParserTest, RegularForStmt_WhileTest) {
     // First is the variable declaration
     auto &block = func_decl->GetFunctionLiteral()->GetBody()->GetStatements();
     ASSERT_TRUE(block[0]->IsDeclStmt());
-    ASSERT_TRUE(block[0]->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDecl());
+    ASSERT_TRUE(block[0]->As<ast::DeclStmt>()->GetDeclaration()->IsVariableDeclaration());
 
     // Next is the for statement
     auto *for_stmt = block[1]->SafeAs<ast::ForStmt>();
@@ -233,9 +233,9 @@ TEST_F(ParserTest, RegularForInStmtTest) {
 
   // Only one function decl
   auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
-  ASSERT_TRUE(decl->IsFunctionDecl());
+  ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-  auto *func_decl = decl->As<ast::FunctionDecl>();
+  auto *func_decl = decl->As<ast::FunctionDeclaration>();
   ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
   ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
   ASSERT_EQ(std::size_t{1}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());

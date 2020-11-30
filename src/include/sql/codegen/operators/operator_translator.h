@@ -244,7 +244,7 @@ class OperatorTranslator : public ColumnValueProvider {
   // The prefix is added to each field/attribute of the child.
   // The fields vector collects the resulting field declarations.
   void GetAllChildOutputFields(uint32_t child_index, const std::string &field_name_prefix,
-                               util::RegionVector<ast::FieldDecl *> *fields) const;
+                               util::RegionVector<ast::FieldDeclaration *> *fields) const;
 
  private:
   // The plan node.

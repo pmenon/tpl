@@ -19,14 +19,14 @@ StateDescriptor::Slot StateDescriptor::DeclareStateEntry(CodeGen *codegen, const
   return slots_.size() - 1;
 }
 
-ast::StructDecl *StateDescriptor::ConstructFinalType(CodeGen *codegen) {
+ast::StructDeclaration *StateDescriptor::ConstructFinalType(CodeGen *codegen) {
   // Early exit if the state is already constructed.
   if (state_type_ != nullptr) {
     return state_type_;
   }
 
   // Collect fields and build the structure type.
-  util::RegionVector<ast::FieldDecl *> fields = codegen->MakeEmptyFieldList();
+  util::RegionVector<ast::FieldDeclaration *> fields = codegen->MakeEmptyFieldList();
   fields.reserve(slots_.size());
   for (auto &slot : slots_) {
     fields.push_back(codegen->MakeField(slot.name, slot.type_repr));

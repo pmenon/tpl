@@ -48,7 +48,7 @@ void StaticAggregationTranslator::DeclarePipelineDependencies() const {
   GetPipeline()->AddDependency(build_pipeline_);
 }
 
-ast::StructDecl *StaticAggregationTranslator::GeneratePayloadStruct() {
+ast::StructDeclaration *StaticAggregationTranslator::GeneratePayloadStruct() {
   auto fields = codegen_->MakeEmptyFieldList();
   fields.reserve(GetAggPlan().GetAggregateTerms().size());
 
@@ -61,7 +61,7 @@ ast::StructDecl *StaticAggregationTranslator::GeneratePayloadStruct() {
   return codegen_->DeclareStruct(agg_payload_type_, std::move(fields));
 }
 
-ast::StructDecl *StaticAggregationTranslator::GenerateValuesStruct() {
+ast::StructDeclaration *StaticAggregationTranslator::GenerateValuesStruct() {
   auto fields = codegen_->MakeEmptyFieldList();
   fields.reserve(GetAggPlan().GetAggregateTerms().size());
 
@@ -89,7 +89,7 @@ void StaticAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline
 
 void StaticAggregationTranslator::GenerateAggregateMergeFunction(
     const PipelineContext &pipeline_ctx) const {
-  util::RegionVector<ast::FieldDecl *> params = pipeline_ctx.PipelineParams();
+  util::RegionVector<ast::FieldDeclaration *> params = pipeline_ctx.PipelineParams();
   FunctionBuilder function(codegen_, merge_func_, std::move(params), codegen_->Nil());
   {
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {

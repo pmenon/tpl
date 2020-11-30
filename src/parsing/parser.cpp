@@ -17,12 +17,12 @@ Parser::Parser(Scanner *scanner, ast::Context *context)
       error_reporter_(context->GetErrorReporter()) {}
 
 ast::AstNode *Parser::Parse() {
-  util::RegionVector<ast::Decl *> decls(Region());
+  util::RegionVector<ast::Declaration *> decls(Region());
 
   const SourcePosition &start_pos = scanner_->CurrentPosition();
 
   while (Peek() != Token::Type::EOS) {
-    if (ast::Decl *decl = ParseDecl()) {
+    if (ast::Declaration *decl = ParseDecl()) {
       decls.push_back(decl);
     }
   }
@@ -54,7 +54,7 @@ ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
   return nullptr;
 }
 
-ast::Decl *Parser::ParseDecl() {
+ast::Declaration *Parser::ParseDecl() {
   // At the top-level, we only allow structs and functions
   switch (Peek()) {
     case Token::Type::STRUCT: {
@@ -74,7 +74,7 @@ ast::Decl *Parser::ParseDecl() {
   return nullptr;
 }
 
-ast::Decl *Parser::ParseFunctionDecl() {
+ast::Declaration *Parser::ParseFunctionDecl() {
   Expect(Token::Type::FUN);
 
   const SourcePosition &position = scanner_->CurrentPosition();
@@ -87,13 +87,13 @@ ast::Decl *Parser::ParseFunctionDecl() {
   auto *fun = ParseFunctionLitExpr()->As<ast::FunctionLiteralExpr>();
 
   // Create declaration
-  ast::FunctionDecl *decl = node_factory_->NewFunctionDecl(position, name, fun);
+  ast::FunctionDeclaration *decl = node_factory_->NewFunctionDecl(position, name, fun);
 
   // Done
   return decl;
 }
 
-ast::Decl *Parser::ParseStructDecl() {
+ast::Declaration *Parser::ParseStructDecl() {
   Expect(Token::Type::STRUCT);
 
   const SourcePosition &position = scanner_->CurrentPosition();
@@ -106,13 +106,13 @@ ast::Decl *Parser::ParseStructDecl() {
   auto *struct_type = ParseStructType()->As<ast::StructTypeRepr>();
 
   // The declaration object
-  ast::StructDecl *decl = node_factory_->NewStructDecl(position, name, struct_type);
+  ast::StructDeclaration *decl = node_factory_->NewStructDecl(position, name, struct_type);
 
   // Done
   return decl;
 }
 
-ast::Decl *Parser::ParseVariableDecl() {
+ast::Declaration *Parser::ParseVariableDecl() {
   // VariableDecl = 'var' Ident ':' Type [ '=' Expr ] ;
 
   Expect(Token::Type::VAR);
@@ -143,7 +143,7 @@ ast::Decl *Parser::ParseVariableDecl() {
   }
 
   // Create declaration object
-  ast::VariableDecl *decl = node_factory_->NewVariableDecl(position, name, type, init);
+  ast::VariableDeclaration *decl = node_factory_->NewVariableDecl(position, name, type, init);
 
   // Done
   return decl;
@@ -167,7 +167,7 @@ ast::Stmt *Parser::ParseStmt() {
       return ParseReturnStmt();
     }
     case Token::Type::VAR: {
-      ast::Decl *var_decl = ParseVariableDecl();
+      ast::Declaration *var_decl = ParseVariableDecl();
       return node_factory_->NewDeclStmt(var_decl);
     }
     default: {
@@ -626,7 +626,7 @@ ast::Expr *Parser::ParseFunctionType() {
 
   Consume(Token::Type::LEFT_PAREN);
 
-  util::RegionVector<ast::FieldDecl *> params(Region());
+  util::RegionVector<ast::FieldDeclaration *> params(Region());
   params.reserve(4);
 
   while (Peek() != Token::Type::RIGHT_PAREN) {
@@ -708,7 +708,7 @@ ast::Expr *Parser::ParseStructType() {
 
   Consume(Token::Type::LEFT_BRACE);
 
-  util::RegionVector<ast::FieldDecl *> fields(Region());
+  util::RegionVector<ast::FieldDeclaration *> fields(Region());
 
   while (Peek() != Token::Type::RIGHT_BRACE) {
     Expect(Token::Type::IDENTIFIER);

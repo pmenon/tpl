@@ -83,7 +83,7 @@ const planner::OutputSchema *OperatorTranslator::GetChildOutputSchema(uint32_t c
 
 void OperatorTranslator::GetAllChildOutputFields(
     const uint32_t child_index, const std::string &field_name_prefix,
-    util::RegionVector<ast::FieldDecl *> *fields) const {
+    util::RegionVector<ast::FieldDeclaration *> *fields) const {
   // Reserve now to reduce allocations.
   fields->reserve(GetChildOutputSchema(child_index)->NumColumns());
 

@@ -8,7 +8,7 @@
 
 namespace tpl::sema {
 
-void Sema::VisitVariableDecl(ast::VariableDecl *node) {
+void Sema::VisitVariableDeclaration(ast::VariableDeclaration *node) {
   TPL_ASSERT(scope_ != nullptr, "No scope exists!");
   if (scope_->LookupLocal(node->GetName()) != nullptr) {
     error_reporter_->Report(node->Position(), ErrorMessages::kVariableRedeclared, node->GetName());
@@ -16,13 +16,13 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   }
 
   // At this point, the variable either has a declared type or an initial value.
-  TPL_ASSERT(node->HasTypeDecl() || node->HasInitialValue(),
+  TPL_ASSERT(node->HasDeclaredType() || node->HasInitialValue(),
              "Variable has neither a type declaration or an initial expression. This should have "
              "been caught during parsing.");
 
   ast::Type *declared_type = nullptr, *initializer_type = nullptr;
 
-  if (node->HasTypeDecl()) {
+  if (node->HasDeclaredType()) {
     declared_type = Resolve(node->GetTypeRepr());
   }
 
@@ -61,14 +61,14 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   scope_->Declare(node->GetName(), resolved_type);
 }
 
-void Sema::VisitFieldDecl(ast::FieldDecl *node) { Visit(node->GetTypeRepr()); }
+void Sema::VisitFieldDeclaration(ast::FieldDeclaration *node) { Visit(node->GetTypeRepr()); }
 
 namespace {
 
 // Return true if the given list of field declarations contains a duplicate name. If so, the 'dup'
 // output parameter is set to the offending field. Otherwise, return false;
-bool HasDuplicatesNames(const util::RegionVector<ast::FieldDecl *> &fields,
-                        const ast::FieldDecl **dup) {
+bool HasDuplicatesNames(const util::RegionVector<ast::FieldDeclaration *> &fields,
+                        const ast::FieldDeclaration **dup) {
   llvm::SmallDenseSet<ast::Identifier, 32> seen;
   for (const auto *field : fields) {
     // Attempt to insert into the set. If the insertion succeeds it's a unique
@@ -84,7 +84,7 @@ bool HasDuplicatesNames(const util::RegionVector<ast::FieldDecl *> &fields,
 
 }  // namespace
 
-void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
+void Sema::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
   // Resolve **JUST** the function's type representation, not the function body.
   ast::Type *func_type = Resolve(node->GetTypeRepr());
 
@@ -98,7 +98,7 @@ void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
   TPL_ASSERT(func_type->IsFunctionType(), "Resolved type isn't function?!");
 
   // Check for duplicate parameter names in signature.
-  if (const ast::FieldDecl *dup = nullptr;
+  if (const ast::FieldDeclaration *dup = nullptr;
       HasDuplicatesNames(node->GetTypeRepr()->As<ast::FunctionTypeRepr>()->GetParameters(), &dup)) {
     error_reporter_->Report(node->Position(), ErrorMessages::kDuplicateArgName, dup->GetName(),
                             node->GetName());
@@ -113,7 +113,7 @@ void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
   Resolve(node->GetFunctionLiteral());
 }
 
-void Sema::VisitStructDecl(ast::StructDecl *node) {
+void Sema::VisitStructDeclaration(ast::StructDeclaration *node) {
   ast::Type *struct_type = Resolve(node->GetTypeRepr());
 
   if (struct_type == nullptr) {
@@ -125,7 +125,7 @@ void Sema::VisitStructDecl(ast::StructDecl *node) {
   TPL_ASSERT(struct_type->IsStructType(), "Resolved type isn't struct?!");
 
   // Check for duplicate fields.
-  if (const ast::FieldDecl *dup = nullptr;
+  if (const ast::FieldDeclaration *dup = nullptr;
       HasDuplicatesNames(node->GetTypeRepr()->As<ast::StructTypeRepr>()->GetFields(), &dup)) {
     error_reporter_->Report(node->Position(), ErrorMessages::kDuplicateStructFieldName,
                             dup->GetName(), node->GetName());

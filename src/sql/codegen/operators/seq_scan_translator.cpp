@@ -85,7 +85,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
   // Signature: (vp: *VectorProjection, tids: *TupleIdList, ctx: *uint8) -> nil
   auto fn_name =
       codegen_->MakeFreshIdentifier(GetPipeline()->CreatePipelineFunctionName("FilterClause"));
-  util::RegionVector<ast::FieldDecl *> params = codegen_->MakeFieldList({
+  util::RegionVector<ast::FieldDeclaration *> params = codegen_->MakeFieldList({
       codegen_->MakeField(codegen_->MakeIdentifier("vp"),
                           codegen_->PointerType(ast::BuiltinType::VectorProjection)),
       codegen_->MakeField(codegen_->MakeIdentifier("tids"),
@@ -223,7 +223,7 @@ void SeqScanTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const
       function->Append(codegen_->IterateTableParallel(GetTableName(), GetQueryStatePtr(),
                                                       GetThreadStateContainer(), work_func));
     };
-    std::vector<ast::FieldDecl *> params = {codegen_->MakeField(
+    std::vector<ast::FieldDeclaration *> params = {codegen_->MakeField(
         tvi_var_, codegen_->PointerType(ast::BuiltinType::TableVectorIterator))};
     GetPipeline()->LaunchParallel(pipeline_ctx, dispatch, std::move(params));
   } else {

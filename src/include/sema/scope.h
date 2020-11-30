@@ -8,7 +8,7 @@
 namespace tpl {
 
 namespace ast {
-class Decl;
+class Declaration;
 class Type;
 }  // namespace ast
 

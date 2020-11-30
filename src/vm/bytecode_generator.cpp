@@ -198,9 +198,11 @@ void BytecodeGenerator::VisitForInStmt(UNUSED ast::ForInStmt *node) {
   TPL_ASSERT(false, "For-in statements not supported");
 }
 
-void BytecodeGenerator::VisitFieldDecl(ast::FieldDecl *node) { AstVisitor::VisitFieldDecl(node); }
+void BytecodeGenerator::VisitFieldDeclaration(ast::FieldDeclaration *node) {
+  AstVisitor::VisitFieldDeclaration(node);
+}
 
-void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
+void BytecodeGenerator::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
   // The function's TPL type
   auto *func_type = node->GetTypeRepr()->GetType()->As<ast::FunctionType>();
 
@@ -377,7 +379,7 @@ void BytecodeGenerator::VisitBlockStmt(ast::BlockStmt *node) {
   }
 }
 
-void BytecodeGenerator::VisitVariableDecl(ast::VariableDecl *node) {
+void BytecodeGenerator::VisitVariableDeclaration(ast::VariableDeclaration *node) {
   // Register a new local variable in the function. If the variable has an
   // explicit type specifier, prefer using that. Otherwise, use the type of the
   // initial value resolved after semantic analysis.
@@ -2151,7 +2153,7 @@ void BytecodeGenerator::VisitLiteralExpr(ast::LiteralExpr *node) {
   }
 }
 
-void BytecodeGenerator::VisitStructDecl(UNUSED ast::StructDecl *node) {
+void BytecodeGenerator::VisitStructDeclaration(ast::StructDeclaration *) {
   // Nothing to do
 }
 

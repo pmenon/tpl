@@ -29,50 +29,46 @@ class AstVisitor {
   // Dispatch to a given type
 #define DISPATCH(Type) return this->Impl()->Visit##Type(static_cast<Type *>(node));
 
+#define GENERATE_VISIT_CASE(NodeKind) \
+  case AstNode::Kind::NodeKind:       \
+    DISPATCH(NodeKind);
+
   /**
    * Begin AST traversal at the given node.
    * @param node The node to begin traversal at.
    * @return Template-specific return type.
    */
   RetType Visit(AstNode *node) {
-#define GENERATE_VISIT_CASE(NodeKind) \
-  case AstNode::Kind::NodeKind:       \
-    DISPATCH(NodeKind);
-
-    // Main dispatch switch
-    switch (node->GetKind()) {
-      AST_NODES(GENERATE_VISIT_CASE)
-      default:
-        UNREACHABLE("Impossible node type");
-    }
+    // Main dispatch switch.
+    switch (node->GetKind()) { AST_NODES(GENERATE_VISIT_CASE) }
+  }
 
 #undef GENERATE_VISIT_CASE
-  }
 
   /**
    * No-op base implementation for all declaration nodes.
    * @param decl The declaration node.
    * @return No-arg constructed return.
    */
-  RetType VisitDecl(UNUSED Decl *decl) { return RetType(); }
+  RetType VisitDeclaration(Declaration *) { return RetType(); }
 
   /**
    * No-op base implementation for all statement nodes.
    * @param stmt The statement node.
    * @return No-arg constructed return.
    */
-  RetType VisitStmt(UNUSED Stmt *stmt) { return RetType(); }
+  RetType VisitStmt(Stmt *) { return RetType(); }
 
   /**
    * No-op base implementation for all expression nodes.
    * @param expr The expression node.
    * @return No-arg constructed return.
    */
-  RetType VisitExpr(UNUSED Expr *expr) { return RetType(); }
+  RetType VisitExpr(Expr *) { return RetType(); }
 
-  // Generate default visitors for declaration nodes that dispatch to base Decl
+  // Generate default no-op visitors for all declaration nodes.
 #define T(DeclType) \
-  RetType Visit##DeclType(DeclType *node) { DISPATCH(Decl); }
+  RetType Visit##DeclType(DeclType *node) { DISPATCH(Declaration); }
   DECLARATION_NODES(T)
 #undef T
 

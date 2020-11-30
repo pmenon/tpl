@@ -110,8 +110,8 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   ast::Expr *GetAggregateTerm(ast::Expr *agg_row, uint32_t attr_idx) const;
   ast::Expr *GetAggregateTermPtr(ast::Expr *agg_row, uint32_t attr_idx) const;
 
-  ast::StructDecl *GeneratePayloadStruct();
-  ast::StructDecl *GenerateValuesStruct();
+  ast::StructDeclaration *GeneratePayloadStruct();
+  ast::StructDeclaration *GenerateValuesStruct();
 
   template <typename F>
   void InitializeAggregates(FunctionBuilder *function, F agg_provider) const;

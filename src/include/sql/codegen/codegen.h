@@ -316,7 +316,7 @@ class CodeGen {
    * @param type_repr The provided type representation.
    * @return The variable declaration.
    */
-  [[nodiscard]] ast::VariableDecl *DeclareVarNoInit(ast::Identifier name, ast::Expr *type_repr);
+  [[nodiscard]] ast::VariableDeclaration *DeclareVarNoInit(ast::Identifier name, ast::Expr *type_repr);
 
   /**
    * Declare a variable with the provided name and builtin kind, but with no initial value.
@@ -325,7 +325,7 @@ class CodeGen {
    * @param kind The builtin kind of the declared variable.
    * @return The variable declaration.
    */
-  [[nodiscard]] ast::VariableDecl *DeclareVarNoInit(ast::Identifier name,
+  [[nodiscard]] ast::VariableDeclaration *DeclareVarNoInit(ast::Identifier name,
                                                     ast::BuiltinType::Kind kind);
 
   /**
@@ -336,7 +336,7 @@ class CodeGen {
    * @param init The initial value to assign the variable.
    * @return The variable declaration.
    */
-  [[nodiscard]] ast::VariableDecl *DeclareVarWithInit(ast::Identifier name, ast::Expr *init);
+  [[nodiscard]] ast::VariableDeclaration *DeclareVarWithInit(ast::Identifier name, ast::Expr *init);
 
   /**
    * Declare a variable with the provided name, type representation, and initial value.
@@ -351,7 +351,7 @@ class CodeGen {
    * @param init The initial value to assign the variable.
    * @return The variable declaration.
    */
-  [[nodiscard]] ast::VariableDecl *DeclareVar(ast::Identifier name, ast::Expr *type_repr,
+  [[nodiscard]] ast::VariableDeclaration *DeclareVar(ast::Identifier name, ast::Expr *type_repr,
                                               ast::Expr *init);
 
   /**
@@ -361,8 +361,8 @@ class CodeGen {
    * @param fields The fields constituting the struct.
    * @return The structure declaration.
    */
-  ast::StructDecl *DeclareStruct(ast::Identifier name,
-                                 util::RegionVector<ast::FieldDecl *> &&fields) const;
+  ast::StructDeclaration *DeclareStruct(ast::Identifier name,
+                                 util::RegionVector<ast::FieldDeclaration *> &&fields) const;
 
   // ---------------------------------------------------------------------------
   //
@@ -1331,7 +1331,7 @@ class CodeGen {
   /**
    * @return The variable declaration as a standalone statement.
    */
-  ast::Stmt *MakeStmt(ast::VariableDecl *var) const;
+  ast::Stmt *MakeStmt(ast::VariableDeclaration *var) const;
 
   /**
    * @return The expression as a standalone statement.
@@ -1346,13 +1346,13 @@ class CodeGen {
   /**
    * @return An empty list of fields.
    */
-  util::RegionVector<ast::FieldDecl *> MakeEmptyFieldList() const;
+  util::RegionVector<ast::FieldDeclaration *> MakeEmptyFieldList() const;
 
   /**
    * @return A field list with the given fields.
    */
-  util::RegionVector<ast::FieldDecl *> MakeFieldList(
-      std::initializer_list<ast::FieldDecl *> fields) const;
+  util::RegionVector<ast::FieldDeclaration *> MakeFieldList(
+      std::initializer_list<ast::FieldDeclaration *> fields) const;
 
   /**
    * Create a single field.
@@ -1360,7 +1360,7 @@ class CodeGen {
    * @param type The type representation of the field.
    * @return The field declaration.
    */
-  ast::FieldDecl *MakeField(ast::Identifier name, ast::Expr *type) const;
+  ast::FieldDeclaration *MakeField(ast::Identifier name, ast::Expr *type) const;
 
   /**
    * @return The current (potentially null) function being built.

@@ -16,22 +16,22 @@ class AstNodeFactory {
 
   DISALLOW_COPY_AND_MOVE(AstNodeFactory);
 
-  File *NewFile(const SourcePosition &pos, util::RegionVector<Decl *> &&declarations) {
+  File *NewFile(const SourcePosition &pos, util::RegionVector<Declaration *> &&declarations) {
     return new (region_) File(pos, std::move(declarations));
   }
 
-  FunctionDecl *NewFunctionDecl(const SourcePosition &pos, Identifier name,
+  FunctionDeclaration *NewFunctionDecl(const SourcePosition &pos, Identifier name,
                                 FunctionLiteralExpr *fun) {
-    return new (region_) FunctionDecl(pos, name, fun);
+    return new (region_) FunctionDeclaration(pos, name, fun);
   }
 
-  StructDecl *NewStructDecl(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr) {
-    return new (region_) StructDecl(pos, name, type_repr);
+  StructDeclaration *NewStructDecl(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr) {
+    return new (region_) StructDeclaration(pos, name, type_repr);
   }
 
-  VariableDecl *NewVariableDecl(const SourcePosition &pos, Identifier name, Expr *type_repr,
+  VariableDeclaration *NewVariableDecl(const SourcePosition &pos, Identifier name, Expr *type_repr,
                                 Expr *init) {
-    return new (region_) VariableDecl(pos, name, type_repr, init);
+    return new (region_) VariableDeclaration(pos, name, type_repr, init);
   }
 
   BlockStmt *NewBlockStmt(const SourcePosition &start_pos, const SourcePosition &end_pos,
@@ -39,7 +39,7 @@ class AstNodeFactory {
     return new (region_) BlockStmt(start_pos, end_pos, std::move(statements));
   }
 
-  DeclStmt *NewDeclStmt(Decl *decl) { return new (region_) DeclStmt(decl); }
+  DeclStmt *NewDeclStmt(Declaration *decl) { return new (region_) DeclStmt(decl); }
 
   AssignmentStmt *NewAssignmentStmt(const SourcePosition &pos, Expr *dest, Expr *src) {
     return new (region_) AssignmentStmt(pos, dest, src);
@@ -133,12 +133,12 @@ class AstNodeFactory {
     return new (region_) ArrayTypeRepr(pos, len, elem_type);
   }
 
-  FieldDecl *NewFieldDecl(const SourcePosition &pos, Identifier name, Expr *type_repr) {
-    return new (region_) FieldDecl(pos, name, type_repr);
+  FieldDeclaration *NewFieldDecl(const SourcePosition &pos, Identifier name, Expr *type_repr) {
+    return new (region_) FieldDeclaration(pos, name, type_repr);
   }
 
   FunctionTypeRepr *NewFunctionType(const SourcePosition &pos,
-                                    util::RegionVector<FieldDecl *> &&params, Expr *ret) {
+                                    util::RegionVector<FieldDeclaration *> &&params, Expr *ret) {
     return new (region_) FunctionTypeRepr(pos, std::move(params), ret);
   }
 
@@ -147,7 +147,7 @@ class AstNodeFactory {
   }
 
   StructTypeRepr *NewStructType(const SourcePosition &pos,
-                                util::RegionVector<FieldDecl *> &&fields) {
+                                util::RegionVector<FieldDeclaration *> &&fields) {
     return new (region_) StructTypeRepr(pos, std::move(fields));
   }
 
