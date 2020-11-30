@@ -13,8 +13,8 @@ void Sema::VisitBadExpr(ast::BadExpr *node) {
 }
 
 void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
-  ast::Type *left_type = Resolve(node->Left());
-  ast::Type *right_type = Resolve(node->Right());
+  ast::Type *left_type = Resolve(node->GetLeft());
+  ast::Type *right_type = Resolve(node->GetRight());
 
   if (left_type == nullptr || right_type == nullptr) {
     // Some error occurred
@@ -25,10 +25,10 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     case parsing::Token::Type::AND:
     case parsing::Token::Type::OR: {
       auto [result_type, left, right] =
-          CheckLogicalOperands(node->Op(), node->Position(), node->Left(), node->Right());
+          CheckLogicalOperands(node->Op(), node->Position(), node->GetLeft(), node->GetRight());
       node->SetType(result_type);
-      if (node->Left() != left) node->SetLeft(left);
-      if (node->Right() != right) node->SetRight(right);
+      if (node->GetLeft() != left) node->SetLeft(left);
+      if (node->GetRight() != right) node->SetRight(right);
       break;
     }
     case parsing::Token::Type::AMPERSAND:
@@ -42,10 +42,10 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
     case parsing::Token::Type::SLASH:
     case parsing::Token::Type::PERCENT: {
       auto [result_type, left, right] =
-          CheckArithmeticOperands(node->Op(), node->Position(), node->Left(), node->Right());
+          CheckArithmeticOperands(node->Op(), node->Position(), node->GetLeft(), node->GetRight());
       node->SetType(result_type);
-      if (node->Left() != left) node->SetLeft(left);
-      if (node->Right() != right) node->SetRight(right);
+      if (node->GetLeft() != left) node->SetLeft(left);
+      if (node->GetRight() != right) node->SetRight(right);
       break;
     }
     default: {
@@ -55,8 +55,8 @@ void Sema::VisitBinaryOpExpr(ast::BinaryOpExpr *node) {
 }
 
 void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
-  ast::Type *left_type = Resolve(node->Left());
-  ast::Type *right_type = Resolve(node->Right());
+  ast::Type *left_type = Resolve(node->GetLeft());
+  ast::Type *right_type = Resolve(node->GetRight());
 
   if (left_type == nullptr || right_type == nullptr) {
     // Some error occurred
@@ -71,10 +71,10 @@ void Sema::VisitComparisonOpExpr(ast::ComparisonOpExpr *node) {
     case parsing::Token::Type::LESS:
     case parsing::Token::Type::LESS_EQUAL: {
       auto [result_type, left, right] =
-          CheckComparisonOperands(node->Op(), node->Position(), node->Left(), node->Right());
+          CheckComparisonOperands(node->Op(), node->Position(), node->GetLeft(), node->GetRight());
       node->SetType(result_type);
-      if (node->Left() != left) node->SetLeft(left);
-      if (node->Right() != right) node->SetRight(right);
+      if (node->GetLeft() != left) node->SetLeft(left);
+      if (node->GetRight() != right) node->SetRight(right);
       break;
     }
     default: {
@@ -91,7 +91,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Resolve the function type
-  ast::Type *type = Resolve(node->Function());
+  ast::Type *type = Resolve(node->GetFunction());
   if (type == nullptr) {
     return;
   }
@@ -109,7 +109,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Resolve function arguments
-  for (auto *arg : node->Arguments()) {
+  for (auto *arg : node->GetArguments()) {
     ast::Type *arg_type = Resolve(arg);
     if (arg_type == nullptr) {
       return;
@@ -119,7 +119,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Check args
   bool has_errors = false;
 
-  const auto &actual_args = node->Arguments();
+  const auto &actual_args = node->GetArguments();
   for (uint32_t arg_num = 0; arg_num < actual_args.size(); arg_num++) {
     ast::Type *expected_type = func_type->GetParams()[arg_num].type;
     ast::Expr *arg = actual_args[arg_num];
@@ -150,15 +150,15 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
 void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
   // Resolve the type, if not resolved already
-  if (auto *type = node->TypeRepr()->GetType(); type == nullptr) {
-    type = Resolve(node->TypeRepr());
+  if (auto *type = node->GetTypeRepr()->GetType(); type == nullptr) {
+    type = Resolve(node->GetTypeRepr());
     if (type == nullptr) {
       return;
     }
   }
 
   // Good function type, insert into node
-  auto *func_type = node->TypeRepr()->GetType()->As<ast::FunctionType>();
+  auto *func_type = node->GetTypeRepr()->GetType()->As<ast::FunctionType>();
   node->SetType(func_type);
 
   // The function scope
@@ -171,37 +171,38 @@ void Sema::VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *node) {
   }
 
   // Recurse into the function body
-  Visit(node->Body());
+  Visit(node->GetBody());
 
   // Check the return value. We allow functions to be empty or elide a final
   // "return" statement only if the function has a "nil" return type. In this
   // case, we automatically insert a "return" statement.
-  if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->Body())) {
+  if (node->IsEmpty() || !ast::Stmt::IsTerminating(node->GetBody())) {
     if (!func_type->GetReturnType()->IsNilType()) {
-      error_reporter_->Report(node->Body()->RightBracePosition(), ErrorMessages::kMissingReturn);
+      error_reporter_->Report(node->GetBody()->GetRightBracePosition(),
+                              ErrorMessages::kMissingReturn);
       return;
     }
 
     auto *empty_ret = context_->GetNodeFactory()->NewReturnStmt(node->Position(), nullptr);
-    node->Body()->AppendStatement(empty_ret);
+    node->GetBody()->AppendStatement(empty_ret);
   }
 }
 
 void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   // Check the current context
-  if (auto *type = scope_->Lookup(node->Name())) {
+  if (auto *type = scope_->Lookup(node->GetName())) {
     node->SetType(type);
     return;
   }
 
   // Check the builtin types
-  if (auto *type = context_->LookupBuiltinType(node->Name())) {
+  if (auto *type = context_->LookupBuiltinType(node->GetName())) {
     node->SetType(type);
     return;
   }
 
   // Error
-  error_reporter_->Report(node->Position(), ErrorMessages::kUndefinedVariable, node->Name());
+  error_reporter_->Report(node->Position(), ErrorMessages::kUndefinedVariable, node->GetName());
 }
 
 void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
@@ -209,8 +210,8 @@ void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
 }
 
 void Sema::VisitIndexExpr(ast::IndexExpr *node) {
-  ast::Type *obj_type = Resolve(node->Object());
-  ast::Type *index_type = Resolve(node->Index());
+  ast::Type *obj_type = Resolve(node->GetObject());
+  ast::Type *index_type = Resolve(node->GetIndex());
 
   if (obj_type == nullptr || index_type == nullptr) {
     return;
@@ -227,7 +228,7 @@ void Sema::VisitIndexExpr(ast::IndexExpr *node) {
   }
 
   if (auto arr_type = obj_type->SafeAs<ast::ArrayType>()) {
-    if (auto index = node->Index()->SafeAs<ast::LiteralExpr>()) {
+    if (auto index = node->GetIndex()->SafeAs<ast::LiteralExpr>()) {
       const int64_t index_val = index->IntegerVal();
       // Check negative array indices.
       if (index_val < 0) {
@@ -287,7 +288,7 @@ void Sema::VisitLiteralExpr(ast::LiteralExpr *node) {
 
 void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
   // Resolve the type of the sub expression
-  ast::Type *expr_type = Resolve(node->Input());
+  ast::Type *expr_type = Resolve(node->GetInput());
 
   if (expr_type == nullptr) {
     // Some error occurred
@@ -342,7 +343,7 @@ void Sema::VisitUnaryOpExpr(ast::UnaryOpExpr *node) {
 }
 
 void Sema::VisitMemberExpr(ast::MemberExpr *node) {
-  ast::Type *obj_type = Resolve(node->Object());
+  ast::Type *obj_type = Resolve(node->GetObject());
 
   if (obj_type == nullptr) {
     // Some error
@@ -358,18 +359,18 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
     return;
   }
 
-  if (!node->Member()->IsIdentifierExpr()) {
-    error_reporter_->Report(node->Member()->Position(),
+  if (!node->GetMember()->IsIdentifierExpr()) {
+    error_reporter_->Report(node->GetMember()->Position(),
                             ErrorMessages::kExpectedIdentifierForMember);
     return;
   }
 
-  ast::Identifier member = node->Member()->As<ast::IdentifierExpr>()->Name();
+  ast::Identifier member = node->GetMember()->As<ast::IdentifierExpr>()->GetName();
 
   ast::Type *member_type = obj_type->As<ast::StructType>()->LookupFieldByName(member);
 
   if (member_type == nullptr) {
-    error_reporter_->Report(node->Member()->Position(), ErrorMessages::kFieldObjectDoesNotExist,
+    error_reporter_->Report(node->GetMember()->Position(), ErrorMessages::kFieldObjectDoesNotExist,
                             member, obj_type);
     return;
   }

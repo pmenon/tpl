@@ -46,7 +46,7 @@ ast::Expr *Parser::MakeExpr(ast::AstNode *node) {
   }
 
   if (auto *expr_stmt = node->SafeAs<ast::ExpressionStmt>()) {
-    return expr_stmt->Expression();
+    return expr_stmt->GetExpression();
   }
 
   const auto err_msg = sema::ErrorMessages::kExpectingExpression;

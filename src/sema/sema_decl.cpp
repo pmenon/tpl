@@ -10,8 +10,8 @@ namespace tpl::sema {
 
 void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   TPL_ASSERT(scope_ != nullptr, "No scope exists!");
-  if (scope_->LookupLocal(node->Name()) != nullptr) {
-    error_reporter_->Report(node->Position(), ErrorMessages::kVariableRedeclared, node->Name());
+  if (scope_->LookupLocal(node->GetName()) != nullptr) {
+    error_reporter_->Report(node->Position(), ErrorMessages::kVariableRedeclared, node->GetName());
     return;
   }
 
@@ -23,11 +23,11 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   ast::Type *declared_type = nullptr, *initializer_type = nullptr;
 
   if (node->HasTypeDecl()) {
-    declared_type = Resolve(node->TypeRepr());
+    declared_type = Resolve(node->GetTypeRepr());
   }
 
   if (node->HasInitialValue()) {
-    initializer_type = Resolve(node->Initial());
+    initializer_type = Resolve(node->GetInitialValue());
   }
 
   // If neither are resolved, it's an error.
@@ -37,15 +37,15 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
 
   if (declared_type != nullptr && initializer_type != nullptr) {
     // If both type declarations are provided, check assignment.
-    ast::Expr *init = node->Initial();
+    ast::Expr *init = node->GetInitialValue();
     if (!CheckAssignmentConstraints(declared_type, init)) {
       error_reporter_->Report(node->Position(), ErrorMessages::kInvalidAssignment, declared_type,
                               initializer_type);
       return;
     }
     // If the check applied an implicit cast, reset the initializing expression.
-    if (init != node->Initial()) {
-      node->SetInitial(init);
+    if (init != node->GetInitialValue()) {
+      node->SetInitialValue(init);
     }
   } else if (initializer_type != nullptr) {
     // Both type declarations are not provided, but the initial value has a
@@ -58,10 +58,10 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
 
   TPL_ASSERT(scope_ != nullptr, "No scope exists!");
   ast::Type *resolved_type = (declared_type != nullptr ? declared_type : initializer_type);
-  scope_->Declare(node->Name(), resolved_type);
+  scope_->Declare(node->GetName(), resolved_type);
 }
 
-void Sema::VisitFieldDecl(ast::FieldDecl *node) { Visit(node->TypeRepr()); }
+void Sema::VisitFieldDecl(ast::FieldDecl *node) { Visit(node->GetTypeRepr()); }
 
 namespace {
 
@@ -73,7 +73,7 @@ bool HasDuplicatesNames(const util::RegionVector<ast::FieldDecl *> &fields,
   for (const auto *field : fields) {
     // Attempt to insert into the set. If the insertion succeeds it's a unique
     // name. If the insertion fails, it's a duplicate name.
-    const bool inserted = seen.insert(field->Name()).second;
+    const bool inserted = seen.insert(field->GetName()).second;
     if (!inserted) {
       *dup = field;
       return true;
@@ -86,7 +86,7 @@ bool HasDuplicatesNames(const util::RegionVector<ast::FieldDecl *> &fields,
 
 void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
   // Resolve **JUST** the function's type representation, not the function body.
-  ast::Type *func_type = Resolve(node->TypeRepr());
+  ast::Type *func_type = Resolve(node->GetTypeRepr());
 
   // Error.
   if (func_type == nullptr) {
@@ -99,22 +99,22 @@ void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
 
   // Check for duplicate parameter names in signature.
   if (const ast::FieldDecl *dup = nullptr;
-      HasDuplicatesNames(node->TypeRepr()->As<ast::FunctionTypeRepr>()->Parameters(), &dup)) {
-    error_reporter_->Report(node->Position(), ErrorMessages::kDuplicateArgName, dup->Name(),
-                            node->Name());
+      HasDuplicatesNames(node->GetTypeRepr()->As<ast::FunctionTypeRepr>()->GetParameters(), &dup)) {
+    error_reporter_->Report(node->Position(), ErrorMessages::kDuplicateArgName, dup->GetName(),
+                            node->GetName());
     return;
   }
 
   // Make declaration available.
   TPL_ASSERT(scope_ != nullptr, "No scope exists!");
-  scope_->Declare(node->Name(), func_type);
+  scope_->Declare(node->GetName(), func_type);
 
   // Now resolve the whole function.
-  Resolve(node->Function());
+  Resolve(node->GetFunctionLiteral());
 }
 
 void Sema::VisitStructDecl(ast::StructDecl *node) {
-  ast::Type *struct_type = Resolve(node->TypeRepr());
+  ast::Type *struct_type = Resolve(node->GetTypeRepr());
 
   if (struct_type == nullptr) {
     return;
@@ -126,15 +126,15 @@ void Sema::VisitStructDecl(ast::StructDecl *node) {
 
   // Check for duplicate fields.
   if (const ast::FieldDecl *dup = nullptr;
-      HasDuplicatesNames(node->TypeRepr()->As<ast::StructTypeRepr>()->Fields(), &dup)) {
-    error_reporter_->Report(node->Position(), ErrorMessages::kDuplicateStructFieldName, dup->Name(),
-                            node->Name());
+      HasDuplicatesNames(node->GetTypeRepr()->As<ast::StructTypeRepr>()->GetFields(), &dup)) {
+    error_reporter_->Report(node->Position(), ErrorMessages::kDuplicateStructFieldName,
+                            dup->GetName(), node->GetName());
     return;
   }
 
   // Make the declaration available.
   TPL_ASSERT(scope_ != nullptr, "No scope exists!");
-  scope_->Declare(node->Name(), struct_type);
+  scope_->Declare(node->GetName(), struct_type);
 }
 
 }  // namespace tpl::sema

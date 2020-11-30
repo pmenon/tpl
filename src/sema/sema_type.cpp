@@ -10,22 +10,22 @@ namespace tpl::sema {
 
 void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
   uint64_t arr_len = 0;
-  if (node->Length() != nullptr) {
-    if (!node->Length()->IsIntegerLiteral()) {
-      error_reporter_->Report(node->Length()->Position(), ErrorMessages::kNonIntegerArrayLength);
+  if (node->GetLength() != nullptr) {
+    if (!node->GetLength()->IsIntegerLiteral()) {
+      error_reporter_->Report(node->GetLength()->Position(), ErrorMessages::kNonIntegerArrayLength);
       return;
     }
 
-    auto length = node->Length()->As<ast::LiteralExpr>()->IntegerVal();
+    auto length = node->GetLength()->As<ast::LiteralExpr>()->IntegerVal();
     if (length < 0) {
-      error_reporter_->Report(node->Length()->Position(), ErrorMessages::kNegativeArrayLength);
+      error_reporter_->Report(node->GetLength()->Position(), ErrorMessages::kNegativeArrayLength);
       return;
     }
 
     arr_len = static_cast<uint64_t>(length);
   }
 
-  ast::Type *elem_type = Resolve(node->ElementType());
+  ast::Type *elem_type = Resolve(node->GetElementType());
 
   if (elem_type == nullptr) {
     return;
@@ -37,17 +37,17 @@ void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
 void Sema::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   // Handle parameters
   util::RegionVector<ast::Field> param_types(context_->GetRegion());
-  for (auto *param : node->Parameters()) {
+  for (auto *param : node->GetParameters()) {
     Visit(param);
-    ast::Type *param_type = param->TypeRepr()->GetType();
+    ast::Type *param_type = param->GetTypeRepr()->GetType();
     if (param_type == nullptr) {
       return;
     }
-    param_types.emplace_back(param->Name(), param_type);
+    param_types.emplace_back(param->GetName(), param_type);
   }
 
   // Handle return type
-  ast::Type *ret = Resolve(node->ReturnType());
+  ast::Type *ret = Resolve(node->GetReturnType());
   if (ret == nullptr) {
     return;
   }
@@ -58,7 +58,7 @@ void Sema::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
 }
 
 void Sema::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
-  ast::Type *base_type = Resolve(node->Base());
+  ast::Type *base_type = Resolve(node->GetBase());
   if (base_type == nullptr) {
     return;
   }
@@ -68,21 +68,21 @@ void Sema::VisitPointerTypeRepr(ast::PointerTypeRepr *node) {
 
 void Sema::VisitStructTypeRepr(ast::StructTypeRepr *node) {
   util::RegionVector<ast::Field> field_types(context_->GetRegion());
-  for (auto *field : node->Fields()) {
+  for (auto *field : node->GetFields()) {
     Visit(field);
-    ast::Type *field_type = field->TypeRepr()->GetType();
+    ast::Type *field_type = field->GetTypeRepr()->GetType();
     if (field_type == nullptr) {
       return;
     }
-    field_types.emplace_back(field->Name(), field_type);
+    field_types.emplace_back(field->GetName(), field_type);
   }
 
   node->SetType(ast::StructType::Get(context_, std::move(field_types)));
 }
 
 void Sema::VisitMapTypeRepr(ast::MapTypeRepr *node) {
-  ast::Type *key_type = Resolve(node->KeyType());
-  ast::Type *value_type = Resolve(node->ValType());
+  ast::Type *key_type = Resolve(node->GetKeyType());
+  ast::Type *value_type = Resolve(node->GetValueType());
 
   if (key_type == nullptr || value_type == nullptr) {
     // Error

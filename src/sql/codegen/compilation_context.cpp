@@ -145,7 +145,7 @@ void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
     // Each generated function becomes an execution step in the order
     // provided by the pipeline.
     for (auto func : exec_funcs) {
-      steps.emplace_back(pipeline->GetId(), func->Name().ToString());
+      steps.emplace_back(pipeline->GetId(), func->GetName().ToString());
     }
   }
 
@@ -165,11 +165,11 @@ void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
 
   // Setup query and finish.
   vm::Module *main_module = modules[0].get();
-  query_->Setup(std::move(modules),               // All compiled modules.
-                main_module,                      // Where init/teardown functions exist.
-                init_fn->Name().ToString(),       // The init() function.
-                tear_down_fn->Name().ToString(),  // The teardown() function.
-                ExecutionPlan(std::move(steps)),  // The generated plan.
+  query_->Setup(std::move(modules),                  // All compiled modules.
+                main_module,                         // Where init/teardown functions exist.
+                init_fn->GetName().ToString(),       // The init() function.
+                tear_down_fn->GetName().ToString(),  // The teardown() function.
+                ExecutionPlan(std::move(steps)),     // The generated plan.
                 query_state_.GetSize());
 }
 

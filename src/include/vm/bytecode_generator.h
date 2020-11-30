@@ -151,7 +151,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   void BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest_type);
   LocalVar BuildLoadPointer(LocalVar double_ptr, ast::Type *type);
 
-  Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type, bool sign=true);
+  Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type, bool sign = true);
 
   Bytecode GetFloatTypedBytecode(Bytecode bytecode, ast::Type *type);
 

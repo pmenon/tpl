@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "sql/type.h"
 #include "sql/sql.h"
+#include "sql/type.h"
 
 namespace tpl::sql {
 
@@ -24,8 +24,7 @@ class Schema {
     ColumnEncoding encoding;
     uint16_t oid{0};
 
-    ColumnInfo(std::string name, Type type,
-               ColumnEncoding encoding = ColumnEncoding::None)
+    ColumnInfo(std::string name, Type type, ColumnEncoding encoding = ColumnEncoding::None)
         : name(std::move(name)), type(type), encoding(encoding) {}
 
     std::size_t GetStorageAlignment() const {

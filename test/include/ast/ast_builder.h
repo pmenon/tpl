@@ -74,7 +74,7 @@ class TestAstBuilder {
     return node_factory()->NewStructDecl(empty_, name, type);
   }
 
-  Expr *DeclRef(Decl *decl) { return IdentExpr(decl->Name()); }
+  Expr *DeclRef(Decl *decl) { return IdentExpr(decl->GetName()); }
 
   Stmt *DeclStmt(Decl *decl) { return node_factory()->NewDeclStmt(decl); }
 

@@ -32,8 +32,7 @@ void Table::Insert(Block &&block) {
 
 namespace {
 
-void DumpColValue(std::ostream &os, Type type, const ColumnSegment &col,
-                  uint32_t row_idx) {
+void DumpColValue(std::ostream &os, Type type, const ColumnSegment &col, uint32_t row_idx) {
   if (type.IsNullable() && col.IsNullAt(row_idx)) {
     os << "NULL";
     return;

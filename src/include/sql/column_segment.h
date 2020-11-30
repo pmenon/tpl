@@ -21,8 +21,7 @@ class ColumnSegment {
    * @param null_bitmap The NULL bitmap for the column's values.
    * @param num_tuples The number of tuples in this segment.
    */
-  ColumnSegment(Type type, byte *data, uint32_t *null_bitmap,
-                uint32_t num_tuples) noexcept
+  ColumnSegment(Type type, byte *data, uint32_t *null_bitmap, uint32_t num_tuples) noexcept
       : type_(type), data_(data), null_bitmap_(null_bitmap), num_tuples_(num_tuples) {}
 
   /**

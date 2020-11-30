@@ -12,7 +12,7 @@ namespace tpl::ast {
 // ---------------------------------------------------------
 
 FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLiteralExpr *func)
-    : Decl(Kind::FunctionDecl, pos, name, func->TypeRepr()), func_(func) {}
+    : Decl(Kind::FunctionDecl, pos, name, func->GetTypeRepr()), func_(func) {}
 
 // ---------------------------------------------------------
 // Structure Declaration
@@ -22,12 +22,12 @@ StructDecl::StructDecl(const SourcePosition &pos, Identifier name, StructTypeRep
     : Decl(Kind::StructDecl, pos, name, type_repr) {}
 
 uint32_t StructDecl::NumFields() const {
-  const auto &fields = TypeRepr()->As<ast::StructTypeRepr>()->Fields();
+  const auto &fields = GetTypeRepr()->As<ast::StructTypeRepr>()->GetFields();
   return fields.size();
 }
 
 ast::FieldDecl *StructDecl::GetFieldAt(uint32_t field_idx) const {
-  return TypeRepr()->As<ast::StructTypeRepr>()->GetFieldAt(field_idx);
+  return GetTypeRepr()->As<ast::StructTypeRepr>()->GetFieldAt(field_idx);
 }
 
 // ---------------------------------------------------------
@@ -102,22 +102,22 @@ FunctionLiteralExpr::FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStmt 
 // Call Expression
 // ---------------------------------------------------------
 
-Identifier CallExpr::GetFuncName() const { return func_->As<IdentifierExpr>()->Name(); }
+Identifier CallExpr::GetFuncName() const { return func_->As<IdentifierExpr>()->GetName(); }
 
 // ---------------------------------------------------------
 // Index Expressions
 // ---------------------------------------------------------
 
 bool IndexExpr::IsArrayAccess() const {
-  TPL_ASSERT(Object() != nullptr, "Object cannot be NULL");
-  TPL_ASSERT(Object() != nullptr, "Cannot determine object type before type checking!");
-  return Object()->GetType()->IsArrayType();
+  TPL_ASSERT(GetObject() != nullptr, "Object cannot be NULL");
+  TPL_ASSERT(GetObject() != nullptr, "Cannot determine object type before type checking!");
+  return GetObject()->GetType()->IsArrayType();
 }
 
 bool IndexExpr::IsMapAccess() const {
-  TPL_ASSERT(Object() != nullptr, "Object cannot be NULL");
-  TPL_ASSERT(Object() != nullptr, "Cannot determine object type before type checking!");
-  return Object()->GetType()->IsMapType();
+  TPL_ASSERT(GetObject() != nullptr, "Object cannot be NULL");
+  TPL_ASSERT(GetObject() != nullptr, "Cannot determine object type before type checking!");
+  return GetObject()->GetType()->IsMapType();
 }
 
 // ---------------------------------------------------------
@@ -189,9 +189,9 @@ bool LiteralExpr::IsRepresentable(ast::Type *type) const {
 // ---------------------------------------------------------
 
 bool MemberExpr::IsSugaredArrow() const {
-  TPL_ASSERT(Object()->GetType() != nullptr,
+  TPL_ASSERT(GetObject()->GetType() != nullptr,
              "Cannot determine sugared-arrow before type checking!");
-  return Object()->GetType()->IsPointerType();
+  return GetObject()->GetType()->IsPointerType();
 }
 
 // ---------------------------------------------------------
@@ -201,12 +201,12 @@ bool MemberExpr::IsSugaredArrow() const {
 bool Stmt::IsTerminating(Stmt *stmt) {
   switch (stmt->GetKind()) {
     case AstNode::Kind::BlockStmt: {
-      return IsTerminating(stmt->As<BlockStmt>()->Statements().back());
+      return IsTerminating(stmt->As<BlockStmt>()->GetStatements().back());
     }
     case AstNode::Kind::IfStmt: {
       auto *if_stmt = stmt->As<IfStmt>();
       return (if_stmt->HasElseStmt() &&
-              (IsTerminating(if_stmt->ThenStmt()) && IsTerminating(if_stmt->ElseStmt())));
+              (IsTerminating(if_stmt->GetThenStmt()) && IsTerminating(if_stmt->GetElseStmt())));
     }
     case AstNode::Kind::ReturnStmt: {
       return true;

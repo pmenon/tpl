@@ -10,13 +10,13 @@ namespace tpl::sema {
 void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, ast::Type *expected) {
   error_reporter_->Report(call->Position(), ErrorMessages::kIncorrectCallArgType,
                           call->GetFuncName(), expected, index,
-                          call->Arguments()[index]->GetType());
+                          call->GetArguments()[index]->GetType());
 }
 
 void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, const char *expected) {
   error_reporter_->Report(call->Position(), ErrorMessages::kIncorrectCallArgType2,
                           call->GetFuncName(), expected, index,
-                          call->Arguments()[index]->GetType());
+                          call->GetArguments()[index]->GetType());
 }
 
 ast::Expr *Sema::ImplCastExprToType(ast::Expr *expr, ast::Type *target_type,

@@ -55,13 +55,13 @@ ast::Expr *StateDescriptor::GetStateEntryPtr(CodeGen *codegen, StateDescriptor::
 ast::Expr *StateDescriptor::GetStateEntryOffset(CodeGen *codegen,
                                                 StateDescriptor::Slot slot) const {
   TPL_ASSERT(slot < slots_.size(), "Invalid slot");
-  return codegen->OffsetOf(state_type_->Name(), slots_[slot].name);
+  return codegen->OffsetOf(state_type_->GetName(), slots_[slot].name);
 }
 
 std::size_t StateDescriptor::GetSize() const {
   TPL_ASSERT(state_type_ != nullptr, "State has not been constructed");
-  TPL_ASSERT(state_type_->TypeRepr()->GetType() != nullptr, "Type-checking not completed!");
-  return state_type_->TypeRepr()->GetType()->GetSize();
+  TPL_ASSERT(state_type_->GetTypeRepr()->GetType() != nullptr, "Type-checking not completed!");
+  return state_type_->GetTypeRepr()->GetType()->GetSize();
 }
 
 }  // namespace tpl::sql::codegen

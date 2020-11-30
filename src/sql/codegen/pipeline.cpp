@@ -209,8 +209,9 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipel
     // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
     ast::Expr *state_ptr = compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
     ast::Decl *state_type = pipeline_ctx->ConstructPipelineStateType();
-    builder.Append(codegen_->TLSReset(codegen_->MakeExpr(tls), state_type->Name(),
-                                      setup_state_fn->Name(), cleanup_state_fn->Name(), state_ptr));
+    builder.Append(codegen_->TLSReset(codegen_->MakeExpr(tls), state_type->GetName(),
+                                      setup_state_fn->GetName(), cleanup_state_fn->GetName(),
+                                      state_ptr));
   }
   return builder.Finish();
 }

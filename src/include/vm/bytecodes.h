@@ -16,7 +16,8 @@ namespace tpl::vm {
 #define CREATE_FOR_INT_TYPES(F, op, ...) INT_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
 /** Creates instances of a given opcode for all unsigned integer primitive types. */
-#define CREATE_FOR_UINT_TYPES(F, op, ...) FOR_EACH_UNSIGNED_INT_TYPE(GEN_TYPED_OP, F, op, __VA_ARGS__)
+#define CREATE_FOR_UINT_TYPES(F, op, ...) \
+  FOR_EACH_UNSIGNED_INT_TYPE(GEN_TYPED_OP, F, op, __VA_ARGS__)
 
 /** Creates instances of a given opcode for primitive boolean types. */
 #define CREATE_FOR_BOOL_TYPES(F, op, ...) BOOL_TYPES(GEN_TYPED_OP, F, op, __VA_ARGS__)
