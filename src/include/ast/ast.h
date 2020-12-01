@@ -1250,7 +1250,7 @@ class IndexExpression : public Expression {
   /**
    * @return The object that's being indexed into.
    */
-  Expression *GetObject() const { return obj_; }
+  Expression *GetObject() const { return object_; }
 
   /**
    * @return The index to use to access the object.
@@ -1279,11 +1279,11 @@ class IndexExpression : public Expression {
 
   // Private to force factory usage.
   IndexExpression(const SourcePosition &pos, Expression *obj, Expression *index)
-      : Expression(Kind::IndexExpression, pos), obj_(obj), index_(index) {}
+      : Expression(Kind::IndexExpression, pos), object_(obj), index_(index) {}
 
  private:
   // The object that's being indexes.
-  Expression *obj_;
+  Expression *object_;
   // The index.
   Expression *index_;
 };

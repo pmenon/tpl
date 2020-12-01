@@ -117,16 +117,12 @@ Identifier CallExpression::GetFuncName() const {
 // ---------------------------------------------------------
 
 bool IndexExpression::IsArrayAccess() const {
-  TPL_ASSERT(GetObject() != nullptr, "Object cannot be NULL");
-  TPL_ASSERT(GetObject() != nullptr, "Cannot determine object type before type checking!");
-  return GetObject()->GetType()->IsArrayType();
+  TPL_ASSERT(object_ != nullptr, "Object cannot be NULL");
+  TPL_ASSERT(object_ != nullptr, "Cannot determine object type before type checking!");
+  return object_->GetType()->IsArrayType();
 }
 
-bool IndexExpression::IsMapAccess() const {
-  TPL_ASSERT(GetObject() != nullptr, "Object cannot be NULL");
-  TPL_ASSERT(GetObject() != nullptr, "Cannot determine object type before type checking!");
-  return GetObject()->GetType()->IsMapType();
-}
+bool IndexExpression::IsMapAccess() const { return !IsArrayAccess(); }
 
 // ---------------------------------------------------------
 // Literal Expressions
@@ -197,9 +193,8 @@ bool LiteralExpression::IsRepresentable(ast::Type *type) const {
 // ---------------------------------------------------------
 
 bool MemberExpression::IsSugaredArrow() const {
-  TPL_ASSERT(GetObject()->GetType() != nullptr,
-             "Cannot determine sugared-arrow before type checking!");
-  return GetObject()->GetType()->IsPointerType();
+  TPL_ASSERT(object_->GetType() != nullptr, "Cannot determine sugared-arrow before type checking!");
+  return object_->GetType()->IsPointerType();
 }
 
 // ---------------------------------------------------------
