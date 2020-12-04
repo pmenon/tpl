@@ -215,14 +215,14 @@ class FunctionInfo {
    * @param name The name of the local variable.
    * @return A (logical) pointer to the local variable.
    */
-  LocalVar LookupLocal(const std::string &name) const;
+  LocalVar LookupLocal(std::string_view name) const;
 
   /**
    * Lookup the information for a local variable in this function by its name.
    * @param name The name of the local variable to find.
    * @return A possibly null pointer to the local's information.
    */
-  const LocalInfo *LookupLocalInfoByName(const std::string &name) const;
+  const LocalInfo *LookupLocalInfoByName(std::string_view name) const;
 
   /**
    * Lookup the information for a local variable in this function by the variable's offset in the

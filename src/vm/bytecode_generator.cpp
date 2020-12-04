@@ -220,28 +220,31 @@ void BytecodeGenerator::VisitFunctionDeclaration(ast::FunctionDeclaration *node)
 }
 
 void BytecodeGenerator::VisitIdentifierExpression(ast::IdentifierExpression *node) {
+  TPL_ASSERT(GetExecutionResult() != nullptr,
+             "Caller expected to use result of identifier expression.");
+
   // Lookup the local in the current function. It must be there through a
   // previous variable declaration (or parameter declaration). What is returned
   // is a pointer to the variable.
-
-  const std::string local_name = node->GetName().GetData();
+  std::string_view local_name = node->GetName().GetView();
   LocalVar local = GetCurrentFunction()->LookupLocal(local_name);
 
+  // If the caller wants the L-Value of the identifier, we just provide the
+  // local we found, which is a register with the address of the identifier.
   if (GetExecutionResult()->IsLValue()) {
     GetExecutionResult()->SetDestination(local);
     return;
   }
 
-  // The caller wants the R-Value of the identifier. So, we need to load it. If
-  // the caller did not provide a destination register, we're done. If the
-  // caller provided a destination, we need to move the value of the identifier
-  // into the provided destination.
-
+  // The caller wants the R-Value of the identifier, so we need to load it. If
+  // the caller did not provide a destination register, we're done.
   if (!GetExecutionResult()->HasDestination()) {
     GetExecutionResult()->SetDestination(local.ValueOf());
     return;
   }
 
+  // The caller wants the R-Value of the identifier and provided a destination.
+  // Thus, we need to copy the identifier's value into the provided destination.
   LocalVar dest = GetExecutionResult()->GetOrCreateDestination(node->GetType());
 
   // If the local we want the R-Value of is a parameter, we can't take its
@@ -494,12 +497,15 @@ void BytecodeGenerator::VisitReturnStatement(ast::ReturnStatement *node) {
     // In other words, it's a double pointer to the result. Thus, we need to
     // store the result of the recursive call into *rv, i.e., rv.ValueOf().
     TPL_ASSERT(rv.GetAddressMode() == LocalVar::AddressMode::Address, "RV expected to be address.");
-    if (node->GetReturnValue()->GetType()->IsSqlValueType()) {
+    if (auto ret_type = node->GetReturnValue()->GetType(); ret_type->IsSqlValueType()) {
       LocalVar result = VisitExpressionForSQLValue(node->GetReturnValue());
-      BuildDeref(rv.ValueOf(), result, node->GetReturnValue()->GetType());
+      BuildDeref(rv.ValueOf(), result, ret_type);
+    } else if (ret_type->IsStructType()) {
+      LocalVar result = VisitExpressionForLValue(node->GetReturnValue());
+      BuildAssign(rv.ValueOf(), result, ret_type);
     } else {
       LocalVar result = VisitExpressionForRValue(node->GetReturnValue());
-      BuildAssign(rv.ValueOf(), result, node->GetReturnValue()->GetType());
+      BuildAssign(rv.ValueOf(), result, ret_type);
     }
   }
   GetEmitter()->EmitReturn();
@@ -2513,8 +2519,10 @@ void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest
     GetEmitter()->EmitAssign(Bytecode::Assign2, dest, val);
   } else if (size == 4) {
     GetEmitter()->EmitAssign(Bytecode::Assign4, dest, val);
-  } else {
+  } else if (size == 8) {
     GetEmitter()->EmitAssign(Bytecode::Assign8, dest, val);
+  } else {
+    GetEmitter()->EmitAssignN(dest, val, size);
   }
 }
 

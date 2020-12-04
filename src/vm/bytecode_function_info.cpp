@@ -69,12 +69,12 @@ LocalVar FunctionInfo::GetReturnValueLocal() const {
   return LocalVar(0u, LocalVar::AddressMode::Address);
 }
 
-const LocalInfo *FunctionInfo::LookupLocalInfoByName(const std::string &name) const {
+const LocalInfo *FunctionInfo::LookupLocalInfoByName(std::string_view name) const {
   auto iter = std::ranges::find_if(locals_, [&](auto &info) { return info.GetName() == name; });
   return iter == locals_.end() ? nullptr : &*iter;
 }
 
-LocalVar FunctionInfo::LookupLocal(const std::string &name) const {
+LocalVar FunctionInfo::LookupLocal(std::string_view name) const {
   if (const auto local_info = LookupLocalInfoByName(name)) {
     return LocalVar(local_info->GetOffset(), LocalVar::AddressMode::Address);
   }
