@@ -20,9 +20,10 @@ UnionAllTranslator::UnionAllTranslator(const planner::SetOpPlanNode &plan,
   // Reserve in vector now so we have stable pointers.
   child_pipelines_.reserve(plan.GetChildrenSize());
   for (uint32_t i = 0; i < plan.GetChildrenSize(); i++) {
-    auto child = &child_pipelines_.emplace_back(compilation_context, pipeline->GetPipelineGraph());
-    compilation_context->Prepare(*plan.GetChild(i), child);
-    pipeline->MarkNestedPipeline(child);
+    auto child_pipeline = &child_pipelines_.emplace_back(this, pipeline->GetPipelineGraph(),
+                                                         Pipeline::Parallelism::Parallel);
+    compilation_context->Prepare(*plan.GetChild(i), child_pipeline);
+    pipeline->MarkNestedPipeline(child_pipeline);
   }
 }
 

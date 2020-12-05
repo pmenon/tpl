@@ -21,6 +21,7 @@ void PipelineGraph::RegisterPipeline(const Pipeline &pipeline) {
 
 void PipelineGraph::AddDependency(const Pipeline &a, const Pipeline &b) {
   TPL_ASSERT(IsRegistered(a), "Adding dependency to unregistered pipeline!");
+  TPL_ASSERT(!a.IsSameAs(b), "Pipelines cannot depend on themselves!");
   TPL_ASSERT(std::ranges::count(dependency_graph_[&a], &b) == 0, "Duplicate dependency!");
   dependency_graph_[&a].push_back(&b);
 }
@@ -36,7 +37,7 @@ void PipelineGraph::CollectTransitiveDependencies(
     dependencies->push_back(&pipeline);
   }
   // Check all outer nestings, too.
-  if (auto &outer_nestings = pipeline.GetParentPipelines(); !outer_nestings.empty()) {
+  if (const auto &outer_nestings = pipeline.GetParentPipelines(); !outer_nestings.empty()) {
     for (auto parent : outer_nestings) {
       CollectTransitiveDependencies(*parent, dependencies);
     }
