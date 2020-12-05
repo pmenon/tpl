@@ -224,6 +224,11 @@ class Pipeline {
   bool IsVectorized() const { return false; }
 
   /**
+   * @return True if this pipeline is nested.
+   */
+  bool IsNested() const { return type_ == Type::Nested; }
+
+  /**
    * @return Is the given operator the last in this pipeline?
    */
   bool IsLastOperator(const OperatorTranslator &op) const;
