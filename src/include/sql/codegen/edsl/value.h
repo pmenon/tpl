@@ -66,7 +66,8 @@ class Value {
    * @param val The value to assign.
    * @return This type as the most specific derived type.
    */
-  template <typename E, typename = std::enable_if<IsETLExpr<E>>>
+  template <typename E,
+            typename = std::enable_if<IsETLExpr<E> && std::is_same_v<ValueType, ValueT<E>>>>
   ValueType &operator=(E &&val) {
     codegen_->GetCurrentFunction()->Append(codegen_->Assign(Eval(), val.Eval()));
     return *Derived();

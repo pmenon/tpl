@@ -104,6 +104,6 @@ constexpr bool SameValueType = std::is_same_v<ValueT<T>, ValueT<U>>;
  * @tparam T The trait to check.
  */
 template <typename T>
-constexpr bool HasBoolValue = IsETLExpr<T> && SameValueType<T, Bool>;
+constexpr bool HasBoolValue = IsETLExpr<T> &&SameValueType<T, Bool>;
 
 };  // namespace tpl::sql::codegen::edsl

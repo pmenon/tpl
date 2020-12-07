@@ -25,20 +25,20 @@ class NamedValue {
   ast::Identifier name_;
 };
 
-//template <typename T, typename = void>
-//struct has_eval : std::false_type {};
+// template <typename T, typename = void>
+// struct has_eval : std::false_type {};
 //
-//template <typename T>
-//struct has_eval<T, decltype((void)std::declval<T>().Eval())> : std::true_type {};
+// template <typename T>
+// struct has_eval<T, decltype((void)std::declval<T>().Eval())> : std::true_type {};
 //
-//template <typename T>
-//auto Evaluate(CodeGen *codegen, const T &val)
+// template <typename T>
+// auto Evaluate(CodeGen *codegen, const T &val)
 //    -> std::enable_if_t<std::is_integral_v<T>, ast::Expression *> {
 //  return GetIntegerLiteral(codegen, val);
 //}
 //
-//template <typename T>
-//auto Evaluate(CodeGen *, const T &val)
+// template <typename T>
+// auto Evaluate(CodeGen *, const T &val)
 //    -> std::enable_if_t<has_eval<T>::value, ast::Expression *> {
 //  return val.Eval();
 //}

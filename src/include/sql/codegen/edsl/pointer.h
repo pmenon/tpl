@@ -24,9 +24,12 @@ class Ptr : public Value<Ptr<T>> {
    */
   using PointeeType = T;
 
-  /** Bring in base overloads. */
+  /**
+   * Bring in base overloads.
+   */
   using Base::Eval;
   using Base::GetCodeGen;
+  using Base::operator=;
 
   /**
    * Create a new pointer type.

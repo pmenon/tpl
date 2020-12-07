@@ -36,6 +36,7 @@ class IntegerBase : public Value<T> {
    */
   using Base::Eval;
   using Base::GetCodeGen;
+  using Base::operator=;
 
   /**
    * Assign the given raw C++ value to this value.
@@ -79,6 +80,8 @@ class IntegerBase : public Value<T> {
   class Class : public IntegerBase<Class, _CppType> {                                         \
    public:                                                                                    \
     using Base = IntegerBase<Class, _CppType>;                                                \
+    using Base::Eval;                                                                         \
+    using Base::operator=;                                                                    \
     template <typename E, typename = std::enable_if<Traits<E>::kIsETL>>                       \
     Class(CodeGen *codegen, ast::Identifier name, E &&val)                                    \
         : Base(codegen, name, std::forward<E>(val)) {}                                        \

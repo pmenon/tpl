@@ -27,7 +27,11 @@ class Bool : public Value<Bool> {
    */
   using CppType = bool;
 
+  /**
+   * Bring in base overloads.
+   */
   using Base::Eval;
+  using Base::GetCodeGen;
   using Base::operator=;
 
   /**
@@ -50,6 +54,16 @@ class Bool : public Value<Bool> {
    */
   Bool(CodeGen *codegen, ast::Identifier name, bool val)
       : Base(codegen, name, Literal<Bool>(codegen, val)) {}
+
+  /**
+   * Create a named boolean with the given name whose value is the result of the given expression.
+   * @tparam E The expression type.
+   * @param codegen The code generator instance.
+   * @param name The name of the boolean.
+   * @param val The initial value.
+   */
+  Bool(CodeGen *codegen, std::string_view name, bool val)
+      : Base(codegen, codegen->MakeFreshIdentifier(name), Literal<Bool>(codegen, val)) {}
 
   /**
    * Assign a raw C++ boolean value to this.
