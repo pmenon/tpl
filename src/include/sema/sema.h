@@ -119,10 +119,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinAggregatorCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinJoinHashTableCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinHashTableEntryCall(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinSorterInit(ast::CallExpression *call);
-  void CheckBuiltinSorterInsert(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinSorterSort(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinSorterFree(ast::CallExpression *call);
+  void CheckBuiltinSorterCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinSorterIterCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinExecutionContextCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinThreadStateContainerCall(ast::CallExpression *call, ast::Builtin builtin);
@@ -133,7 +130,6 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinPtrCastCall(ast::CallExpression *call);
   void CheckBuiltinIntCast(ast::CallExpression *call);
   void CheckBuiltinTableIterCall(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinTableIterParCall(ast::CallExpression *call);
   void CheckBuiltinVPICall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinFilterManagerCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinVectorFilterCall(ast::CallExpression *call);
