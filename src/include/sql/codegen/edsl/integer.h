@@ -60,9 +60,24 @@ class IntegerBase : public Value<T> {
    * Generate all the common operation-assignment ops, e.g., +=, -=, *=, /=, %=, >>=, <<=, etc.
    */
 #define GEN_ASSIGN_OP(OP)                                                                         \
+  /**                                                                                             \
+   * Assignment operation with a C++ value. Convert to a Literal expression and dispatch to       \
+   * version using generic ETL expression.                                                        \
+   * @param val The C++ value to assign this integer.                                             \
+   * @return This updated integer.                                                                \
+   */                                                                                             \
   ValueType &operator OP##=(CppType val) {                                                        \
     return (*Derived() OP## = Literal<ValueType>(GetCodeGen(), val));                             \
   }                                                                                               \
+                                                                                                  \
+  /**                                                                                             \
+   * Assignment operation with a generic ETL expression. The template guard ensures we're         \
+   * assigning compatible types. In this context "compatible" means the ETL value type of the     \
+   * expression must exactly match the type of the this integer. No implicit casting is           \
+   * performed.                                                                                   \
+   * @tparam E The ETL expression type. The value type must match this integer.                   \
+   * @param val The value to assign this integer.                                                 \
+   */                                                                                             \
   template <typename E, typename = std::enable_if_t<IsETLExpr<E> && SameValueType<ValueType, E>>> \
   ValueType &operator OP##=(E &&val) {                                                            \
     CodeGen *codegen = GetCodeGen();                                                              \
