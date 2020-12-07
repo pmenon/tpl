@@ -19,12 +19,6 @@ class ElementTest : public CodegenBasedTest {
   ast::Context ctx_;
 };
 
-NEVER_INLINE void f(edsl::UInt8 &i) {
-  for (int j = 0; j < 10; j++) {
-    ++i;
-  }
-}
-
 TEST_F(ElementTest, SimpleCheck) {
   CompilationUnit cu(GetContext(), "test");
   CodeGen codegen(&cu);
@@ -32,21 +26,21 @@ TEST_F(ElementTest, SimpleCheck) {
   FunctionBuilder func(&codegen, codegen.MakeIdentifier("test"), codegen.MakeEmptyFieldList(),
                        codegen.Nil());
   {
-    edsl::UInt8 i(&codegen, "i", 128);
+    edsl::UInt8 i(&codegen, "i", 2);
     edsl::UInt8 j(&codegen, "j", i + i);
     edsl::UInt8 k = j;
     edsl::UInt8 l(&codegen, "l", k * k * k * k);
-    edsl::while_(&codegen, i < j, [&]{
+    edsl::Ptr<edsl::UInt8> ptr(&codegen, "ptr");
+    ptr.Store(j);
+    edsl::While(&codegen, i < j, [&] {
       //
       j = ++i;
-      f(i);
+      j += 20;
+      j += (i + 2 - 1);
+      j -= (i * 2);
+      j *= (i * 4);
+      j |= (i * 8);
     });
-
-    //    i = (i + j) << i;  // good
-    // i = a;             // bad
-    //  auto yy = a + b;  // good
-    //  auto zz = i + a;  // bad
-    //  auto zzz = i.Cast<Int16>() + a;  // good
   }
   func.Finish();
 
