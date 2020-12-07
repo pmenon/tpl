@@ -68,89 +68,90 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
 
   // Dispatched from VisitBuiltinCallExpr() to handle the various builtin
   // functions, including filtering, hash table interaction, sorting etc.
-  void VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitNullValueCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitSqlStringLikeCall(ast::CallExpr *call);
-  void VisitBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinConcatCall(ast::CallExpr *call);
-  void VisitBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinTableIterParallelCall(ast::CallExpr *call);
-  void VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinCompactStorageCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinHashCall(ast::CallExpr *call);
-  void VisitBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinVectorFilterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinJoinHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinSorterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitResultBufferCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin);
-  void VisitBuiltinSizeOfCall(ast::CallExpr *call);
-  void VisitBuiltinOffsetOfCall(ast::CallExpr *call);
-  void VisitBuiltinIntCastCall(ast::CallExpr *call);
-  void VisitBuiltinTrigCall(ast::CallExpr *call, ast::Builtin builtin);
+  void VisitSqlConversionCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitNullValueCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitSqlStringLikeCall(ast::CallExpression *call);
+  void VisitBuiltinDateFunctionCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinConcatCall(ast::CallExpression *call);
+  void VisitBuiltinTableIterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinTableIterParallelCall(ast::CallExpression *call);
+  void VisitBuiltinVPICall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinCompactStorageCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinHashCall(ast::CallExpression *call);
+  void VisitBuiltinFilterManagerCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinVectorFilterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinAggHashTableIterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinAggPartIterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinAggregatorCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinJoinHashTableCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinHashTableEntryCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinSorterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinSorterIterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitResultBufferCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitCSVReaderCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitExecutionContextCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinThreadStateContainerCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinSizeOfCall(ast::CallExpression *call);
+  void VisitBuiltinOffsetOfCall(ast::CallExpression *call);
+  void VisitBuiltinIntCastCall(ast::CallExpression *call);
+  void VisitBuiltinTrigCall(ast::CallExpression *call, ast::Builtin builtin);
+  void VisitBuiltinBitsCall(ast::CallExpression *call, ast::Builtin builtin);
 
   // Dispatched from VisitCallExpr() for handling builtins
-  void VisitBuiltinCallExpr(ast::CallExpr *call);
-  void VisitRegularCallExpr(ast::CallExpr *call);
+  void VisitBuiltinCallExpression(ast::CallExpression *call);
+  void VisitRegularCallExpression(ast::CallExpression *call);
 
   // Dispatched from VisitBinaryOpExpr() for handling logical boolean expressions and arithmetic
   // expressions
-  void VisitLogicalAndOrExpr(ast::BinaryOpExpr *node);
-  void VisitArithmeticExpr(ast::BinaryOpExpr *node);
+  void VisitLogicalAndOrExpression(ast::BinaryOpExpression *node);
+  void VisitArithmeticExpression(ast::BinaryOpExpression *node);
 
   // Dispatched from VisitArithmeticExpr for or SQL vs. primitive arithmetic
-  void VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node);
-  void VisitSqlArithmeticExpr(ast::BinaryOpExpr *node);
+  void VisitPrimitiveArithmeticExpression(ast::BinaryOpExpression *node);
+  void VisitSqlArithmeticExpression(ast::BinaryOpExpression *node);
 
   // Dispatched from VisitUnaryOp()
-  void VisitAddressOfExpr(ast::UnaryOpExpr *op);
-  void VisitDerefExpr(ast::UnaryOpExpr *op);
-  void VisitArithmeticUnaryExpr(ast::UnaryOpExpr *op);
-  void VisitLogicalNotExpr(ast::UnaryOpExpr *op);
+  void VisitAddressOfExpression(ast::UnaryOpExpression *op);
+  void VisitDerefExpression(ast::UnaryOpExpression *op);
+  void VisitArithmeticUnaryExpression(ast::UnaryOpExpression *op);
+  void VisitLogicalNotExpression(ast::UnaryOpExpression *op);
 
   // Dispatched from VisitIndexExpr() to distinguish between array and map access
-  void VisitArrayIndexExpr(ast::IndexExpr *node);
-  void VisitMapIndexExpr(ast::IndexExpr *node);
+  void VisitArrayIndexExpression(ast::IndexExpression *node);
+  void VisitMapIndexExpression(ast::IndexExpression *node);
 
   // Visit an expression for its L-Value
-  LocalVar VisitExpressionForLValue(ast::Expr *expr);
+  LocalVar VisitExpressionForLValue(ast::Expression *expr);
 
   // Visit an expression for its R-Value and return the local variable holding its result
-  LocalVar VisitExpressionForRValue(ast::Expr *expr);
+  LocalVar VisitExpressionForRValue(ast::Expression *expr);
 
   // Visit an expression for its R-Value, providing a destination variable where the result should
   // be stored
-  void VisitExpressionForRValue(ast::Expr *expr, LocalVar dest);
+  void VisitExpressionForRValue(ast::Expression *expr, LocalVar dest);
 
   // Visit an expression that returns a SQL value. The address of the computed
   // value is returned.
-  LocalVar VisitExpressionForSQLValue(ast::Expr *expr);
+  LocalVar VisitExpressionForSQLValue(ast::Expression *expr);
 
   enum class TestFallthrough : uint8_t { None, Then, Else };
 
-  void VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *then_label, BytecodeLabel *else_label,
-                              TestFallthrough fallthrough);
+  void VisitExpressionForTest(ast::Expression *expr, BytecodeLabel *then_label,
+                              BytecodeLabel *else_label, TestFallthrough fallthrough);
 
   // Visit the body of an iteration statement
-  void VisitIterationStatement(ast::IterationStmt *iteration, LoopBuilder *loop_builder);
+  void VisitIterationStatement(ast::IterationStatement *iteration, LoopBuilder *loop_builder);
 
   // Dispatched from VisitCompareOp for SQL vs. primitive comparisons
-  void VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare);
-  void VisitPrimitiveCompareOpExpr(ast::ComparisonOpExpr *compare);
+  void VisitSqlComparisonExpression(ast::ComparisonOpExpression *compare);
+  void VisitPrimitiveComparisonExpression(ast::ComparisonOpExpression *compare);
 
   void BuildDeref(LocalVar dest, LocalVar ptr, ast::Type *dest_type);
   void BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest_type);
   LocalVar BuildLoadPointer(LocalVar double_ptr, ast::Type *type);
 
-  Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type);
+  Bytecode GetIntTypedBytecode(Bytecode bytecode, ast::Type *type, bool sign = true);
 
   Bytecode GetFloatTypedBytecode(Bytecode bytecode, ast::Type *type);
 

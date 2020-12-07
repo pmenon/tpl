@@ -151,7 +151,7 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
              Bytecodes::ToString(bytecode));                                \
   } while (false)
 #else
-#define DEBUG_TRACE_INSTRUCTIONS(op) (void)op
+#define DEBUG_TRACE_INSTRUCTIONS(op) /* No-op */
 #endif
 
   // TODO(pmenon): Should these READ/PEEK macros take in a vm::OperandType so
@@ -307,6 +307,23 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
 #undef GEN_NEG_OP
 #undef DO_GEN_BIT_OP
 
+#define DO_GEN_BIT_OP(type, ...)                              \
+  OP(BitCtlz##_##type) : {                                    \
+    auto *dest = frame->LocalAt<uint32_t *>(READ_LOCAL_ID()); \
+    auto input = frame->LocalAt<type>(READ_LOCAL_ID());       \
+    OpBitCtlz_##type(dest, input);                            \
+    DISPATCH_NEXT();                                          \
+  }                                                           \
+  OP(BitCttz##_##type) : {                                    \
+    auto *dest = frame->LocalAt<uint32_t *>(READ_LOCAL_ID()); \
+    auto input = frame->LocalAt<type>(READ_LOCAL_ID());       \
+    OpBitCttz_##type(dest, input);                            \
+    DISPATCH_NEXT();                                          \
+  }
+
+  FOR_EACH_UNSIGNED_INT_TYPE(DO_GEN_BIT_OP)
+#undef DO_GEN_BIT_OP
+
   // -------------------------------------------------------
   // Primitive casting.
   // NOTE: This blows up into ~121 opcodes :(
@@ -420,6 +437,14 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   GEN_ASSIGN(int32_t, 4);
   GEN_ASSIGN(int64_t, 8);
 #undef GEN_ASSIGN
+
+  OP(AssignN) : {
+    auto *dest = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto len = READ_UIMM4();
+    OpAssignN(dest, src, len);
+    DISPATCH_NEXT();
+  }
 
   OP(AssignImm4F) : {
     auto *dest = frame->LocalAt<float *>(READ_LOCAL_ID());

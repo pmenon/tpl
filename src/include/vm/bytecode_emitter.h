@@ -44,6 +44,7 @@ class BytecodeEmitter {
   // -------------------------------------------------------
 
   void EmitAssign(Bytecode bytecode, LocalVar dest, LocalVar src);
+  void EmitAssignN(LocalVar dest, LocalVar src, uint32_t len);
   void EmitAssignImm1(LocalVar dest, int8_t val);
   void EmitAssignImm2(LocalVar dest, int16_t val);
   void EmitAssignImm4(LocalVar dest, int32_t val);

@@ -11,8 +11,7 @@
 namespace tpl::sql::planner {
 
 /**
- * Plan node for set operations INTERSECT, INTERSECT ALL, EXPECT, EXCEPT ALL.
- * @warning UNION (ALL) is handled differently.
+ * Plan node for set operations INTERSECT, INTERSECT ALL, EXPECT, EXCEPT ALL, UNION, UNION ALL.
  * IMPORTANT: All children must have the same physical schema.
  */
 class SetOpPlanNode : public AbstractPlanNode {

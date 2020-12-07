@@ -40,7 +40,7 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
   }
 
   // Register a Sorter instance in the global query state.
-  ast::Expr *sorter_type = codegen_->BuiltinType(ast::BuiltinType::Sorter);
+  ast::Expression *sorter_type = codegen_->BuiltinType(ast::BuiltinType::Sorter);
   global_sorter_ =
       compilation_context->GetQueryState()->DeclareStateEntry(codegen_, "sorter", sorter_type);
 }
@@ -70,18 +70,18 @@ void SortTranslator::GenerateComparisonLogic(FunctionBuilder *function) {
   for (std::size_t idx = 0; idx < sort_keys.size(); idx++) {
     const auto &[expr, sort_order] = sort_keys[idx];
     current_row_ = CurrentRow::Lhs;
-    ast::Expr *lhs = context.DeriveValue(*expr, this);
+    ast::Expression *lhs = context.DeriveValue(*expr, this);
     current_row_ = CurrentRow::Rhs;
-    ast::Expr *rhs = context.DeriveValue(*expr, this);
+    ast::Expression *rhs = context.DeriveValue(*expr, this);
     const auto comparison_type = sort_order == planner::OrderByOrderingType::ASC
                                      ? parsing::Token::Type::LESS
                                      : parsing::Token::Type::GREATER;
     if (idx != sort_keys.size() - 1) {
       If check_comparison(function, codegen_->Compare(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
-      ast::Expr *result = codegen_->Compare(comparison_type, lhs, rhs);
+      ast::Expression *result = codegen_->Compare(comparison_type, lhs, rhs);
       function->Append(codegen_->Return(result));
     } else {
-      ast::Expr *result = codegen_->Compare(comparison_type, lhs, rhs);
+      ast::Expression *result = codegen_->Compare(comparison_type, lhs, rhs);
       function->Append(codegen_->Return(result));
     }
   }
@@ -89,13 +89,13 @@ void SortTranslator::GenerateComparisonLogic(FunctionBuilder *function) {
   current_row_ = CurrentRow::Child;
 }
 
-ast::StructDecl *SortTranslator::GenerateSortRowStructType() const {
+ast::StructDeclaration *SortTranslator::GenerateSortRowStructType() const {
   auto fields = codegen_->MakeEmptyFieldList();
   GetAllChildOutputFields(0, kSortRowAttrPrefix, &fields);
   return codegen_->DeclareStruct(sort_row_type_, std::move(fields));
 }
 
-ast::FunctionDecl *SortTranslator::GenerateComparisonFunction() {
+ast::FunctionDeclaration *SortTranslator::GenerateComparisonFunction() {
   auto params = codegen_->MakeFieldList({
       codegen_->MakeField(lhs_row_, codegen_->PointerType(sort_row_type_)),
       codegen_->MakeField(rhs_row_, codegen_->PointerType(sort_row_type_)),
@@ -112,28 +112,29 @@ void SortTranslator::DefineStructsAndFunctions() {
   GenerateComparisonFunction();
 }
 
-void SortTranslator::InitializeSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const {
-  ast::Expr *mem_pool = GetMemoryPool();
+void SortTranslator::InitializeSorter(FunctionBuilder *function,
+                                      ast::Expression *sorter_ptr) const {
+  ast::Expression *mem_pool = GetMemoryPool();
   function->Append(codegen_->SorterInit(sorter_ptr, mem_pool, compare_func_, sort_row_type_));
 }
 
-void SortTranslator::TearDownSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const {
+void SortTranslator::TearDownSorter(FunctionBuilder *function, ast::Expression *sorter_ptr) const {
   function->Append(codegen_->SorterFree(sorter_ptr));
 }
 
 void SortTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  ast::Expr *sorter = GetQueryStateEntryPtr(global_sorter_);
+  ast::Expression *sorter = GetQueryStateEntryPtr(global_sorter_);
   InitializeSorter(function, sorter);
 }
 
 void SortTranslator::TearDownQueryState(FunctionBuilder *function) const {
-  ast::Expr *sorter = GetQueryStateEntryPtr(global_sorter_);
+  ast::Expression *sorter = GetQueryStateEntryPtr(global_sorter_);
   TearDownSorter(function, sorter);
 }
 
 void SortTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (pipeline_ctx->IsForPipeline(build_pipeline_) && pipeline_ctx->IsParallel()) {
-    ast::Expr *sorter_type = codegen_->BuiltinType(ast::BuiltinType::Sorter);
+    ast::Expression *sorter_type = codegen_->BuiltinType(ast::BuiltinType::Sorter);
     local_sorter_ = pipeline_ctx->DeclarePipelineStateEntry("sorter", sorter_type);
   }
 }
@@ -141,7 +142,7 @@ void SortTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
 void SortTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                              FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    ast::Expr *local_sorter = pipeline_ctx.GetStateEntryPtr(local_sorter_);
+    ast::Expression *local_sorter = pipeline_ctx.GetStateEntryPtr(local_sorter_);
     InitializeSorter(function, local_sorter);
   }
 }
@@ -149,12 +150,13 @@ void SortTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx
 void SortTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                            FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    ast::Expr *local_sorter = pipeline_ctx.GetStateEntryPtr(local_sorter_);
+    ast::Expression *local_sorter = pipeline_ctx.GetStateEntryPtr(local_sorter_);
     TearDownSorter(function, local_sorter);
   }
 }
 
-ast::Expr *SortTranslator::GetSortRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const {
+ast::Expression *SortTranslator::GetSortRowAttribute(ast::Identifier sort_row,
+                                                     uint32_t attr_idx) const {
   ast::Identifier attr_name =
       codegen_->MakeIdentifier(kSortRowAttrPrefix + std::to_string(attr_idx));
   return codegen_->AccessStructMember(codegen_->MakeExpr(sort_row), attr_name);
@@ -163,8 +165,8 @@ ast::Expr *SortTranslator::GetSortRowAttribute(ast::Identifier sort_row, uint32_
 void SortTranslator::FillSortRow(ConsumerContext *ctx, FunctionBuilder *function) const {
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->GetColumns().size(); attr_idx++) {
-    ast::Expr *lhs = GetSortRowAttribute(sort_row_var_, attr_idx);
-    ast::Expr *rhs = GetChildOutput(ctx, 0, attr_idx);
+    ast::Expression *lhs = GetSortRowAttribute(sort_row_var_, attr_idx);
+    ast::Expression *rhs = GetChildOutput(ctx, 0, attr_idx);
     function->Append(codegen_->Assign(lhs, rhs));
   }
 }
@@ -174,12 +176,13 @@ void SortTranslator::InsertIntoSorter(ConsumerContext *context, FunctionBuilder 
                                       F sorter_provider) const {
   if (const auto &plan = GetPlanAs<planner::OrderByPlanNode>(); plan.HasLimit()) {
     const std::size_t top_k = plan.GetOffset() + plan.GetLimit();
-    ast::Expr *insert_call = codegen_->SorterInsertTopK(sorter_provider(), sort_row_type_, top_k);
+    ast::Expression *insert_call =
+        codegen_->SorterInsertTopK(sorter_provider(), sort_row_type_, top_k);
     function->Append(codegen_->DeclareVarWithInit(sort_row_var_, insert_call));
     FillSortRow(context, function);
     function->Append(codegen_->SorterInsertTopKFinish(sorter_provider(), top_k));
   } else {
-    ast::Expr *insert_call = codegen_->SorterInsert(sorter_provider(), sort_row_type_);
+    ast::Expression *insert_call = codegen_->SorterInsert(sorter_provider(), sort_row_type_);
     function->Append(codegen_->DeclareVarWithInit(sort_row_var_, insert_call));
     FillSortRow(context, function);
   }
@@ -199,14 +202,14 @@ void SortTranslator::ScanSorter(ConsumerContext *context, FunctionBuilder *funct
   // Call @sorterIterInit().
   function->Append(codegen_->SorterIterInit(iter(), GetQueryStateEntryPtr(global_sorter_)));
 
-  ast::Expr *init = nullptr;
+  ast::Expression *init = nullptr;
   if (const auto offset = GetPlanAs<planner::OrderByPlanNode>().GetOffset(); offset != 0) {
     init = codegen_->SorterIterSkipRows(iter(), offset);
   }
   Loop loop(function,
-            init == nullptr ? nullptr : codegen_->MakeStmt(init),   // @sorterIterSkipRows();
-            codegen_->SorterIterHasNext(iter()),                    // @sorterIterHasNext();
-            codegen_->MakeStmt(codegen_->SorterIterNext(iter())));  // @sorterIterNext()
+            init == nullptr ? nullptr : codegen_->MakeStatement(init),   // @sorterIterSkipRows();
+            codegen_->SorterIterHasNext(iter()),                         // @sorterIterHasNext();
+            codegen_->MakeStatement(codegen_->SorterIterNext(iter())));  // @sorterIterNext()
   {
     // var sortRow = @ptrCast(SortRow*, @sorterIterGetRow(sorter))
     auto row = codegen_->SorterIterGetRow(iter(), sort_row_type_);
@@ -239,13 +242,13 @@ void SortTranslator::Consume(ConsumerContext *context, FunctionBuilder *function
 void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                         FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_)) {
-    ast::Expr *sorter_ptr = GetQueryStateEntryPtr(global_sorter_);
+    ast::Expression *sorter_ptr = GetQueryStateEntryPtr(global_sorter_);
     if (pipeline_ctx.IsParallel()) {
       // Build pipeline is parallel, so we need to issue a parallel sort. Issue
       // a SortParallel() or a SortParallelTopK() depending on whether a limit
       // was provided in the plan.
-      ast::Expr *tls = GetThreadStateContainer();
-      ast::Expr *offset = pipeline_ctx.GetStateEntryByteOffset(local_sorter_);
+      ast::Expression *tls = GetThreadStateContainer();
+      ast::Expression *offset = pipeline_ctx.GetStateEntryByteOffset(local_sorter_);
       if (const auto &plan = GetPlanAs<planner::OrderByPlanNode>(); plan.HasLimit()) {
         const std::size_t top_k = plan.GetOffset() + plan.GetLimit();
         function->Append(codegen_->SortTopKParallel(sorter_ptr, tls, offset, top_k));
@@ -258,8 +261,8 @@ void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
   }
 }
 
-ast::Expr *SortTranslator::GetChildOutput(ConsumerContext *context, UNUSED uint32_t child_idx,
-                                          uint32_t attr_idx) const {
+ast::Expression *SortTranslator::GetChildOutput(ConsumerContext *context, UNUSED uint32_t child_idx,
+                                                uint32_t attr_idx) const {
   if (context->IsForPipeline(*GetPipeline())) {
     return GetSortRowAttribute(sort_row_var_, attr_idx);
   }

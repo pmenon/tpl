@@ -33,23 +33,23 @@ PipelineContext::PipelineContext(const Pipeline &pipeline)
              [this](CodeGen *codegen) { return codegen->MakeExpr(state_var_); }) {}
 
 StateDescriptor::Slot PipelineContext::DeclarePipelineStateEntry(const std::string &name,
-                                                                 ast::Expr *type_repr) {
+                                                                 ast::Expression *type_repr) {
   return state_.DeclareStateEntry(codegen_, name, type_repr);
 }
 
-ast::StructDecl *PipelineContext::ConstructPipelineStateType() {
+ast::StructDeclaration *PipelineContext::ConstructPipelineStateType() {
   return state_.ConstructFinalType(codegen_);
 }
 
-ast::Expr *PipelineContext::GetStateEntry(StateDescriptor::Slot slot) const {
+ast::Expression *PipelineContext::GetStateEntry(StateDescriptor::Slot slot) const {
   return state_.GetStateEntry(codegen_, slot);
 }
 
-ast::Expr *PipelineContext::GetStateEntryPtr(StateDescriptor::Slot slot) const {
+ast::Expression *PipelineContext::GetStateEntryPtr(StateDescriptor::Slot slot) const {
   return state_.GetStateEntryPtr(codegen_, slot);
 }
 
-ast::Expr *PipelineContext::GetStateEntryByteOffset(StateDescriptor::Slot slot) const {
+ast::Expression *PipelineContext::GetStateEntryByteOffset(StateDescriptor::Slot slot) const {
   return state_.GetStateEntryOffset(codegen_, slot);
 }
 
@@ -59,18 +59,19 @@ bool PipelineContext::IsParallel() const { return pipeline_.IsParallel(); }
 
 bool PipelineContext::IsVectorized() const { return pipeline_.IsVectorized(); }
 
-ast::Expr *PipelineContext::AccessCurrentThreadState() const {
-  ast::Expr *exec_ctx = pipeline_.GetCompilationContext()->GetExecutionContextPtrFromQueryState();
-  ast::Expr *tls = codegen_->ExecCtxGetTLS(exec_ctx);
+ast::Expression *PipelineContext::AccessCurrentThreadState() const {
+  ast::Expression *exec_ctx =
+      pipeline_.GetCompilationContext()->GetExecutionContextPtrFromQueryState();
+  ast::Expression *tls = codegen_->ExecCtxGetTLS(exec_ctx);
   return codegen_->TLSAccessCurrentThreadState(tls, state_.GetTypeName());
 }
 
-util::RegionVector<ast::FieldDecl *> PipelineContext::PipelineParams() const {
+util::RegionVector<ast::FieldDeclaration *> PipelineContext::PipelineParams() const {
   // The main query parameters.
-  util::RegionVector<ast::FieldDecl *> query_params =
+  util::RegionVector<ast::FieldDeclaration *> query_params =
       pipeline_.GetCompilationContext()->QueryParams();
   // Tag on the pipeline state.
-  ast::Expr *pipeline_state = codegen_->PointerType(codegen_->MakeExpr(state_.GetTypeName()));
+  ast::Expression *pipeline_state = codegen_->PointerType(codegen_->MakeExpr(state_.GetTypeName()));
   query_params.push_back(codegen_->MakeField(state_var_, pipeline_state));
   return query_params;
 }
@@ -165,7 +166,7 @@ std::string Pipeline::ConstructPipelinePath() const {
   return result;
 }
 
-ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction(
+ast::FunctionDeclaration *Pipeline::GenerateSetupPipelineStateFunction(
     PipelineContext *pipeline_ctx) const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("InitPipelineState"));
   FunctionBuilder builder(codegen_, name, pipeline_ctx->PipelineParams(), codegen_->Nil());
@@ -179,7 +180,7 @@ ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction(
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction(
+ast::FunctionDeclaration *Pipeline::GenerateTearDownPipelineStateFunction(
     PipelineContext *pipeline_ctx) const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("TearDownPipelineState"));
   FunctionBuilder builder(codegen_, name, pipeline_ctx->PipelineParams(), codegen_->Nil());
@@ -193,29 +194,32 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction(
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(PipelineContext *pipeline_ctx) const {
-  ast::FunctionDecl *setup_state_fn = GenerateSetupPipelineStateFunction(pipeline_ctx);
-  ast::FunctionDecl *cleanup_state_fn = GenerateTearDownPipelineStateFunction(pipeline_ctx);
+ast::FunctionDeclaration *Pipeline::GenerateInitPipelineFunction(
+    PipelineContext *pipeline_ctx) const {
+  ast::FunctionDeclaration *setup_state_fn = GenerateSetupPipelineStateFunction(pipeline_ctx);
+  ast::FunctionDeclaration *cleanup_state_fn = GenerateTearDownPipelineStateFunction(pipeline_ctx);
 
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Init"));
   FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(), codegen_->Nil());
   {
     CodeGen::CodeScope code_scope(codegen_);
     // var tls = @execCtxGetTLS(exec_ctx)
-    ast::Expr *exec_ctx = compilation_ctx_->GetExecutionContextPtrFromQueryState();
+    ast::Expression *exec_ctx = compilation_ctx_->GetExecutionContextPtrFromQueryState();
     ast::Identifier tls = codegen_->MakeFreshIdentifier("thread_state_container");
     builder.Append(codegen_->DeclareVarWithInit(tls, codegen_->ExecCtxGetTLS(exec_ctx)));
 
     // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
-    ast::Expr *state_ptr = compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
-    ast::Decl *state_type = pipeline_ctx->ConstructPipelineStateType();
-    builder.Append(codegen_->TLSReset(codegen_->MakeExpr(tls), state_type->Name(),
-                                      setup_state_fn->Name(), cleanup_state_fn->Name(), state_ptr));
+    ast::Expression *state_ptr = compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
+    ast::Declaration *state_type = pipeline_ctx->ConstructPipelineStateType();
+    builder.Append(codegen_->TLSReset(codegen_->MakeExpr(tls), state_type->GetName(),
+                                      setup_state_fn->GetName(), cleanup_state_fn->GetName(),
+                                      state_ptr));
   }
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeline_ctx) const {
+ast::FunctionDeclaration *Pipeline::GenerateRunPipelineFunction(
+    PipelineContext *pipeline_ctx) const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
   FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(), codegen_->Nil());
   {
@@ -240,14 +244,14 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(PipelineContext *pipeli
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
+ast::FunctionDeclaration *Pipeline::GenerateTearDownPipelineFunction() const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("TearDown"));
   FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(), codegen_->Nil());
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen_);
     // Tear down thread local state if parallel pipeline.
-    ast::Expr *exec_ctx = compilation_ctx_->GetExecutionContextPtrFromQueryState();
+    ast::Expression *exec_ctx = compilation_ctx_->GetExecutionContextPtrFromQueryState();
     builder.Append(codegen_->TLSClear(codegen_->ExecCtxGetTLS(exec_ctx)));
   }
   return builder.Finish();
@@ -266,7 +270,7 @@ void Pipeline::DefinePipelineFunctions(PipelineContext *pipeline_ctx) const {
   }
 }
 
-std::vector<ast::FunctionDecl *> Pipeline::GeneratePipelineLogic() const {
+std::vector<ast::FunctionDeclaration *> Pipeline::GeneratePipelineLogic() const {
   LOG_DEBUG("Pipeline-{}: parallel={}, vectorized={}, path=[{}]", id_, IsParallel(), IsVectorized(),
             ConstructPipelinePath());
 
@@ -276,11 +280,11 @@ std::vector<ast::FunctionDecl *> Pipeline::GeneratePipelineLogic() const {
 
   DefinePipelineFunctions(&pipeline_context);
 
-  ast::FunctionDecl *init_fn = GenerateInitPipelineFunction(&pipeline_context);
+  ast::FunctionDeclaration *init_fn = GenerateInitPipelineFunction(&pipeline_context);
 
-  ast::FunctionDecl *run_fn = GenerateRunPipelineFunction(&pipeline_context);
+  ast::FunctionDeclaration *run_fn = GenerateRunPipelineFunction(&pipeline_context);
 
-  ast::FunctionDecl *tear_down_fn = GenerateTearDownPipelineFunction();
+  ast::FunctionDeclaration *tear_down_fn = GenerateTearDownPipelineFunction();
 
   return {init_fn, run_fn, tear_down_fn};
 }
@@ -291,15 +295,15 @@ void Pipeline::LaunchSerial(const PipelineContext &pipeline_ctx) const {
 
 void Pipeline::LaunchParallel(const PipelineContext &pipeline_ctx,
                               std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
-                              std::vector<ast::FieldDecl *> &&additional_params) const {
+                              std::vector<ast::FieldDeclaration *> &&additional_params) const {
   LaunchInternal(pipeline_ctx, dispatch, std::move(additional_params));
 }
 
 void Pipeline::LaunchInternal(const PipelineContext &pipeline_ctx,
                               std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
-                              std::vector<ast::FieldDecl *> &&additional_params) const {
+                              std::vector<ast::FieldDeclaration *> &&additional_params) const {
   // First, make the work function.
-  util::RegionVector<ast::FieldDecl *> pipeline_params = pipeline_ctx.PipelineParams();
+  util::RegionVector<ast::FieldDeclaration *> pipeline_params = pipeline_ctx.PipelineParams();
   pipeline_params.reserve(pipeline_params.size() + additional_params.size());
   pipeline_params.insert(pipeline_params.end(), additional_params.begin(), additional_params.end());
 
@@ -323,8 +327,8 @@ void Pipeline::LaunchInternal(const PipelineContext &pipeline_ctx,
     dispatch(run_function, worker_name);
   } else {
     // var p_state = @tlsGetCurrentThreadState(...)
-    ast::Expr *q_state = compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
-    ast::Expr *p_state = pipeline_ctx.AccessCurrentThreadState();
+    ast::Expression *q_state = compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
+    ast::Expression *p_state = pipeline_ctx.AccessCurrentThreadState();
     ast::Identifier p_state_name = codegen_->MakeFreshIdentifier("p_state");
     run_function->Append(codegen_->DeclareVarWithInit(p_state_name, p_state));
     // Call the work function directly.

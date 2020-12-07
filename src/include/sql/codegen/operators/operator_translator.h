@@ -13,6 +13,7 @@
 
 namespace tpl::sql::planner {
 class AbstractPlanNode;
+class OutputSchema;
 }  // namespace tpl::sql::planner
 
 namespace tpl::sql::codegen {
@@ -186,14 +187,14 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * @return The value (vector) of the attribute at the given index in this operator's output.
    */
-  ast::Expr *GetOutput(ConsumerContext *context, uint32_t attr_idx) const;
+  ast::Expression *GetOutput(ConsumerContext *context, uint32_t attr_idx) const;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
+  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                  uint32_t attr_idx) const override;
 
   /**
    * @return The plan the translator is generating.
@@ -207,22 +208,22 @@ class OperatorTranslator : public ColumnValueProvider {
 
  protected:
   // Get a pointer to the query state.
-  ast::Expr *GetQueryStatePtr() const;
+  ast::Expression *GetQueryStatePtr() const;
 
   // Get the value of a entry in the query state at the given slot.
-  ast::Expr *GetQueryStateEntry(StateDescriptor::Slot slot) const;
+  ast::Expression *GetQueryStateEntry(StateDescriptor::Slot slot) const;
 
   // Get a pointer to the entry in the query state at the given slot.
-  ast::Expr *GetQueryStateEntryPtr(StateDescriptor::Slot slot) const;
+  ast::Expression *GetQueryStateEntryPtr(StateDescriptor::Slot slot) const;
 
   // Get the execution context pointer in the current function.
-  ast::Expr *GetExecutionContext() const;
+  ast::Expression *GetExecutionContext() const;
 
   // Get the thread state container pointer from the execution context stored in the query state.
-  ast::Expr *GetThreadStateContainer() const;
+  ast::Expression *GetThreadStateContainer() const;
 
   // Get the memory pool pointer from the execution context stored in the query state.
-  ast::Expr *GetMemoryPool() const;
+  ast::Expression *GetMemoryPool() const;
 
   // The pipeline this translator is a part of.
   Pipeline *GetPipeline() const { return pipeline_; }
@@ -234,13 +235,16 @@ class OperatorTranslator : public ColumnValueProvider {
     return static_cast<const T &>(plan_);
   }
 
+  // Get the output schema of the given child plan node.
+  const planner::OutputSchema *GetChildOutputSchema(uint32_t child_idx) const;
+
   // Used by operators when they need to generate a struct containing a child's
   // output. Also used by the output layer to materialize the output.
   // The child index refers to which specific child to inspect.
   // The prefix is added to each field/attribute of the child.
   // The fields vector collects the resulting field declarations.
   void GetAllChildOutputFields(uint32_t child_index, const std::string &field_name_prefix,
-                               util::RegionVector<ast::FieldDecl *> *fields) const;
+                               util::RegionVector<ast::FieldDeclaration *> *fields) const;
 
  private:
   // The plan node.

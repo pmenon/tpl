@@ -29,14 +29,15 @@ class Loop {
    * @param condition The loop condition.
    * @param next The next statements.
    */
-  explicit Loop(FunctionBuilder *function, ast::Stmt *init, ast::Expr *condition, ast::Stmt *next);
+  explicit Loop(FunctionBuilder *function, ast::Statement *init, ast::Expression *condition,
+                ast::Statement *next);
 
   /**
    * Create a while-loop.
    * @param codegen The code generator instance.
    * @param condition The loop condition.
    */
-  explicit Loop(FunctionBuilder *function, ast::Expr *condition);
+  explicit Loop(FunctionBuilder *function, ast::Expression *condition);
 
   /**
    * Create an infinite loop.
@@ -60,13 +61,13 @@ class Loop {
   // The loop position.
   const SourcePosition position_;
   // The previous list of statements.
-  ast::BlockStmt *prev_statements_;
+  ast::BlockStatement *prev_statements_;
   // The initial statements, loop condition, and next statements.
-  ast::Stmt *init_;
-  ast::Expr *condition_;
-  ast::Stmt *next_;
+  ast::Statement *init_;
+  ast::Expression *condition_;
+  ast::Statement *next_;
   // The loop body.
-  ast::BlockStmt *loop_body_;
+  ast::BlockStatement *loop_body_;
   // Completion flag.
   bool completed_;
 };

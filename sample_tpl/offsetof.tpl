@@ -1,10 +1,10 @@
 struct Test {
-  a : uint8
-  b : uint16
-  c : uint32
-  d : uint64
-  e : float32
-  f : float64
+    a : uint8
+    b : uint16
+    c : uint32
+    d : uint64
+    e : float32
+    f : float64
 }
 
 fun main() -> int {

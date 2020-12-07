@@ -53,14 +53,14 @@ class ForFinder : public AstTraversalVisitor<ForFinder<FindInfinite>> {
  public:
   explicit ForFinder(ast::AstNode *root) : AstTraversalVisitor<SelfT>(root), num_fors_(0) {}
 
-  void VisitForStmt(ast::ForStmt *stmt) {
+  void VisitForStatement(ast::ForStatement *stmt) {
     if constexpr (FindInfinite) {
-      bool is_finite_for = (stmt->Condition() == nullptr);
+      bool is_finite_for = (stmt->GetCondition() == nullptr);
       num_fors_ += static_cast<uint32_t>(is_finite_for);
     } else {  // NOLINT
       num_fors_++;
     }
-    AstTraversalVisitor<SelfT>::VisitForStmt(stmt);
+    AstTraversalVisitor<SelfT>::VisitForStatement(stmt);
   }
 
   uint32_t num_fors() const { return num_fors_; }
@@ -161,18 +161,18 @@ class FunctionFinder : public AstTraversalVisitor<FunctionFinder<CountLiterals>>
  public:
   explicit FunctionFinder(ast::AstNode *root) : AstTraversalVisitor<SelfT>(root), num_funcs_(0) {}
 
-  void VisitFunctionDecl(ast::FunctionDecl *decl) {
+  void VisitFunctionDeclaration(ast::FunctionDeclaration *decl) {
     if constexpr (!CountLiterals) {
       num_funcs_++;
     }
-    AstTraversalVisitor<SelfT>::VisitFunctionDecl(decl);
+    AstTraversalVisitor<SelfT>::VisitFunctionDeclaration(decl);
   }
 
-  void VisitFunctionLiteralExpr(ast::FunctionLiteralExpr *expr) {
+  void VisitFunctionLiteralExpression(ast::FunctionLiteralExpression *expr) {
     if constexpr (CountLiterals) {
       num_funcs_++;
     }
-    AstTraversalVisitor<SelfT>::VisitFunctionLiteralExpr(expr);
+    AstTraversalVisitor<SelfT>::VisitFunctionLiteralExpression(expr);
   }
 
   uint32_t NumFunctions() const { return num_funcs_; }
@@ -231,9 +231,9 @@ class IfFinder : public AstTraversalVisitor<IfFinder> {
  public:
   explicit IfFinder(ast::AstNode *root) : AstTraversalVisitor(root), num_ifs_(0) {}
 
-  void VisitIfStmt(ast::IfStmt *stmt) {
+  void VisitIfStatement(ast::IfStatement *stmt) {
     num_ifs_++;
-    AstTraversalVisitor<IfFinder>::VisitIfStmt(stmt);
+    AstTraversalVisitor<IfFinder>::VisitIfStatement(stmt);
   }
 
   uint32_t NumIfs() const { return num_ifs_; }

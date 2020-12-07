@@ -9,16 +9,16 @@
 
 namespace tpl::sema {
 
-void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
-  ast::Type *src_type = Resolve(node->Source());
-  ast::Type *dest_type = Resolve(node->Destination());
+void Sema::VisitAssignmentStatement(ast::AssignmentStatement *node) {
+  ast::Type *src_type = Resolve(node->GetSource());
+  ast::Type *dest_type = Resolve(node->GetDestination());
 
   if (src_type == nullptr || dest_type == nullptr) {
     return;
   }
 
   // Check assignment
-  ast::Expr *source = node->Source();
+  ast::Expression *source = node->GetSource();
   if (!CheckAssignmentConstraints(dest_type, source)) {
     error_reporter_->Report(node->Position(), ErrorMessages::kInvalidAssignment, src_type,
                             dest_type);
@@ -26,15 +26,15 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   }
 
   // Assignment looks good, but the source may have been casted
-  if (source != node->Source()) {
+  if (source != node->GetSource()) {
     node->SetSource(source);
   }
 }
 
-void Sema::VisitBlockStmt(ast::BlockStmt *node) {
+void Sema::VisitBlockStatement(ast::BlockStatement *node) {
   SemaScope block_scope(this, Scope::Kind::Block);
 
-  for (auto *stmt : node->Statements()) {
+  for (auto *stmt : node->GetStatements()) {
     Visit(stmt);
   }
 }
@@ -42,45 +42,48 @@ void Sema::VisitBlockStmt(ast::BlockStmt *node) {
 void Sema::VisitFile(ast::File *node) {
   SemaScope file_scope(this, Scope::Kind::File);
 
-  for (auto *decl : node->Declarations()) {
+  for (auto *decl : node->GetDeclarations()) {
     Visit(decl);
   }
 }
 
-void Sema::VisitForStmt(ast::ForStmt *node) {
+void Sema::VisitForStatement(ast::ForStatement *node) {
   // Create a new scope for variables introduced in initialization block
   SemaScope for_scope(this, Scope::Kind::Loop);
 
-  if (node->Init() != nullptr) {
-    Visit(node->Init());
+  if (node->GetInit() != nullptr) {
+    Visit(node->GetInit());
   }
 
-  if (node->Condition() != nullptr) {
-    ast::Type *cond_type = Resolve(node->Condition());
+  if (node->GetCondition() != nullptr) {
+    ast::Type *cond_type = Resolve(node->GetCondition());
     // If unable to resolve condition type, there was some error
     if (cond_type == nullptr) {
       return;
     }
     // If the resolved type isn't a boolean, it's an error
     if (!cond_type->IsBoolType()) {
-      error_reporter_->Report(node->Condition()->Position(), ErrorMessages::kNonBoolForCondition);
+      error_reporter_->Report(node->GetCondition()->Position(),
+                              ErrorMessages::kNonBoolForCondition);
     }
   }
 
-  if (node->Next() != nullptr) {
-    Visit(node->Next());
+  if (node->GetNext() != nullptr) {
+    Visit(node->GetNext());
   }
 
   // The body
-  Visit(node->Body());
+  Visit(node->GetBody());
 }
 
-void Sema::VisitForInStmt(ast::ForInStmt *node) { TPL_ASSERT(false, "Not supported"); }
+void Sema::VisitForInStatement(ast::ForInStatement *node) { TPL_ASSERT(false, "Not supported"); }
 
-void Sema::VisitExpressionStmt(ast::ExpressionStmt *node) { Visit(node->Expression()); }
+void Sema::VisitExpressionStatement(ast::ExpressionStatement *node) {
+  Visit(node->GetExpression());
+}
 
-void Sema::VisitIfStmt(ast::IfStmt *node) {
-  if (ast::Type *cond_type = Resolve(node->Condition()); cond_type == nullptr) {
+void Sema::VisitIfStatement(ast::IfStatement *node) {
+  if (ast::Type *cond_type = Resolve(node->GetCondition()); cond_type == nullptr) {
     // Error
     return;
   }
@@ -89,33 +92,35 @@ void Sema::VisitIfStmt(ast::IfStmt *node) {
   // implicitly cast it to a native boolean value before we feed it into the
   // if-condition.
 
-  if (node->Condition()->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
+  if (node->GetCondition()->GetType()->IsSpecificBuiltin(ast::BuiltinType::BooleanVal)) {
     // A primitive boolean
     auto *bool_type = ast::BuiltinType::Get(context_, ast::BuiltinType::Bool);
 
     // Perform implicit cast from SQL boolean to primitive boolean
-    ast::Expr *cond = node->Condition();
-    cond = context_->GetNodeFactory()->NewImplicitCastExpr(
+    ast::Expression *cond = node->GetCondition();
+    cond = context_->GetNodeFactory()->NewImplicitCastExpression(
         cond->Position(), ast::CastKind::SqlBoolToBool, bool_type, cond);
     cond->SetType(bool_type);
     node->SetCondition(cond);
   }
 
   // If the conditional isn't an explicit boolean type, error
-  if (!node->Condition()->GetType()->IsBoolType()) {
-    error_reporter_->Report(node->Condition()->Position(), ErrorMessages::kNonBoolIfCondition);
+  if (!node->GetCondition()->GetType()->IsBoolType()) {
+    error_reporter_->Report(node->GetCondition()->Position(), ErrorMessages::kNonBoolIfCondition);
   }
 
-  Visit(node->ThenStmt());
+  Visit(node->GetThenStatement());
 
-  if (node->ElseStmt() != nullptr) {
-    Visit(node->ElseStmt());
+  if (node->GetElseStatement() != nullptr) {
+    Visit(node->GetElseStatement());
   }
 }
 
-void Sema::VisitDeclStmt(ast::DeclStmt *node) { Visit(node->Declaration()); }
+void Sema::VisitDeclarationStatement(ast::DeclarationStatement *node) {
+  Visit(node->GetDeclaration());
+}
 
-void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
+void Sema::VisitReturnStatement(ast::ReturnStatement *node) {
   if (GetCurrentFunction() == nullptr) {
     error_reporter_->Report(node->Position(), ErrorMessages::kReturnOutsideFunction);
     return;
@@ -125,8 +130,8 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
   // check later if we need it.
 
   ast::Type *return_type = nullptr;
-  if (node->Ret() != nullptr) {
-    return_type = Resolve(node->Ret());
+  if (node->GetReturnValue() != nullptr) {
+    return_type = Resolve(node->GetReturnValue());
   }
 
   // If the function has a nil-type, we just need to make sure this return
@@ -151,15 +156,15 @@ void Sema::VisitReturnStmt(ast::ReturnStmt *node) {
     return;
   }
 
-  ast::Expr *ret = node->Ret();
+  ast::Expression *ret = node->GetReturnValue();
   if (!CheckAssignmentConstraints(func_type->GetReturnType(), ret)) {
     error_reporter_->Report(node->Position(), ErrorMessages::kMismatchedReturnType, return_type,
                             func_type->GetReturnType());
     return;
   }
 
-  if (ret != node->Ret()) {
-    node->SetRet(ret);
+  if (ret != node->GetReturnValue()) {
+    node->SetReturnValue(ret);
   }
 }
 

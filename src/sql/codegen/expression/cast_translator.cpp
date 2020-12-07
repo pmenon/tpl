@@ -14,9 +14,9 @@ CastTranslator::CastTranslator(const planner::OperatorExpression &expr,
   compilation_context->Prepare(*expr.GetChild(0));
 }
 
-ast::Expr *CastTranslator::DeriveValue(ConsumerContext *context,
-                                       const ColumnValueProvider *provider) const {
-  ast::Expr *input = context->DeriveValue(*GetExpression().GetChild(0), provider);
+ast::Expression *CastTranslator::DeriveValue(ConsumerContext *context,
+                                             const ColumnValueProvider *provider) const {
+  ast::Expression *input = context->DeriveValue(*GetExpression().GetChild(0), provider);
   const auto input_type = GetExpression().GetChild(0)->GetReturnValueType();
   const auto output_type = GetExpression().GetReturnValueType();
   return codegen_->ConvertSql(input, input_type, output_type);

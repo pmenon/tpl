@@ -1,7 +1,5 @@
 #pragma once
 
-#include "llvm/Support/Allocator.h"
-
 #include "util/region.h"
 
 namespace tpl::util {
@@ -56,53 +54,22 @@ class StlRegionAllocator {
   void deallocate(T *ptr, std::size_t n) { region_->Deallocate(ptr, n); }
 
   /**
-   * @return True if this and that allocators allocate the same object types, and use the same
-   *         underlying region. False otherwise.
+   * @return True if the storage allocated by @em this allocator can be deallocated through @em that
+   *         allocator. Establishes reflexive, symmetric, and transitive relationship. Does not
+   *         throw exceptions.
    */
-  bool operator==(const StlRegionAllocator &other) const { return region_ == other.region_; }
-
-  bool operator!=(const StlRegionAllocator &other) const { return !(*this == other); }
-
- private:
-  Region *region_;
-};
-
-/**
- * A region allocator that complies with LLVM's allocator concept.
- */
-class LLVMRegionAllocator : public llvm::AllocatorBase<LLVMRegionAllocator> {
- public:
-  /**
-   * Instantiate an allocator using the provided region.
-   * @param region The region to allocate from.
-   */
-  explicit LLVMRegionAllocator(Region *region) noexcept : region_(region) {}
-
-  /**
-   * Allocate memory of the given size and alignment.
-   * @param size The number of bytes to allocate.
-   * @param alignment The desired alignment.
-   * @return A pointer to the aligned memory of the given size.
-   */
-  void *Allocate(size_t size, size_t alignment) { return region_->Allocate(size, alignment); }
-
-  /** Pull in base class overloads. */
-  using AllocatorBase<LLVMRegionAllocator>::Allocate;
-
-  /**
-   * De-allocate memory pointed to by the provided pointer and of the given size and alignment.
-   * @param ptr Pointer to the memory to de-allocate.
-   * @param size The size (in bytes) of the memory region to de-allocate.
-   * @param alignment The alignment of the memory region to de-allocate.
-   */
-  void Deallocate(const void *ptr, size_t size, UNUSED size_t alignment) {
-    region_->Deallocate(ptr, size);
+  bool operator==(const StlRegionAllocator &that) const noexcept {
+    return this == &that || region_ == that.region_;
   }
 
-  /** Pull in base class overloads. */
-  using AllocatorBase<LLVMRegionAllocator>::Deallocate;
+  /**
+   * @return True if the storage allocated by @em this allocator cannot be deallocated through
+   *         @em that.
+   */
+  bool operator!=(const StlRegionAllocator &that) const noexcept { return !(*this == that); }
 
  private:
+  // The region to source memory from.
   Region *region_;
 };
 

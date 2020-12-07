@@ -294,72 +294,35 @@ class OutputCollectorAndChecker : public sql::ResultConsumer {
  public:
   /**
    * Constructor
-   * @param checker checker to run
-   * @param schema output schema of the query.
+   * @param checker The checks to run on each output batch from the query.
+   * @param schema The output schema of the query.
    */
   OutputCollectorAndChecker(OutputChecker *checker, const planner::OutputSchema *schema)
-      : schema_(schema), checker_(checker) {}
+      : schema_(schema), offsets_(schema->GetColumnOffsets()), checker_(checker) {}
 
   /**
    * OutputCallback function. This will gather the output in a vector.
    */
   void Consume(const sql::OutputBuffer &tuples) override {
-    for (uint32_t row = 0; row < tuples.size(); row++) {
-      uint32_t curr_offset = 0;
-      std::vector<const sql::Val *> vals;
-      vals.reserve(schema_->NumColumns());
-      for (uint16_t col = 0; col < schema_->GetColumns().size(); col++) {
-        switch (schema_->GetColumn(col).GetType()) {
-          case sql::TypeId::TinyInt:
-          case sql::TypeId::SmallInt:
-          case sql::TypeId::BigInt:
-          case sql::TypeId::Integer: {
-            auto *val = reinterpret_cast<const sql::Integer *>(tuples[row] + curr_offset);
-            vals.emplace_back(val);
-            curr_offset += sizeof(sql::Integer);
-            break;
-          }
-          case sql::TypeId::Boolean: {
-            auto *val = reinterpret_cast<const sql::BoolVal *>(tuples[row] + curr_offset);
-            vals.emplace_back(val);
-            curr_offset += sizeof(sql::BoolVal);
-            break;
-          }
-          case sql::TypeId::Float:
-          case sql::TypeId::Double: {
-            auto *val = reinterpret_cast<const sql::Real *>(tuples[row] + curr_offset);
-            vals.emplace_back(val);
-            curr_offset += sizeof(sql::Real);
-            break;
-          }
-          case sql::TypeId::Date: {
-            auto *val = reinterpret_cast<const sql::DateVal *>(tuples[row] + curr_offset);
-            vals.emplace_back(val);
-            curr_offset += sizeof(sql::DateVal);
-            break;
-          }
-          case sql::TypeId::Varchar: {
-            auto *val = reinterpret_cast<const sql::StringVal *>(tuples[row] + curr_offset);
-            vals.emplace_back(val);
-            curr_offset += sizeof(sql::StringVal);
-            break;
-          }
-          default:
-            UNREACHABLE("Cannot output unsupported type!!!");
-        }
+    std::vector<std::vector<const sql::Val *>> output;
+    for (uint32_t row_idx = 0; row_idx < tuples.size(); row_idx++) {
+      std::vector<const sql::Val *> row(schema_->NumColumns());
+      for (uint32_t col_idx = 0; col_idx < schema_->NumColumns(); col_idx++) {
+        row[col_idx] = reinterpret_cast<const sql::Val *>(tuples[row_idx] + offsets_[col_idx]);
       }
-      output.emplace_back(vals);
+      output.emplace_back(row);
     }
+
+    // Send along.
     checker_->ProcessBatch(output);
-    output.clear();
   }
 
  private:
-  // Current output batch
-  std::vector<std::vector<const sql::Val *>> output;
-  // output schema
+  // Output schema.
   const planner::OutputSchema *schema_;
-  // checker to run
+  // Byte offsets of each column in the output.
+  std::vector<std::size_t> offsets_;
+  // Checker to run.
   OutputChecker *checker_;
 };
 

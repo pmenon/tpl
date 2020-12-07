@@ -25,8 +25,9 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan,
 void OutputTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   // First generate the call @resultBufferAllocRow(execCtx)
   auto exec_ctx = GetExecutionContext();
-  ast::Expr *alloc_call = codegen_->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {exec_ctx});
-  ast::Expr *cast_call = codegen_->PtrCast(output_struct_, alloc_call);
+  ast::Expression *alloc_call =
+      codegen_->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {exec_ctx});
+  ast::Expression *cast_call = codegen_->PtrCast(output_struct_, alloc_call);
   function->Append(codegen_->DeclareVar(output_var_, nullptr, cast_call));
   const auto child_translator = GetCompilationContext()->LookupTranslator(GetPlan());
 
@@ -35,16 +36,17 @@ void OutputTranslator::Consume(ConsumerContext *context, FunctionBuilder *functi
   for (uint32_t attr_idx = 0; attr_idx < GetPlan().GetOutputSchema()->NumColumns(); attr_idx++) {
     ast::Identifier attr_name =
         codegen_->MakeIdentifier(kOutputColPrefix + std::to_string(attr_idx));
-    ast::Expr *lhs = codegen_->AccessStructMember(codegen_->MakeExpr(output_var_), attr_name);
-    ast::Expr *rhs = child_translator->GetOutput(context, attr_idx);
+    ast::Expression *lhs = codegen_->AccessStructMember(codegen_->MakeExpr(output_var_), attr_name);
+    ast::Expression *rhs = child_translator->GetOutput(context, attr_idx);
     function->Append(codegen_->Assign(lhs, rhs));
   }
 }
 
 void OutputTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                           FunctionBuilder *function) const {
-  ast::Expr *exec_ctx = GetExecutionContext();
-  ast::Expr *finalize_call = codegen_->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx});
+  ast::Expression *exec_ctx = GetExecutionContext();
+  ast::Expression *finalize_call =
+      codegen_->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx});
   function->Append(finalize_call);
 }
 

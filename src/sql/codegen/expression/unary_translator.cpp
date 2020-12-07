@@ -14,8 +14,8 @@ UnaryTranslator::UnaryTranslator(const planner::OperatorExpression &expr,
   compilation_context->Prepare(*expr.GetChild(0));
 }
 
-ast::Expr *UnaryTranslator::DeriveValue(ConsumerContext *context,
-                                        const ColumnValueProvider *provider) const {
+ast::Expression *UnaryTranslator::DeriveValue(ConsumerContext *context,
+                                              const ColumnValueProvider *provider) const {
   auto input = context->DeriveValue(*GetExpression().GetChild(0), provider);
 
   parsing::Token::Type type;

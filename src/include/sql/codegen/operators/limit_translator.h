@@ -49,7 +49,7 @@ class LimitTranslator : public OperatorTranslator {
   /**
    * Limits never touch raw table data.
    */
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override {
+  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("LIMITs do not touch base table columns.");
   }
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <sql/codegen/compilation_unit.h>
 #include <vector>
 
 #include "sql/codegen/ast_fwd.h"
@@ -90,13 +89,13 @@ class HashJoinTranslator : public OperatorTranslator {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
+  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                  uint32_t attr_idx) const override;
 
   /**
    * Hash-joins do not produce columns from base tables.
    */
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override {
+  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Hash-joins do not produce columns from base tables.");
   }
 
@@ -107,11 +106,11 @@ class HashJoinTranslator : public OperatorTranslator {
   }
 
   // Functions to initialize and tear-down the given join hash table.
-  void InitializeJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;
-  void TearDownJoinHashTable(FunctionBuilder *function, ast::Expr *jht_ptr) const;
+  void InitializeJoinHashTable(FunctionBuilder *function, ast::Expression *jht_ptr) const;
+  void TearDownJoinHashTable(FunctionBuilder *function, ast::Expression *jht_ptr) const;
 
   // Access an attribute at the given index in the provided build row.
-  ast::Expr *GetBuildRowAttribute(uint32_t attr_idx) const;
+  ast::Expression *GetBuildRowAttribute(uint32_t attr_idx) const;
 
   // Evaluate the provided hash keys in the provided context and return the
   // results in the provided results output vector.

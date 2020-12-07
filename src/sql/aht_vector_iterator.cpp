@@ -20,7 +20,7 @@ AHTVectorIterator::AHTVectorIterator(const AggregationHashTable &agg_hash_table,
   std::vector<TypeId> col_types;
   col_types.reserve(column_info.size());
   for (const auto *col_info : column_info) {
-    col_types.emplace_back(col_info->sql_type.GetPrimitiveTypeId());
+    col_types.emplace_back(col_info->type.GetPrimitiveTypeId());
   }
   vector_projection_->Initialize(col_types);
 

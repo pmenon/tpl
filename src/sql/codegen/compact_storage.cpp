@@ -43,31 +43,31 @@ void CompactStorage::Setup(const std::vector<TypeId> &schema) {
   col_info_.resize(schema.size());
 
   // Generate the compact struct.
-  util::RegionVector<ast::FieldDecl *> members = codegen_->MakeEmptyFieldList();
-  members.resize(schema.size() + 1);
+  util::RegionVector<ast::FieldDeclaration *> members = codegen_->MakeEmptyFieldList();
+  members.resize(schema.size());
   for (uint32_t i = 0; i < schema.size(); i++) {
-    ast::Identifier name = codegen_->MakeIdentifier(fmt::format("_m{}", i));
+    ast::Identifier name = codegen_->MakeIdentifier(fmt::format("member{}", i));
     members[i] = codegen_->MakeField(name, codegen_->PrimitiveTplType(schema[reordered[i]]));
     col_info_[reordered[i]] = std::make_pair(schema[reordered[i]], name);
   }
   // Tack on the NULL indicators for all fields as a bitmap byte array.
-  const auto null_byte = ast::BuiltinType::Uint8;
+  const auto null_byte = ast::BuiltinType::UInt8;
   const auto num_null_bytes = util::MathUtil::DivRoundUp(schema.size(), 8);
-  members.back() = codegen_->MakeField(nulls_, codegen_->ArrayType(num_null_bytes, null_byte));
+  members.push_back(codegen_->MakeField(nulls_, codegen_->ArrayType(num_null_bytes, null_byte)));
 
   // Build the final type.
   codegen_->DeclareStruct(type_name_, std::move(members));
 }
 
-ast::Expr *CompactStorage::Nulls(ast::Expr *ptr) const {
+ast::Expression *CompactStorage::Nulls(ast::Expression *ptr) const {
   return codegen_->AddressOf(codegen_->AccessStructMember(ptr, nulls_));
 }
 
-ast::Expr *CompactStorage::ColumnPtr(ast::Expr *ptr, uint32_t index) const {
+ast::Expression *CompactStorage::ColumnPtr(ast::Expression *ptr, uint32_t index) const {
   return codegen_->AddressOf(codegen_->AccessStructMember(ptr, col_info_[index].second));
 }
 
-void CompactStorage::WriteSQL(ast::Expr *ptr, uint32_t index, ast::Expr *val) const {
+void CompactStorage::WriteSQL(ast::Expression *ptr, uint32_t index, ast::Expression *val) const {
   TPL_ASSERT(ptr != nullptr, "Buffer pointer cannot be null.");
   TPL_ASSERT(val != nullptr, "Input value cannot be null.");
   TPL_ASSERT(index < col_info_.size(), "Out-of-bounds index access.");
@@ -87,12 +87,12 @@ void CompactStorage::WriteSQL(ast::Expr *ptr, uint32_t index, ast::Expr *val) co
 #undef GEN_CASE
 
   // Call.
-  ast::Expr *col_ptr = ColumnPtr(ptr, index);
-  ast::Expr *nulls = Nulls(ptr);
+  ast::Expression *col_ptr = ColumnPtr(ptr, index);
+  ast::Expression *nulls = Nulls(ptr);
   function->Append(codegen_->CallBuiltin(op, {col_ptr, nulls, codegen_->Const32(index), val}));
 }
 
-ast::Expr *CompactStorage::ReadSQL(ast::Expr *ptr, uint32_t index) const {
+ast::Expression *CompactStorage::ReadSQL(ast::Expression *ptr, uint32_t index) const {
   TPL_ASSERT(ptr != nullptr, "Buffer pointer cannot be null.");
   TPL_ASSERT(index < col_info_.size(), "Out-of-bounds index access.");
 

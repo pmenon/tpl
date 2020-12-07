@@ -25,7 +25,7 @@ void LimitTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
 
 void LimitTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
-  ast::Expr *count = pipeline_ctx.GetStateEntry(tuple_count_);
+  ast::Expression *count = pipeline_ctx.GetStateEntry(tuple_count_);
   function->Append(codegen_->Assign(count, codegen_->Const64(0)));
 }
 
@@ -36,14 +36,14 @@ void LimitTranslator::Consume(ConsumerContext *context, FunctionBuilder *functio
 
   // Build the limit/offset condition check:
   // if (numTuples >= plan.offset and numTuples < plan.limit)
-  ast::Expr *cond = nullptr;
+  ast::Expression *cond = nullptr;
   if (plan.GetOffset() != 0) {
-    ast::Expr *lower = codegen_->Const32(plan.GetOffset());
+    ast::Expression *lower = codegen_->Const32(plan.GetOffset());
     cond = codegen_->Compare(parsing::Token::Type::GREATER_EQUAL, count(), lower);
   }
   if (plan.GetLimit() != 0) {
-    ast::Expr *upper = codegen_->Const32(plan.GetOffset() + plan.GetLimit());
-    ast::Expr *limit_check = codegen_->Compare(parsing::Token::Type::LESS, count(), upper);
+    ast::Expression *upper = codegen_->Const32(plan.GetOffset() + plan.GetLimit());
+    ast::Expression *limit_check = codegen_->Compare(parsing::Token::Type::LESS, count(), upper);
     cond = cond == nullptr ? limit_check
                            : codegen_->BinaryOp(parsing::Token::Type::AND, cond, limit_check);
   }

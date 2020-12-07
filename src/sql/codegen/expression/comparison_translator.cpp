@@ -18,8 +18,8 @@ ComparisonTranslator::ComparisonTranslator(const planner::ComparisonExpression &
   }
 }
 
-ast::Expr *ComparisonTranslator::DeriveValue(ConsumerContext *context,
-                                             const ColumnValueProvider *provider) const {
+ast::Expression *ComparisonTranslator::DeriveValue(ConsumerContext *context,
+                                                   const ColumnValueProvider *provider) const {
   auto left_val = context->DeriveValue(*GetExpression().GetChild(0), provider);
   auto right_val = context->DeriveValue(*GetExpression().GetChild(1), provider);
 

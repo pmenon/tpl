@@ -38,8 +38,8 @@ class ConsumerContext {
    * @param expr The expression.
    * @return The TPL value of the expression.
    */
-  ast::Expr *DeriveValue(const planner::AbstractExpression &expr,
-                         const ColumnValueProvider *provider);
+  ast::Expression *DeriveValue(const planner::AbstractExpression &expr,
+                               const ColumnValueProvider *provider);
 
   /**
    * Push this context to the next operator in the pipeline.
@@ -55,17 +55,17 @@ class ConsumerContext {
   /**
    * @return The value of the element at the given slot within this pipeline's state.
    */
-  ast::Expr *GetStateEntry(StateDescriptor::Slot slot) const;
+  ast::Expression *GetStateEntry(StateDescriptor::Slot slot) const;
 
   /**
    * @return A pointer to the element at the given slot within this pipeline's state.
    */
-  ast::Expr *GetStateEntryPtr(StateDescriptor::Slot slot) const;
+  ast::Expression *GetStateEntryPtr(StateDescriptor::Slot slot) const;
 
   /**
    * @return The byte offset of the element at the given slot in the pipeline state.
    */
-  ast::Expr *GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const;
+  ast::Expression *GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const;
 
   /**
    * @return True if the pipeline this work is flowing on is parallel; false otherwise.

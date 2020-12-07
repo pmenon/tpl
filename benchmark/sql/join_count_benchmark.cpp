@@ -5,7 +5,6 @@
 #include "common/memory.h"
 #include "logging/logger.h"
 #include "sql/catalog.h"
-#include "sql/data_types.h"
 #include "sql/join_hash_table.h"
 #include "sql/join_manager.h"
 #include "sql/table.h"
@@ -81,7 +80,7 @@ void LoadTestTable(sql::Table *table) {
     std::vector<sql::ColumnSegment> columns;
     for (uint32_t j = 0; j < kNumTableCols; j++) {
       auto *col_data = reinterpret_cast<byte *>(GenColumnData(i * batch_size, batch_size));
-      columns.emplace_back(sql::IntegerType::Instance(false), col_data, nullptr, batch_size);
+      columns.emplace_back(sql::Type::IntegerType(false), col_data, nullptr, batch_size);
     }
 
     // Insert into table
@@ -96,7 +95,7 @@ void InitTestTables() {
   // Create the table schema.
   std::vector<sql::Schema::ColumnInfo> cols;
   for (uint32_t i = 0; i < kNumTableCols; i++) {
-    cols.emplace_back("col" + std::to_string(i), sql::IntegerType::Instance(false));
+    cols.emplace_back("col" + std::to_string(i), sql::Type::IntegerType(false));
   }
 
   // Create the table instance.
@@ -197,8 +196,9 @@ BENCHMARK_DEFINE_F(JoinManagerBenchmark, StaticOrder_1)(benchmark::State &state)
       vpi->ForEach([&]() {
         auto a_val = *vpi->GetValue<int32_t, false>(0, nullptr);
         auto a_hash_val = util::HashUtil::Hash(a_val);
-        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1.HasNext();) {
-          if (auto *jr1 = iter1.GetMatch()->PayloadAs<JoinRow>(); jr1->key == a_val) {
+        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1 != nullptr;
+             iter1 = iter1->next) {
+          if (auto *jr1 = iter1->PayloadAs<JoinRow>(); jr1->key == a_val) {
             count++;
           }
         }
@@ -222,11 +222,13 @@ BENCHMARK_DEFINE_F(JoinManagerBenchmark, StaticOrder_2)(benchmark::State &state)
         auto b_val = *vpi->GetValue<int32_t, false>(1, nullptr);
 
         auto a_hash_val = util::HashUtil::Hash(a_val);
-        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1.HasNext();) {
-          if (auto *jr1 = iter1.GetMatch()->PayloadAs<JoinRow>(); jr1->key == a_val) {
+        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1 != nullptr;
+             iter1 = iter1->next) {
+          if (auto *jr1 = iter1->PayloadAs<JoinRow>(); jr1->key == a_val) {
             auto b_hash_val = util::HashUtil::Hash(b_val);
-            for (auto iter2 = query_state->jht2->Lookup<false>(b_hash_val); iter2.HasNext();) {
-              if (auto *jr2 = iter2.GetMatch()->PayloadAs<JoinRow>(); jr2->key == b_val) {
+            for (auto iter2 = query_state->jht2->Lookup<false>(b_hash_val); iter2 != nullptr;
+                 iter2 = iter2->next) {
+              if (auto *jr2 = iter2->PayloadAs<JoinRow>(); jr2->key == b_val) {
                 count++;
               }
             }
@@ -253,14 +255,17 @@ BENCHMARK_DEFINE_F(JoinManagerBenchmark, StaticOrder_3)(benchmark::State &state)
         auto c_val = *vpi->GetValue<int32_t, false>(2, nullptr);
 
         auto a_hash_val = util::HashUtil::Hash(a_val);
-        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1.HasNext();) {
-          if (auto *jr1 = iter1.GetMatch()->PayloadAs<JoinRow>(); jr1->key == a_val) {
+        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1 != nullptr;
+             iter1 = iter1->next) {
+          if (auto *jr1 = iter1->PayloadAs<JoinRow>(); jr1->key == a_val) {
             auto b_hash_val = util::HashUtil::Hash(b_val);
-            for (auto iter2 = query_state->jht2->Lookup<false>(b_hash_val); iter2.HasNext();) {
-              if (auto *jr2 = iter2.GetMatch()->PayloadAs<JoinRow>(); jr2->key == b_val) {
+            for (auto iter2 = query_state->jht2->Lookup<false>(b_hash_val); iter2 != nullptr;
+                 iter2 = iter2->next) {
+              if (auto *jr2 = iter2->PayloadAs<JoinRow>(); jr2->key == b_val) {
                 auto c_hash_val = util::HashUtil::Hash(c_val);
-                for (auto iter3 = query_state->jht3->Lookup<false>(c_hash_val); iter3.HasNext();) {
-                  if (auto *jr3 = iter3.GetMatch()->PayloadAs<JoinRow>(); jr3->key == c_val) {
+                for (auto iter3 = query_state->jht3->Lookup<false>(c_hash_val); iter3 != nullptr;
+                     iter3 = iter3->next) {
+                  if (auto *jr3 = iter3->PayloadAs<JoinRow>(); jr3->key == c_val) {
                     count++;
                   }
                 }
@@ -290,18 +295,21 @@ BENCHMARK_DEFINE_F(JoinManagerBenchmark, StaticOrder_4)(benchmark::State &state)
         auto d_val = *vpi->GetValue<int32_t, false>(3, nullptr);
 
         auto a_hash_val = util::HashUtil::Hash(a_val);
-        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1.HasNext();) {
-          if (auto *jr1 = iter1.GetMatch()->PayloadAs<JoinRow>(); jr1->key == a_val) {
+        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1 != nullptr;
+             iter1 = iter1->next) {
+          if (auto *jr1 = iter1->PayloadAs<JoinRow>(); jr1->key == a_val) {
             auto b_hash_val = util::HashUtil::Hash(b_val);
-            for (auto iter2 = query_state->jht2->Lookup<false>(b_hash_val); iter2.HasNext();) {
-              if (auto *jr2 = iter2.GetMatch()->PayloadAs<JoinRow>(); jr2->key == b_val) {
+            for (auto iter2 = query_state->jht2->Lookup<false>(b_hash_val); iter2 != nullptr;
+                 iter2 = iter2->next) {
+              if (auto *jr2 = iter2->PayloadAs<JoinRow>(); jr2->key == b_val) {
                 auto c_hash_val = util::HashUtil::Hash(c_val);
-                for (auto iter3 = query_state->jht3->Lookup<false>(c_hash_val); iter3.HasNext();) {
-                  if (auto *jr3 = iter3.GetMatch()->PayloadAs<JoinRow>(); jr3->key == c_val) {
+                for (auto iter3 = query_state->jht3->Lookup<false>(c_hash_val); iter3 != nullptr;
+                     iter3 = iter3->next) {
+                  if (auto *jr3 = iter3->PayloadAs<JoinRow>(); jr3->key == c_val) {
                     auto d_hash_val = util::HashUtil::Hash(d_val);
                     for (auto iter4 = query_state->jht4->Lookup<false>(d_hash_val);
-                         iter4.HasNext();) {
-                      if (auto *jr4 = iter4.GetMatch()->PayloadAs<JoinRow>(); jr4->key == d_val) {
+                         iter4 != nullptr; iter4 = iter4->next) {
+                      if (auto *jr4 = iter4->PayloadAs<JoinRow>(); jr4->key == d_val) {
                         count++;
                       }
                     }
@@ -334,23 +342,25 @@ BENCHMARK_DEFINE_F(JoinManagerBenchmark, StaticOrder_5)(benchmark::State &state)
         auto e_val = *vpi->GetValue<int32_t, false>(4, nullptr);
 
         auto a_hash_val = util::HashUtil::Hash(a_val);
-        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1.HasNext();) {
-          if (auto *jr1 = iter1.GetMatch()->PayloadAs<JoinRow>(); jr1->key == a_val) {
+        for (auto iter1 = query_state->jht1->Lookup<false>(a_hash_val); iter1 != nullptr;
+             iter1 = iter1->next) {
+          if (auto *jr1 = iter1->PayloadAs<JoinRow>(); jr1->key == a_val) {
             auto b_hash_val = util::HashUtil::Hash(b_val);
-            for (auto iter2 = query_state->jht2->Lookup<false>(b_hash_val); iter2.HasNext();) {
-              if (auto *jr2 = iter2.GetMatch()->PayloadAs<JoinRow>(); jr2->key == b_val) {
+            for (auto iter2 = query_state->jht2->Lookup<false>(b_hash_val); iter2 != nullptr;
+                 iter2 = iter2->next) {
+              if (auto *jr2 = iter2->PayloadAs<JoinRow>(); jr2->key == b_val) {
                 auto c_hash_val = util::HashUtil::Hash(c_val);
-                for (auto iter3 = query_state->jht3->Lookup<false>(c_hash_val); iter3.HasNext();) {
-                  if (auto *jr3 = iter3.GetMatch()->PayloadAs<JoinRow>(); jr3->key == c_val) {
+                for (auto iter3 = query_state->jht3->Lookup<false>(c_hash_val); iter3 != nullptr;
+                     iter3 = iter3->next) {
+                  if (auto *jr3 = iter3->PayloadAs<JoinRow>(); jr3->key == c_val) {
                     auto d_hash_val = util::HashUtil::Hash(d_val);
                     for (auto iter4 = query_state->jht4->Lookup<false>(d_hash_val);
-                         iter4.HasNext();) {
-                      if (auto *jr4 = iter4.GetMatch()->PayloadAs<JoinRow>(); jr4->key == d_val) {
+                         iter4 != nullptr; iter4 = iter4->next) {
+                      if (auto *jr4 = iter4->PayloadAs<JoinRow>(); jr4->key == d_val) {
                         auto e_hash_val = util::HashUtil::Hash(e_val);
                         for (auto iter5 = query_state->jht5->Lookup<false>(e_hash_val);
-                             iter5.HasNext();) {
-                          if (auto *jr5 = iter5.GetMatch()->PayloadAs<JoinRow>();
-                              jr5->key == e_val) {
+                             iter5 != nullptr; iter5 = iter5->next) {
+                          if (auto *jr5 = iter5->PayloadAs<JoinRow>(); jr5->key == e_val) {
                             count++;
                           }
                         }

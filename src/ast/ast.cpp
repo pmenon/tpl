@@ -11,59 +11,61 @@ namespace tpl::ast {
 // Function Declaration
 // ---------------------------------------------------------
 
-FunctionDecl::FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLiteralExpr *func)
-    : Decl(Kind::FunctionDecl, pos, name, func->TypeRepr()), func_(func) {}
+FunctionDeclaration::FunctionDeclaration(const SourcePosition &pos, Identifier name,
+                                         FunctionLiteralExpression *func)
+    : Declaration(Kind::FunctionDeclaration, pos, name, func->GetTypeRepr()), func_(func) {}
 
 // ---------------------------------------------------------
 // Structure Declaration
 // ---------------------------------------------------------
 
-StructDecl::StructDecl(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr)
-    : Decl(Kind::StructDecl, pos, name, type_repr) {}
+StructDeclaration::StructDeclaration(const SourcePosition &pos, Identifier name,
+                                     StructTypeRepr *type_repr)
+    : Declaration(Kind::StructDeclaration, pos, name, type_repr) {}
 
-uint32_t StructDecl::NumFields() const {
-  const auto &fields = TypeRepr()->As<ast::StructTypeRepr>()->Fields();
+uint32_t StructDeclaration::NumFields() const {
+  const auto &fields = GetTypeRepr()->As<ast::StructTypeRepr>()->GetFields();
   return fields.size();
 }
 
-ast::FieldDecl *StructDecl::GetFieldAt(uint32_t field_idx) const {
-  return TypeRepr()->As<ast::StructTypeRepr>()->GetFieldAt(field_idx);
+ast::FieldDeclaration *StructDeclaration::GetFieldAt(uint32_t field_idx) const {
+  return GetTypeRepr()->As<ast::StructTypeRepr>()->GetFieldAt(field_idx);
 }
 
 // ---------------------------------------------------------
 // Expression Statement
 // ---------------------------------------------------------
 
-ExpressionStmt::ExpressionStmt(Expr *expr)
-    : Stmt(Kind::ExpressionStmt, expr->Position()), expr_(expr) {}
+ExpressionStatement::ExpressionStatement(Expression *expr)
+    : Statement(Kind::ExpressionStatement, expr->Position()), expr_(expr) {}
 
 // ---------------------------------------------------------
 // Expression
 // ---------------------------------------------------------
 
-bool Expr::IsNilLiteral() const {
-  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+bool Expression::IsNilLiteral() const {
+  if (auto literal = SafeAs<ast::LiteralExpression>()) {
     return literal->IsNilLiteral();
   }
   return false;
 }
 
-bool Expr::IsBoolLiteral() const {
-  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+bool Expression::IsBoolLiteral() const {
+  if (auto literal = SafeAs<ast::LiteralExpression>()) {
     return literal->IsBoolLiteral();
   }
   return false;
 }
 
-bool Expr::IsStringLiteral() const {
-  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+bool Expression::IsStringLiteral() const {
+  if (auto literal = SafeAs<ast::LiteralExpression>()) {
     return literal->IsStringLiteral();
   }
   return false;
 }
 
-bool Expr::IsIntegerLiteral() const {
-  if (auto literal = SafeAs<ast::LiteralExpr>()) {
+bool Expression::IsIntegerLiteral() const {
+  if (auto literal = SafeAs<ast::LiteralExpression>()) {
     return literal->IsIntegerLiteral();
   }
   return false;
@@ -76,7 +78,8 @@ bool Expr::IsIntegerLiteral() const {
 namespace {
 
 // Catches: nil [ '==' | '!=' ] expr
-bool MatchIsLiteralCompareNil(Expr *left, parsing::Token::Type op, Expr *right, Expr **result) {
+bool MatchIsLiteralCompareNil(Expression *left, parsing::Token::Type op, Expression *right,
+                              Expression **result) {
   if (left->IsNilLiteral() && parsing::Token::IsCompareOp(op)) {
     *result = right;
     return true;
@@ -86,7 +89,7 @@ bool MatchIsLiteralCompareNil(Expr *left, parsing::Token::Type op, Expr *right, 
 
 }  // namespace
 
-bool ComparisonOpExpr::IsLiteralCompareNil(Expr **result) const {
+bool ComparisonOpExpression::IsLiteralCompareNil(Expression **result) const {
   return MatchIsLiteralCompareNil(left_, op_, right_, result) ||
          MatchIsLiteralCompareNil(right_, op_, left_, result);
 }
@@ -95,32 +98,37 @@ bool ComparisonOpExpr::IsLiteralCompareNil(Expr **result) const {
 // Function Literal Expressions
 // ---------------------------------------------------------
 
-FunctionLiteralExpr::FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStmt *body)
-    : Expr(Kind::FunctionLiteralExpr, type_repr->Position()), type_repr_(type_repr), body_(body) {}
+FunctionLiteralExpression::FunctionLiteralExpression(FunctionTypeRepr *type_repr,
+                                                     BlockStatement *body)
+    : Expression(Kind::FunctionLiteralExpression, type_repr->Position()),
+      type_repr_(type_repr),
+      body_(body) {}
 
 // ---------------------------------------------------------
 // Call Expression
 // ---------------------------------------------------------
 
-Identifier CallExpr::GetFuncName() const { return func_->As<IdentifierExpr>()->Name(); }
+Identifier CallExpression::GetFuncName() const {
+  return func_->As<IdentifierExpression>()->GetName();
+}
 
 // ---------------------------------------------------------
 // Index Expressions
 // ---------------------------------------------------------
 
-bool IndexExpr::IsArrayAccess() const {
-  TPL_ASSERT(Object() != nullptr, "Object cannot be NULL");
-  TPL_ASSERT(Object() != nullptr, "Cannot determine object type before type checking!");
-  return Object()->GetType()->IsArrayType();
+bool IndexExpression::IsArrayAccess() const {
+  TPL_ASSERT(object_ != nullptr, "Object cannot be NULL");
+  TPL_ASSERT(object_ != nullptr, "Cannot determine object type before type checking!");
+  return object_->GetType()->IsArrayType();
 }
 
-bool IndexExpr::IsMapAccess() const {
-  TPL_ASSERT(Object() != nullptr, "Object cannot be NULL");
-  TPL_ASSERT(Object() != nullptr, "Cannot determine object type before type checking!");
-  return Object()->GetType()->IsMapType();
-}
+bool IndexExpression::IsMapAccess() const { return !IsArrayAccess(); }
 
-bool LiteralExpr::IsRepresentable(ast::Type *type) const {
+// ---------------------------------------------------------
+// Literal Expressions
+// ---------------------------------------------------------
+
+bool LiteralExpression::IsRepresentable(ast::Type *type) const {
   // Integers.
   if (type->IsIntegerType()) {
     if (!IsIntegerLiteral()) {
@@ -133,10 +141,10 @@ bool LiteralExpr::IsRepresentable(ast::Type *type) const {
       case ast::BuiltinType::Kind::Int16: return INT16_MIN <= val && val <= INT16_MAX;
       case ast::BuiltinType::Kind::Int32: return INT32_MIN <= val && val <= INT32_MAX;
       case ast::BuiltinType::Kind::Int64: return true;
-      case ast::BuiltinType::Kind::Uint8: return 0 <= val && val <= int64_t(UINT8_MAX);
-      case ast::BuiltinType::Kind::Uint16: return 0 <= val && val <= int64_t(UINT16_MAX);
-      case ast::BuiltinType::Kind::Uint32: return 0 <= val && val <= int64_t(UINT32_MAX);
-      case ast::BuiltinType::Kind::Uint64: return 0 <= val;
+      case ast::BuiltinType::Kind::UInt8: return 0 <= val && val <= int64_t(UINT8_MAX);
+      case ast::BuiltinType::Kind::UInt16: return 0 <= val && val <= int64_t(UINT16_MAX);
+      case ast::BuiltinType::Kind::UInt32: return 0 <= val && val <= int64_t(UINT32_MAX);
+      case ast::BuiltinType::Kind::UInt64: return 0 <= val;
       default: UNREACHABLE("Impossible integer kind.");
     }
     // clang-format on
@@ -184,27 +192,26 @@ bool LiteralExpr::IsRepresentable(ast::Type *type) const {
 // Member expression
 // ---------------------------------------------------------
 
-bool MemberExpr::IsSugaredArrow() const {
-  TPL_ASSERT(Object()->GetType() != nullptr,
-             "Cannot determine sugared-arrow before type checking!");
-  return Object()->GetType()->IsPointerType();
+bool MemberExpression::IsSugaredArrow() const {
+  TPL_ASSERT(object_->GetType() != nullptr, "Cannot determine sugared-arrow before type checking!");
+  return object_->GetType()->IsPointerType();
 }
 
 // ---------------------------------------------------------
 // Statement
 // ---------------------------------------------------------
 
-bool Stmt::IsTerminating(Stmt *stmt) {
+bool Statement::IsTerminating(Statement *stmt) {
   switch (stmt->GetKind()) {
-    case AstNode::Kind::BlockStmt: {
-      return IsTerminating(stmt->As<BlockStmt>()->Statements().back());
+    case AstNode::Kind::BlockStatement: {
+      return IsTerminating(stmt->As<BlockStatement>()->GetStatements().back());
     }
-    case AstNode::Kind::IfStmt: {
-      auto *if_stmt = stmt->As<IfStmt>();
-      return (if_stmt->HasElseStmt() &&
-              (IsTerminating(if_stmt->ThenStmt()) && IsTerminating(if_stmt->ElseStmt())));
+    case AstNode::Kind::IfStatement: {
+      auto *if_stmt = stmt->As<IfStatement>();
+      return (if_stmt->HasElseStatement() && (IsTerminating(if_stmt->GetThenStatement()) &&
+                                              IsTerminating(if_stmt->GetElseStatement())));
     }
-    case AstNode::Kind::ReturnStmt: {
+    case AstNode::Kind::ReturnStatement: {
       return true;
     }
     default: {

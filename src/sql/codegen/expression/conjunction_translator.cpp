@@ -17,8 +17,8 @@ ConjunctionTranslator::ConjunctionTranslator(const planner::ConjunctionExpressio
   compilation_context->Prepare(*expr.GetChild(1));
 }
 
-ast::Expr *ConjunctionTranslator::DeriveValue(ConsumerContext *context,
-                                              const ColumnValueProvider *provider) const {
+ast::Expression *ConjunctionTranslator::DeriveValue(ConsumerContext *context,
+                                                    const ColumnValueProvider *provider) const {
   auto left_val = context->DeriveValue(*GetExpression().GetChild(0), provider);
   auto right_val = context->DeriveValue(*GetExpression().GetChild(1), provider);
 

@@ -37,25 +37,29 @@ TEST_F(ParserTest, RegularForStmtTest) {
 
   // No errors, move down AST
   ASSERT_TRUE(ast->IsFile());
-  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->Declarations().size());
+  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
   // Only one function decl
-  auto *decl = ast->As<ast::File>()->Declarations()[0];
-  ASSERT_TRUE(decl->IsFunctionDecl());
+  auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
+  ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-  auto *func_decl = decl->As<ast::FunctionDecl>();
-  ASSERT_NE(nullptr, func_decl->Function());
-  ASSERT_NE(nullptr, func_decl->Function()->Body());
-  ASSERT_EQ(std::size_t{1}, func_decl->Function()->Body()->Statements().size());
+  auto *func_decl = decl->As<ast::FunctionDeclaration>();
+  ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
+  ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
+  ASSERT_EQ(std::size_t{1}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
 
   // Only one for statement, all elements are non-null
-  auto *for_stmt = func_decl->Function()->Body()->Statements()[0]->SafeAs<ast::ForStmt>();
+  auto *for_stmt =
+      func_decl->GetFunctionLiteral()->GetBody()->GetStatements()[0]->SafeAs<ast::ForStatement>();
   ASSERT_NE(nullptr, for_stmt);
-  ASSERT_NE(nullptr, for_stmt->Init());
-  ASSERT_TRUE(for_stmt->Init()->IsDeclStmt());
-  ASSERT_TRUE(for_stmt->Init()->As<ast::DeclStmt>()->Declaration()->IsVariableDecl());
-  ASSERT_NE(nullptr, for_stmt->Condition());
-  ASSERT_NE(nullptr, for_stmt->Next());
+  ASSERT_NE(nullptr, for_stmt->GetInit());
+  ASSERT_TRUE(for_stmt->GetInit()->IsDeclarationStatement());
+  ASSERT_TRUE(for_stmt->GetInit()
+                  ->As<ast::DeclarationStatement>()
+                  ->GetDeclaration()
+                  ->IsVariableDeclaration());
+  ASSERT_NE(nullptr, for_stmt->GetCondition());
+  ASSERT_NE(nullptr, for_stmt->GetNext());
 }
 
 TEST_F(ParserTest, ExhaustiveForStmtTest) {
@@ -94,23 +98,24 @@ TEST_F(ParserTest, ExhaustiveForStmtTest) {
 
     // No errors, move down AST
     ASSERT_TRUE(ast->IsFile());
-    ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->Declarations().size());
+    ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
     // Only one function decl
-    auto *decl = ast->As<ast::File>()->Declarations()[0];
-    ASSERT_TRUE(decl->IsFunctionDecl());
+    auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
+    ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-    auto *func_decl = decl->As<ast::FunctionDecl>();
-    ASSERT_NE(nullptr, func_decl->Function());
-    ASSERT_NE(nullptr, func_decl->Function()->Body());
-    ASSERT_EQ(std::size_t{1}, func_decl->Function()->Body()->Statements().size());
+    auto *func_decl = decl->As<ast::FunctionDeclaration>();
+    ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
+    ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
+    ASSERT_EQ(std::size_t{1}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
 
     // Only one for statement, all elements are non-null
-    auto *for_stmt = func_decl->Function()->Body()->Statements()[0]->SafeAs<ast::ForStmt>();
+    auto *for_stmt =
+        func_decl->GetFunctionLiteral()->GetBody()->GetStatements()[0]->SafeAs<ast::ForStatement>();
     ASSERT_NE(nullptr, for_stmt);
-    ASSERT_EQ(test.init_null, for_stmt->Init() == nullptr);
-    ASSERT_EQ(test.cond_null, for_stmt->Condition() == nullptr);
-    ASSERT_EQ(test.next_null, for_stmt->Next() == nullptr);
+    ASSERT_EQ(test.init_null, for_stmt->GetInit() == nullptr);
+    ASSERT_EQ(test.cond_null, for_stmt->GetCondition() == nullptr);
+    ASSERT_EQ(test.next_null, for_stmt->GetNext() == nullptr);
   }
 }
 
@@ -131,30 +136,30 @@ TEST_F(ParserTest, RegularForStmt_NoInitTest) {
 
   // No errors, move down AST
   ASSERT_TRUE(ast->IsFile());
-  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->Declarations().size());
+  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
   // Only one function decl
-  auto *decl = ast->As<ast::File>()->Declarations()[0];
-  ASSERT_TRUE(decl->IsFunctionDecl());
+  auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
+  ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-  auto *func_decl = decl->As<ast::FunctionDecl>();
-  ASSERT_NE(nullptr, func_decl->Function());
-  ASSERT_NE(nullptr, func_decl->Function()->Body());
-  ASSERT_EQ(std::size_t{2}, func_decl->Function()->Body()->Statements().size());
+  auto *func_decl = decl->As<ast::FunctionDeclaration>();
+  ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
+  ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
+  ASSERT_EQ(std::size_t{2}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
 
   // Two statements in function
 
   // First is the variable declaration
-  auto &block = func_decl->Function()->Body()->Statements();
-  ASSERT_TRUE(block[0]->IsDeclStmt());
-  ASSERT_TRUE(block[0]->As<ast::DeclStmt>()->Declaration()->IsVariableDecl());
+  auto &block = func_decl->GetFunctionLiteral()->GetBody()->GetStatements();
+  ASSERT_TRUE(block[0]->IsDeclarationStatement());
+  ASSERT_TRUE(block[0]->As<ast::DeclarationStatement>()->GetDeclaration()->IsVariableDeclaration());
 
   // Next is the for statement
-  auto *for_stmt = block[1]->SafeAs<ast::ForStmt>();
+  auto *for_stmt = block[1]->SafeAs<ast::ForStatement>();
   ASSERT_NE(nullptr, for_stmt);
-  ASSERT_EQ(nullptr, for_stmt->Init());
-  ASSERT_NE(nullptr, for_stmt->Condition());
-  ASSERT_NE(nullptr, for_stmt->Next());
+  ASSERT_EQ(nullptr, for_stmt->GetInit());
+  ASSERT_NE(nullptr, for_stmt->GetCondition());
+  ASSERT_NE(nullptr, for_stmt->GetNext());
 }
 
 TEST_F(ParserTest, RegularForStmt_WhileTest) {
@@ -184,30 +189,31 @@ TEST_F(ParserTest, RegularForStmt_WhileTest) {
 
     // No errors, move down AST
     ASSERT_TRUE(ast->IsFile());
-    ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->Declarations().size());
+    ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
     // Only one function decl
-    auto *decl = ast->As<ast::File>()->Declarations()[0];
-    ASSERT_TRUE(decl->IsFunctionDecl());
+    auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
+    ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-    auto *func_decl = decl->As<ast::FunctionDecl>();
-    ASSERT_NE(nullptr, func_decl->Function());
-    ASSERT_NE(nullptr, func_decl->Function()->Body());
-    ASSERT_EQ(std::size_t{2}, func_decl->Function()->Body()->Statements().size());
+    auto *func_decl = decl->As<ast::FunctionDeclaration>();
+    ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
+    ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
+    ASSERT_EQ(std::size_t{2}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
 
     // Two statements in function
 
     // First is the variable declaration
-    auto &block = func_decl->Function()->Body()->Statements();
-    ASSERT_TRUE(block[0]->IsDeclStmt());
-    ASSERT_TRUE(block[0]->As<ast::DeclStmt>()->Declaration()->IsVariableDecl());
+    auto &block = func_decl->GetFunctionLiteral()->GetBody()->GetStatements();
+    ASSERT_TRUE(block[0]->IsDeclarationStatement());
+    ASSERT_TRUE(
+        block[0]->As<ast::DeclarationStatement>()->GetDeclaration()->IsVariableDeclaration());
 
     // Next is the for statement
-    auto *for_stmt = block[1]->SafeAs<ast::ForStmt>();
+    auto *for_stmt = block[1]->SafeAs<ast::ForStatement>();
     ASSERT_NE(nullptr, for_stmt);
-    ASSERT_EQ(nullptr, for_stmt->Init());
-    ASSERT_NE(nullptr, for_stmt->Condition());
-    ASSERT_EQ(nullptr, for_stmt->Next());
+    ASSERT_EQ(nullptr, for_stmt->GetInit());
+    ASSERT_NE(nullptr, for_stmt->GetCondition());
+    ASSERT_EQ(nullptr, for_stmt->GetNext());
   }
 }
 
@@ -227,20 +233,20 @@ TEST_F(ParserTest, RegularForInStmtTest) {
 
   // No errors, move down AST
   ASSERT_TRUE(ast->IsFile());
-  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->Declarations().size());
+  ASSERT_EQ(std::size_t{1}, ast->As<ast::File>()->GetDeclarations().size());
 
   // Only one function decl
-  auto *decl = ast->As<ast::File>()->Declarations()[0];
-  ASSERT_TRUE(decl->IsFunctionDecl());
+  auto *decl = ast->As<ast::File>()->GetDeclarations()[0];
+  ASSERT_TRUE(decl->IsFunctionDeclaration());
 
-  auto *func_decl = decl->As<ast::FunctionDecl>();
-  ASSERT_NE(nullptr, func_decl->Function());
-  ASSERT_NE(nullptr, func_decl->Function()->Body());
-  ASSERT_EQ(std::size_t{1}, func_decl->Function()->Body()->Statements().size());
+  auto *func_decl = decl->As<ast::FunctionDeclaration>();
+  ASSERT_NE(nullptr, func_decl->GetFunctionLiteral());
+  ASSERT_NE(nullptr, func_decl->GetFunctionLiteral()->GetBody());
+  ASSERT_EQ(std::size_t{1}, func_decl->GetFunctionLiteral()->GetBody()->GetStatements().size());
 
   // Only statement is the for-in statement
-  auto &block = func_decl->Function()->Body()->Statements();
-  auto *for_in_stmt = block[0]->SafeAs<ast::ForInStmt>();
+  auto &block = func_decl->GetFunctionLiteral()->GetBody()->GetStatements();
+  auto *for_in_stmt = block[0]->SafeAs<ast::ForInStatement>();
   ASSERT_NE(nullptr, for_in_stmt);
   ASSERT_NE(nullptr, for_in_stmt->Target());
   ASSERT_NE(nullptr, for_in_stmt->Iterable());

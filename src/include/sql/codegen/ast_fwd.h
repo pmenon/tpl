@@ -5,16 +5,16 @@
 
 namespace tpl::ast {
 
-class BlockStmt;
+class BlockStatement;
 class Context;
-class Expr;
-class Decl;
-class FieldDecl;
+class Expression;
+class Declaration;
+class FieldDeclaration;
 class File;
-class FunctionDecl;
-class IdentifierExpr;
-class Stmt;
-class StructDecl;
-class VariableDecl;
+class FunctionDeclaration;
+class IdentifierExpression;
+class Statement;
+class StructDeclaration;
+class VariableDeclaration;
 
 }  // namespace tpl::ast

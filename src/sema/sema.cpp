@@ -20,7 +20,7 @@ Sema::Sema(ast::Context *context)
   num_cached_scopes_ = kScopeCacheSize;
 }
 
-// Main entry point to semantic analysis and type checking an AST
+// Main entry point to semantic analysis and type checking an AST.
 bool Sema::Run(ast::AstNode *root) {
   Visit(root);
   return error_reporter_->HasErrors();

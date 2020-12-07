@@ -27,47 +27,47 @@ namespace ast {
 
 /**
  * All possible declaration types.
- * NOTE: If you add a new declaration node to either the beginning or end of
- * the list, remember to modify Decl::classof() to update the bounds check.
+ * NOTE: If you add a new declaration node to either the beginning or end of the list, remember to
+ *       modify Declaration::classof() to update the bounds check.
  */
 #define DECLARATION_NODES(T) \
-  T(FieldDecl)               \
-  T(FunctionDecl)            \
-  T(StructDecl)              \
-  T(VariableDecl)
+  T(FieldDeclaration)        \
+  T(FunctionDeclaration)     \
+  T(StructDeclaration)       \
+  T(VariableDeclaration)
 
 /**
  * All possible statements
- * NOTE: If you add a new statement node to either the beginning or end of the
- * list, remember to modify Stmt::classof() to update the bounds check.
+ * NOTE: If you add a new statement node to either the beginning or end of the list, remember to
+ *       modify Statement::classof() to update the bounds check.
  */
 #define STATEMENT_NODES(T) \
-  T(AssignmentStmt)        \
-  T(BlockStmt)             \
-  T(DeclStmt)              \
-  T(ExpressionStmt)        \
-  T(ForStmt)               \
-  T(ForInStmt)             \
-  T(IfStmt)                \
-  T(ReturnStmt)
+  T(AssignmentStatement)   \
+  T(BlockStatement)        \
+  T(DeclarationStatement)  \
+  T(ExpressionStatement)   \
+  T(ForStatement)          \
+  T(ForInStatement)        \
+  T(IfStatement)           \
+  T(ReturnStatement)
 
 /**
  * All possible expressions
- * NOTE: If you add a new expression node to either the beginning or end of the
- * list, remember to modify Expr::classof() to update the bounds check.
+ * NOTE: If you add a new expression node to either the beginning or end of the list, remember to
+ *       modify Expression::classof() to update the bounds check.
  */
 #define EXPRESSION_NODES(T)             \
-  T(BadExpr)                            \
-  T(BinaryOpExpr)                       \
-  T(CallExpr)                           \
-  T(ComparisonOpExpr)                   \
-  T(FunctionLiteralExpr)                \
-  T(IdentifierExpr)                     \
-  T(ImplicitCastExpr)                   \
-  T(IndexExpr)                          \
-  T(LiteralExpr)                        \
-  T(MemberExpr)                         \
-  T(UnaryOpExpr)                        \
+  T(BadExpression)                      \
+  T(BinaryOpExpression)                 \
+  T(CallExpression)                     \
+  T(ComparisonOpExpression)             \
+  T(FunctionLiteralExpression)          \
+  T(IdentifierExpression)               \
+  T(ImplicitCastExpression)             \
+  T(IndexExpression)                    \
+  T(LiteralExpression)                  \
+  T(MemberExpression)                   \
+  T(UnaryOpExpression)                  \
   /* Type Representation Expressions */ \
   T(ArrayTypeRepr)                      \
   T(FunctionTypeRepr)                   \
@@ -85,9 +85,9 @@ namespace ast {
   STATEMENT_NODES(T)
 
 // Forward declare some base classes
-class Decl;
-class Expr;
-class Stmt;
+class Declaration;
+class Expression;
+class Statement;
 class Type;
 
 // Forward declare all nodes
@@ -201,13 +201,10 @@ class AstNode : public util::RegionObject {
  */
 class File : public AstNode {
  public:
-  File(const SourcePosition &pos, util::RegionVector<Decl *> &&decls)
-      : AstNode(Kind::File, pos), decls_(std::move(decls)) {}
-
   /**
    * @return A const-view of the declarations making up the file.
    */
-  const util::RegionVector<Decl *> &Declarations() const { return decls_; }
+  const util::RegionVector<Declaration *> &GetDeclarations() const { return decls_; }
 
   /**
    * Is the given node an AST File? Needed as part of the custom AST RTTI infrastructure.
@@ -217,8 +214,15 @@ class File : public AstNode {
   static bool classof(const AstNode *node) { return node->GetKind() == Kind::File; }
 
  private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  File(const SourcePosition &pos, util::RegionVector<Declaration *> &&decls)
+      : AstNode(Kind::File, pos), decls_(std::move(decls)) {}
+
+ private:
   // The declarations.
-  util::RegionVector<Decl *> decls_;
+  util::RegionVector<Declaration *> decls_;
 };
 
 // ---------------------------------------------------------
@@ -229,20 +233,17 @@ class File : public AstNode {
  * Base class for all declarations in TPL. All declarations have a name, and an optional type
  * representation. Structure and function declarations have an explicit type, but variables may not.
  */
-class Decl : public AstNode {
+class Declaration : public AstNode {
  public:
-  Decl(Kind kind, const SourcePosition &pos, Identifier name, Expr *type_repr)
-      : AstNode(kind, pos), name_(name), type_repr_(type_repr) {}
-
   /**
    * @return The name of the declaration as it appears in code.
    */
-  Identifier Name() const { return name_; }
+  Identifier GetName() const { return name_; }
 
   /**
    * @return The type representation of the declaration. May be null for variables.
    */
-  Expr *TypeRepr() const { return type_repr_; }
+  Expression *GetTypeRepr() const { return type_repr_; }
 
   /**
    * Is the given node an AST Declaration? Needed as part of the custom AST RTTI infrastructure.
@@ -250,69 +251,75 @@ class Decl : public AstNode {
    * @return True if the node is a declaration; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->GetKind() >= Kind::FieldDecl && node->GetKind() <= Kind::VariableDecl;
+    return node->GetKind() >= Kind::FieldDeclaration &&
+           node->GetKind() <= Kind::VariableDeclaration;
   }
+
+ protected:
+  // Protected to force usage of concrete subclass.
+  Declaration(Kind kind, const SourcePosition &pos, Identifier name, Expression *type_repr)
+      : AstNode(kind, pos), name_(name), type_repr_(type_repr) {}
 
  private:
   // The name of the declaration.
   Identifier name_;
   // The unresolved type representation of the declaration.
-  Expr *type_repr_;
+  Expression *type_repr_;
 };
 
 /**
  * A generic declaration of a function argument or a field in a struct.
  */
-class FieldDecl : public Decl {
+class FieldDeclaration : public Declaration {
  public:
-  FieldDecl(const SourcePosition &pos, Identifier name, Expr *type_repr)
-      : Decl(Kind::FieldDecl, pos, name, type_repr) {}
-
   /**
    * Is the given node an AST field? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a field; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FieldDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FieldDeclaration; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  FieldDeclaration(const SourcePosition &pos, Identifier name, Expression *type_repr)
+      : Declaration(Kind::FieldDeclaration, pos, name, type_repr) {}
 };
 
 /**
  * A function declaration.
  */
-class FunctionDecl : public Decl {
+class FunctionDeclaration : public Declaration {
  public:
-  FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLiteralExpr *func);
-
   /**
    * @return The function literal defining the body of the function declaration.
    */
-  FunctionLiteralExpr *Function() const { return func_; }
+  FunctionLiteralExpression *GetFunctionLiteral() const { return func_; }
 
   /**
    * Is the given node a function declaration? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a function declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionDeclaration; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  FunctionDeclaration(const SourcePosition &pos, Identifier name, FunctionLiteralExpression *func);
 
  private:
   // The function definition (signature and body).
-  FunctionLiteralExpr *func_;
+  FunctionLiteralExpression *func_;
 };
 
 /**
  * A structure declaration.
  */
-class StructDecl : public Decl {
+class StructDeclaration : public Declaration {
  public:
-  /**
-   * Create a new structure declaration.
-   * @param pos The position in the source where the declaration was defined.
-   * @param name The name of the structure.
-   * @param type_repr The type representation of the structure.
-   */
-  StructDecl(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr);
-
   /**
    * @return The number of fields in the declaration.
    */
@@ -323,34 +330,37 @@ class StructDecl : public Decl {
    *         not perform any bounds checking. It is the responsibility of the caller to access only
    *         valid fields.
    */
-  ast::FieldDecl *GetFieldAt(uint32_t field_idx) const;
+  FieldDeclaration *GetFieldAt(uint32_t field_idx) const;
 
   /**
    * Is the given node a struct declaration? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a struct declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::StructDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::StructDeclaration; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  StructDeclaration(const SourcePosition &pos, Identifier name, StructTypeRepr *type_repr);
 };
 
 /**
  * A variable declaration.
  */
-class VariableDecl : public Decl {
+class VariableDeclaration : public Declaration {
  public:
-  VariableDecl(const SourcePosition &pos, Identifier name, Expr *type_repr, Expr *init)
-      : Decl(Kind::VariableDecl, pos, name, type_repr), init_(init) {}
-
   /**
    * @return The initial value assigned to the variable, if one was provided; null otherwise.
    */
-  Expr *Initial() const { return init_; }
+  Expression *GetInitialValue() const { return init_; }
 
   /**
    * @return True if the variable declaration came with an explicit type, i.e., var v: int = 0.
    *         False if no explicit type was provided.
    */
-  bool HasTypeDecl() const { return TypeRepr() != nullptr; }
+  bool HasDeclaredType() const { return GetTypeRepr() != nullptr; }
 
   /**
    * @return True if the variable is assigned an initial value; false otherwise.
@@ -362,15 +372,22 @@ class VariableDecl : public Decl {
    * @param node The node to check.
    * @return True if the node is a variable declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::VariableDecl; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::VariableDeclaration; }
 
  private:
+  friend class AstNodeFactory;
   friend class sema::Sema;
 
-  void SetInitial(ast::Expr *initial) { init_ = initial; }
+  // Private to force factory usage.
+  VariableDeclaration(const SourcePosition &pos, Identifier name, Expression *type_repr,
+                      Expression *init)
+      : Declaration(Kind::VariableDeclaration, pos, name, type_repr), init_(init) {}
+
+  // Only set during semantic analysis.
+  void SetInitialValue(Expression *initial) { init_ = initial; }
 
  private:
-  Expr *init_;
+  Expression *init_;
 };
 
 // ---------------------------------------------------------
@@ -380,16 +397,14 @@ class VariableDecl : public Decl {
 /**
  * Base class for all statement nodes.
  */
-class Stmt : public AstNode {
+class Statement : public AstNode {
  public:
-  Stmt(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
-
   /**
    * Determines if the provided statement, the last in a statement list, is terminating.
    * @param stmt The statement node to check.
    * @return True if statement has a terminator; false otherwise.
    */
-  static bool IsTerminating(Stmt *stmt);
+  static bool IsTerminating(Statement *stmt);
 
   /**
    * Is the given node an AST statement? Needed as part of the custom AST RTTI infrastructure.
@@ -397,72 +412,74 @@ class Stmt : public AstNode {
    * @return True if the node is a statement; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->GetKind() >= Kind::AssignmentStmt && node->GetKind() <= Kind::ReturnStmt;
+    return node->GetKind() >= Kind::AssignmentStatement && node->GetKind() <= Kind::ReturnStatement;
   }
+
+ protected:
+  // Protected to force usage of concrete subclass.
+  Statement(Kind kind, const SourcePosition &pos) : AstNode(kind, pos) {}
 };
 
 /**
  * An assignment, dest = source.
  */
-class AssignmentStmt : public Stmt {
+class AssignmentStatement : public Statement {
  public:
-  AssignmentStmt(const SourcePosition &pos, Expr *dest, Expr *src)
-      : Stmt(AstNode::Kind::AssignmentStmt, pos), dest_(dest), src_(src) {}
-
   /**
    * @return The target/destination of the assignment.
    */
-  Expr *Destination() { return dest_; }
+  Expression *GetDestination() { return dest_; }
 
   /**
    * @return The source of the assignment.
    */
-  Expr *Source() { return src_; }
+  Expression *GetSource() { return src_; }
 
   /**
    * Is the given node an AST assignment? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a assignment; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::AssignmentStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::AssignmentStatement; }
 
  private:
+  friend class AstNodeFactory;
   friend class sema::Sema;
 
-  // Used for implicit casts
-  void SetSource(Expr *source) { src_ = source; }
+  // Private to force factory usage.
+  AssignmentStatement(const SourcePosition &pos, Expression *dest, Expression *src)
+      : Statement(AstNode::Kind::AssignmentStatement, pos), dest_(dest), src_(src) {}
+
+  // Used for implicit casts.
+  void SetSource(Expression *source) { src_ = source; }
 
  private:
   // The destination of the assignment.
-  Expr *dest_;
+  Expression *dest_;
   // The source of the assignment.
-  Expr *src_;
+  Expression *src_;
 };
 
 /**
- * A block of statements.
+ * A list statements all within one block scope.
  */
-class BlockStmt : public Stmt {
+class BlockStatement : public Statement {
  public:
-  BlockStmt(const SourcePosition &pos, const SourcePosition &rbrace_pos,
-            util::RegionVector<Stmt *> &&statements)
-      : Stmt(Kind::BlockStmt, pos), rbrace_pos_(rbrace_pos), statements_(std::move(statements)) {}
-
   /**
    * @return The statements making up the block.
    */
-  const util::RegionVector<Stmt *> &Statements() const { return statements_; }
+  const util::RegionVector<Statement *> &GetStatements() const { return statements_; }
 
   /**
    * Append a new statement to the list of statements.
    * @param stmt The statement to append.
    */
-  void AppendStatement(ast::Stmt *stmt) { statements_.push_back(stmt); }
+  void AppendStatement(Statement *stmt) { statements_.push_back(stmt); }
 
   /**
    * @return The position of the right-brace.
    */
-  const SourcePosition &RightBracePosition() const { return rbrace_pos_; }
+  const SourcePosition &GetRightBracePosition() const { return rbrace_pos_; }
 
   /**
    * Set the right-brace position for the end of the block.
@@ -478,82 +495,98 @@ class BlockStmt : public Stmt {
   /**
    * @return The last statement in the block; null if the block is empty;
    */
-  Stmt *GetLast() const { return (IsEmpty() ? nullptr : statements_.back()); }
+  Statement *GetLast() const { return (IsEmpty() ? nullptr : statements_.back()); }
 
   /**
    * Is the given node an AST statement list? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a statement list; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BlockStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BlockStatement; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  BlockStatement(const SourcePosition &pos, const SourcePosition &rbrace_pos,
+                 util::RegionVector<Statement *> &&statements)
+      : Statement(Kind::BlockStatement, pos),
+        rbrace_pos_(rbrace_pos),
+        statements_(std::move(statements)) {}
 
  private:
   // The right brace position.
   SourcePosition rbrace_pos_;
   // The list of statements.
-  util::RegionVector<Stmt *> statements_;
+  util::RegionVector<Statement *> statements_;
 };
 
 /**
  * The bridge between statements and declarations.
  */
-class DeclStmt : public Stmt {
+class DeclarationStatement : public Statement {
  public:
-  explicit DeclStmt(Decl *decl) : Stmt(Kind::DeclStmt, decl->Position()), decl_(decl) {}
-
   /**
    * @return The wrapped declaration.
    */
-  Decl *Declaration() const { return decl_; }
+  Declaration *GetDeclaration() const { return decl_; }
 
   /**
    * Is the given node an AST declaration? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a declaration; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::DeclStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::DeclarationStatement; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  explicit DeclarationStatement(Declaration *decl)
+      : Statement(Kind::DeclarationStatement, decl->Position()), decl_(decl) {}
 
  private:
   // The wrapped declaration.
-  Decl *decl_;
+  Declaration *decl_;
 };
 
 /**
  * The bridge between statements and expressions.
  */
-class ExpressionStmt : public Stmt {
+class ExpressionStatement : public Statement {
  public:
-  explicit ExpressionStmt(Expr *expr);
-
   /**
    * @return The wrapped expression.
    */
-  Expr *Expression() { return expr_; }
+  Expression *GetExpression() { return expr_; }
 
   /**
    * Is the given node an AST expression? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is an expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ExpressionStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ExpressionStatement; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  explicit ExpressionStatement(Expression *expr);
 
  private:
   // The wrapped expression.
-  Expr *expr_;
+  Expression *expr_;
 };
 
 /**
  * Base class for all iteration-based statements
  */
-class IterationStmt : public Stmt {
+class IterationStatement : public Statement {
  public:
-  IterationStmt(const SourcePosition &pos, AstNode::Kind kind, BlockStmt *body)
-      : Stmt(kind, pos), body_(body) {}
-
   /**
    * @return The block making up the body of the iteration.
    */
-  BlockStmt *Body() const { return body_; }
+  BlockStatement *GetBody() const { return body_; }
 
   /**
    * Is the given node an AST iteration? Needed as part of the custom AST RTTI infrastructure.
@@ -561,48 +594,61 @@ class IterationStmt : public Stmt {
    * @return True if the node is an iteration; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->GetKind() >= Kind::ForStmt && node->GetKind() <= Kind::ForInStmt;
+    return node->GetKind() >= Kind::ForStatement && node->GetKind() <= Kind::ForInStatement;
   }
+
+ protected:
+  // Protected to force usage of concrete subclass.
+  IterationStatement(const SourcePosition &pos, AstNode::Kind kind, BlockStatement *body)
+      : Statement(kind, pos), body_(body) {}
 
  private:
   // The body of the iteration.
-  BlockStmt *body_;
+  BlockStatement *body_;
 };
 
 /**
  * A vanilla for-statement.
  */
-class ForStmt : public IterationStmt {
+class ForStatement : public IterationStatement {
  public:
-  ForStmt(const SourcePosition &pos, Stmt *init, Expr *cond, Stmt *next, BlockStmt *body)
-      : IterationStmt(pos, AstNode::Kind::ForStmt, body), init_(init), cond_(cond), next_(next) {}
-
   /**
    * @return The initialization statement(s). Can be null.
    */
-  Stmt *Init() const { return init_; }
+  Statement *GetInit() const { return init_; }
 
   /**
    * @return The loop condition. Can be null if infinite loop.
    */
-  Expr *Condition() const { return cond_; }
+  Expression *GetCondition() const { return cond_; }
 
   /**
    * @return The advancement statement(s). Can be null.
    */
-  Stmt *Next() const { return next_; }
+  Statement *GetNext() const { return next_; }
 
   /**
    * Is the given node an AST for loop? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a for loop; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForStatement; }
 
  private:
-  Stmt *init_;
-  Expr *cond_;
-  Stmt *next_;
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  ForStatement(const SourcePosition &pos, Statement *init, Expression *cond, Statement *next,
+               BlockStatement *body)
+      : IterationStatement(pos, AstNode::Kind::ForStatement, body),
+        init_(init),
+        cond_(cond),
+        next_(next) {}
+
+ private:
+  Statement *init_;
+  Expression *cond_;
+  Statement *next_;
 };
 
 /**
@@ -616,112 +662,130 @@ class ForStmt : public IterationStmt {
  *
  * 'row' is the target and 'table' is the iterable object in a for-in statement.
  */
-class ForInStmt : public IterationStmt {
+class ForInStatement : public IterationStatement {
  public:
-  ForInStmt(const SourcePosition &pos, Expr *target, Expr *iter, BlockStmt *body)
-      : IterationStmt(pos, AstNode::Kind::ForInStmt, body), target_(target), iter_(iter) {}
-
   /**
    * @return The loop iteration variable.
    */
-  Expr *Target() const { return target_; }
+  Expression *Target() const { return target_; }
 
   /**
    * @return The iterable.
    */
-  Expr *Iterable() const { return iter_; }
+  Expression *Iterable() const { return iter_; }
 
   /**
    * Is the given node an AST for-in loop? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a for-in loop; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForInStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ForInStatement; }
 
  private:
-  Expr *target_;
-  Expr *iter_;
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  ForInStatement(const SourcePosition &pos, Expression *target, Expression *iter,
+                 BlockStatement *body)
+      : IterationStatement(pos, AstNode::Kind::ForInStatement, body),
+        target_(target),
+        iter_(iter) {}
+
+ private:
+  Expression *target_;
+  Expression *iter_;
 };
 
 /**
  * An if-then-else statement.
  */
-class IfStmt : public Stmt {
+class IfStatement : public Statement {
  public:
-  IfStmt(const SourcePosition &pos, Expr *cond, BlockStmt *then_stmt, Stmt *else_stmt)
-      : Stmt(Kind::IfStmt, pos), cond_(cond), then_stmt_(then_stmt), else_stmt_(else_stmt) {}
-
   /**
    * @return The if-condition.
    */
-  Expr *Condition() const { return cond_; }
+  Expression *GetCondition() const { return cond_; }
 
   /**
    * @return The block of statements if the condition is true.
    */
-  BlockStmt *ThenStmt() const { return then_stmt_; }
+  BlockStatement *GetThenStatement() const { return then_stmt_; }
 
   /**
    * @return The else statement.
    */
-  Stmt *ElseStmt() const { return else_stmt_; }
+  Statement *GetElseStatement() const { return else_stmt_; }
 
   /**
    * @return True if there is an else statement; false otherwise.
    */
-  bool HasElseStmt() const { return else_stmt_ != nullptr; }
+  bool HasElseStatement() const { return else_stmt_ != nullptr; }
 
   /**
    * Is the given node an AST if statement? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is an if statement; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IfStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IfStatement; }
 
  private:
+  friend class AstNodeFactory;
   friend class sema::Sema;
 
-  void SetCondition(Expr *cond) {
+  // Private to force factory usage.
+  IfStatement(const SourcePosition &pos, Expression *cond, BlockStatement *then_stmt,
+              Statement *else_stmt)
+      : Statement(Kind::IfStatement, pos),
+        cond_(cond),
+        then_stmt_(then_stmt),
+        else_stmt_(else_stmt) {}
+
+  // Set only during semantic analysis.
+  void SetCondition(Expression *cond) {
     TPL_ASSERT(cond != nullptr, "Cannot set null condition");
     cond_ = cond;
   }
 
  private:
   // The if condition.
-  Expr *cond_;
+  Expression *cond_;
   // The block of statements if the condition is true.
-  BlockStmt *then_stmt_;
+  BlockStatement *then_stmt_;
   // The else statement.
-  Stmt *else_stmt_;
+  Statement *else_stmt_;
 };
 
 /**
  * A return statement.
  */
-class ReturnStmt : public Stmt {
+class ReturnStatement : public Statement {
  public:
-  ReturnStmt(const SourcePosition &pos, Expr *ret) : Stmt(Kind::ReturnStmt, pos), ret_(ret) {}
-
   /**
    * @return The expression representing the value that's to be returned.
    */
-  Expr *Ret() const { return ret_; }
+  Expression *GetReturnValue() const { return ret_; }
 
   /**
    * Is the given node a return statement? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a return statement; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ReturnStmt; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ReturnStatement; }
 
  private:
+  friend class AstNodeFactory;
   friend class sema::Sema;
 
-  void SetRet(ast::Expr *ret) { ret_ = ret; }
+  // Private to force factory usage.
+  ReturnStatement(const SourcePosition &pos, Expression *ret)
+      : Statement(Kind::ReturnStatement, pos), ret_(ret) {}
+
+  // Set only during semantic analysis.
+  void SetReturnValue(Expression *ret) { ret_ = ret; }
 
  private:
   // The expression representing the value that's returned.
-  Expr *ret_;
+  Expression *ret_;
 };
 
 // ---------------------------------------------------------
@@ -732,7 +796,7 @@ class ReturnStmt : public Stmt {
  * Base class for all expression nodes. Expression nodes all have a required type. This type is
  * filled in during semantic analysis. Thus, type() will return a null pointer before type-checking.
  */
-class Expr : public AstNode {
+class Expression : public AstNode {
  public:
   enum class Context : uint8_t {
     LValue,
@@ -740,9 +804,6 @@ class Expr : public AstNode {
     Test,
     Effect,
   };
-
-  Expr(Kind kind, const SourcePosition &pos, Type *type = nullptr)
-      : AstNode(kind, pos), type_(type) {}
 
   /**
    * @return The resolved TPL type of the expression. NULL if type checking has yet to run.
@@ -788,8 +849,13 @@ class Expr : public AstNode {
    * @return True if the node is an expression; false otherwise.
    */
   static bool classof(const AstNode *node) {
-    return node->GetKind() >= Kind::BadExpr && node->GetKind() <= Kind::StructTypeRepr;
+    return node->GetKind() >= Kind::BadExpression && node->GetKind() <= Kind::StructTypeRepr;
   }
+
+ protected:
+  // Protected to force usage of concrete subclass.
+  Expression(Kind kind, const SourcePosition &pos, Type *type = nullptr)
+      : AstNode(kind, pos), type_(type) {}
 
  private:
   // The resolved TPL type. Null if type checking has not run.
@@ -799,21 +865,23 @@ class Expr : public AstNode {
 /**
  * A bad statement.
  */
-class BadExpr : public Expr {
+class BadExpression : public Expression {
  public:
-  explicit BadExpr(const SourcePosition &pos) : Expr(AstNode::Kind::BadExpr, pos) {}
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BadExpression; }
 
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BadExpr; }
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  explicit BadExpression(const SourcePosition &pos)
+      : Expression(AstNode::Kind::BadExpression, pos) {}
 };
 
 /**
  * A binary expression with non-null left and right children and an operator.
  */
-class BinaryOpExpr : public Expr {
+class BinaryOpExpression : public Expression {
  public:
-  BinaryOpExpr(const SourcePosition &pos, parsing::Token::Type op, Expr *left, Expr *right)
-      : Expr(Kind::BinaryOpExpr, pos), op_(op), left_(left), right_(right) {}
-
   /**
    * @return The parsing token representing the kind of binary operation. +, -, etc.
    */
@@ -822,54 +890,56 @@ class BinaryOpExpr : public Expr {
   /**
    * @return The left input to the binary expression.
    */
-  Expr *Left() const { return left_; }
+  Expression *GetLeft() const { return left_; }
 
   /**
    * @return The right input to the binary expression.
    */
-  Expr *Right() const { return right_; }
+  Expression *GetRight() const { return right_; }
 
   /**
    * Is the given node a binary expression? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a binary expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BinaryOpExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::BinaryOpExpression; }
 
  private:
+  friend class AstNodeFactory;
   friend class sema::Sema;
 
-  void SetLeft(Expr *left) {
+  // Private to force factory usage.
+  BinaryOpExpression(const SourcePosition &pos, parsing::Token::Type op, Expression *left,
+                     Expression *right)
+      : Expression(Kind::BinaryOpExpression, pos), op_(op), left_(left), right_(right) {}
+
+  // Set only during semantic analysis.
+  void SetLeft(Expression *left) {
     TPL_ASSERT(left != nullptr, "Left cannot be null!");
     left_ = left;
   }
 
-  void SetRight(Expr *right) {
+  // Set only during semantic analysis.
+  void SetRight(Expression *right) {
     TPL_ASSERT(right != nullptr, "Right cannot be null!");
     right_ = right;
   }
 
  private:
   parsing::Token::Type op_;
-  Expr *left_;
-  Expr *right_;
+  Expression *left_;
+  Expression *right_;
 };
 
 /**
  * A function call expression.
  */
-class CallExpr : public Expr {
+class CallExpression : public Expression {
  public:
+  /**
+   * The different kinds of function invocations.
+   */
   enum class CallKind : uint8_t { Regular, Builtin };
-
-  CallExpr(Expr *func, util::RegionVector<Expr *> &&args)
-      : CallExpr(func, std::move(args), CallKind::Regular) {}
-
-  CallExpr(Expr *func, util::RegionVector<Expr *> &&args, CallKind call_kind)
-      : Expr(Kind::CallExpr, func->Position()),
-        func_(func),
-        args_(std::move(args)),
-        call_kind_(call_kind) {}
 
   /**
    * @return The name of the function to call.
@@ -879,12 +949,12 @@ class CallExpr : public Expr {
   /**
    * @return The function that's to be called.
    */
-  Expr *Function() const { return func_; }
+  Expression *GetFunction() const { return func_; }
 
   /**
    * @return A const-view of the arguments to the function.
    */
-  const util::RegionVector<Expr *> &Arguments() const { return args_; }
+  const util::RegionVector<Expression *> &GetArguments() const { return args_; }
 
   /**
    * @return The number of call arguments.
@@ -906,21 +976,36 @@ class CallExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a call; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::CallExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::CallExpression; }
 
  private:
+  friend class AstNodeFactory;
   friend class sema::Sema;
 
-  void SetArgument(uint32_t arg_idx, Expr *expr) {
+  // Create a regular call expression.
+  // Private to force factory usage.
+  CallExpression(Expression *func, util::RegionVector<Expression *> &&args)
+      : CallExpression(func, std::move(args), CallKind::Regular) {}
+
+  // Create a specific kind of call expression.
+  // Private to force factory usage.
+  CallExpression(Expression *func, util::RegionVector<Expression *> &&args, CallKind call_kind)
+      : Expression(Kind::CallExpression, func->Position()),
+        func_(func),
+        args_(std::move(args)),
+        call_kind_(call_kind) {}
+
+  // Called only during semantic analysis to adjust arguments.
+  void SetArgument(uint32_t arg_idx, Expression *expr) {
     TPL_ASSERT(arg_idx < NumArgs(), "Out-of-bounds argument access");
     args_[arg_idx] = expr;
   }
 
  private:
   // The function to call.
-  Expr *func_;
+  Expression *func_;
   // The arguments to the invocation.
-  util::RegionVector<Expr *> args_;
+  util::RegionVector<Expression *> args_;
   // The kind of call.
   CallKind call_kind_;
 };
@@ -928,11 +1013,8 @@ class CallExpr : public Expr {
 /**
  * A binary comparison operator.
  */
-class ComparisonOpExpr : public Expr {
+class ComparisonOpExpression : public Expression {
  public:
-  ComparisonOpExpr(const SourcePosition &pos, parsing::Token::Type op, Expr *left, Expr *right)
-      : Expr(Kind::ComparisonOpExpr, pos), op_(op), left_(left), right_(right) {}
-
   /**
    * @return The parsing token representing the kind of comparison, <, ==, etc.
    */
@@ -941,12 +1023,12 @@ class ComparisonOpExpr : public Expr {
   /**
    * @return The left input to the comparison.
    */
-  Expr *Left() const { return left_; }
+  Expression *GetLeft() const { return left_; }
 
   /**
    * @return The right input to the comparison.
    */
-  Expr *Right() const { return right_; }
+  Expression *GetRight() const { return right_; }
 
   /**
    * Is this a comparison between an expression and a nil literal?
@@ -954,24 +1036,34 @@ class ComparisonOpExpr : public Expr {
    *                    we're checking nil against, either the left or right input.
    * @return True if this is a nil comparison; false otherwise
    */
-  bool IsLiteralCompareNil(Expr **result) const;
+  bool IsLiteralCompareNil(Expression **result) const;
 
   /**
    * Is the given node a comparison? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a comparison; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ComparisonOpExpr; }
+  static bool classof(const AstNode *node) {
+    return node->GetKind() == Kind::ComparisonOpExpression;
+  }
 
  private:
+  friend class AstNodeFactory;
   friend class sema::Sema;
 
-  void SetLeft(Expr *left) {
+  // Private to force factory usage.
+  ComparisonOpExpression(const SourcePosition &pos, parsing::Token::Type op, Expression *left,
+                         Expression *right)
+      : Expression(Kind::ComparisonOpExpression, pos), op_(op), left_(left), right_(right) {}
+
+  // Set only during semantic analysis.
+  void SetLeft(Expression *left) {
     TPL_ASSERT(left != nullptr, "Left cannot be null!");
     left_ = left;
   }
 
-  void SetRight(Expr *right) {
+  // Set only during semantic analysis.
+  void SetRight(Expression *right) {
     TPL_ASSERT(right != nullptr, "Right cannot be null!");
     right_ = right;
   }
@@ -980,65 +1072,68 @@ class ComparisonOpExpr : public Expr {
   // The kind of comparison.
   parsing::Token::Type op_;
   // The left side of comparison.
-  Expr *left_;
+  Expression *left_;
   // The right side of comparison.
-  Expr *right_;
+  Expression *right_;
 };
 
 /**
  * A function literal.
  */
-class FunctionLiteralExpr : public Expr {
+class FunctionLiteralExpression : public Expression {
  public:
-  FunctionLiteralExpr(FunctionTypeRepr *type_repr, BlockStmt *body);
-
   /**
    * @return The function's signature.
    */
-  FunctionTypeRepr *TypeRepr() const { return type_repr_; }
+  FunctionTypeRepr *GetTypeRepr() const { return type_repr_; }
 
   /**
    * @return The statements making up the body of the function.
    */
-  BlockStmt *Body() const { return body_; }
+  BlockStatement *GetBody() const { return body_; }
 
   /**
    * @return True if the function has no statements; false otherwise.
    */
-  bool IsEmpty() const { return Body()->IsEmpty(); }
+  bool IsEmpty() const { return body_->IsEmpty(); }
 
   /**
    * Is the given node a function literal? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a function literal; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionLiteralExpr; }
+  static bool classof(const AstNode *node) {
+    return node->GetKind() == Kind::FunctionLiteralExpression;
+  }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  FunctionLiteralExpression(FunctionTypeRepr *type_repr, BlockStatement *body);
 
  private:
   // The function's signature.
   FunctionTypeRepr *type_repr_;
   // The body of the function.
-  BlockStmt *body_;
+  BlockStatement *body_;
 };
 
 /**
  * A reference to a variable, function or struct.
  */
-class IdentifierExpr : public Expr {
+class IdentifierExpression : public Expression {
  public:
-  IdentifierExpr(const SourcePosition &pos, Identifier name)
-      : Expr(Kind::IdentifierExpr, pos), name_(name), decl_(nullptr) {}
-
   /**
    * @return The identifier the expression represents.
    */
-  Identifier Name() const { return name_; }
+  Identifier GetName() const { return name_; }
 
   /**
    * Bind an identifier to a source declaration.
    * @param decl The declaration to bind this identifier to.
    */
-  void BindTo(Decl *decl) { decl_ = decl; }
+  void BindTo(Declaration *decl) { decl_ = decl; }
 
   /**
    * @return True if the expression has been bound; false otherwise.
@@ -1051,13 +1146,20 @@ class IdentifierExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is an identifier expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IdentifierExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IdentifierExpression; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  IdentifierExpression(const SourcePosition &pos, Identifier name)
+      : Expression(Kind::IdentifierExpression, pos), name_(name), decl_(nullptr) {}
 
  private:
   // TODO(pmenon) Should these two be a union since only one should be active?
   // Pre-binding, 'name_' is used, and post-binding 'decl_' should be used.
   Identifier name_;
-  Decl *decl_;
+  Declaration *decl_;
 };
 
 /**
@@ -1100,7 +1202,7 @@ std::string CastKindToString(CastKind cast_kind);
  * An implicit cast operation is one that is inserted automatically by the compiler during semantic
  * analysis.
  */
-class ImplicitCastExpr : public Expr {
+class ImplicitCastExpression : public Expression {
  public:
   /**
    * @return The kind of cast operation this expression represents.
@@ -1110,26 +1212,32 @@ class ImplicitCastExpr : public Expr {
   /**
    * @return The input to the cast operation.
    */
-  Expr *Input() const { return input_; }
+  Expression *GetInput() const { return input_; }
 
   /**
    * Is the given node an implicit cast? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is an implicit cast; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::ImplicitCastExpr; }
+  static bool classof(const AstNode *node) {
+    return node->GetKind() == Kind::ImplicitCastExpression;
+  }
 
  private:
   friend class AstNodeFactory;
 
-  ImplicitCastExpr(const SourcePosition &pos, CastKind cast_kind, Type *target_type, Expr *input)
-      : Expr(Kind::ImplicitCastExpr, pos, target_type), cast_kind_(cast_kind), input_(input) {}
+  // Private to force factory usage.
+  ImplicitCastExpression(const SourcePosition &pos, CastKind cast_kind, Type *target_type,
+                         Expression *input)
+      : Expression(Kind::ImplicitCastExpression, pos, target_type),
+        cast_kind_(cast_kind),
+        input_(input) {}
 
  private:
   // The kind of cast operation.
   CastKind cast_kind_;
   // The input to the cast.
-  Expr *input_;
+  Expression *input_;
 };
 
 /**
@@ -1137,17 +1245,17 @@ class ImplicitCastExpr : public Expr {
  * an array or a map. The index ('i' in the example) must evaluate to an integer for array access
  * and the map's associated key type if the object is a map.
  */
-class IndexExpr : public Expr {
+class IndexExpression : public Expression {
  public:
   /**
    * @return The object that's being indexed into.
    */
-  Expr *Object() const { return obj_; }
+  Expression *GetObject() const { return object_; }
 
   /**
    * @return The index to use to access the object.
    */
-  Expr *Index() const { return index_; }
+  Expression *GetIndex() const { return index_; }
 
   /**
    * @return True if this expression for an array access; false otherwise.
@@ -1164,47 +1272,36 @@ class IndexExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is an index expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IndexExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::IndexExpression; }
 
  private:
   friend class AstNodeFactory;
 
-  IndexExpr(const SourcePosition &pos, Expr *obj, Expr *index)
-      : Expr(Kind::IndexExpr, pos), obj_(obj), index_(index) {}
+  // Private to force factory usage.
+  IndexExpression(const SourcePosition &pos, Expression *obj, Expression *index)
+      : Expression(Kind::IndexExpression, pos), object_(obj), index_(index) {}
 
  private:
   // The object that's being indexes.
-  Expr *obj_;
+  Expression *object_;
   // The index.
-  Expr *index_;
+  Expression *index_;
 };
 
 /**
  * A literal in the original source code.
  */
-class LiteralExpr : public Expr {
+class LiteralExpression : public Expression {
  public:
+  /**
+   * The kinds of literals that can appear in TPL.
+   */
   enum class LiteralKind : uint8_t { Nil, Boolean, Int, Float, String };
-
-  explicit LiteralExpr(const SourcePosition &pos)
-      : Expr(Kind::LiteralExpr, pos), lit_kind_(LiteralKind::Nil) {}
-
-  LiteralExpr(const SourcePosition &pos, bool val)
-      : Expr(Kind::LiteralExpr, pos), bool_val_(val), lit_kind_(LiteralKind::Boolean) {}
-
-  LiteralExpr(const SourcePosition &pos, Identifier str)
-      : Expr(Kind::LiteralExpr, pos), string_val_(str), lit_kind_(LiteralKind::String) {}
-
-  LiteralExpr(const SourcePosition &pos, int64_t num)
-      : Expr(Kind::LiteralExpr, pos), int_val_(num), lit_kind_(LiteralKind::Int) {}
-
-  LiteralExpr(const SourcePosition &pos, double num)
-      : Expr(Kind::LiteralExpr, pos), float_val_(num), lit_kind_(LiteralKind::Float) {}
 
   /**
    * @return The kind of literal this expression represents.
    */
-  LiteralExpr::LiteralKind GetLiteralKind() const { return lit_kind_; }
+  LiteralKind GetLiteralKind() const { return lit_kind_; }
 
   /**
    * @return True if this is a 'nil' literal; false otherwise.
@@ -1266,14 +1363,35 @@ class LiteralExpr : public Expr {
   /**
    * @return True if this expression is representable as the given type; false otherwise.
    */
-  bool IsRepresentable(ast::Type *type) const;
+  bool IsRepresentable(Type *type) const;
 
   /**
    * Is the given node a literal? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a literal; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::LiteralExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::LiteralExpression; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  explicit LiteralExpression(const SourcePosition &pos)
+      : Expression(Kind::LiteralExpression, pos), lit_kind_(LiteralKind::Nil) {}
+
+  LiteralExpression(const SourcePosition &pos, bool val)
+      : Expression(Kind::LiteralExpression, pos), bool_val_(val), lit_kind_(LiteralKind::Boolean) {}
+
+  LiteralExpression(const SourcePosition &pos, Identifier str)
+      : Expression(Kind::LiteralExpression, pos),
+        string_val_(str),
+        lit_kind_(LiteralKind::String) {}
+
+  LiteralExpression(const SourcePosition &pos, int64_t num)
+      : Expression(Kind::LiteralExpression, pos), int_val_(num), lit_kind_(LiteralKind::Int) {}
+
+  LiteralExpression(const SourcePosition &pos, double num)
+      : Expression(Kind::LiteralExpression, pos), float_val_(num), lit_kind_(LiteralKind::Float) {}
 
  private:
   // A union of possible literal values.
@@ -1307,17 +1425,17 @@ class LiteralExpr : public Expr {
  *
  * Using dot-access for pointers to object is termed a sugared-arrow access.
  */
-class MemberExpr : public Expr {
+class MemberExpression : public Expression {
  public:
   /**
    * @return The object being accessed.
    */
-  Expr *Object() const { return object_; }
+  Expression *GetObject() const { return object_; }
 
   /**
    * @return The member of the object/struct to access.
    */
-  Expr *Member() const { return member_; }
+  Expression *GetMember() const { return member_; }
 
   /**
    * @return True if this member access is sugared. Refer to docs to understand arrow sugaring.
@@ -1329,29 +1447,27 @@ class MemberExpr : public Expr {
    * @param node The node to check.
    * @return True if the node is a member expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::MemberExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::MemberExpression; }
 
  private:
   friend class AstNodeFactory;
 
-  MemberExpr(const SourcePosition &pos, Expr *obj, Expr *member)
-      : Expr(Kind::MemberExpr, pos), object_(obj), member_(member) {}
+  // Private to force factory usage.
+  MemberExpression(const SourcePosition &pos, Expression *obj, Expression *member)
+      : Expression(Kind::MemberExpression, pos), object_(obj), member_(member) {}
 
  private:
   // The object being accessed.
-  Expr *object_;
+  Expression *object_;
   // The member in the object to access.
-  Expr *member_;
+  Expression *member_;
 };
 
 /**
  * A unary expression with a non-null inner expression and an operator.
  */
-class UnaryOpExpr : public Expr {
+class UnaryOpExpression : public Expression {
  public:
-  UnaryOpExpr(const SourcePosition &pos, parsing::Token::Type op, Expr *expr)
-      : Expr(Kind::UnaryOpExpr, pos), op_(op), expr_(expr) {}
-
   /**
    * @return The parsing token operator representing the unary operation.
    */
@@ -1360,20 +1476,27 @@ class UnaryOpExpr : public Expr {
   /**
    * @return The input expression to the unary operation.
    */
-  Expr *Input() const { return expr_; }
+  Expression *GetInput() const { return expr_; }
 
   /**
    * Is the given node a unary expression? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
    * @return True if the node is a unary expression; false otherwise.
    */
-  static bool classof(const AstNode *node) { return node->GetKind() == Kind::UnaryOpExpr; }
+  static bool classof(const AstNode *node) { return node->GetKind() == Kind::UnaryOpExpression; }
+
+ private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  UnaryOpExpression(const SourcePosition &pos, parsing::Token::Type op, Expression *expr)
+      : Expression(Kind::UnaryOpExpression, pos), op_(op), expr_(expr) {}
 
  private:
   // The unary operator.
   parsing::Token::Type op_;
   // The input to the unary operation.
-  Expr *expr_;
+  Expression *expr_;
 };
 
 // ---------------------------------------------------------
@@ -1388,20 +1511,17 @@ class UnaryOpExpr : public Expr {
 /**
  * Array type.
  */
-class ArrayTypeRepr : public Expr {
+class ArrayTypeRepr : public Expression {
  public:
-  ArrayTypeRepr(const SourcePosition &pos, Expr *len, Expr *elem_type)
-      : Expr(Kind::ArrayTypeRepr, pos), len_(len), elem_type_(elem_type) {}
-
   /**
    * @return The length of the array, if provided; null if not provided.
    */
-  Expr *Length() const { return len_; }
+  Expression *GetLength() const { return len_; }
 
   /**
    * @return The type of elements the array stores.
    */
-  Expr *ElementType() const { return elem_type_; }
+  Expression *GetElementType() const { return elem_type_; }
 
   /**
    * @return True if a length was specified in the array type representation; false otherwise.
@@ -1416,32 +1536,33 @@ class ArrayTypeRepr : public Expr {
   static bool classof(const AstNode *node) { return node->GetKind() == Kind::ArrayTypeRepr; }
 
  private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  ArrayTypeRepr(const SourcePosition &pos, Expression *len, Expression *elem_type)
+      : Expression(Kind::ArrayTypeRepr, pos), len_(len), elem_type_(elem_type) {}
+
+ private:
   // The specified length.
-  Expr *len_;
+  Expression *len_;
   // The element type of the array.
-  Expr *elem_type_;
+  Expression *elem_type_;
 };
 
 /**
  * Function type.
  */
-class FunctionTypeRepr : public Expr {
+class FunctionTypeRepr : public Expression {
  public:
-  FunctionTypeRepr(const SourcePosition &pos, util::RegionVector<FieldDecl *> &&param_types,
-                   Expr *ret_type)
-      : Expr(Kind::FunctionTypeRepr, pos),
-        param_types_(std::move(param_types)),
-        ret_type_(ret_type) {}
-
   /**
    * @return The parameters to the function.
    */
-  const util::RegionVector<FieldDecl *> &Parameters() const { return param_types_; }
+  const util::RegionVector<FieldDeclaration *> &GetParameters() const { return param_types_; }
 
   /**
    * @return The return type of the function.
    */
-  Expr *ReturnType() const { return ret_type_; }
+  Expression *GetReturnType() const { return ret_type_; }
 
   /**
    * Is the given node a function type? Needed as part of the custom AST RTTI infrastructure.
@@ -1451,29 +1572,36 @@ class FunctionTypeRepr : public Expr {
   static bool classof(const AstNode *node) { return node->GetKind() == Kind::FunctionTypeRepr; }
 
  private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  FunctionTypeRepr(const SourcePosition &pos, util::RegionVector<FieldDeclaration *> &&param_types,
+                   Expression *ret_type)
+      : Expression(Kind::FunctionTypeRepr, pos),
+        param_types_(std::move(param_types)),
+        ret_type_(ret_type) {}
+
+ private:
   // The parameters to the function.
-  util::RegionVector<FieldDecl *> param_types_;
+  util::RegionVector<FieldDeclaration *> param_types_;
   // The return type.
-  Expr *ret_type_;
+  Expression *ret_type_;
 };
 
 /**
  * Map type.
  */
-class MapTypeRepr : public Expr {
+class MapTypeRepr : public Expression {
  public:
-  MapTypeRepr(const SourcePosition &pos, Expr *key, Expr *val)
-      : Expr(Kind::MapTypeRepr, pos), key_(key), val_(val) {}
-
   /**
    * @return The key type of the map.
    */
-  Expr *KeyType() const { return key_; }
+  Expression *GetKeyType() const { return key_; }
 
   /**
    * @return The value type of the map.
    */
-  Expr *ValType() const { return val_; }
+  Expression *GetValueType() const { return val_; }
 
   /**
    * Is the given node a map type? Needed as part of the custom AST RTTI infrastructure.
@@ -1483,24 +1611,28 @@ class MapTypeRepr : public Expr {
   static bool classof(const AstNode *node) { return node->GetKind() == Kind::MapTypeRepr; }
 
  private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  MapTypeRepr(const SourcePosition &pos, Expression *key, Expression *val)
+      : Expression(Kind::MapTypeRepr, pos), key_(key), val_(val) {}
+
+ private:
   // The key type.
-  Expr *key_;
+  Expression *key_;
   // The value type.
-  Expr *val_;
+  Expression *val_;
 };
 
 /**
  * Pointer type.
  */
-class PointerTypeRepr : public Expr {
+class PointerTypeRepr : public Expression {
  public:
-  PointerTypeRepr(const SourcePosition &pos, Expr *base)
-      : Expr(Kind::PointerTypeRepr, pos), base_(base) {}
-
   /**
    * @return The pointee type.
    */
-  Expr *Base() const { return base_; }
+  Expression *GetBase() const { return base_; }
 
   /**
    * Is the given node a pointer type? Needed as part of the custom AST RTTI infrastructure.
@@ -1510,27 +1642,31 @@ class PointerTypeRepr : public Expr {
   static bool classof(const AstNode *node) { return node->GetKind() == Kind::PointerTypeRepr; }
 
  private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  PointerTypeRepr(const SourcePosition &pos, Expression *base)
+      : Expression(Kind::PointerTypeRepr, pos), base_(base) {}
+
+ private:
   // The type of the element being pointed to.
-  Expr *base_;
+  Expression *base_;
 };
 
 /**
  * Struct type.
  */
-class StructTypeRepr : public Expr {
+class StructTypeRepr : public Expression {
  public:
-  StructTypeRepr(const SourcePosition &pos, util::RegionVector<FieldDecl *> &&fields)
-      : Expr(Kind::StructTypeRepr, pos), fields_(std::move(fields)) {}
-
   /**
    * @return The fields of the struct.
    */
-  const util::RegionVector<FieldDecl *> &Fields() const { return fields_; }
+  const util::RegionVector<FieldDeclaration *> &GetFields() const { return fields_; }
 
   /**
    * @return The field at the provided index. No bounds checking is performed!
    */
-  FieldDecl *GetFieldAt(uint32_t field_idx) const {
+  FieldDeclaration *GetFieldAt(uint32_t field_idx) const {
     TPL_ASSERT(field_idx < fields_.size(), "Out-of-bounds field access");
     return fields_[field_idx];
   }
@@ -1543,8 +1679,15 @@ class StructTypeRepr : public Expr {
   static bool classof(const AstNode *node) { return node->GetKind() == Kind::StructTypeRepr; }
 
  private:
+  friend class AstNodeFactory;
+
+  // Private to force factory usage.
+  StructTypeRepr(const SourcePosition &pos, util::RegionVector<FieldDeclaration *> &&fields)
+      : Expression(Kind::StructTypeRepr, pos), fields_(std::move(fields)) {}
+
+ private:
   // The fields of the struct.
-  util::RegionVector<FieldDecl *> fields_;
+  util::RegionVector<FieldDeclaration *> fields_;
 };
 
 }  // namespace ast

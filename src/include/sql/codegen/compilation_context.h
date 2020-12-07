@@ -84,12 +84,12 @@ class CompilationContext {
   /**
    * @return The list of parameters common to all query functions. For now, just the query state.
    */
-  util::RegionVector<ast::FieldDecl *> QueryParams() const;
+  util::RegionVector<ast::FieldDeclaration *> QueryParams() const;
 
   /**
    * @return The slot in the query state where the execution context can be found.
    */
-  ast::Expr *GetExecutionContextPtrFromQueryState();
+  ast::Expression *GetExecutionContextPtrFromQueryState();
 
  private:
   // Private to force use of static Compile() function.
@@ -99,10 +99,10 @@ class CompilationContext {
   void GeneratePlan(const planner::AbstractPlanNode &plan);
 
   // Generate the query initialization function.
-  ast::FunctionDecl *GenerateInitFunction();
+  ast::FunctionDeclaration *GenerateInitFunction();
 
   // Generate the query tear-down function.
-  ast::FunctionDecl *GenerateTearDownFunction();
+  ast::FunctionDeclaration *GenerateTearDownFunction();
 
   // Declare common state.
   void DeclareCommonQueryState();

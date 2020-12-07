@@ -36,6 +36,7 @@
 #include "sql/codegen/operators/seq_scan_translator.h"
 #include "sql/codegen/operators/sort_translator.h"
 #include "sql/codegen/operators/static_aggregation_translator.h"
+#include "sql/codegen/operators/union_all_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_graph.h"
 #include "sql/planner/expressions/abstract_expression.h"
@@ -54,6 +55,7 @@
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
+#include "sql/planner/plannodes/set_op_plan_node.h"
 #include "util/timer.h"
 #include "vm/module.h"
 
@@ -73,7 +75,7 @@ CompilationContext::CompilationContext(ExecutableQuery *query)
       query_state_(query_state_type_,
                    [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }) {}
 
-ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
+ast::FunctionDeclaration *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
   {
@@ -86,7 +88,7 @@ ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   return builder.Finish();
 }
 
-ast::FunctionDecl *CompilationContext::GenerateTearDownFunction() {
+ast::FunctionDeclaration *CompilationContext::GenerateTearDownFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_TearDown");
   FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
   {
@@ -124,8 +126,8 @@ void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
                                             const Pipeline &main_pipeline) {
   // Now we're ready to generate some code.
   // First, generate the query state initialization and tear-down logic.
-  ast::FunctionDecl *init_fn = GenerateInitFunction();
-  ast::FunctionDecl *tear_down_fn = GenerateTearDownFunction();
+  ast::FunctionDeclaration *init_fn = GenerateInitFunction();
+  ast::FunctionDeclaration *tear_down_fn = GenerateTearDownFunction();
 
   // Next, generate all pipeline code.
   // Optimize (prematurely?) by reserving now.
@@ -143,7 +145,7 @@ void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
     // Each generated function becomes an execution step in the order
     // provided by the pipeline.
     for (auto func : exec_funcs) {
-      steps.emplace_back(pipeline->GetId(), func->Name().ToString());
+      steps.emplace_back(pipeline->GetId(), func->GetName().ToString());
     }
   }
 
@@ -163,11 +165,11 @@ void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
 
   // Setup query and finish.
   vm::Module *main_module = modules[0].get();
-  query_->Setup(std::move(modules),               // All compiled modules.
-                main_module,                      // Where init/teardown functions exist.
-                init_fn->Name().ToString(),       // The init() function.
-                tear_down_fn->Name().ToString(),  // The teardown() function.
-                ExecutionPlan(std::move(steps)),  // The generated plan.
+  query_->Setup(std::move(modules),                  // All compiled modules.
+                main_module,                         // Where init/teardown functions exist.
+                init_fn->GetName().ToString(),       // The init() function.
+                tear_down_fn->GetName().ToString(),  // The teardown() function.
+                ExecutionPlan(std::move(steps)),     // The generated plan.
                 query_state_.GetSize());
 }
 
@@ -270,6 +272,11 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
     case planner::PlanNodeType::SEQSCAN: {
       const auto &seq_scan = static_cast<const planner::SeqScanPlanNode &>(plan);
       translator = std::make_unique<SeqScanTranslator>(seq_scan, this, pipeline);
+      break;
+    }
+    case planner::PlanNodeType::SETOP: {
+      const auto &set_op = static_cast<const planner::SetOpPlanNode &>(plan);
+      translator = std::make_unique<UnionAllTranslator>(set_op, this, pipeline);
       break;
     }
     default: {
@@ -387,13 +394,13 @@ std::string CompilationContext::GetFunctionPrefix() const {
   return "Query" + std::to_string(unique_id_);
 }
 
-util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {
-  ast::Expr *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_));
-  ast::FieldDecl *field = codegen_.MakeField(query_state_var_, state_type);
+util::RegionVector<ast::FieldDeclaration *> CompilationContext::QueryParams() const {
+  ast::Expression *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_));
+  ast::FieldDeclaration *field = codegen_.MakeField(query_state_var_, state_type);
   return codegen_.MakeFieldList({field});
 }
 
-ast::Expr *CompilationContext::GetExecutionContextPtrFromQueryState() {
+ast::Expression *CompilationContext::GetExecutionContextPtrFromQueryState() {
   return query_state_.GetStateEntry(&codegen_, exec_ctx_);
 }
 

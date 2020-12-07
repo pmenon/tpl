@@ -21,6 +21,7 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/vector_filter_executor.h"
+#include "util/bit_util.h"
 #include "util/csv_reader.h"
 
 // All VM bytecode op handlers must use this macro
@@ -142,6 +143,21 @@ INT_TYPES(BIT_OPS);
 
 #undef BIT_OPS
 
+#define BIT_OPS(type, ...)                                          \
+  /* Primitive count-leading-zeros */                               \
+  VM_OP_HOT void OpBitCtlz##_##type(uint32_t *result, type input) { \
+    *result = tpl::util::BitUtil::CountLeadingZeros(input);         \
+  }                                                                 \
+                                                                    \
+  /* Primitive count-trailing-zeros */                              \
+  VM_OP_HOT void OpBitCttz##_##type(uint32_t *result, type input) { \
+    *result = tpl::util::BitUtil::CountTrailingZeros(input);        \
+  }
+
+FOR_EACH_UNSIGNED_INT_TYPE(BIT_OPS)
+
+#undef BIT_OPS
+
 // ---------------------------------------------------------
 // Primitive casts
 // ---------------------------------------------------------
@@ -171,7 +187,7 @@ VM_OP_HOT void OpDeref4(int32_t *dest, const int32_t *const src) { *dest = *src;
 
 VM_OP_HOT void OpDeref8(int64_t *dest, const int64_t *const src) { *dest = *src; }
 
-VM_OP_HOT void OpDerefN(byte *dest, const byte *const src, uint32_t len) {
+VM_OP_WARM void OpDerefN(byte *dest, const byte *const src, uint32_t len) {
   std::memcpy(dest, src, len);
 }
 
@@ -182,6 +198,10 @@ VM_OP_HOT void OpAssign2(int16_t *dest, int16_t src) { *dest = src; }
 VM_OP_HOT void OpAssign4(int32_t *dest, int32_t src) { *dest = src; }
 
 VM_OP_HOT void OpAssign8(int64_t *dest, int64_t src) { *dest = src; }
+
+VM_OP_WARM void OpAssignN(byte *dest, const byte *const src, uint32_t len) {
+  std::memmove(dest, src, len);
+}
 
 VM_OP_HOT void OpAssignImm1(int8_t *dest, int8_t src) { *dest = src; }
 

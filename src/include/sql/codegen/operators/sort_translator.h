@@ -98,23 +98,23 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expr *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                            uint32_t attr_idx) const override;
+  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                  uint32_t attr_idx) const override;
 
   /**
    * Order-by operators do not produce columns from base tables.
    */
-  ast::Expr *GetTableColumn(uint16_t col_oid) const override {
+  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Order-by operators do not produce columns from base tables");
   }
 
  private:
   // Initialize and destroy the given sorter.
-  void InitializeSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const;
-  void TearDownSorter(FunctionBuilder *function, ast::Expr *sorter_ptr) const;
+  void InitializeSorter(FunctionBuilder *function, ast::Expression *sorter_ptr) const;
+  void TearDownSorter(FunctionBuilder *function, ast::Expression *sorter_ptr) const;
 
   // Access the attribute at the given index within the provided sort row.
-  ast::Expr *GetSortRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const;
+  ast::Expression *GetSortRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const;
 
   // Called to scan the global sorter instance.
   void ScanSorter(ConsumerContext *context, FunctionBuilder *function) const;
@@ -128,10 +128,10 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
                         F sorter_provider) const;
 
   // Generate the struct used to represent the sorting row.
-  ast::StructDecl *GenerateSortRowStructType() const;
+  ast::StructDeclaration *GenerateSortRowStructType() const;
 
   // Generate the sorting function.
-  ast::FunctionDecl *GenerateComparisonFunction();
+  ast::FunctionDeclaration *GenerateComparisonFunction();
   void GenerateComparisonLogic(FunctionBuilder *function);
 
  private:

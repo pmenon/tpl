@@ -14,8 +14,8 @@ ConsumerContext::ConsumerContext(CompilationContext *compilation_context,
       pipeline_iter_(pipeline_ctx_.pipeline_.Begin()),
       pipeline_end_(pipeline_ctx_.pipeline_.End()) {}
 
-ast::Expr *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr,
-                                        const ColumnValueProvider *provider) {
+ast::Expression *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr,
+                                              const ColumnValueProvider *provider) {
   auto translator = compilation_context_->LookupTranslator(expr);
   if (translator == nullptr) {
     return nullptr;
@@ -38,15 +38,15 @@ bool ConsumerContext::IsForPipeline(const Pipeline &pipeline) const {
   return pipeline_ctx_.IsForPipeline(pipeline);
 }
 
-ast::Expr *ConsumerContext::GetStateEntry(StateDescriptor::Slot slot) const {
+ast::Expression *ConsumerContext::GetStateEntry(StateDescriptor::Slot slot) const {
   return pipeline_ctx_.GetStateEntry(slot);
 }
 
-ast::Expr *ConsumerContext::GetStateEntryPtr(StateDescriptor::Slot slot) const {
+ast::Expression *ConsumerContext::GetStateEntryPtr(StateDescriptor::Slot slot) const {
   return pipeline_ctx_.GetStateEntryPtr(slot);
 }
 
-ast::Expr *ConsumerContext::GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const {
+ast::Expression *ConsumerContext::GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const {
   return pipeline_ctx_.GetStateEntryByteOffset(slot);
 }
 

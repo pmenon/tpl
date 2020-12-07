@@ -4,15 +4,11 @@
 
 namespace tpl::sql::planner {
 
-constexpr int INVALID_TYPE_ID = 0;
-
 //===--------------------------------------------------------------------===//
 // Plan Node Types
 //===--------------------------------------------------------------------===//
 
-enum class PlanNodeType {
-  INVALID = INVALID_TYPE_ID,
-
+enum class PlanNodeType : uint8_t {
   // Scan Nodes
   SEQSCAN,
   INDEXSCAN,
@@ -56,9 +52,6 @@ enum class PlanNodeType {
   // Utility
   EXPORT_EXTERNAL_FILE,
   RESULT,
-
-  // Test
-  MOCK
 };
 
 /**
@@ -70,34 +63,32 @@ std::string PlanNodeTypeToString(PlanNodeType type);
 // Aggregate Strategies
 //===--------------------------------------------------------------------===//
 
-enum class AggregateStrategyType {
-  INVALID = INVALID_TYPE_ID,
-  SORTED = 1,
-  HASH = 2,
-  PLAIN = 3  // no group-by
+enum class AggregateStrategyType : uint8_t {
+  SORTED,
+  HASH,
+  PLAIN,  // no group-by
 };
 
 //===--------------------------------------------------------------------===//
 // Order-by Orderings
 //===--------------------------------------------------------------------===//
 
-enum class OrderByOrderingType { ASC, DESC };
+enum class OrderByOrderingType : uint8_t { ASC, DESC };
 
 //===--------------------------------------------------------------------===//
 // Logical Join Types
 //===--------------------------------------------------------------------===//
 
-enum class LogicalJoinType {
-  INVALID = INVALID_TYPE_ID,  // invalid join type
-  LEFT = 1,                   // left
-  RIGHT = 2,                  // right
-  INNER = 3,                  // inner
-  OUTER = 4,                  // outer
-  SEMI = 5,                   // returns a row ONLY if it has a join partner, no duplicates
-  ANTI = 6,                   // returns a row ONLY if it has NO join partner, no duplicates
-  LEFT_SEMI = 7,              // Left semi join
-  RIGHT_SEMI = 8,             // Right semi join
-  RIGHT_ANTI = 9              // Right anti join
+enum class LogicalJoinType : uint8_t {
+  LEFT,        // left
+  RIGHT,       // right
+  INNER,       // inner
+  OUTER,       // outer
+  SEMI,        // returns a row ONLY if it has a join partner, no duplicates
+  ANTI,        // returns a row ONLY if it has NO join partner, no duplicates
+  LEFT_SEMI,   // Left semi join
+  RIGHT_SEMI,  // Right semi join
+  RIGHT_ANTI   // Right anti join
 };
 
 /**
@@ -109,13 +100,7 @@ std::string JoinTypeToString(LogicalJoinType type);
 // Set Operation Types
 //===--------------------------------------------------------------------===//
 
-enum class SetOpType {
-  INVALID = INVALID_TYPE_ID,
-  INTERSECT = 1,
-  INTERSECT_ALL = 2,
-  EXCEPT = 3,
-  EXCEPT_ALL = 4
-};
+enum class SetOpType : uint8_t { INTERSECT, INTERSECT_ALL, EXCEPT, EXCEPT_ALL, UNION, UNION_ALL };
 
 //===--------------------------------------------------------------------===//
 // CSV scan defaults

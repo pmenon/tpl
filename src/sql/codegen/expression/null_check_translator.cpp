@@ -14,8 +14,8 @@ NullCheckTranslator::NullCheckTranslator(const planner::OperatorExpression &expr
   compilation_context->Prepare(*expr.GetChild(0));
 }
 
-ast::Expr *NullCheckTranslator::DeriveValue(ConsumerContext *context,
-                                            const ColumnValueProvider *provider) const {
+ast::Expression *NullCheckTranslator::DeriveValue(ConsumerContext *context,
+                                                  const ColumnValueProvider *provider) const {
   auto input = context->DeriveValue(*GetExpression().GetChild(0), provider);
   switch (auto type = GetExpression().GetExpressionType()) {
     case planner::ExpressionType::OPERATOR_IS_NULL:

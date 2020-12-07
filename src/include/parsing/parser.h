@@ -86,59 +86,59 @@ class Parser {
   void Sync(const std::unordered_set<Token::Type> &s);
 
   // Cast the input node into an expression if it is one, otherwise report error
-  ast::Expr *MakeExpr(ast::AstNode *node);
+  ast::Expression *MakeExpr(ast::AstNode *node);
 
   // -------------------------------------------------------
   // Parsing productions
   // -------------------------------------------------------
 
-  ast::Decl *ParseDecl();
+  ast::Declaration *ParseDeclaration();
 
-  ast::Decl *ParseFunctionDecl();
+  ast::Declaration *ParseFunctionDeclaration();
 
-  ast::Decl *ParseStructDecl();
+  ast::Declaration *ParseStructDeclaration();
 
-  ast::Decl *ParseVariableDecl();
+  ast::Declaration *ParseVariableDeclaration();
 
-  ast::Stmt *ParseStmt();
+  ast::Statement *ParseStatement();
 
-  ast::Stmt *ParseSimpleStmt();
+  ast::Statement *ParseSimpleStatement();
 
-  ast::Stmt *ParseBlockStmt();
+  ast::Statement *ParseBlockStatement();
 
   class ForHeader;
 
   ForHeader ParseForHeader();
 
-  ast::Stmt *ParseForStmt();
+  ast::Statement *ParseForStatement();
 
-  ast::Stmt *ParseIfStmt();
+  ast::Statement *ParseIfStatement();
 
-  ast::Stmt *ParseReturnStmt();
+  ast::Statement *ParseReturnStatement();
 
-  ast::Expr *ParseExpr();
+  ast::Expression *ParseExpression();
 
-  ast::Expr *ParseBinaryOpExpr(uint32_t min_prec);
+  ast::Expression *ParseBinaryOpExpression(uint32_t min_prec);
 
-  ast::Expr *ParseUnaryOpExpr();
+  ast::Expression *ParseUnaryOpExpression();
 
-  ast::Expr *ParsePrimaryExpr();
+  ast::Expression *ParsePrimaryExpression();
 
-  ast::Expr *ParseOperand();
+  ast::Expression *ParseOperand();
 
-  ast::Expr *ParseFunctionLitExpr();
+  ast::Expression *ParseFunctionLiteralExpression();
 
-  ast::Expr *ParseType();
+  ast::Expression *ParseType();
 
-  ast::Expr *ParseFunctionType();
+  ast::Expression *ParseFunctionType();
 
-  ast::Expr *ParsePointerType();
+  ast::Expression *ParsePointerType();
 
-  ast::Expr *ParseArrayType();
+  ast::Expression *ParseArrayType();
 
-  ast::Expr *ParseStructType();
+  ast::Expression *ParseStructType();
 
-  ast::Expr *ParseMapType();
+  ast::Expression *ParseMapType();
 
  private:
   // The source code scanner.

@@ -33,10 +33,10 @@ void CaseTranslator::GenerateCases(const ast::Identifier ret, const std::size_t 
   // Base case.
   if (clause_idx == expr.GetWhenClauseSize()) {
     if (const auto default_val = expr.GetDefaultClause()) {
-      ast::Expr *default_result = context->DeriveValue(*default_val, provider);
+      ast::Expression *default_result = context->DeriveValue(*default_val, provider);
       function->Append(codegen_->Assign(codegen_->MakeExpr(ret), default_result));
     } else {
-      UNREACHABLE("Null default not implemented");
+      function->Append(codegen_->InitSqlNull(codegen_->MakeExpr(ret)));
     }
     return;
   }
@@ -46,7 +46,8 @@ void CaseTranslator::GenerateCases(const ast::Identifier ret, const std::size_t 
   // }
   If condition(function, context->DeriveValue(*expr.GetWhenClauseCondition(clause_idx), provider));
   {
-    ast::Expr *when_result = context->DeriveValue(*expr.GetWhenClauseResult(clause_idx), provider);
+    ast::Expression *when_result =
+        context->DeriveValue(*expr.GetWhenClauseResult(clause_idx), provider);
     function->Append(codegen_->Assign(codegen_->MakeExpr(ret), when_result));
   }
   condition.Else();
@@ -57,8 +58,8 @@ void CaseTranslator::GenerateCases(const ast::Identifier ret, const std::size_t 
   condition.EndIf();
 }
 
-ast::Expr *CaseTranslator::DeriveValue(ConsumerContext *context,
-                                       const ColumnValueProvider *provider) const {
+ast::Expression *CaseTranslator::DeriveValue(ConsumerContext *context,
+                                             const ColumnValueProvider *provider) const {
   // var case_result: TYPE
   ast::Identifier ret = codegen_->MakeFreshIdentifier("case_result");
   codegen_->GetCurrentFunction()->Append(

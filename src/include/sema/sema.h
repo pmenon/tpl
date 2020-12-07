@@ -63,7 +63,7 @@ class Sema : public ast::AstVisitor<Sema> {
 
  private:
   // Resolve the type of the input expression.
-  ast::Type *Resolve(ast::Expr *expr) {
+  ast::Type *Resolve(ast::Expression *expr) {
     Visit(expr);
     return expr->GetType();
   }
@@ -73,73 +73,75 @@ class Sema : public ast::AstVisitor<Sema> {
 
   struct CheckResult {
     ast::Type *result_type;
-    ast::Expr *left;
-    ast::Expr *right;
+    ast::Expression *left;
+    ast::Expression *right;
   };
 
   // Report an incorrect call argument for the given call expression.
-  void ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, ast::Type *expected);
-  void ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, const char *expected);
+  void ReportIncorrectCallArg(ast::CallExpression *call, uint32_t index, ast::Type *expected);
+  void ReportIncorrectCallArg(ast::CallExpression *call, uint32_t index, const char *expected);
 
   // Implicitly cast the input expression into the target type using the
   // provided cast kind, also setting the type of the casted expression result.
-  ast::Expr *ImplCastExprToType(ast::Expr *expr, ast::Type *target_type, ast::CastKind cast_kind);
+  ast::Expression *ImplCastExprToType(ast::Expression *expr, ast::Type *target_type,
+                                      ast::CastKind cast_kind);
 
   // Check the number of arguments to the call; true if good, false otherwise.
-  bool CheckArgCount(ast::CallExpr *call, uint32_t expected_arg_count);
-  bool CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count);
+  bool CheckArgCount(ast::CallExpression *call, uint32_t expected_arg_count);
+  bool CheckArgCountAtLeast(ast::CallExpression *call, uint32_t expected_arg_count);
 
   // Check boolean logic operands: and, or.
   CheckResult CheckLogicalOperands(parsing::Token::Type op, const SourcePosition &pos,
-                                   ast::Expr *left, ast::Expr *right);
+                                   ast::Expression *left, ast::Expression *right);
 
   // Check operands to an arithmetic operation: +, -, *, etc.
   CheckResult CheckArithmeticOperands(parsing::Token::Type op, const SourcePosition &pos,
-                                      ast::Expr *left, ast::Expr *right);
+                                      ast::Expression *left, ast::Expression *right);
 
   CheckResult CheckComparisonOperands(parsing::Token::Type op, const SourcePosition &pos,
-                                      ast::Expr *left, ast::Expr *right);
+                                      ast::Expression *left, ast::Expression *right);
 
   // Check the assignment of the expression to a variable or the target type.
   // Return true if the assignment is valid, and false otherwise.
   // Will also apply an implicit cast to make the assignment valid.
-  bool CheckAssignmentConstraints(ast::Type *target_type, ast::Expr *&expr);
+  bool CheckAssignmentConstraints(ast::Type *target_type, ast::Expression *&expr);
 
   // Dispatched from VisitCall() to handle builtin functions.
-  void CheckBuiltinCall(ast::CallExpr *call);
-  void CheckSqlConversionCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckNullValueCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinStringLikeCall(ast::CallExpr *call);
-  void CheckBuiltinDateFunctionCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinConcat(ast::CallExpr *call);
-  void CheckBuiltinAggHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinAggHashTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinAggPartIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinJoinHashTableCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinHashTableEntryCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinSorterInit(ast::CallExpr *call);
-  void CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinSorterFree(ast::CallExpr *call);
-  void CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinSizeOfCall(ast::CallExpr *call);
-  void CheckBuiltinOffsetOfCall(ast::CallExpr *call);
-  void CheckBuiltinPtrCastCall(ast::CallExpr *call);
-  void CheckBuiltinIntCast(ast::CallExpr *call);
-  void CheckBuiltinTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinTableIterParCall(ast::CallExpr *call);
-  void CheckBuiltinVPICall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinFilterManagerCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinVectorFilterCall(ast::CallExpr *call);
-  void CheckBuiltinCompactStorageWriteCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinCompactStorageReadCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckBuiltinHashCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckResultBufferCall(ast::CallExpr *call, ast::Builtin builtin);
-  void CheckCSVReaderCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinCall(ast::CallExpression *call);
+  void CheckSqlConversionCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckNullValueCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinStringLikeCall(ast::CallExpression *call);
+  void CheckBuiltinDateFunctionCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinConcat(ast::CallExpression *call);
+  void CheckBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinAggHashTableIterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinAggPartIterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinAggregatorCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinJoinHashTableCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinHashTableEntryCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinSorterInit(ast::CallExpression *call);
+  void CheckBuiltinSorterInsert(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinSorterSort(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinSorterFree(ast::CallExpression *call);
+  void CheckBuiltinSorterIterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinExecutionContextCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinThreadStateContainerCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckMathTrigCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinBitsCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinSizeOfCall(ast::CallExpression *call);
+  void CheckBuiltinOffsetOfCall(ast::CallExpression *call);
+  void CheckBuiltinPtrCastCall(ast::CallExpression *call);
+  void CheckBuiltinIntCast(ast::CallExpression *call);
+  void CheckBuiltinTableIterCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinTableIterParCall(ast::CallExpression *call);
+  void CheckBuiltinVPICall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinFilterManagerCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinVectorFilterCall(ast::CallExpression *call);
+  void CheckBuiltinCompactStorageWriteCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinCompactStorageReadCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckBuiltinHashCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckResultBufferCall(ast::CallExpression *call, ast::Builtin builtin);
+  void CheckCSVReaderCall(ast::CallExpression *call, ast::Builtin builtin);
 
   template <typename T>
   struct CheckHelper;
@@ -148,32 +150,30 @@ class Sema : public ast::AstVisitor<Sema> {
   struct ArgCheck;
 
   template <typename T>
-  bool GenericBuiltinCheck(ast::CallExpr *call);
+  bool GenericBuiltinCheck(ast::CallExpression *call);
 
   // -------------------------------------------------------
   // Scoping
   // -------------------------------------------------------
-
-  Scope *GetCurrentScope() { return scope_; }
 
   // Enter a new scope.
   void EnterScope(Scope::Kind scope_kind) {
     if (num_cached_scopes_ > 0) {
       Scope *scope = scope_cache_[--num_cached_scopes_].release();
       TPL_ASSERT(scope != nullptr, "Cached scope was null");
-      scope->Init(GetCurrentScope(), scope_kind);
+      scope->Init(scope_, scope_kind);
       scope_ = scope;
     } else {
-      scope_ = new Scope(GetCurrentScope(), scope_kind);
+      scope_ = new Scope(scope_, scope_kind);
     }
   }
 
   // Exit the current scope.
   void ExitScope() {
-    TPL_ASSERT(GetCurrentScope() != nullptr, "Mismatched scope exit");
+    TPL_ASSERT(scope_ != nullptr, "Mismatched scope exit.");
 
-    Scope *scope = GetCurrentScope();
-    scope_ = scope->outer();
+    Scope *scope = scope_;
+    scope_ = scope->GetOuter();
 
     if (num_cached_scopes_ < kScopeCacheSize) {
       scope_cache_[num_cached_scopes_++].reset(scope);
@@ -182,17 +182,18 @@ class Sema : public ast::AstVisitor<Sema> {
     }
   }
 
-  /**
-   * RAII scope class to track the current scope.
-   */
+  // RAII class to automatically enter and exit a new scope during its lifetime.
+  // Callers can control the type of scope that is created.
   class SemaScope {
    public:
     SemaScope(Sema *check, Scope::Kind scope_kind) : check_(check), exited_(false) {
       check->EnterScope(scope_kind);
     }
 
+    // Destructor. Exits the current scope.
     ~SemaScope() { Exit(); }
 
+    // Manually exit the current scope, if not already exited.
     void Exit() {
       if (!exited_) {
         check_->ExitScope();
@@ -200,25 +201,28 @@ class Sema : public ast::AstVisitor<Sema> {
       }
     }
 
+    // Access the semantic check instance.
     Sema *Check() { return check_; }
 
    private:
+    // The checker.
     Sema *check_;
+    // Flag indicating if the scope has already exited.
     bool exited_;
   };
 
-  /**
-   * RAII scope class to capture both the current function and its scope.
-   */
+  // RAII scope class to capture both the current function and its scope.
   class FunctionSemaScope {
    public:
-    FunctionSemaScope(Sema *check, ast::FunctionLiteralExpr *func)
+    FunctionSemaScope(Sema *check, ast::FunctionLiteralExpression *func)
         : prev_func_(check->GetCurrentFunction()), block_scope_(check, Scope::Kind::Function) {
       check->curr_func_ = func;
     }
 
+    // Destructor. Exits the current scope.
     ~FunctionSemaScope() { Exit(); }
 
+    // Manually exit the current scope, if not already exited.
     void Exit() {
       block_scope_.Exit();
       block_scope_.Check()->curr_func_ = prev_func_;
@@ -226,12 +230,12 @@ class Sema : public ast::AstVisitor<Sema> {
 
    private:
     // The outer-nested function being type-checked.
-    ast::FunctionLiteralExpr *prev_func_;
+    ast::FunctionLiteralExpression *prev_func_;
     SemaScope block_scope_;
   };
 
   // Return the function that's currently getting type-checked.
-  ast::FunctionLiteralExpr *GetCurrentFunction() const { return curr_func_; }
+  ast::FunctionLiteralExpression *GetCurrentFunction() const { return curr_func_; }
 
  private:
   // By default, we keep pre-allocate four scopes for four levels of nesting.
@@ -249,7 +253,7 @@ class Sema : public ast::AstVisitor<Sema> {
   uint64_t num_cached_scopes_;
   std::unique_ptr<Scope> scope_cache_[kScopeCacheSize] = {nullptr};
   // The current in-flight function being type-checked.
-  ast::FunctionLiteralExpr *curr_func_;
+  ast::FunctionLiteralExpression *curr_func_;
 };
 
 }  // namespace sema

@@ -21,101 +21,117 @@ class TestAstBuilder {
 
   Identifier Ident(const std::string &s) { return ctx()->GetIdentifier(s); }
 
-  Expr *IdentExpr(Identifier ident) { return node_factory()->NewIdentifierExpr(empty_, ident); }
+  Expression *IdentExpr(Identifier ident) {
+    return node_factory()->NewIdentifierExpression(empty_, ident);
+  }
 
-  Expr *IdentExpr(const std::string &s) { return IdentExpr(Ident(s)); }
+  Expression *IdentExpr(const std::string &s) { return IdentExpr(Ident(s)); }
 
-  Expr *BoolLit(bool b) { return node_factory()->NewBoolLiteral(empty_, b); }
+  Expression *BoolLit(bool b) { return node_factory()->NewBoolLiteral(empty_, b); }
 
-  Expr *IntLit(int64_t i) { return node_factory()->NewIntLiteral(empty_, i); }
+  Expression *IntLit(int64_t i) { return node_factory()->NewIntLiteral(empty_, i); }
 
-  Expr *FloatLit(float i) { return node_factory()->NewFloatLiteral(empty_, i); }
+  Expression *FloatLit(float i) { return node_factory()->NewFloatLiteral(empty_, i); }
 
   template <parsing::Token::Type OP>
-  Expr *BinOp(Expr *left, Expr *right) {
-    return node_factory()->NewBinaryOpExpr(empty_, OP, left, right);
+  Expression *BinOp(Expression *left, Expression *right) {
+    return node_factory()->NewBinaryOpExpression(empty_, OP, left, right);
   }
 
   template <parsing::Token::Type OP>
-  Expr *Cmp(Expr *left, Expr *right) {
+  Expression *Cmp(Expression *left, Expression *right) {
     TPL_ASSERT(parsing::Token::IsCompareOp(OP), "Not a comparison");
-    return node_factory()->NewComparisonOpExpr(empty_, OP, left, right);
+    return node_factory()->NewComparisonOpExpression(empty_, OP, left, right);
   }
 
-  Expr *CmpEq(Expr *left, Expr *right) {
+  Expression *CmpEq(Expression *left, Expression *right) {
     return Cmp<parsing::Token::Type::EQUAL_EQUAL>(left, right);
   }
-  Expr *CmpNe(Expr *left, Expr *right) {
+  Expression *CmpNe(Expression *left, Expression *right) {
     return Cmp<parsing::Token::Type::BANG_EQUAL>(left, right);
   }
-  Expr *CmpLt(Expr *left, Expr *right) { return Cmp<parsing::Token::Type::LESS>(left, right); }
+  Expression *CmpLt(Expression *left, Expression *right) {
+    return Cmp<parsing::Token::Type::LESS>(left, right);
+  }
 
-  Expr *Field(Expr *obj, Expr *field) { return node_factory()->NewMemberExpr(empty_, obj, field); }
+  Expression *Field(Expression *obj, Expression *field) {
+    return node_factory()->NewMemberExpression(empty_, obj, field);
+  }
 
-  VariableDecl *DeclVar(Identifier name, Expr *init) { return DeclVar(name, nullptr, init); }
+  VariableDeclaration *DeclVar(Identifier name, Expression *init) {
+    return DeclVar(name, nullptr, init);
+  }
 
-  VariableDecl *DeclVar(std::string n, Expr *init) { return DeclVar(Ident(n), nullptr, init); }
+  VariableDeclaration *DeclVar(std::string n, Expression *init) {
+    return DeclVar(Ident(n), nullptr, init);
+  }
 
-  VariableDecl *DeclVar(std::string n, std::string type_name, Expr *init) {
+  VariableDeclaration *DeclVar(std::string n, std::string type_name, Expression *init) {
     return DeclVar(Ident(n), IdentExpr(type_name), init);
   }
 
-  VariableDecl *DeclVar(Identifier name, Expr *type_repr, Expr *init) {
-    return node_factory()->NewVariableDecl(empty_, name, type_repr, init);
+  VariableDeclaration *DeclVar(Identifier name, Expression *type_repr, Expression *init) {
+    return node_factory()->NewVariableDeclaration(empty_, name, type_repr, init);
   }
 
-  FieldDecl *GenFieldDecl(Identifier name, ast::Expr *type_repr) {
-    return node_factory()->NewFieldDecl(empty_, name, type_repr);
+  FieldDeclaration *GenFieldDecl(Identifier name, ast::Expression *type_repr) {
+    return node_factory()->NewFieldDeclaration(empty_, name, type_repr);
   }
 
-  StructDecl *DeclStruct(Identifier name, std::initializer_list<ast::FieldDecl *> fields) {
-    util::RegionVector<FieldDecl *> f(fields.begin(), fields.end(), ctx()->GetRegion());
+  StructDeclaration *DeclStruct(Identifier name,
+                                std::initializer_list<ast::FieldDeclaration *> fields) {
+    util::RegionVector<FieldDeclaration *> f(fields.begin(), fields.end(), ctx()->GetRegion());
     ast::StructTypeRepr *type = node_factory()->NewStructType(empty_, std::move(f));
-    return node_factory()->NewStructDecl(empty_, name, type);
+    return node_factory()->NewStructDeclaration(empty_, name, type);
   }
 
-  Expr *DeclRef(Decl *decl) { return IdentExpr(decl->Name()); }
+  Expression *DeclRef(Declaration *decl) { return IdentExpr(decl->GetName()); }
 
-  Stmt *DeclStmt(Decl *decl) { return node_factory()->NewDeclStmt(decl); }
+  Statement *DeclStmt(Declaration *decl) { return node_factory()->NewDeclStatement(decl); }
 
-  Stmt *Block(std::initializer_list<Stmt *> stmts) {
-    util::RegionVector<Stmt *> region_stmts(stmts.begin(), stmts.end(), ctx()->GetRegion());
-    return node_factory()->NewBlockStmt(empty_, empty_, std::move(region_stmts));
+  Statement *Block(std::initializer_list<Statement *> stmts) {
+    util::RegionVector<Statement *> region_stmts(stmts.begin(), stmts.end(), ctx()->GetRegion());
+    return node_factory()->NewBlockStatement(empty_, empty_, std::move(region_stmts));
   }
 
-  Stmt *ExprStmt(Expr *expr) { return node_factory()->NewExpressionStmt(expr); }
+  Statement *ExprStmt(Expression *expr) { return node_factory()->NewExpressionStatement(expr); }
 
-  Expr *PtrType(Expr *base) { return node_factory()->NewPointerType(empty_, base); }
+  Expression *PtrType(Expression *base) { return node_factory()->NewPointerType(empty_, base); }
 
   template <BuiltinType::Kind BUILTIN>
-  Expr *BuiltinTypeRepr() {
+  Expression *BuiltinTypeRepr() {
     return IdentExpr(BuiltinType::Get(ctx(), BUILTIN)->GetTplName());
   }
 
-  Expr *PrimIntTypeRepr() { return BuiltinTypeRepr<BuiltinType::Int32>(); }
-  Expr *PrimFloatTypeRepr() { return BuiltinTypeRepr<BuiltinType::Float32>(); }
-  Expr *PrimBoolTypeRepr() { return BuiltinTypeRepr<BuiltinType::Bool>(); }
+  Expression *PrimIntTypeRepr() { return BuiltinTypeRepr<BuiltinType::Int32>(); }
+  Expression *PrimFloatTypeRepr() { return BuiltinTypeRepr<BuiltinType::Float32>(); }
+  Expression *PrimBoolTypeRepr() { return BuiltinTypeRepr<BuiltinType::Bool>(); }
 
-  Expr *IntegerSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::IntegerVal>(); }
-  Expr *RealSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::RealVal>(); }
-  Expr *StringSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::StringVal>(); }
+  Expression *IntegerSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::IntegerVal>(); }
+  Expression *RealSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::RealVal>(); }
+  Expression *StringSqlTypeRepr() { return BuiltinTypeRepr<BuiltinType::StringVal>(); }
 
-  Expr *ArrayTypeRepr(Expr *type) { return node_factory()->NewArrayType(empty_, nullptr, type); }
-  Expr *ArrayTypeRepr(Expr *type, uint32_t len) {
+  Expression *ArrayTypeRepr(Expression *type) {
+    return node_factory()->NewArrayType(empty_, nullptr, type);
+  }
+  Expression *ArrayTypeRepr(Expression *type, uint32_t len) {
     return node_factory()->NewArrayType(empty_, IntLit(len), type);
   }
 
-  Expr *ArrayIndex(Expr *arr, Expr *idx) { return node_factory()->NewIndexExpr(empty_, arr, idx); }
-
-  template <Builtin BUILTIN, typename... Args>
-  CallExpr *Call(Args... args) {
-    auto fn = IdentExpr(Builtins::GetFunctionName(BUILTIN));
-    auto call_args = util::RegionVector<Expr *>({std::forward<Args>(args)...}, ctx()->GetRegion());
-    return node_factory()->NewBuiltinCallExpr(fn, std::move(call_args));
+  Expression *ArrayIndex(Expression *arr, Expression *idx) {
+    return node_factory()->NewIndexExpression(empty_, arr, idx);
   }
 
-  File *GenFile(std::initializer_list<ast::Decl *> decls) {
-    util::RegionVector<Decl *> d(decls.begin(), decls.end(), ctx()->GetRegion());
+  template <Builtin BUILTIN, typename... Args>
+  CallExpression *Call(Args... args) {
+    auto fn = IdentExpr(Builtins::GetFunctionName(BUILTIN));
+    auto call_args =
+        util::RegionVector<Expression *>({std::forward<Args>(args)...}, ctx()->GetRegion());
+    return node_factory()->NewBuiltinCallExpression(fn, std::move(call_args));
+  }
+
+  File *GenFile(std::initializer_list<ast::Declaration *> decls) {
+    util::RegionVector<Declaration *> d(decls.begin(), decls.end(), ctx()->GetRegion());
     return node_factory()->NewFile(empty_, std::move(d));
   }
 

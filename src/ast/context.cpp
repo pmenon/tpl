@@ -5,13 +5,15 @@
 #include <utility>
 #include <vector>
 
+// LLVM data structures.
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
+
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
 #include "ast/type.h"
 #include "common/common.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringMap.h"
 #include "sql/aggregation_hash_table.h"
 #include "sql/aggregators.h"
 #include "sql/compact_storage.h"
@@ -24,9 +26,9 @@
 #include "sql/table_vector_iterator.h"
 #include "sql/thread_state_container.h"
 #include "sql/value.h"
-#include "sql/vector_filter_executor.h"
 #include "util/csv_reader.h"
 #include "util/math_util.h"
+#include "util/region_allocator_llvm.h"
 
 namespace tpl::ast {
 
@@ -141,7 +143,7 @@ struct Context::Implementation {
   // Type caches
   // -------------------------------------------------------
 
-  llvm::StringMap<char, util::LLVMRegionAllocator> string_table;
+  llvm::StringMap<llvm::NoneType, util::LLVMRegionAllocator> identifier_table;
   std::vector<BuiltinType *> builtin_types_list;
   llvm::DenseMap<Identifier, Type *> builtin_types;
   llvm::DenseMap<Identifier, Builtin> builtin_funcs;
@@ -152,8 +154,8 @@ struct Context::Implementation {
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
   explicit Implementation(Context *ctx)
-      : string_table(kDefaultStringTableCapacity, util::LLVMRegionAllocator(ctx->GetRegion())) {
-    // Instantiate all the builtins
+      : identifier_table(kDefaultStringTableCapacity, util::LLVMRegionAllocator(ctx->GetRegion())) {
+    // Instantiate all the builtin types.
 #define F(BKind, CppType, ...)         \
   BKind##Type = new (ctx->GetRegion()) \
       BuiltinType(ctx, sizeof(CppType), alignof(CppType), BuiltinType::BKind);
@@ -169,49 +171,54 @@ Context::Context(sema::ErrorReporter *error_reporter)
       error_reporter_(error_reporter),
       node_factory_(std::make_unique<AstNodeFactory>(&region_)),
       impl_(std::make_unique<Implementation>(this)) {
-  // Put all builtins into list
-#define F(BKind, ...) impl_->builtin_types_list.push_back(impl()->BKind##Type);
+  // Put all builtin types into list.
+  impl_->builtin_types_list.resize(BuiltinType::GetNumBuiltinKinds());
+#define F(BKind, ...) impl_->builtin_types_list[BuiltinType::BKind] = Impl()->BKind##Type;
   BUILTIN_TYPE_LIST(F, F, F)
 #undef F
 
-  // Put all builtins into cache by name
+  // Put all builtin types into fast map keyed on its name.
+  impl_->builtin_types.reserve(BuiltinType::GetNumBuiltinKinds());
 #define PRIM(BKind, CppType, TplName) \
-  impl_->builtin_types[GetIdentifier(TplName)] = impl_->BKind##Type;
-#define OTHERS(BKind, CppType) impl_->builtin_types[GetIdentifier(#BKind)] = impl_->BKind##Type;
+  impl_->builtin_types[GetIdentifier(TplName)] = Impl()->BKind##Type;
+#define OTHERS(BKind, CppType) impl_->builtin_types[GetIdentifier(#BKind)] = Impl()->BKind##Type;
   BUILTIN_TYPE_LIST(PRIM, OTHERS, OTHERS)
 #undef OTHERS
 #undef PRIM
 
-  // Builtin aliases
-  impl_->builtin_types[GetIdentifier("int")] = impl_->Int32Type;
-  impl_->builtin_types[GetIdentifier("float")] = impl_->Float32Type;
-  impl_->builtin_types[GetIdentifier("void")] = impl_->NilType;
+  // Insert some convenient type-aliases.
+  impl_->builtin_types[GetIdentifier("int")] = Impl()->Int32Type;
+  impl_->builtin_types[GetIdentifier("float")] = Impl()->Float32Type;
+  impl_->builtin_types[GetIdentifier("void")] = Impl()->NilType;
 
-  // Initialize builtin functions
-#define BUILTIN_FUNC(Name, ...) \
+  // Put all builtin functions into a fast map keyed on name.
+  impl_->builtin_funcs.reserve(Builtins::NumBuiltins());
+#define F(Name, ...) \
   impl_->builtin_funcs[GetIdentifier(Builtins::GetFunctionName(Builtin::Name))] = Builtin::Name;
-  BUILTINS_LIST(BUILTIN_FUNC)
-#undef BUILTIN_FUNC
+  BUILTINS_LIST(F)
+#undef F
 }
 
 Context::~Context() = default;
 
-Identifier Context::GetIdentifier(llvm::StringRef str) {
+Identifier Context::GetIdentifier(std::string_view str) {
   if (str.empty()) {
     return Identifier();
   }
 
-  auto iter = impl_->string_table.insert(std::make_pair(str, static_cast<char>(0))).first;
-  return Identifier(iter->getKeyData());
+  auto &entry = *impl_->identifier_table.insert(std::make_pair(str, llvm::None)).first;
+  return Identifier(&entry);
 }
 
+std::size_t Context::GetNumIdentifiers() const noexcept { return impl_->identifier_table.size(); }
+
 Type *Context::LookupBuiltinType(Identifier name) const {
-  auto iter = impl_->builtin_types.find(name);
+  const auto iter = impl_->builtin_types.find(name);
   return (iter == impl_->builtin_types.end() ? nullptr : iter->second);
 }
 
 bool Context::IsBuiltinFunction(Identifier name, Builtin *builtin) const {
-  if (auto iter = impl_->builtin_funcs.find(name); iter != impl_->builtin_funcs.end()) {
+  if (const auto iter = impl_->builtin_funcs.find(name); iter != impl_->builtin_funcs.end()) {
     if (builtin != nullptr) {
       *builtin = iter->second;
     }
@@ -225,17 +232,17 @@ PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
 // static
 BuiltinType *BuiltinType::Get(Context *ctx, BuiltinType::Kind kind) {
-  return ctx->impl()->builtin_types_list[kind];
+  return ctx->Impl()->builtin_types_list[kind];
 }
 
 // static
-StringType *StringType::Get(Context *ctx) { return ctx->impl()->string_type; }
+StringType *StringType::Get(Context *ctx) { return ctx->Impl()->string_type; }
 
 // static
 PointerType *PointerType::Get(Type *base) {
   Context *ctx = base->GetContext();
 
-  PointerType *&pointer_type = ctx->impl()->pointer_types[base];
+  PointerType *&pointer_type = ctx->Impl()->pointer_types[base];
 
   if (pointer_type == nullptr) {
     pointer_type = new (ctx->GetRegion()) PointerType(base);
@@ -248,7 +255,7 @@ PointerType *PointerType::Get(Type *base) {
 ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
   Context *ctx = elem_type->GetContext();
 
-  ArrayType *&array_type = ctx->impl()->array_types[{elem_type, length}];
+  ArrayType *&array_type = ctx->Impl()->array_types[{elem_type, length}];
 
   if (array_type == nullptr) {
     array_type = new (ctx->GetRegion()) ArrayType(length, elem_type);
@@ -261,7 +268,7 @@ ArrayType *ArrayType::Get(uint64_t length, Type *elem_type) {
 MapType *MapType::Get(Type *key_type, Type *value_type) {
   Context *ctx = key_type->GetContext();
 
-  MapType *&map_type = ctx->impl()->map_types[{key_type, value_type}];
+  MapType *&map_type = ctx->Impl()->map_types[{key_type, value_type}];
 
   if (map_type == nullptr) {
     map_type = new (ctx->GetRegion()) MapType(key_type, value_type);
@@ -282,7 +289,7 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
 
   const StructTypeKeyInfo::KeyTy key(fields);
 
-  auto [iter, inserted] = ctx->impl()->struct_types.insert_as(nullptr, key);
+  auto [iter, inserted] = ctx->Impl()->struct_types.insert_as(nullptr, key);
 
   StructType *struct_type = nullptr;
 
@@ -347,7 +354,7 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
 
   const FunctionTypeKeyInfo::KeyTy key(ret, params);
 
-  auto [iter, inserted] = ctx->impl()->func_types.insert_as(nullptr, key);
+  auto [iter, inserted] = ctx->Impl()->func_types.insert_as(nullptr, key);
 
   FunctionType *func_type = nullptr;
 

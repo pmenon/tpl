@@ -7,7 +7,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Get latest CMake
+    - name: Instal CMake
       uses: lukka/get-cmake@latest
 
     - name: Cleanup Environment
@@ -62,3 +62,25 @@ jobs:
         # Maybe run benchmarks, too?
         LSAN_OPTIONS=$LSAN_OPTIONS ninja
         LSAN_OPTIONS=$LSAN_OPTIONS ninja check-tpl
+
+    - name: Generate & Upload Code Coverage Report
+      env:
+        CC: gcc-10
+        CXX: g++-10
+        LSAN_OPTIONS: "fast_unwind_on_malloc=0,suppressions=${{github.workspace}}/build-support/leaksanitizer.conf"
+      run: |
+        cmake -E remove_directory build
+        cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DTPL_USE_ASAN=On -DTPL_GENERATE_COVERAGE=On
+        cd build
+        LSAN_OPTIONS=$LSAN_OPTIONS ninja
+        LSAN_OPTIONS=$LSAN_OPTIONS ninja check
+        lcov --directory . --capture --output-file coverage.info
+        lcov --remove coverage.info --output-file coverage.info \
+             '/usr/*'                                           \
+             '*/build/*'                                        \
+             '*/third_party/*'                                  \
+             '*/benchmark/*'                                    \
+             '*/test/*'                                         \
+             '*/src/tpl.cpp'
+        lcov --list coverage.info
+        bash <(curl -s https://codecov.io/bash) -X gcov

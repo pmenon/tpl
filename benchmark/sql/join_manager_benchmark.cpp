@@ -51,7 +51,7 @@ void LoadTestTable(sql::Table *table) {
     std::vector<sql::ColumnSegment> columns;
     for (uint32_t j = 0; j < kNumTableCols; j++) {
       auto *col_data = reinterpret_cast<byte *>(GenColumnData(i * batch_size, batch_size));
-      columns.emplace_back(sql::IntegerType::Instance(false), col_data, nullptr, batch_size);
+      columns.emplace_back(sql::Type::IntegerType(false), col_data, nullptr, batch_size);
     }
 
     // Insert into table
@@ -66,7 +66,7 @@ void InitTestTables() {
   // Create the table schema.
   std::vector<sql::Schema::ColumnInfo> cols;
   for (uint32_t i = 0; i < kNumTableCols; i++) {
-    cols.emplace_back("col" + std::to_string(i), sql::IntegerType::Instance(false));
+    cols.emplace_back("col" + std::to_string(i), sql::Type::IntegerType(false));
   }
 
   // Create the table instance.

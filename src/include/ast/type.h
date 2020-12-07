@@ -3,8 +3,9 @@
 #include <cstdint>
 #include <string>
 
-#include "ast/identifier.h"
 #include "llvm/Support/Casting.h"
+
+#include "ast/identifier.h"
 #include "util/region.h"
 #include "util/region_containers.h"
 
@@ -42,12 +43,12 @@ class Context;
   PRIM(Int16, int16_t, "int16")                                                  \
   PRIM(Int32, int32_t, "int32")                                                  \
   PRIM(Int64, int64_t, "int64")                                                  \
-  PRIM(Uint8, uint8_t, "uint8")                                                  \
-  PRIM(Uint16, uint16_t, "uint16")                                               \
-  PRIM(Uint32, uint32_t, "uint32")                                               \
-  PRIM(Uint64, uint64_t, "uint64")                                               \
+  PRIM(UInt8, uint8_t, "uint8")                                                  \
+  PRIM(UInt16, uint16_t, "uint16")                                               \
+  PRIM(UInt32, uint32_t, "uint32")                                               \
+  PRIM(UInt64, uint64_t, "uint64")                                               \
   PRIM(Int128, int128_t, "int128")                                               \
-  PRIM(Uint128, uint128_t, "uint128")                                            \
+  PRIM(UInt128, uint128_t, "uint128")                                            \
   PRIM(Float32, float, "float32")                                                \
   PRIM(Float64, double, "float64")                                               \
                                                                                  \
@@ -98,21 +99,21 @@ class Context;
   SQL(DateVal, tpl::sql::DateVal)                                                \
   SQL(TimestampVal, tpl::sql::TimestampVal)
 
-// Ignore a builtin
-#define IGNORE_BUILTIN_TYPE (...)
+// Ignore a builtin.
+#define IGNORE_BUILTIN_TYPE(...)
 
-// Only consider the primitive builtin types
+// Only consider the primitive builtin types.
 #define PRIMITIVE_BUILTIN_TYPE_LIST(F) \
   BUILTIN_TYPE_LIST(F, IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE)
 
-// Only consider the non-primitive builtin types
+// Only consider the non-primitive builtin types.
 #define NON_PRIMITIVE_BUILTIN_TYPE_LIST(F) \
   BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, F, IGNORE_BUILTIN_TYPE)
 
-// Only consider the SQL builtin types
+// Only consider the SQL builtin types.
 #define SQL_BUILTIN_TYPE_LIST(F) BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE, F)
 
-// Forward declare everything first
+// Forward declare all types first since some have circular dependencies.
 #define F(TypeClass) class TypeClass;
 TYPE_LIST(F)
 #undef F
@@ -293,55 +294,74 @@ class Type : public util::RegionObject {
 };
 
 /**
- * Builtin types (int32, float32, Integer, JoinHashTable etc.)
+ * Builtin types (int32, float32, Integer, JoinHashTable etc.). These types cannot be composed from
+ * any other TPL type.
  */
 class BuiltinType : public Type {
+#define F(BKind, ...) +1
+  static constexpr uint32_t kNumBuiltinKinds = BUILTIN_TYPE_LIST(F, F, F);
+#undef F
+
  public:
 #define F(BKind, ...) BKind,
   enum Kind : uint16_t { BUILTIN_TYPE_LIST(F, F, F) };
 #undef F
 
   /**
+   * @return The number of builtin kinds.
+   */
+  static constexpr uint32_t GetNumBuiltinKinds() { return kNumBuiltinKinds; }
+
+  /**
    * @return The name of the builtin as it appears in TPL code.
    */
-  const char *GetTplName() const { return kTplNames[static_cast<uint16_t>(kind_)]; }
+  constexpr const char *GetTplName() const { return kTplNames[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return The name of the C++ type that backs this builtin. For primitive types like 32-bit
    *         integers, this will be 'int32'. For non-primitive types this will be the
    *         fully-qualified name of the class (i.e., the class name along with the namespace).
    */
-  const char *GetCppName() const { return kCppNames[static_cast<uint16_t>(kind_)]; }
+  constexpr const char *GetCppName() const { return kCppNames[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return The size of this type, in bytes.
    */
-  uint64_t GetSize() const { return kSizes[static_cast<uint16_t>(kind_)]; }
+  constexpr uint64_t GetSize() const { return kSizes[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return The alignment of this type, in bytes.
    */
-  uint64_t GetAlignment() const { return kAlignments[static_cast<uint16_t>(kind_)]; }
+  constexpr uint64_t GetAlignment() const { return kAlignments[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return True if this type is a C/C++ primitive; false otherwise.
    */
-  bool IsPrimitive() const { return kPrimitiveFlags[static_cast<uint16_t>(kind_)]; }
+  constexpr bool IsPrimitive() const { return kPrimitiveFlags[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return True if this type is a C/C++ primitive integer; false otherwise.
    */
-  bool IsIntegral() const { return Kind::Int8 <= GetKind() && GetKind() <= Kind::Uint128; }
+  constexpr bool IsIntegral() const {
+    return Kind::Int8 <= GetKind() && GetKind() <= Kind::UInt128;
+  }
+
+  /**
+   * @return True if this type is a signed type; false otherwise.
+   */
+  constexpr bool IsSigned() const { return kSignedFlags[static_cast<uint16_t>(kind_)]; }
 
   /**
    * @return True if this type is a C/C++ primitive floating point number; false otherwise.
    */
-  bool IsFloatingPoint() const { return kFloatingPointFlags[static_cast<uint16_t>(kind_)]; }
+  constexpr bool IsFloatingPoint() const {
+    return kFloatingPointFlags[static_cast<uint16_t>(kind_)];
+  }
 
   /**
    * @return True if this type is a SQL value type.
    */
-  bool IsSqlValue() const {
+  constexpr bool IsSqlValue() const noexcept {
     return Kind::BooleanVal <= GetKind() && GetKind() <= Kind::TimestampVal;
   }
 
@@ -349,14 +369,14 @@ class BuiltinType : public Type {
    * @return True if this type is a SQL aggregator type (i.e., IntegerSumAggregate,
    *         CountAggregate, etc.); false otherwise.
    */
-  bool IsSqlAggregateType() const {
+  constexpr bool IsSqlAggregateType() const noexcept {
     return Kind::CountAggregate <= GetKind() && GetKind() <= Kind::RealSumAggregate;
   }
 
   /**
    * @return The kind of this builtin.
    */
-  Kind GetKind() const { return kind_; }
+  constexpr Kind GetKind() const noexcept { return kind_; }
 
   /**
    * Factory to create a builtin type of the given kind.

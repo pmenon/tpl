@@ -13,7 +13,6 @@
 #include "common/exception.h"
 #include "common/memory.h"
 #include "logging/logger.h"
-#include "sql/data_types.h"
 #include "sql/schema.h"
 #include "sql/table.h"
 
@@ -32,15 +31,15 @@ enum class Dist : uint8_t { Uniform, Zipf_50, Zipf_75, Zipf_95, Zipf_99, Serial,
  */
 struct ColumnInsertMeta {
   const char *name;
-  const SqlType &sql_type;
+  Type type;
   Dist dist;
   uint64_t serial_counter;
   std::variant<int64_t, double> min;
   std::variant<int64_t, double> max;
 
-  ColumnInsertMeta(const char *name, const SqlType &sql_type, Dist dist,
-                   std::variant<int64_t, double> min, std::variant<int64_t, double> max)
-      : name(name), sql_type(sql_type), dist(dist), serial_counter(0), min(min), max(max) {}
+  ColumnInsertMeta(const char *name, Type type, Dist dist, std::variant<int64_t, double> min,
+                   std::variant<int64_t, double> max)
+      : name(name), type(type), dist(dist), serial_counter(0), min(min), max(max) {}
 };
 
 /**
@@ -68,35 +67,35 @@ struct TableInsertMeta {
 TableInsertMeta insert_meta[] = {
     // The empty table
     {TableId::EmptyTable, "empty_table", 0,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
+     {{"colA", Type::IntegerType(false), Dist::Serial, 0L, 0L}}},
 
     // Table 1
     {TableId::Test1, "test_1", 20000,
-     {{"colA", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L},
-      {"colB", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 9L},
-      {"colC", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 9999L},
-      {"colD", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 99999L}}},
+     {{"colA", Type::IntegerType(false), Dist::Serial, 0L, 0L},
+      {"colB", Type::IntegerType(false), Dist::Uniform, 0L, 9L},
+      {"colC", Type::IntegerType(false), Dist::Uniform, 0L, 9999L},
+      {"colD", Type::IntegerType(false), Dist::Uniform, 0L, 99999L}}},
 
     // Table 2
     {TableId::Test2, "test_2", 20000,
-     {{"col1", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 100L},
-      {"col2", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
+     {{"col1", Type::IntegerType(false), Dist::Uniform, 0L, 100L},
+      {"col2", Type::IntegerType(false), Dist::Serial, 0L, 0L}}},
 
     // All types
     {TableId::AllTypes, "all_types", 2000,
-     {{"a", sql::BooleanType::Instance(false), Dist::Serial, 0L, 1L},
-      {"b", sql::TinyIntType::Instance(false), Dist::Uniform, -100L, 100L},
-      {"c", sql::SmallIntType::Instance(false), Dist::Uniform, -1000L, 1000L},
-      {"d", sql::IntegerType::Instance(false), Dist::Uniform, -10000L, 10000L},
-      {"e", sql::BigIntType::Instance(false), Dist::Uniform, -1000000L, 1000000L},
-      {"f", sql::RealType::Instance(false), Dist::Uniform, -4444.44F, 4444.44F},
-      {"g", sql::DoubleType::Instance(false), Dist::Uniform, -7777.77F, 7777.77F},
+     {{"a", Type::BooleanType(false), Dist::Serial, 0L, 1L},
+      {"b", Type::TinyIntType(false), Dist::Uniform, -100L, 100L},
+      {"c", Type::SmallIntType(false), Dist::Uniform, -1000L, 1000L},
+      {"d", Type::IntegerType(false), Dist::Uniform, -10000L, 10000L},
+      {"e", Type::BigIntType(false), Dist::Uniform, -1000000L, 1000000L},
+      {"f", Type::RealType(false), Dist::Uniform, -4444.44F, 4444.44F},
+      {"g", Type::DoubleType(false), Dist::Uniform, -7777.77F, 7777.77F},
      }},
 
     // Small1
     {TableId::Small1, "small_1", 200,
-     {{"col1", sql::IntegerType::Instance(false), Dist::Uniform, 0L, 100L},
-      {"col2", sql::IntegerType::Instance(false), Dist::Serial, 0L, 0L}}},
+     {{"col1", Type::IntegerType(false), Dist::Uniform, 0L, 100L},
+      {"col2", Type::IntegerType(false), Dist::Serial, 0L, 0L}}},
 
 };
 // clang-format on
@@ -177,7 +176,7 @@ T *CreateNumberColumnData(ColumnInsertMeta *col_meta, uint32_t num_vals, T min, 
 std::pair<byte *, uint32_t *> GenerateColumnData(ColumnInsertMeta *col_meta, uint32_t num_rows) {
   // Create data
   byte *col_data = nullptr;
-  switch (col_meta->sql_type.GetId()) {
+  switch (col_meta->type.GetTypeId()) {
     case SqlTypeId::Boolean: {
       col_data = reinterpret_cast<byte *>(CreateBooleanColumnData(col_meta, num_rows));
       break;
@@ -218,13 +217,13 @@ std::pair<byte *, uint32_t *> GenerateColumnData(ColumnInsertMeta *col_meta, uin
     case SqlTypeId::Char:
     case SqlTypeId::Varchar: {
       throw NotImplementedException(
-          fmt::format("Populating column type '{}'", col_meta->sql_type.GetName()));
+          fmt::format("Populating column type '{}'", col_meta->type.ToString()));
     }
   }
 
   // Create bitmap
   uint32_t *null_bitmap = nullptr;
-  if (col_meta->sql_type.IsNullable()) {
+  if (col_meta->type.IsNullable()) {
     TPL_ASSERT(num_rows != 0, "Cannot have 0 rows.");
     uint64_t num_words = util::BitUtil::Num32BitWordsFor(num_rows);
     null_bitmap = static_cast<uint32_t *>(
@@ -249,7 +248,7 @@ void InitTable(TableInsertMeta *table_meta, Table *table) {
     TPL_ASSERT(num_vals != 0, "Can't have empty columns.");
     for (auto &col_meta : table_meta->col_meta) {
       auto [data, null_bitmap] = GenerateColumnData(&col_meta, num_vals);
-      columns.emplace_back(col_meta.sql_type, data, null_bitmap, num_vals);
+      columns.emplace_back(col_meta.type, data, null_bitmap, num_vals);
     }
 
     // Insert into table
@@ -271,7 +270,7 @@ Catalog::Catalog() : next_table_id_(static_cast<uint16_t>(TableId::Last)) {
 
     std::vector<Schema::ColumnInfo> cols;
     for (const auto &col_meta : meta.col_meta) {
-      cols.emplace_back(col_meta.name, col_meta.sql_type);
+      cols.emplace_back(col_meta.name, col_meta.type);
     }
 
     const auto table_id = static_cast<uint16_t>(meta.id);
