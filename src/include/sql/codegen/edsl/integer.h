@@ -43,7 +43,7 @@ class IntegerBase : public Value<T> {
    * @param val The value to assign.
    * @return This integer.
    */
-  ValueType &operator=(CppType val) { return this->operator=(Literal<T>(GetCodeGen(), val)); }
+  ValueType &operator=(CppType val) { return (*Derived() = Literal<ValueType>(GetCodeGen(), val)); }
 
   /**
    * Pre-increment this integer by one.
@@ -55,6 +55,33 @@ class IntegerBase : public Value<T> {
     function->Append(codegen->Assign(Eval(), (*Derived() + 1).Eval()));
     return *Derived();
   }
+
+  /**
+   * Generate all the common operation-assignment ops, e.g., +=, -=, *=, /=, %=, >>=, <<=, etc.
+   */
+#define GEN_ASSIGN_OP(OP)                                                                         \
+  ValueType &operator OP##=(CppType val) {                                                        \
+    return (*Derived() OP## = Literal<ValueType>(GetCodeGen(), val));                             \
+  }                                                                                               \
+  template <typename E, typename = std::enable_if_t<IsETLExpr<E> && SameValueType<ValueType, E>>> \
+  ValueType &operator OP##=(E &&val) {                                                            \
+    CodeGen *codegen = GetCodeGen();                                                              \
+    FunctionBuilder *function = codegen->GetCurrentFunction();                                    \
+    function->Append(codegen->Assign(Eval(), (*Derived() OP val).Eval()));                        \
+    return *Derived();                                                                            \
+  }
+
+  GEN_ASSIGN_OP(+)
+  GEN_ASSIGN_OP(-)
+  GEN_ASSIGN_OP(*)
+  GEN_ASSIGN_OP(/)
+  GEN_ASSIGN_OP(%)
+  GEN_ASSIGN_OP(>>)
+  GEN_ASSIGN_OP(<<)
+  GEN_ASSIGN_OP(&)
+  GEN_ASSIGN_OP(|)
+
+#undef GEN_ASSIGN_OP
 
   /**
    * Case this integer to the provided target type, also an integer type.
@@ -72,45 +99,48 @@ class IntegerBase : public Value<T> {
   }
 
  private:
+  /** @return The derived type.  */
   ValueType *Derived() { return static_cast<ValueType *>(this); }
+
+  /** @return The derived type.  */
   const ValueType *Derived() const { return static_cast<const ValueType *>(this); }
 
  protected:
   // Declare a variable with the given expression value.
-  template <typename E, typename = std::enable_if_t<Traits<E>::kIsETL>>
+  template <typename E, typename = std::enable_if_t<IsETLExpr<E>>>
   IntegerBase(CodeGen *codegen, ast::Identifier name, E &&val)
       : Base(codegen, name, std::forward<E>(val)) {}
 
   // Declare a variable with the given raw C++ value.
   IntegerBase(CodeGen *codegen, ast::Identifier name, CppType val)
-      : Base(codegen, name, Literal<T>(codegen, val)) {}
+      : Base(codegen, name, Literal<ValueType>(codegen, val)) {}
 };
 
-#define GEN_INTEGER_TYPE(Class, _CppType)                                                     \
-  class Class : public IntegerBase<Class, _CppType> {                                         \
-   public:                                                                                    \
-    using Base = IntegerBase<Class, _CppType>;                                                \
-    using Base::Eval;                                                                         \
-    using Base::GetCodeGen;                                                                   \
-    using Base::operator=;                                                                    \
-    template <typename E, typename = std::enable_if<Traits<E>::kIsETL>>                       \
-    Class(CodeGen *codegen, ast::Identifier name, E &&val)                                    \
-        : Base(codegen, name, std::forward<E>(val)) {}                                        \
-    template <typename E, typename = std::enable_if<Traits<E>::kIsETL>>                       \
-    Class(CodeGen *codegen, std::string_view name, E &&val)                                   \
-        : Base(codegen, codegen->MakeFreshIdentifier(name), std::forward<E>(val)) {}          \
-    Class(CodeGen *codegen, ast::Identifier name, _CppType val) : Base(codegen, name, val) {} \
-    Class(CodeGen *codegen, std::string_view name, _CppType val)                              \
-        : Base(codegen, codegen->MakeFreshIdentifier(name), val) {}                           \
-  };                                                                                          \
-  template <>                                                                                 \
-  struct Traits<Class> {                                                                      \
-    /** The EDSL value type of the expression. */                                             \
-    using ValueType = Class;                                                                  \
-    /** The raw C++ type of the expression. */                                                \
-    using CppType = _CppType;                                                                 \
-    /** Indicates if T is an ETL type. */                                                     \
-    static constexpr bool kIsETL = true;                                                      \
+#define GEN_INTEGER_TYPE(Class, _CppType)                                                       \
+  class Class : public IntegerBase<Class, _CppType> {                                           \
+   public:                                                                                      \
+    using Base = IntegerBase<Class, _CppType>;                                                  \
+    using Base::Eval;                                                                           \
+    using Base::GetCodeGen;                                                                     \
+    using Base::operator=;                                                                      \
+    template <typename E, typename = std::enable_if_t<IsETLExpr<E> && SameValueType<Class, E>>> \
+    Class(CodeGen *codegen, ast::Identifier name, E &&val)                                      \
+        : Base(codegen, name, std::forward<E>(val)) {}                                          \
+    template <typename E, typename = std::enable_if_t<IsETLExpr<E> && SameValueType<Class, E>>> \
+    Class(CodeGen *codegen, std::string_view name, E &&val)                                     \
+        : Base(codegen, codegen->MakeFreshIdentifier(name), std::forward<E>(val)) {}            \
+    Class(CodeGen *codegen, ast::Identifier name, _CppType val) : Base(codegen, name, val) {}   \
+    Class(CodeGen *codegen, std::string_view name, _CppType val)                                \
+        : Base(codegen, codegen->MakeFreshIdentifier(name), val) {}                             \
+  };                                                                                            \
+  template <>                                                                                   \
+  struct Traits<Class> {                                                                        \
+    /** The EDSL value type of the expression. */                                               \
+    using ValueType = Class;                                                                    \
+    /** The raw C++ type of the expression. */                                                  \
+    using CppType = _CppType;                                                                   \
+    /** Indicates if T is an ETL type. */                                                       \
+    static constexpr bool kIsETL = true;                                                        \
   };
 
 GEN_INTEGER_TYPE(UInt8, uint8_t)
