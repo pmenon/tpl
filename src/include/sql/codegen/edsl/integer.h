@@ -56,9 +56,19 @@ class IntegerBase : public Value<T> {
     return *Derived();
   }
 
+  /**
+   * Case this integer to the provided target type, also an integer type.
+   * @tparam Target The integer type to cast to.
+   * @return The result of the integer cast.
+   */
   template <typename Target, typename = std::enable_if_t<trait_details::IsInteger<Target>::value>>
   auto Cast() {
-    return BuiltinOperation<Target, ValueType>(ast::Builtin::IntCast, *Derived());
+    // If the target type matches the current type, optimize into no-op.
+    if constexpr (std::is_same_v<Target, ValueType>) {
+      return *Derived();
+    } else {
+      return BuiltinOperation<Target, ValueType>(ast::Builtin::IntCast, *Derived());
+    }
   }
 
  private:
@@ -81,6 +91,7 @@ class IntegerBase : public Value<T> {
    public:                                                                                    \
     using Base = IntegerBase<Class, _CppType>;                                                \
     using Base::Eval;                                                                         \
+    using Base::GetCodeGen;                                                                   \
     using Base::operator=;                                                                    \
     template <typename E, typename = std::enable_if<Traits<E>::kIsETL>>                       \
     Class(CodeGen *codegen, ast::Identifier name, E &&val)                                    \
