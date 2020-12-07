@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sql/codegen/edsl/builtin_op.h"
 #include "sql/codegen/edsl/element_base.h"
 #include "sql/codegen/edsl/literal.h"
 #include "sql/codegen/edsl/traits.h"
@@ -33,8 +34,8 @@ class IntegerBase : public Value<T> {
   /**
    * Bring in base overloads.
    */
-  using Base::GetCodeGen;
   using Base::Eval;
+  using Base::GetCodeGen;
 
   /**
    * Assign the given raw C++ value to this value.
@@ -52,6 +53,11 @@ class IntegerBase : public Value<T> {
     FunctionBuilder *function = codegen->GetCurrentFunction();
     function->Append(codegen->Assign(Eval(), (*Derived() + 1).Eval()));
     return *Derived();
+  }
+
+  template <typename Target, typename = std::enable_if_t<trait_details::IsInteger<Target>::value>>
+  auto Cast() {
+    return BuiltinOperation<Target, ValueType>(ast::Builtin::IntCast, *Derived());
   }
 
  private:

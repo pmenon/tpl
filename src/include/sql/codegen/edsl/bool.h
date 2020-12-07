@@ -27,14 +27,8 @@ class Bool : public Value<Bool> {
    */
   using CppType = bool;
 
-  /**
-   * Create an unnamed boolean whose value is the result of the given expression.
-   * @tparam E The expression type.
-   * @param val The value.
-   */
-  template <typename E,
-            typename = std::enable_if_t<Traits<E>::kIsETL && std::is_same_v<Bool, ValueT<E>>>>
-  Bool(E &&val) : Base(std::forward<E>(val)) {}
+  using Base::Eval;
+  using Base::operator=;
 
   /**
    * Create a named boolean with the given name whose value is the result of the given expression.
@@ -43,10 +37,9 @@ class Bool : public Value<Bool> {
    * @param name The name of the boolean.
    * @param val The initial value.
    */
-  template <typename E,
-            typename = std::enable_if_t<Traits<E>::kIsETL && std::is_same_v<Bool, ValueT<E>>>>
+  template <typename E, typename = std::enable_if_t<HasBoolValue<E>>>
   Bool(CodeGen *codegen, std::string_view name, E &&val)
-      : Bool(codegen, codegen->MakeFreshIdentifier(name), std::forward<E>(val)) {}
+      : Base(codegen, codegen->MakeFreshIdentifier(name), std::forward<E>(val)) {}
 
   /**
    * Create a named boolean with the given name whose value is the result of the given expression.
@@ -64,6 +57,19 @@ class Bool : public Value<Bool> {
    * @return This value.
    */
   Bool &operator=(CppType val) { return this->operator=(Literal<Bool>(GetCodeGen(), val)); }
+};
+
+/**
+ * Trait specialization for boolean.
+ */
+template <>
+struct Traits<Bool> {
+  /** The EDSL value type of the expression. */
+  using ValueType = Bool;
+  /** The raw C++ type of the expression. */
+  using CppType = bool;
+  /** Indicates if T is an ETL type. */
+  static constexpr bool kIsETL = true;
 };
 
 }  // namespace tpl::sql::codegen::edsl

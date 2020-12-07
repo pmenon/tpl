@@ -69,8 +69,14 @@ using DecayTraits = Traits<std::decay_t<T>>;
 template <typename T>
 using ValueT = typename DecayTraits<T>::ValueType;
 
+/**
+ * Trait indicating if the given type is an ETL value class. A value class is any type that
+ * subclasses our ETL Value<T>.
+ * @tparam T The type to check.
+ */
 template <typename T>
 constexpr bool IsETLValueClass = std::is_base_of_v<Value, T>;
+
 /**
  * Trait indicating if the given type is an ETL expression.
  * @tparam T The type to test.
@@ -92,5 +98,12 @@ constexpr bool AllETLExpr = (IsETLExpr<Ts> && ...);
  */
 template <typename T, typename U>
 constexpr bool SameValueType = std::is_same_v<ValueT<T>, ValueT<U>>;
+
+/**
+ * Trait indicating if the given input type is an ETL boolean.
+ * @tparam T The trait to check.
+ */
+template <typename T>
+constexpr bool HasBoolValue = IsETLExpr<T> && SameValueType<T, Bool>;
 
 };  // namespace tpl::sql::codegen::edsl

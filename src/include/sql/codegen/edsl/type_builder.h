@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ast/type.h"
+#include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/codegen.h"
+#include "sql/codegen/edsl/fwd.h"
 
 namespace tpl::sql::codegen::edsl {
 
@@ -50,7 +53,7 @@ BUILTIN_TYPE_LIST(GEN_TYPE_BUILDER, GEN_TYPE_BUILDER, GEN_TYPE_BUILDER)
  * @tparam T The pointee type.
  **/
 template <typename T>
-struct TypeBuilder<T *> {
+struct TypeBuilder<Ptr<T>> {
   /** Pointers cannot participate in arithmetic operations. */
   static constexpr bool kIsArithmetic = false;
   /** @return The AST type representation of this pointer type. */
@@ -58,12 +61,6 @@ struct TypeBuilder<T *> {
     return codegen->PointerType(TypeBuilder<T>::MakeTypeRepr(codegen));
   }
 };
-
-/**
- * References don't exist in TPL, but occur enough to treat them special.
- **/
-template <typename T>
-struct TypeBuilder<T &> : public TypeBuilder<T *> {};
 
 /**
  * Arrays with unknown length.

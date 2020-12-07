@@ -11,4 +11,7 @@ class Value;
 BUILTIN_TYPE_LIST(F, F, F)
 #undef F
 
+template <typename T>
+class Ptr;
+
 }  // namespace tpl::sql::codegen::edsl

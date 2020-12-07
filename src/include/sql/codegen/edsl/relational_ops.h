@@ -63,39 +63,87 @@ struct Traits<RelationalOperation<Lhs, Rhs>> {
   static constexpr bool kIsETL = true;
 };
 
+/**
+ * Builds an expression representing the equality of @em lhs and @em rhs.
+ * @tparam Lhs The left hand side expression.
+ * @tparam Rhs The right hand side expression.
+ * @param lhs The left input.
+ * @param rhs The right input.
+ * @return An expression representing the equality of @em lhs and @em rhs.
+ */
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
-auto operator==(Lhs lhs, Rhs rhs) {
+auto operator==(Lhs &&lhs, Rhs &&rhs) {
   return RelationalOperation(parsing::Token::Type::EQUAL_EQUAL, lhs, rhs);
 }
 
+/**
+ * Builds an expression representing the inequality of @em lhs and @em rhs.
+ * @tparam Lhs The left hand side expression.
+ * @tparam Rhs The right hand side expression.
+ * @param lhs The left input.
+ * @param rhs The right input.
+ * @return An expression representing the inequality of @em lhs and @em rhs.
+ */
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
-auto operator!=(Lhs lhs, Rhs rhs) {
+auto operator!=(Lhs &&lhs, Rhs &&rhs) {
   return RelationalOperation(parsing::Token::Type::BANG_EQUAL, lhs, rhs);
 }
 
+/**
+ * Builds an expression representing the result of lhs >= rhs.
+ * @tparam Lhs The left hand side expression.
+ * @tparam Rhs The right hand side expression.
+ * @param lhs The left input.
+ * @param rhs The right input.
+ * @return An expression representing the result of lhs >= rhs.
+ */
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
-auto operator>=(Lhs lhs, Rhs rhs) {
+auto operator>=(Lhs &&lhs, Rhs &&rhs) {
   return RelationalOperation(parsing::Token::Type::GREATER_EQUAL, lhs, rhs);
 }
 
+/**
+ * Builds an expression representing the result of lhs > rhs.
+ * @tparam Lhs The left hand side expression.
+ * @tparam Rhs The right hand side expression.
+ * @param lhs The left input.
+ * @param rhs The right input.
+ * @return An expression representing the result of lhs > rhs.
+ */
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
-auto operator>(Lhs lhs, Rhs rhs) {
+auto operator>(Lhs &&lhs, Rhs &&rhs) {
   return RelationalOperation(parsing::Token::Type::GREATER, lhs, rhs);
 }
 
+/**
+ * Builds an expression representing the result of lhs <= rhs.
+ * @tparam Lhs The left hand side expression.
+ * @tparam Rhs The right hand side expression.
+ * @param lhs The left input.
+ * @param rhs The right input.
+ * @return An expression representing the result of lhs <= rhs.
+ */
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
-auto operator<=(Lhs lhs, Rhs rhs) {
+auto operator<=(Lhs &&lhs, Rhs &&rhs) {
   return RelationalOperation(parsing::Token::Type::LESS_EQUAL, lhs, rhs);
 }
 
+/**
+ * Builds an expression representing the result of lhs < rhs.
+ * @tparam Lhs The left hand side expression.
+ * @tparam Rhs The right hand side expression.
+ * @param lhs The left input.
+ * @param rhs The right input.
+ * @return An expression representing the result of lhs < rhs.
+ */
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
-auto operator<(Lhs lhs, Rhs rhs) {
+auto operator<(Lhs &&lhs, Rhs &&rhs) {
   return RelationalOperation(parsing::Token::Type::LESS, lhs, rhs);
 }
 
