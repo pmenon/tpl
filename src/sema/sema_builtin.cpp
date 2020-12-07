@@ -51,8 +51,6 @@ struct Function;
 struct StringLiteral;
 // Represent any pointer type.
 struct AnyPointer;
-// Represent any function type.
-struct AnyFunction;
 // Byte arrays.
 template <typename T>
 struct Array;
@@ -102,17 +100,6 @@ struct Sema::ArgCheck<AnyPointer> {
   }
 };
 
-template <>
-struct Sema::ArgCheck<AnyFunction> {
-  static bool Check(Sema *sema, ast::CallExpression *call, uint32_t index) {
-    if (!call->GetArguments()[index]->GetType()->IsFunctionType()) {
-      sema->ReportIncorrectCallArg(call, index, "function");
-      return false;
-    }
-    return true;
-  }
-};
-
 template <typename Ret, typename... Args>
 struct Sema::ArgCheck<Function<Ret(Args...)>> {
   template <typename U, bool = true>
@@ -125,11 +112,6 @@ struct Sema::ArgCheck<Function<Ret(Args...)>> {
   template <bool dummy>
   struct TypeCheck<AnyPointer, dummy> {
     static bool Check(ast::Context *, ast::Type *type) { return type->IsPointerType(); }
-  };
-
-  template <bool dummy>
-  struct TypeCheck<AnyFunction, dummy> {
-    static bool Check(ast::Context *, ast::Type *type) { return type->IsFunctionType(); }
   };
 
   template <bool dummy>
@@ -315,20 +297,26 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin 
       GenericBuiltinCheck<void(sql::AggregationHashTable *, sql::HashTableEntry *)>(call);
       break;
     case ast::Builtin::AggHashTableLookup:
-      GenericBuiltinCheck<byte *(sql::AggregationHashTable *, hash_t, AnyFunction, AnyPointer)>(
+      using KeyCheckFunc = Function<bool(AnyPointer, AnyPointer)>;
+      GenericBuiltinCheck<byte *(sql::AggregationHashTable *, hash_t, KeyCheckFunc, AnyPointer)>(
           call);
       break;
     case ast::Builtin::AggHashTableProcessBatch:
+      using VectorProcFunc =
+          Function<void(sql::VectorProjectionIterator *, sql::VectorProjectionIterator *)>;
       GenericBuiltinCheck<void(sql::AggregationHashTable *, sql::VectorProjectionIterator *,
-                               uint32_t[], AnyFunction, AnyFunction, bool)>(call);
+                               uint32_t[], VectorProcFunc, VectorProcFunc, bool)>(call);
       break;
     case ast::Builtin::AggHashTableMovePartitions:
+      using MergeFunc = Function<void(AnyPointer, sql::AggregationHashTable *,
+                                      sql::AHTOverflowPartitionIterator *)>;
       GenericBuiltinCheck<void(sql::AggregationHashTable *, sql::ThreadStateContainer *, uint32_t,
-                               AnyFunction)>(call);
+                               MergeFunc)>(call);
       break;
     case ast::Builtin::AggHashTableParallelPartitionedScan:
+      using ScanFunc = Function<void(AnyPointer, AnyPointer, sql::AggregationHashTable *)>;
       GenericBuiltinCheck<void(sql::AggregationHashTable *, AnyPointer, sql::ThreadStateContainer *,
-                               AnyFunction)>(call);
+                               ScanFunc)>(call);
       break;
     case ast::Builtin::AggHashTableFree:
       GenericBuiltinCheck<void(sql::AggregationHashTable *)>(call);
@@ -532,11 +520,13 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpression *call, ast::
       GenericBuiltinCheck<uint8_t *(sql::ThreadStateContainer *)>(call);
       break;
     case ast::Builtin::ThreadStateContainerReset:
-      GenericBuiltinCheck<void(sql::ThreadStateContainer *, uint32_t, AnyFunction, AnyFunction,
+      using TLSFunc = Function<void(AnyPointer, AnyPointer)>;
+      GenericBuiltinCheck<void(sql::ThreadStateContainer *, uint32_t, TLSFunc, TLSFunc,
                                AnyPointer)>(call);
       break;
     case ast::Builtin::ThreadStateContainerIterate:
-      GenericBuiltinCheck<void(sql::ThreadStateContainer *, AnyPointer, AnyFunction)>(call);
+      using IterateFunc = Function<void(AnyPointer, AnyPointer)>;
+      GenericBuiltinCheck<void(sql::ThreadStateContainer *, AnyPointer, IterateFunc)>(call);
       break;
     default:
       UNREACHABLE("Impossible table iteration call");
