@@ -98,6 +98,14 @@ class Settings {
 #undef COUNT_OP
   };
 
+ private:
+  template <class T, class U>
+  struct IsOneOf;
+
+  template <class T, class... Ts>
+  struct IsOneOf<T, std::variant<Ts...>> : std::bool_constant<(std::is_same_v<T, Ts> || ...)> {};
+
+ public:
   /**
    * Number of settings.
    */
@@ -172,7 +180,10 @@ class Settings {
    * @param name The name of the setting to set.
    * @param val The value to set.
    */
-  void SetDouble(Name name, const double val) { settings_[static_cast<uint32_t>(name)] = val; }
+  template <typename T, typename = std::enable_if_t<IsOneOf<T, Value>::value>>
+  void Set(Name name, T val) {
+    settings_[static_cast<uint32_t>(name)] = val;
+  }
 
  private:
   // Private to force singleton access
@@ -181,6 +192,6 @@ class Settings {
  private:
   // Container for all settings
   std::array<Value, kNumSettings> settings_;
-};  // namespace tpl
+};
 
 }  // namespace tpl

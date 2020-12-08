@@ -4,6 +4,8 @@
 
 #include "util/sql_test_harness.h"
 
+#include "common/settings.h"
+#include "sql/codegen/compilation_context.h"
 #include "sql/codegen/executable_query.h"
 #include "sql/execution_context.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
@@ -22,21 +24,32 @@ class CodegenBasedTest : public TplTest {
 
  protected:
   void ExecuteAndCheckInAllModes(
-      sql::codegen::ExecutableQuery *query,
+      const sql::planner::AbstractPlanNode &plan,
       std::function<std::unique_ptr<sql::codegen::OutputChecker>()> checker_maker) {
-    const sql::planner::OutputSchema *output_schema = query->GetPlan().GetOutputSchema();
-    // Test in all modes.
-    for (const auto mode : {vm::ExecutionMode::Interpret}) {
-      // Create a checker.
-      std::unique_ptr<sql::codegen::OutputChecker> checker = checker_maker();
-      sql::codegen::OutputCollectorAndChecker store(checker.get(), output_schema);
-      // Setup and run the query.
-      sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory, output_schema, &store);
-      query->Run(&exec_ctx, mode);
-      // Check.
-      checker->CheckCorrectness();
-    }
+    auto compile_and_check = [&] {
+      // Compile.
+      auto query = sql::codegen::CompilationContext::Compile(plan);
+      // Test in all modes.
+      for (const auto mode : {vm::ExecutionMode::Interpret}) {
+        // Create a checker.
+        std::unique_ptr<sql::codegen::OutputChecker> checker = checker_maker();
+        sql::codegen::OutputCollectorAndChecker store(checker.get(), plan.GetOutputSchema());
+        // Setup and run the query.
+        sql::MemoryPool memory(nullptr);
+        sql::ExecutionContext exec_ctx(&memory, plan.GetOutputSchema(), &store);
+        query->Run(&exec_ctx, mode);
+        // Check.
+        checker->CheckCorrectness();
+      }
+    };
+
+    // Disable parallel execution.
+    Settings::Instance()->Set(Settings::Name::ParallelQueryExecution, false);
+    compile_and_check();
+
+    // Enable parallel execution.
+    Settings::Instance()->Set(Settings::Name::ParallelQueryExecution, true);
+    compile_and_check();
   }
 };
 

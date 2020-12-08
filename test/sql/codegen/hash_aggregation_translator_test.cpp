@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "sql/catalog.h"
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
@@ -28,6 +27,8 @@ TEST_F(HashAggregationTranslatorTest, SimpleAggregateTest) {
   planner::ExpressionMaker expr_maker;
   sql::Table *table = accessor->LookupTableByName("test_1");
   const auto &table_schema = table->GetSchema();
+
+  // Scan.
   std::unique_ptr<planner::AbstractPlanNode> seq_scan;
   planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
   {
@@ -46,7 +47,8 @@ TEST_F(HashAggregationTranslatorTest, SimpleAggregateTest) {
                    .SetTableOid(table->GetId())
                    .Build();
   }
-  // Make the aggregate
+
+  // Aggregation.
   std::unique_ptr<planner::AbstractPlanNode> agg;
   planner::OutputSchemaHelper agg_out{&expr_maker, 0};
   {
@@ -72,11 +74,8 @@ TEST_F(HashAggregationTranslatorTest, SimpleAggregateTest) {
               .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*agg);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), []() {
+  ExecuteAndCheckInAllModes(*agg, []() {
     std::vector<std::unique_ptr<OutputChecker>> checks;
     checks.emplace_back(std::make_unique<TupleCounterChecker>(10));
     checks.emplace_back(std::make_unique<SingleIntSumChecker>(1, (1000 * 999) / 2));

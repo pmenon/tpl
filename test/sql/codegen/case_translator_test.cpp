@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "sql/catalog.h"
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/schema.h"
 #include "sql/table.h"
@@ -65,11 +64,8 @@ TEST_F(CaseTranslatorTest, CasesWithDefault) {
                    .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*seq_scan);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*seq_scan, [&]() {
     // Check category column based on colb.
     std::vector<std::unique_ptr<OutputChecker>> checks;
     checks.emplace_back(std::make_unique<GenericChecker>(

@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "sql/catalog.h"
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/printing_consumer.h"
 #include "sql/schema.h"
@@ -43,11 +42,8 @@ TEST_F(ProjectionTranslatorTest, SimpleArithmeticProjections) {
         planner::ProjectionPlanNode::Builder().SetOutputSchema(projection_out.MakeSchema()).Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*projection);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), []() {
+  ExecuteAndCheckInAllModes(*projection, []() {
     // Checkers:
     // 1. Only 1 output row.
     // 2. First column must be std::cos(1.0)

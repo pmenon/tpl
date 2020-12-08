@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "sql/catalog.h"
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
@@ -67,11 +66,8 @@ TEST_F(StaticAggregationTranslatorTest, SimpleTest) {
               .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*agg);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*agg, [&]() {
     const uint64_t ntuples = table->GetTupleCount();
     // Checks:
     // 1. There should only be one output.
@@ -129,11 +125,8 @@ TEST_F(StaticAggregationTranslatorTest, StaticAggregateWithHavingTest) {
               .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*agg);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*agg, [&]() {
     // Checks:
     // 1. Should not output anything since the count is greater than 0.
     std::vector<std::unique_ptr<OutputChecker>> checks;
