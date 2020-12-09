@@ -22,7 +22,7 @@ foreach(test_src ${tpl_test_srs})
     # Build a binary for it
     add_executable(${test_name} EXCLUDE_FROM_ALL ${test_src})
     target_include_directories(${test_name} PRIVATE "${PROJECT_SOURCE_DIR}/test/include")
-    target_link_libraries(${test_name} tpl_shared ${TPL_LINK_LIBS} gtest gtest_main -lpthread)
+    target_link_libraries(${test_name} tpl_shared ${TPL_LINK_LIBS} gtest gmock gtest_main -lpthread)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS true)
     add_dependencies(check ${test_name})
 
