@@ -339,7 +339,7 @@ class FilterManagerBenchmark : public benchmark::Fixture {
       // Create tables.
       InitTestTables();
       // Disabled some optimizations.
-      Settings::Instance()->SetDouble(Settings::Name::FullSelectOptThreshold, 7.00);
+      Settings::Instance()->Set(Settings::Name::FullSelectOptThreshold, 7.00);
     });
   }
 };
@@ -434,8 +434,7 @@ BENCHMARK_DEFINE_F(FilterManagerBenchmark, VarySamplingRate)(benchmark::State &s
   // Sampling rates.
   for (double sample_freq : sample_freqs) {
     // Set rate.
-    Settings::Instance()->SetDouble(Settings::Name::AdaptivePredicateOrderSamplingFrequency,
-                                    sample_freq);
+    Settings::Instance()->Set(Settings::Name::AdaptivePredicateOrderSamplingFrequency, sample_freq);
     // Run experiment.
     double overhead;
     std::vector<double> sample_results;

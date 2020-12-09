@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "sql/catalog.h"
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/hash_join_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/printing_consumer.h"
@@ -102,11 +101,8 @@ TEST_F(HashJoinTranslatorTest, SimpleHashJoinTest) {
                          .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*hash_join_plan);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*hash_join_plan, [&]() {
     // Checkers:
     // 1. Only 80 rows should be produced due to where clause.
     // 2. Joined columns should be equal.

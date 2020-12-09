@@ -117,16 +117,9 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinAggHashTableIterCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinAggPartIterCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinAggregatorCall(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinJoinHashTableInit(ast::CallExpression *call);
-  void CheckBuiltinJoinHashTableInsert(ast::CallExpression *call);
-  void CheckBuiltinJoinHashTableBuild(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinJoinHashTableLookup(ast::CallExpression *call);
-  void CheckBuiltinJoinHashTableFree(ast::CallExpression *call);
+  void CheckBuiltinJoinHashTableCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinHashTableEntryCall(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinSorterInit(ast::CallExpression *call);
-  void CheckBuiltinSorterInsert(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinSorterSort(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinSorterFree(ast::CallExpression *call);
+  void CheckBuiltinSorterCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinSorterIterCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinExecutionContextCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinThreadStateContainerCall(ast::CallExpression *call, ast::Builtin builtin);
@@ -137,7 +130,6 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinPtrCastCall(ast::CallExpression *call);
   void CheckBuiltinIntCast(ast::CallExpression *call);
   void CheckBuiltinTableIterCall(ast::CallExpression *call, ast::Builtin builtin);
-  void CheckBuiltinTableIterParCall(ast::CallExpression *call);
   void CheckBuiltinVPICall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinFilterManagerCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckBuiltinVectorFilterCall(ast::CallExpression *call);
@@ -146,6 +138,15 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinHashCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckResultBufferCall(ast::CallExpression *call, ast::Builtin builtin);
   void CheckCSVReaderCall(ast::CallExpression *call, ast::Builtin builtin);
+
+  template <typename T>
+  struct CheckHelper;
+
+  template <typename... T>
+  struct ArgCheck;
+
+  template <typename T>
+  bool GenericBuiltinCheck(ast::CallExpression *call);
 
   // -------------------------------------------------------
   // Scoping

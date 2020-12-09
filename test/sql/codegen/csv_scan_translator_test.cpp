@@ -1,6 +1,5 @@
 #include <memory>
 
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/csv_scan_plan_node.h"
 #include "sql/schema.h"
 #include "util/file.h"
@@ -84,11 +83,8 @@ TEST_F(CSVScanTranslatorTest, ManyTypesTest) {
                    .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*csv_scan);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), []() {
+  ExecuteAndCheckInAllModes(*csv_scan, []() {
     // Expect two output tuples.
     // TODO(pmenon): Check attribute values.
     return std::make_unique<TupleCounterChecker>(2);

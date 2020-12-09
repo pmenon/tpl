@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "sql/catalog.h"
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/order_by_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/printing_consumer.h"
@@ -72,11 +71,8 @@ class SortTranslatorTest : public CodegenBasedTest {
           table->GetTupleCount() > off ? std::min(lim, table->GetTupleCount() - off) : 0;
     }
 
-    // Compile.
-    auto query = CompilationContext::Compile(*order_by);
-
     // Run and check.
-    ExecuteAndCheckInAllModes(query.get(), [&]() {
+    ExecuteAndCheckInAllModes(*order_by, [&]() {
       // Checkers:
       // 1. col2 should contain rows in range [offset, offset+lim].
       // 2. col2 should be sorted by col2 ASC.
@@ -142,11 +138,8 @@ TEST_F(SortTranslatorTest, SimpleSortTest) {
                    .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*order_by);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*order_by, [&]() {
     // Checkers:
     // 1. All 'col1' should be less than 500 due to the filter.
     // 2. The output should be sorted by col2 ASC.
@@ -208,11 +201,8 @@ TEST_F(SortTranslatorTest, TwoColumnSortTest) {
                    .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*order_by);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*order_by, [&]() {
     // Checkers:
     // There should be 500 output rows, where col1 < 500.
     // The output should be sorted by col2 ASC

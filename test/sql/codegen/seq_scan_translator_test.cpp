@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "sql/catalog.h"
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/projection_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/printing_consumer.h"
@@ -42,24 +41,20 @@ TEST_F(SeqScanTranslatorTest, ScanTest) {
     seq_scan_out.AddOutput("col2", col2);
     seq_scan_out.AddOutput("col3", col3);
     seq_scan_out.AddOutput("col4", col4);
-    auto schema = seq_scan_out.MakeSchema();
     // Make predicate
     auto comp1 = expr_maker.CompareLt(col1, expr_maker.Constant(col1_filter_val));
     auto comp2 = expr_maker.CompareGe(col2, expr_maker.Constant(col2_filter_val));
     auto predicate = expr_maker.ConjunctionAnd(comp1, comp2);
     // Build
-    planner::SeqScanPlanNode::Builder builder;
-    seq_scan = builder.SetOutputSchema(std::move(schema))
+    seq_scan = planner::SeqScanPlanNode::Builder{}
+                   .SetOutputSchema(seq_scan_out.MakeSchema())
                    .SetScanPredicate(predicate)
                    .SetTableOid(table->GetId())
                    .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*seq_scan);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*seq_scan, [&]() {
     // Checkers:
     // 1. Filtered column (0) is less than 500 (i.e., the filtering value);
     // 2. Filtered column (1) is less than 5 (i.e., the filtering value);
@@ -96,11 +91,8 @@ TEST_F(SeqScanTranslatorTest, ScanWithNullCheckTest) {
                    .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*seq_scan);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*seq_scan, [&]() {
     // Checkers:
     // 1. 'cola' is non-nullable, so no rows should be selected.
     std::vector<std::unique_ptr<OutputChecker>> checks;
@@ -130,7 +122,6 @@ TEST_F(SeqScanTranslatorTest, ScanWithNonVectorizedFilterTest) {
     seq_scan_out.AddOutput("col2", col2);
     seq_scan_out.AddOutput("col3", col3);
     seq_scan_out.AddOutput("col4", col4);
-    auto schema = seq_scan_out.MakeSchema();
     // Make predicate
     auto comp1 = expr_maker.CompareLt(col1, expr_maker.Constant(500));
     auto comp2 = expr_maker.CompareGe(col2, expr_maker.Constant(5));
@@ -143,18 +134,15 @@ TEST_F(SeqScanTranslatorTest, ScanWithNonVectorizedFilterTest) {
                                              expr_maker.ConjunctionOr(comp5, comp6));
     auto predicate = expr_maker.ConjunctionOr(clause1, clause2);
     // Build
-    planner::SeqScanPlanNode::Builder builder;
-    seq_scan = builder.SetOutputSchema(std::move(schema))
+    seq_scan = planner::SeqScanPlanNode::Builder{}
+                   .SetOutputSchema(seq_scan_out.MakeSchema())
                    .SetScanPredicate(predicate)
                    .SetTableOid(table->GetId())
                    .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*seq_scan);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*seq_scan, [&]() {
     // Check filtering value.
     std::vector<std::unique_ptr<OutputChecker>> checks;
     checks.emplace_back(std::make_unique<GenericChecker>(
@@ -191,12 +179,11 @@ TEST_F(SeqScanTranslatorTest, ScanWithProjection) {
     // Make New Column
     seq_scan_out.AddOutput("col1", col1);
     seq_scan_out.AddOutput("col2", col2);
-    auto schema = seq_scan_out.MakeSchema();
     // Make predicate
     auto predicate = expr_maker.CompareLt(col1, expr_maker.Constant(500));
     // Build
-    planner::SeqScanPlanNode::Builder builder;
-    seq_scan = builder.SetOutputSchema(std::move(schema))
+    seq_scan = planner::SeqScanPlanNode::Builder{}
+                   .SetOutputSchema(seq_scan_out.MakeSchema())
                    .SetScanPredicate(predicate)
                    .SetTableOid(table->GetId())
                    .Build();
@@ -213,16 +200,14 @@ TEST_F(SeqScanTranslatorTest, ScanWithProjection) {
     proj_out.AddOutput("col2", col2);
     proj_out.AddOutput("col3", col3);
     proj_out.AddOutput("col4", col4);
-    auto schema = proj_out.MakeSchema();
-    planner::ProjectionPlanNode::Builder builder;
-    proj = builder.SetOutputSchema(std::move(schema)).AddChild(std::move(seq_scan)).Build();
+    proj = planner::ProjectionPlanNode::Builder{}
+               .SetOutputSchema(proj_out.MakeSchema())
+               .AddChild(std::move(seq_scan))
+               .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*proj);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*proj, [&]() {
     // Make the output checkers:
     // 1. There has to be exactly 500 rows, due to the filter.
     // 2. Check col3 and col4 values for each row.
@@ -276,18 +261,15 @@ TEST_F(SeqScanTranslatorTest, ScanWithAllColumnTypes) {
     seq_scan_out.AddOutput("f", f);
     seq_scan_out.AddOutput("g", g);
     // Build plan.
-    planner::SeqScanPlanNode::Builder builder;
-    seq_scan = builder.SetOutputSchema(seq_scan_out.MakeSchema())
+    seq_scan = planner::SeqScanPlanNode::Builder{}
+                   .SetOutputSchema(seq_scan_out.MakeSchema())
                    .SetScanPredicate(expr_maker.CompareEq(a, expr_maker.ConstantBool(true)))
                    .SetTableOid(table->GetId())
                    .Build();
   }
 
-  // Compile.
-  auto query = CompilationContext::Compile(*seq_scan);
-
   // Run and check.
-  ExecuteAndCheckInAllModes(query.get(), [&]() {
+  ExecuteAndCheckInAllModes(*seq_scan, [&]() {
     // Checkers:
     // 1. Total number of rows should be N/2 where N=table size.
     // 2. All 'a' values should be true.

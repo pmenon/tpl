@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "sql/catalog.h"
-#include "sql/codegen/compilation_context.h"
 #include "sql/planner/plannodes/limit_plan_node.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/printing_consumer.h"
@@ -65,9 +64,6 @@ class LimitTranslatorTest : public CodegenBasedTest {
                   .Build();
     }
 
-    // Compile.
-    auto query = CompilationContext::Compile(*limit);
-
     // The expected number of output tuples.
     uint32_t expected_tuple_count = 0;
     if (lim == 0) {
@@ -78,7 +74,7 @@ class LimitTranslatorTest : public CodegenBasedTest {
     }
 
     // Run and check.
-    ExecuteAndCheckInAllModes(query.get(), [&]() {
+    ExecuteAndCheckInAllModes(*limit, [&]() {
       std::vector<std::unique_ptr<OutputChecker>> checks;
       // 1. Generic per-row check to ensure rows are in limit/offset range.
       // 2. Ensure total count matches expectation.

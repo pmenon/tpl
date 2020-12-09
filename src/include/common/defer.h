@@ -43,7 +43,7 @@ class Defer {
 
 }  // namespace detail
 
-#define __XDEFER(x, line) auto __defer##line = detail::Defer([&] { (x)(); })
+#define __XDEFER(x, line) auto __defer##line = ::tpl::detail::Defer([&] { (x)(); })
 #define _XDEFER(x, line) __XDEFER(x, line)
 #define XDEFER(x) _XDEFER(x, __LINE__)
 
