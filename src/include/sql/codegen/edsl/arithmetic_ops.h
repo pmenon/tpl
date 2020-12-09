@@ -1,7 +1,6 @@
 #pragma once
 
 #include "parsing/token.h"
-#include "sql/codegen/edsl/element_base.h"
 #include "sql/codegen/edsl/literal.h"
 
 namespace tpl::sql::codegen::edsl {

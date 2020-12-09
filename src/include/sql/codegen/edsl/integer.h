@@ -1,7 +1,7 @@
 #pragma once
 
 #include "sql/codegen/edsl/builtin_op.h"
-#include "sql/codegen/edsl/element_base.h"
+#include "sql/codegen/edsl/fwd.h"
 #include "sql/codegen/edsl/literal.h"
 #include "sql/codegen/edsl/traits.h"
 #include "sql/codegen/edsl/value.h"

@@ -2,7 +2,6 @@
 
 #include "sql/codegen/edsl/arithmetic_ops.h"
 #include "sql/codegen/edsl/bool.h"
-#include "sql/codegen/edsl/element_base.h"
 #include "sql/codegen/edsl/integer.h"
 #include "sql/codegen/edsl/literal.h"
 #include "sql/codegen/edsl/pointer.h"

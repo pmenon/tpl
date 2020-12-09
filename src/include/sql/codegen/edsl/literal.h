@@ -4,16 +4,10 @@
 
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/codegen.h"
+#include "sql/codegen/edsl/fwd.h"
+#include "sql/codegen/edsl/traits.h"
 
 namespace tpl::sql::codegen::edsl {
-
-/**
- * Literal values.
- * @tparam T The EDSL type of the value.
- * @tparam Enable Enabler type.
- */
-template <typename T, typename Enable = void>
-class Literal;
 
 /**
  * Literal specialization for C++ booleans.

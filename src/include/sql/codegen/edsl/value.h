@@ -11,8 +11,32 @@
 
 namespace tpl::sql::codegen::edsl {
 
+/**
+ * Base value. These are just fancy names that are untyped.
+ */
+class RawValue {
+ protected:
+  RawValue(CodeGen *codegen, ast::Identifier name) : codegen_(codegen), name_(name) {}
+
+  /**
+   * @return The code generator instance.
+   */
+  CodeGen *GetCodeGen() const { return codegen_; }
+
+  /**
+   * @return The value.
+   */
+  ast::Identifier GetRawValue() const { return name_; }
+
+ private:
+  // The code generator instance.
+  CodeGen *codegen_;
+  // The name.
+  ast::Identifier name_;
+};
+
 template <typename T>
-class Value {
+class Value : public RawValue {
  public:
   /**
    * The ETL value type.
@@ -49,16 +73,11 @@ class Value {
   virtual ~Value() = default;
 
   /**
-   * @return The code generator instance.
-   */
-  CodeGen *GetCodeGen() const { return codegen_; }
-
-  /**
    * Evaluate the value into an AST expression.
    * @param codegen The code generator instance.
    * @return An expression representing the current value.
    */
-  [[nodiscard]] ast::Expression *Eval() const { return codegen_->MakeExpr(name_); }
+  [[nodiscard]] ast::Expression *Eval() const { return GetCodeGen()->MakeExpr(GetRawValue()); }
 
   /**
    * Assign the given value to this value.
@@ -69,7 +88,7 @@ class Value {
   template <typename E,
             typename = std::enable_if<IsETLExpr<E> && std::is_same_v<ValueType, ValueT<E>>>>
   ValueType &operator=(E &&val) {
-    codegen_->GetCurrentFunction()->Append(codegen_->Assign(Eval(), val.Eval()));
+    GetCodeGen()->GetCurrentFunction()->Append(GetCodeGen()->Assign(Eval(), val.Eval()));
     return *Derived();
   }
 
@@ -79,7 +98,7 @@ class Value {
    * @return This type as the most specific derived type.
    */
   ValueType &operator=(const Value &that) {
-    codegen_->GetCurrentFunction()->Append(codegen_->Assign(Eval(), that.Eval()));
+    GetCodeGen()->GetCurrentFunction()->Append(GetCodeGen()->Assign(Eval(), that.Eval()));
     return *Derived();
   }
 
@@ -100,7 +119,7 @@ class Value {
    */
   template <typename E,
             typename = std::enable_if_t<IsETLExpr<E> && std::is_same_v<ValueType, ValueT<E>>>>
-  Value(CodeGen *codegen, ast::Identifier name, E &&val) : codegen_(codegen), name_(name) {
+  Value(CodeGen *codegen, ast::Identifier name, E &&val) : RawValue(codegen, name) {
     auto type_repr = TypeBuilder<ValueType>::MakeTypeRepr(codegen);
     codegen->GetCurrentFunction()->Append(codegen->DeclareVar(name, type_repr, val.Eval()));
   }
@@ -110,7 +129,7 @@ class Value {
    * @tparam E The ETL expression type.
    * @param name The name of the value.
    */
-  Value(CodeGen *codegen, ast::Identifier name) : codegen_(codegen), name_(name) {
+  Value(CodeGen *codegen, ast::Identifier name) : RawValue(codegen, name) {
     auto type_repr = TypeBuilder<ValueType>::MakeTypeRepr(codegen);
     codegen->GetCurrentFunction()->Append(codegen->DeclareVarNoInit(name, type_repr));
   }
@@ -123,13 +142,7 @@ class Value {
    * @param name The name of the value.
    */
   Value(CodeGen *codegen, std::string_view name)
-      : Value(codegen, codegen->MakeFreshIdentifier(name)) {}
-
- private:
-  // The code generator instance.
-  CodeGen *codegen_;
-  // The name.
-  ast::Identifier name_;
+      : RawValue(codegen, codegen->MakeFreshIdentifier(name)) {}
 };
 
 }  // namespace tpl::sql::codegen::edsl
