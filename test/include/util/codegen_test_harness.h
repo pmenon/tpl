@@ -26,30 +26,23 @@ class CodegenBasedTest : public TplTest {
   void ExecuteAndCheckInAllModes(
       const sql::planner::AbstractPlanNode &plan,
       std::function<std::unique_ptr<sql::codegen::OutputChecker>()> checker_maker) {
-    auto compile_and_check = [&] {
+    for (const auto parallel : {false, true}) {
+      // Set parallelization setting.
+      Settings::Instance()->Set(Settings::Name::ParallelQueryExecution, parallel);
       // Compile.
       auto query = sql::codegen::CompilationContext::Compile(plan);
-      // Test in all modes.
       for (const auto mode : {vm::ExecutionMode::Interpret}) {
         // Create a checker.
         std::unique_ptr<sql::codegen::OutputChecker> checker = checker_maker();
         sql::codegen::OutputCollectorAndChecker store(checker.get(), plan.GetOutputSchema());
-        // Setup and run the query.
+        // Run the query.
         sql::MemoryPool memory(nullptr);
         sql::ExecutionContext exec_ctx(&memory, plan.GetOutputSchema(), &store);
         query->Run(&exec_ctx, mode);
         // Check.
         checker->CheckCorrectness();
       }
-    };
-
-    // Disable parallel execution.
-    Settings::Instance()->Set(Settings::Name::ParallelQueryExecution, false);
-    compile_and_check();
-
-    // Enable parallel execution.
-    Settings::Instance()->Set(Settings::Name::ParallelQueryExecution, true);
-    compile_and_check();
+    }
   }
 };
 
