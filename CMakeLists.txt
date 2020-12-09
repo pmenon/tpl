@@ -269,10 +269,6 @@ endif ()
 # Setup includes. Needed for all directory components.
 include_directories("${PROJECT_SOURCE_DIR}/src/include/" "${PROJECT_BINARY_DIR}")
 
-set(TPL_TEST_LINK_LIBS tpl_shared ${TPL_LINK_LIBS} gtest gtest_main)
-set(TPL_BENCHMARK_LINK_LIBS tpl_shared ${TPL_LINK_LIBS} benchmark gtest gtest_main)
-set(TPL_LSAN_OPTIONS "fast_unwind_on_malloc=0,suppressions=${BUILD_SUPPORT_DIR}/leaksanitizer.conf")
-
 # Let the sources and tests directory set themselves up
 add_subdirectory(src)
 add_subdirectory(test)

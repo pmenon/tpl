@@ -21,7 +21,7 @@ if (TPL_BUILD_BENCHMARKS)
         add_executable(${benchmark_name} EXCLUDE_FROM_ALL ${benchmark_src} ${benchmark_main})
         set_target_properties(${benchmark_name} PROPERTIES ENABLE_EXPORTS true)
         target_include_directories(${benchmark_name} PRIVATE "${PROJECT_SOURCE_DIR}/test/include")
-        target_link_libraries(${benchmark_name} ${TPL_BENCHMARK_LINK_LIBS})
+        target_link_libraries(${benchmark_name} tpl_shared ${TPL_LINK_LIBS} benchmark)
 
         # Add a ctest that will not be run by default.
         # To run it the command `ctest -C benchmark -L benchmark` must be used.

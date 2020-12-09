@@ -8,6 +8,9 @@ enable_testing()
 
 file(GLOB_RECURSE tpl_test_srs "${PROJECT_SOURCE_DIR}/test/*.cpp")
 
+# LSAN_OPTIONS. Required to suppress TBB leaks.
+set(TPL_LSAN_OPTIONS "fast_unwind_on_malloc=0,suppressions=${BUILD_SUPPORT_DIR}/leaksanitizer.conf")
+
 add_custom_target(check
         COMMAND LSAN_OPTIONS=${TPL_LSAN_OPTIONS} ${CMAKE_CTEST_COMMAND} ${CTEST_FLAGS} --output-on-failure)
 
@@ -19,7 +22,7 @@ foreach(test_src ${tpl_test_srs})
     # Build a binary for it
     add_executable(${test_name} EXCLUDE_FROM_ALL ${test_src})
     target_include_directories(${test_name} PRIVATE "${PROJECT_SOURCE_DIR}/test/include")
-    target_link_libraries(${test_name} ${TPL_TEST_LINK_LIBS} -lpthread)
+    target_link_libraries(${test_name} tpl_shared ${TPL_LINK_LIBS} gtest gtest_main -lpthread)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS true)
     add_dependencies(check ${test_name})
 
