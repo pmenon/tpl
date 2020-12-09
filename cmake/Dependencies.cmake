@@ -39,7 +39,7 @@ list(APPEND TPL_LINK_LIBS ${JEMALLOC_LIBRARIES})
 ############################################################
 
 # Look for LLVM 11+
-find_package(LLVM 11 REQUIRED CONFIG)
+find_package(LLVM 11.1.0 REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 if (${LLVM_PACKAGE_VERSION} VERSION_LESS "11")
     message(FATAL_ERROR "LLVM 11 or newer is required.")

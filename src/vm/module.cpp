@@ -21,7 +21,8 @@ Module::Module(std::unique_ptr<BytecodeModule> bytecode_module,
     : bytecode_module_(std::move(bytecode_module)),
       jit_module_(std::move(llvm_module)),
       functions_(std::make_unique<std::atomic<void *>[]>(bytecode_module_->GetFunctionCount())),
-      bytecode_trampolines_(std::make_unique<Trampoline[]>(bytecode_module_->GetFunctionCount())) {
+      bytecode_trampolines_(std::make_unique<Trampoline[]>(bytecode_module_->GetFunctionCount())),
+      jit_compiling_(false) {
   // Create the trampolines for all bytecode functions
   for (const auto &func : bytecode_module_->GetFunctionsInfo()) {
     CreateFunctionTrampoline(func.GetId());
@@ -41,6 +42,12 @@ Module::Module(std::unique_ptr<BytecodeModule> bytecode_module,
       functions_[idx] = jit_module_->GetFunctionPointer(func_info->GetName());
     }
   }
+}
+
+Module::~Module() {
+  // Wait for any outstanding compilation.
+  std::unique_lock<std::mutex> lock(compilation_mutex_);
+  if (jit_compiling_) compilation_complete_.wait(lock, [this] { return !jit_compiling_; });
 }
 
 namespace {
@@ -241,26 +248,41 @@ void Module::CreateFunctionTrampoline(FunctionId func_id) {
 }
 
 void Module::CompileToMachineCode() {
-  std::call_once(compiled_flag_, [this]() {
-    // Exit if the module has already been compiled. This might happen if
-    // requested to execute in adaptive mode by concurrent threads.
-    if (jit_module_ != nullptr) {
+  {
+    std::unique_lock<std::mutex> lock(compilation_mutex_);
+    // If the module has already been compiled, return now.
+    if (jit_module_ != nullptr) return;
+    // The module hasn't been compiled. If, however, there is an outstanding
+    // compilation we wait for it to complete here.
+    if (jit_compiling_) {
+      compilation_complete_.wait(lock, [this] { return !jit_compiling_; });
       return;
     }
+    // This thread will compile. Set the flag.
+    jit_compiling_ = true;
+  }
 
-    // JIT the module.
-    LLVMEngine::CompilerOptions options;
-    jit_module_ = LLVMEngine::Compile(*bytecode_module_, options);
+  // JIT the module to machine code. This is done OUTSIDE the lock.
+  LLVMEngine::CompilerOptions options;
+  auto module = LLVMEngine::Compile(*bytecode_module_, options);
 
-    // JIT completed successfully. For each function in the module, pull out its
-    // compiled implementation into the function cache, atomically replacing any
-    // previous implementation.
-    for (const auto &func_info : bytecode_module_->GetFunctionsInfo()) {
-      auto *jit_function = jit_module_->GetFunctionPointer(func_info.GetName());
-      TPL_ASSERT(jit_function != nullptr, "Missing function in compiled module!");
-      functions_[func_info.GetId()].store(jit_function, std::memory_order_relaxed);
-    }
-  });
+  // JIT completed successfully. For each function in the module, pull out its
+  // compiled implementation into the function cache, atomically replacing any
+  // previous implementation.
+  for (const auto &func_info : bytecode_module_->GetFunctionsInfo()) {
+    void *jit_function = module->GetFunctionPointer(func_info.GetName());
+    TPL_ASSERT(jit_function != nullptr, "Missing function in compiled module!");
+    functions_[func_info.GetId()].store(jit_function, std::memory_order_relaxed);
+  }
+
+  {
+    std::unique_lock<std::mutex> lock(compilation_mutex_);
+    // Set the module and reset the compiling flag.
+    jit_module_ = std::move(module);
+    jit_compiling_ = false;
+    // Notify anyone waiting that we're done.
+    compilation_complete_.notify_all();
+  }
 }
 
 void Module::CompileToMachineCodeAsync() {

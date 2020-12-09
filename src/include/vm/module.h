@@ -1,8 +1,9 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
-#include <mutex>  // NOLINT
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -46,6 +47,11 @@ class Module {
    * This class cannot be copied or moved.
    */
   DISALLOW_COPY_AND_MOVE(Module);
+
+  /**
+   * Destructor. The destructor may block if there is an outstanding asynchronous compilation.
+   */
+  ~Module();
 
   /**
    * Look up the metadata for a TPL function in this module by its ID.
@@ -165,7 +171,9 @@ class Module {
   std::unique_ptr<Trampoline[]> bytecode_trampolines_;
 
   // Flag to indicate if the JIT compilation has occurred.
-  std::once_flag compiled_flag_;
+  std::mutex compilation_mutex_;
+  std::condition_variable compilation_complete_;
+  bool jit_compiling_;
 };
 
 // ---------------------------------------------------------
