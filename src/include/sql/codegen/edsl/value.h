@@ -15,9 +15,7 @@ namespace tpl::sql::codegen::edsl {
  * Base value. These are just fancy names that are untyped.
  */
 class RawValue {
- protected:
-  RawValue(CodeGen *codegen, ast::Identifier name) : codegen_(codegen), name_(name) {}
-
+ public:
   /**
    * @return The code generator instance.
    */
@@ -27,6 +25,14 @@ class RawValue {
    * @return The value.
    */
   ast::Identifier GetRawValue() const { return name_; }
+
+  /**
+   * @return If this value is equivalent to the provided value.
+   */
+  bool operator==(const RawValue &that) const noexcept = default;
+
+ protected:
+  RawValue(CodeGen *codegen, ast::Identifier name) : codegen_(codegen), name_(name) {}
 
  private:
   // The code generator instance.
