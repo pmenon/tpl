@@ -112,6 +112,10 @@ ast::Expression *CompactStorage::ReadSQL(ast::Expression *ptr, uint32_t index) c
   return codegen_->CallBuiltin(op, {ColumnPtr(ptr, index), Nulls(ptr), codegen_->Const32(index)});
 }
 
+ast::Expression *CompactStorage::ReadPrimitive(ast::Expression *ptr, uint32_t index) const {
+  return codegen_->AccessStructMember(ptr, col_info_[index].second);
+}
+
 ast::Identifier CompactStorage::FieldNameAtIndex(uint32_t index) const {
   TPL_ASSERT(index < col_info_.size(), "Out-of-bounds field access.");
   return col_info_[index].second;

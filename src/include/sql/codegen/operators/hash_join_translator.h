@@ -38,6 +38,11 @@ class HashJoinTranslator : public OperatorTranslator {
   void DeclarePipelineDependencies() const override;
 
   /**
+   * Declare compression functions.
+   */
+  void DefineStructsAndFunctions() override;
+
+  /**
    * Initialize the global hash table.
    */
   void InitializeQueryState(FunctionBuilder *function) const override;
@@ -137,6 +142,12 @@ class HashJoinTranslator : public OperatorTranslator {
   // This is useful to speed up probes when complex keys are present
   // as it can perform early termination.
   bool ShouldValidateHashOnProbe() const;
+
+  // Compression-related functions.
+  void GenerateHashTableAnalysisFunction();
+  void GenerateHashTableCompressionFunction();
+  void AnalyzeHashTable(FunctionBuilder *function);
+  void CompressHashTable(FunctionBuilder *function);
 
  private:
   // Storage used to read/write rows into/from hash table.

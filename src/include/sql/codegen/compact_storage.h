@@ -43,7 +43,6 @@ class CompactStorage {
    *            attribute should be stored, but where the ROW's contents are stored).
    * @param index The index in the input schema whose attribute/column we're to store.
    * @param val The SQL value to store.
-   * @return The generated invocation.
    */
   void WriteSQL(ast::Expression *ptr, uint32_t index, ast::Expression *val) const;
 
@@ -55,6 +54,15 @@ class CompactStorage {
    * @return A pair storing the read value and NULL-indication flag.
    */
   ast::Expression *ReadSQL(ast::Expression *ptr, uint32_t index) const;
+
+  /**
+   * Read the raw primitive component of the SQL value.
+   * @param ptr The pointer to the row's buffer space (i.e., NOT a pointer to where you think the
+   *            attribute should be stored, but where the ROW's contents are stored).
+   * @param index The index in the input schema whose attribute/column we're to read.
+   * @return The value.
+   */
+  ast::Expression *ReadPrimitive(ast::Expression *ptr, uint32_t index) const;
 
   /**
    * @return The name of the field at the given index in the compact struct.

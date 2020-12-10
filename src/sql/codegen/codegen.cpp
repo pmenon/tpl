@@ -131,8 +131,21 @@ ast::Statement *CodeGen::Assign(ast::Expression *dest, ast::Expression *value) {
   return NodeFactory()->NewAssignmentStatement(position_, dest, value);
 }
 
+ast::Expression *CodeGen::ArrayType(uint64_t num_elems, ast::Expression *type_repr) {
+  ast::Expression *length = num_elems == 0 ? nullptr : Const64(num_elems);
+  return NodeFactory()->NewArrayType(position_, length, type_repr);
+}
+
 ast::Expression *CodeGen::ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind) {
-  return NodeFactory()->NewArrayType(position_, Const64(num_elems), BuiltinType(kind));
+  return ArrayType(num_elems, BuiltinType(kind));
+}
+
+ast::Expression *CodeGen::ArrayAccess(ast::Expression *arr, ast::Expression *idx) {
+  return NodeFactory()->NewIndexExpression(position_, arr, idx);
+}
+
+ast::Expression *CodeGen::ArrayAccess(ast::Identifier arr, uint64_t idx) {
+  return ArrayAccess(MakeExpr(arr), Const64(idx));
 }
 
 ast::Expression *CodeGen::BuiltinType(ast::BuiltinType::Kind builtin_kind) const {
@@ -1180,6 +1193,10 @@ util::RegionVector<ast::FieldDeclaration *> CodeGen::MakeFieldList(
 
 ast::FieldDeclaration *CodeGen::MakeField(ast::Identifier name, ast::Expression *type) const {
   return NodeFactory()->NewFieldDeclaration(position_, name, type);
+}
+
+ast::FieldDeclaration *CodeGen::MakeField(std::string_view name, ast::Expression *type) {
+  return MakeField(MakeFreshIdentifier(name), type);
 }
 
 ast::AstNodeFactory *CodeGen::NodeFactory() const { return Context()->GetNodeFactory(); }

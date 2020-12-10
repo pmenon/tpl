@@ -37,8 +37,8 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
 
   // Setup compact storage.
   std::vector<TypeId> types;
-  types.reserve(plan.GetChild(0)->GetOutputSchema()->NumColumns());
-  for (const auto &col : plan.GetChild(0)->GetOutputSchema()->GetColumns()) {
+  types.reserve(GetChildOutputSchema(0)->NumColumns());
+  for (const auto &col : GetChildOutputSchema(0)->GetColumns()) {
     types.push_back(col.GetType());
   }
   if (plan.RequiresLeftMark()) {
@@ -308,6 +308,74 @@ ast::Expression *HashJoinTranslator::GetChildOutput(ConsumerContext *context, ui
     return GetBuildRowAttribute(attr_idx);
   }
   return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
+}
+
+void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
+  // Declare the attributes.
+  const auto build_schema = GetChildOutputSchema(0);
+  std::vector<ast::Identifier> attributes(build_schema->NumColumns());
+  for (uint32_t attr_idx = 0; attr_idx < build_schema->NumColumns(); attr_idx++) {
+    attributes[attr_idx] = codegen_->MakeFreshIdentifier("bits_m");
+    auto type = codegen_->PrimitiveTplType(build_schema->GetColumn(attr_idx).GetType());
+    function->Append(codegen_->DeclareVarNoInit(attributes[attr_idx], type));
+  }
+
+  // for (var i = 0; i < n; i++)
+  ast::Identifier i_var = codegen_->MakeIdentifier("i"), row_var = codegen_->MakeIdentifier("row");
+  const auto i = [&, name = codegen_->MakeIdentifier("i")]() { return codegen_->MakeExpr(name); };
+  Loop loop(function,
+            codegen_->MakeStatement(
+                codegen_->DeclareVar(i_var, codegen_->UInt32Type(), codegen_->Const32(0))),
+            codegen_->CompareLt(i(), function->GetParameterByPosition(0)),
+            codegen_->Assign(i(), codegen_->Add(i(), codegen_->Const32(1))));
+  {
+    // var row = rows[i]
+    ast::Expression *rows = function->GetParameterByPosition(1);
+    function->Append(codegen_->DeclareVarWithInit(row_var, codegen_->ArrayAccess(rows, i())));
+
+    // Read all columns.
+    for (uint32_t attr_idx = 0; attr_idx < GetChildOutputSchema(0)->NumColumns(); attr_idx++) {
+      function->Append(codegen_->Assign(
+          codegen_->MakeExpr(attributes[attr_idx]),
+          codegen_->BitOr(codegen_->MakeExpr(attributes[attr_idx]),
+                          storage_.ReadPrimitive(codegen_->MakeExpr(row_var), attr_idx))));
+    }
+  }
+  loop.EndLoop();
+
+  for (uint32_t attr_idx = 0; attr_idx < build_schema->NumColumns(); attr_idx++) {
+    auto uval = codegen_->CallBuiltin(ast::Builtin::IntCast,
+                                      {codegen_->BuiltinType(ast::BuiltinType::UInt64),
+                                       codegen_->MakeExpr(attributes[attr_idx])});
+    ast::Identifier room = codegen_->MakeFreshIdentifier("room");
+    function->Append(
+        codegen_->DeclareVarWithInit(room, codegen_->CallBuiltin(ast::Builtin::Ctlz, {uval})));
+  }
+}
+
+void HashJoinTranslator::GenerateHashTableAnalysisFunction() {
+  auto args = codegen_->MakeEmptyFieldList();
+  args.resize(3);
+  args[0] = codegen_->MakeField("n", codegen_->UInt32Type());
+  args[1] = codegen_->MakeField(
+      "rows",
+      codegen_->ArrayType(0, codegen_->PointerType(codegen_->MakeExpr(storage_.GetTypeName()))));
+  args[2] = codegen_->MakeField("stats", codegen_->PointerType(codegen_->Int8Type()));
+
+  auto name = codegen_->MakeFreshIdentifier(GetPipeline()->CreatePipelineFunctionName("AnalyzeHT"));
+  FunctionBuilder function(codegen_, name, std::move(args), codegen_->Nil());
+  {
+    // Analyze hash table.
+    AnalyzeHashTable(&function);
+  }
+  function.Finish();
+}
+
+void HashJoinTranslator::GenerateHashTableCompressionFunction() {}
+
+void HashJoinTranslator::DefineStructsAndFunctions() {
+  GenerateHashTableAnalysisFunction();
+  GenerateHashTableCompressionFunction();
 }
 
 }  // namespace tpl::sql::codegen

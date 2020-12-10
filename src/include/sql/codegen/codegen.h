@@ -205,6 +205,11 @@ class CodeGen {
   [[nodiscard]] ast::Expression *Float64Type() const;
 
   /**
+   * @return A type representation expression that is "[num_elems]type".
+   */
+  [[nodiscard]] ast::Expression *ArrayType(uint64_t num_elems, ast::Expression *type_repr);
+
+  /**
    * @return A type representation expression that is "[num_elems]kind".
    */
   [[nodiscard]] ast::Expression *ArrayType(uint64_t num_elems, ast::BuiltinType::Kind kind);
@@ -383,6 +388,16 @@ class CodeGen {
    */
   [[nodiscard]] ast::Statement *Assign(ast::Expression *dest, ast::Expression *value);
 
+  /**
+   * @return An expression representing "arr[idx]".
+   */
+  [[nodiscard]] ast::Expression *ArrayAccess(ast::Identifier arr, uint64_t idx);
+
+  /**
+   * @return An expression representing "arr[idx]".
+   */
+  [[nodiscard]] ast::Expression *ArrayAccess(ast::Expression *arr, ast::Expression *idx);
+
   // ---------------------------------------------------------------------------
   //
   // Binary and comparison operations
@@ -412,14 +427,17 @@ class CodeGen {
                                          ast::Expression *right) const;
 
   /**
-   * Generate a comparison operation of the provided type between the provided left and right
-   * operands, returning its result.
-   * @param left The left input.
-   * @param right The right input.
-   * @return The result of the comparison.
+   * @return The result of the comparison left == right.
    */
   [[nodiscard]] ast::Expression *CompareEq(ast::Expression *left, ast::Expression *right) const {
     return Compare(parsing::Token::Type::EQUAL_EQUAL, left, right);
+  }
+
+  /**
+   * @return The result of the comparison left < right.
+   */
+  [[nodiscard]] ast::Expression *CompareLt(ast::Expression *left, ast::Expression *right) const {
+    return Compare(parsing::Token::Type::LESS, left, right);
   }
 
   /**
@@ -1388,6 +1406,14 @@ class CodeGen {
    * @return The field declaration.
    */
   ast::FieldDeclaration *MakeField(ast::Identifier name, ast::Expression *type) const;
+
+  /**
+   * Create a single field.
+   * @param name The name of the field.
+   * @param type The type representation of the field.
+   * @return The field declaration.
+   */
+  ast::FieldDeclaration *MakeField(std::string_view name, ast::Expression *type);
 
   /**
    * @return The current (potentially null) function being built.
