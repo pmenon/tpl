@@ -35,4 +35,11 @@ BUILTIN_TYPE_LIST(F, F, F)
 template <typename T>
 class Ptr;
 
+/**
+ * Array type.
+ * @tparam T The EDSL type of the elements contained in the array.
+ */
+template <std::size_t N, typename T>
+class Array;
+
 }  // namespace tpl::sql::codegen::edsl

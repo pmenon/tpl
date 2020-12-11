@@ -143,7 +143,7 @@ class Value : public ValueBase {
    * @param name The name of the value.
    */
   Value(CodeGen *codegen, std::string_view name)
-      : ValueBase(codegen, codegen->MakeFreshIdentifier(name)) {}
+      : Value(codegen, codegen->MakeFreshIdentifier(name)) {}
 };
 
 }  // namespace tpl::sql::codegen::edsl

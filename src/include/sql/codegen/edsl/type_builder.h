@@ -51,7 +51,7 @@ BUILTIN_TYPE_LIST(GEN_TYPE_BUILDER, GEN_TYPE_BUILDER, GEN_TYPE_BUILDER)
 /**
  * Trait for pointers.
  * @tparam T The pointee type.
- **/
+ */
 template <typename T>
 struct TypeBuilder<Ptr<T>> {
   /** Pointers cannot participate in arithmetic operations. */
@@ -64,25 +64,12 @@ struct TypeBuilder<Ptr<T>> {
 
 /**
  * Arrays with unknown length.
- **/
-template <typename T>
-struct TypeBuilder<T[]> {
+ */
+template <std::size_t N, typename T>
+struct TypeBuilder<Array<N, T>> {
   /** Arrays cannot participate in arithmetic operations. */
   static constexpr bool kIsArithmetic = false;
   /** @return The AST type representation of this unbounded array. */
-  static ast::Expression *MakeTypeRepr(CodeGen *codegen) {
-    return codegen->ArrayType(0, TypeBuilder<T>::MakeTypeRepr(codegen));
-  }
-};
-
-/**
- * Arrays with known length.
- **/
-template <typename T, uint64_t N>
-struct TypeBuilder<T[N]> {
-  /** Arrays cannot participate in arithmetic operations. */
-  static constexpr bool kIsArithmetic = false;
-  /** @return The AST type representation of this array. */
   static ast::Expression *MakeTypeRepr(CodeGen *codegen) {
     return codegen->ArrayType(N, TypeBuilder<T>::MakeTypeRepr(codegen));
   }
