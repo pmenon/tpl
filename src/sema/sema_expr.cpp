@@ -287,58 +287,47 @@ void Sema::VisitLiteralExpression(ast::LiteralExpression *node) {
 }
 
 void Sema::VisitUnaryOpExpression(ast::UnaryOpExpression *node) {
-  // Resolve the type of the sub expression
+  // Resolve the type of the sub expression.
   ast::Type *expr_type = Resolve(node->GetInput());
 
   if (expr_type == nullptr) {
-    // Some error occurred
+    // Some error occurred. Exit now.
     return;
   }
 
-  switch (node->Op()) {
-    case parsing::Token::Type::BANG: {
+  switch (const auto op = node->Op(); op) {
+    case parsing::Token::Type::BANG:
       if (!expr_type->IsBoolType()) {
-        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
-                                expr_type);
+        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, op, expr_type);
         return;
       }
-
       node->SetType(expr_type);
       break;
-    }
-    case parsing::Token::Type::MINUS: {
+    case parsing::Token::Type::BIT_NOT:
+    case parsing::Token::Type::MINUS:
       if (!expr_type->IsArithmetic()) {
-        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
-                                expr_type);
+        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, op, expr_type);
         return;
       }
-
       node->SetType(expr_type);
       break;
-    }
     case parsing::Token::Type::STAR: {
       if (!expr_type->IsPointerType()) {
-        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
-                                expr_type);
+        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, op, expr_type);
         return;
       }
-
       node->SetType(expr_type->As<ast::PointerType>()->GetBase());
       break;
     }
-    case parsing::Token::Type::AMPERSAND: {
+    case parsing::Token::Type::AMPERSAND:
       if (expr_type->IsFunctionType()) {
-        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, node->Op(),
-                                expr_type);
+        error_reporter_->Report(node->Position(), ErrorMessages::kInvalidOperation, op, expr_type);
         return;
       }
-
       node->SetType(expr_type->PointerTo());
       break;
-    }
-    default: {
+    default:
       UNREACHABLE("Impossible unary operation!");
-    }
   }
 }
 
