@@ -7,7 +7,7 @@ namespace tpl::sql::codegen::edsl {
 /**
  * Base raw untyped value.
  */
-class RawValue;
+class ValueBase;
 
 /**
  * Base typed value.

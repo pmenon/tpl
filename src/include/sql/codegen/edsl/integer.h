@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sql/codegen/edsl/builtin_op.h"
+#include "sql/codegen/edsl/builtin_expression.h"
 #include "sql/codegen/edsl/fwd.h"
 #include "sql/codegen/edsl/literal.h"
 #include "sql/codegen/edsl/traits.h"
@@ -109,7 +109,7 @@ class IntegerBase : public Value<T> {
     if constexpr (std::is_same_v<Target, ValueType>) {
       return *Derived();
     } else {
-      return BuiltinOperation<Target, ValueType>(ast::Builtin::IntCast, *Derived());
+      return BuiltinExpression<Target, ValueType>(ast::Builtin::IntCast, *Derived());
     }
   }
 

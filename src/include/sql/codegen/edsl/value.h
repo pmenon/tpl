@@ -14,41 +14,8 @@ namespace tpl::sql::codegen::edsl {
 /**
  * Base value. These are just fancy names that are untyped.
  */
-class RawValue {
+class ValueBase {
  public:
-  /**
-   * @return The code generator instance.
-   */
-  CodeGen *GetCodeGen() const { return codegen_; }
-
-  /**
-   * @return The value.
-   */
-  ast::Identifier GetRawValue() const { return name_; }
-
-  /**
-   * @return If this value is equivalent to the provided value.
-   */
-  bool operator==(const RawValue &that) const noexcept = default;
-
- protected:
-  RawValue(CodeGen *codegen, ast::Identifier name) : codegen_(codegen), name_(name) {}
-
- private:
-  // The code generator instance.
-  CodeGen *codegen_;
-  // The name.
-  ast::Identifier name_;
-};
-
-template <typename T>
-class Value : public RawValue {
- public:
-  /**
-   * The ETL value type.
-   **/
-  using ValueType = T;
-
   /**
    * A value can be constructed from another to create an ALIAS. This means that valid modifications
    * to THIS value will be reflected in the other, and vice versa.
@@ -63,7 +30,7 @@ class Value : public RawValue {
    *
    * @param that The value to copy.
    */
-  Value(const Value &that) = default;
+  ValueBase(const ValueBase &that) = default;
 
   /**
    * A value can be created from another R-Value value. The C++ lifetime of the other value ends
@@ -71,19 +38,47 @@ class Value : public RawValue {
    * to THIS value will be reflected in the TPL value in generated source.
    * @param that The value to move.
    */
-  Value(Value &&that) = default;
-
-  /**
-   * Defaulted virtual destructor.
-   */
-  virtual ~Value() = default;
+  ValueBase(ValueBase &&that) = default;
 
   /**
    * Evaluate the value into an AST expression.
    * @param codegen The code generator instance.
    * @return An expression representing the current value.
    */
-  [[nodiscard]] ast::Expression *Eval() const { return GetCodeGen()->MakeExpr(GetRawValue()); }
+  ast::Expression *Eval() const { return codegen_->MakeExpr(name_); }
+
+  /**
+   * @return The code generator instance.
+   */
+  CodeGen *GetCodeGen() const { return codegen_; }
+
+  /**
+   * @return If this value is equivalent to the provided value.
+   */
+  bool operator==(const ValueBase &that) const noexcept = default;
+
+ protected:
+  ValueBase(CodeGen *codegen, ast::Identifier name) : codegen_(codegen), name_(name) {}
+
+ private:
+  // The code generator instance.
+  CodeGen *codegen_;
+  // The name.
+  ast::Identifier name_;
+};
+
+template <typename T>
+class Value : public ValueBase {
+ public:
+  /**
+   * The ETL value type.
+   **/
+  using ValueType = T;
+
+  /**
+   * Defaulted virtual destructor.
+   */
+  virtual ~Value() = default;
 
   /**
    * Assign the given value to this value.
@@ -125,7 +120,7 @@ class Value : public RawValue {
    */
   template <typename E,
             typename = std::enable_if_t<IsETLExpr<E> && std::is_same_v<ValueType, ValueT<E>>>>
-  Value(CodeGen *codegen, ast::Identifier name, E &&val) : RawValue(codegen, name) {
+  Value(CodeGen *codegen, ast::Identifier name, E &&val) : ValueBase(codegen, name) {
     auto type_repr = TypeBuilder<ValueType>::MakeTypeRepr(codegen);
     codegen->GetCurrentFunction()->Append(codegen->DeclareVar(name, type_repr, val.Eval()));
   }
@@ -135,7 +130,7 @@ class Value : public RawValue {
    * @tparam E The ETL expression type.
    * @param name The name of the value.
    */
-  Value(CodeGen *codegen, ast::Identifier name) : RawValue(codegen, name) {
+  Value(CodeGen *codegen, ast::Identifier name) : ValueBase(codegen, name) {
     auto type_repr = TypeBuilder<ValueType>::MakeTypeRepr(codegen);
     codegen->GetCurrentFunction()->Append(codegen->DeclareVarNoInit(name, type_repr));
   }
@@ -148,7 +143,7 @@ class Value : public RawValue {
    * @param name The name of the value.
    */
   Value(CodeGen *codegen, std::string_view name)
-      : RawValue(codegen, codegen->MakeFreshIdentifier(name)) {}
+      : ValueBase(codegen, codegen->MakeFreshIdentifier(name)) {}
 };
 
 }  // namespace tpl::sql::codegen::edsl

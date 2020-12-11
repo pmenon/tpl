@@ -1,6 +1,7 @@
 #include "ast/context.h"
 #include "sema/error_reporter.h"
 #include "sql/codegen/edsl/elements.h"
+#include "sql/codegen/loop.h"
 #include "vm/module.h"
 
 // Tests
@@ -30,9 +31,11 @@ TEST_F(ElementTest, SimpleCheck) {
     edsl::UInt8 j(&codegen, "j", i + i);
     edsl::UInt8 k = j;
     edsl::UInt8 l(&codegen, "l", k * k * k * k);
+    edsl::UInt32 m(&codegen, "m", Ctlz(l) + Cttz(l));
     edsl::Ptr<edsl::UInt8> ptr(&codegen, "ptr");
     ptr.Store(j);
-    edsl::While(&codegen, i < j, [&] {
+    Loop loop(&func, i < j);
+    {
       //
       j = ++i;
       j += 20;
@@ -40,7 +43,7 @@ TEST_F(ElementTest, SimpleCheck) {
       j -= (i * 2);
       j *= (i * 4);
       j |= (i * 8);
-    });
+    }
   }
   func.Finish();
 

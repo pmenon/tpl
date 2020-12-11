@@ -12,7 +12,7 @@ namespace tpl::sql::codegen::edsl {
  * @tparam T The template type of the left-hand input.
  */
 template <typename T, typename InputType>
-class UnaryOperation {
+class UnaryExpression {
  public:
   /** The value type of the expression. */
   using ValueType = T;
@@ -22,13 +22,13 @@ class UnaryOperation {
    * @param op The type of operation.
    * @param input The input expression.
    */
-  UnaryOperation(parsing::Token::Type op, InputType input)
+  UnaryExpression(parsing::Token::Type op, InputType input)
       : codegen_(input.GetCodeGen()), op_(op), input_(std::forward<InputType>(input)) {}
 
   /**
    * @return The result of the application of the unary operation on the input arguments.
    */
-  [[nodiscard]] ast::Expression *Eval() const { return codegen_->UnaryOp(op_, input_.Eval()); }
+  ast::Expression *Eval() const { return codegen_->UnaryOp(op_, input_.Eval()); }
 
   /**
    * @return The code generator instance.
@@ -50,7 +50,7 @@ class UnaryOperation {
  * @tparam InputType The type of the input operation.
  */
 template <typename T, typename InputType>
-struct Traits<UnaryOperation<T, InputType>> {
+struct Traits<UnaryExpression<T, InputType>> {
   /** The value type of the expression is the same as the left input. */
   using ValueType = T;
   /** Arithmetic is an ETL expression. */

@@ -10,7 +10,7 @@ namespace tpl::sql::codegen::edsl {
  * @tparam Rhs The template type of the right-hand input.
  */
 template <typename Lhs, typename Rhs>
-class RelationalOperation {
+class ComparisonExpression {
  public:
   using ValueType = edsl::Bool;
 
@@ -21,7 +21,7 @@ class RelationalOperation {
    * @param lhs The left input.
    * @param rhs The right input.
    */
-  RelationalOperation(parsing::Token::Type op, Lhs lhs, Rhs rhs)
+  ComparisonExpression(parsing::Token::Type op, Lhs lhs, Rhs rhs)
       : codegen_(lhs.GetCodeGen()),
         op_(op),
         lhs_(std::forward<Lhs>(lhs)),
@@ -30,9 +30,7 @@ class RelationalOperation {
   /**
    * @return The result of the application of the relational operation on the input arguments.
    */
-  [[nodiscard]] ast::Expression *Eval() const {
-    return codegen_->Compare(op_, lhs_.Eval(), rhs_.Eval());
-  }
+  ast::Expression *Eval() const { return codegen_->Compare(op_, lhs_.Eval(), rhs_.Eval()); }
 
   /**
    * @return The code generator instance.
@@ -56,7 +54,7 @@ class RelationalOperation {
  * @tparam Rhs The type of the right-hand input.
  */
 template <typename Lhs, typename Rhs>
-struct Traits<RelationalOperation<Lhs, Rhs>> {
+struct Traits<ComparisonExpression<Lhs, Rhs>> {
   /** Relational operations produce primitive boolean values. */
   using ValueType = edsl::Bool;
   /** Arithmetic is an ETL expression. */
@@ -74,7 +72,7 @@ struct Traits<RelationalOperation<Lhs, Rhs>> {
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
 auto operator==(Lhs &&lhs, Rhs &&rhs) {
-  return RelationalOperation(parsing::Token::Type::EQUAL_EQUAL, lhs, rhs);
+  return ComparisonExpression(parsing::Token::Type::EQUAL_EQUAL, lhs, rhs);
 }
 
 /**
@@ -88,7 +86,7 @@ auto operator==(Lhs &&lhs, Rhs &&rhs) {
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
 auto operator!=(Lhs &&lhs, Rhs &&rhs) {
-  return RelationalOperation(parsing::Token::Type::BANG_EQUAL, lhs, rhs);
+  return ComparisonExpression(parsing::Token::Type::BANG_EQUAL, lhs, rhs);
 }
 
 /**
@@ -102,7 +100,7 @@ auto operator!=(Lhs &&lhs, Rhs &&rhs) {
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
 auto operator>=(Lhs &&lhs, Rhs &&rhs) {
-  return RelationalOperation(parsing::Token::Type::GREATER_EQUAL, lhs, rhs);
+  return ComparisonExpression(parsing::Token::Type::GREATER_EQUAL, lhs, rhs);
 }
 
 /**
@@ -116,7 +114,7 @@ auto operator>=(Lhs &&lhs, Rhs &&rhs) {
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
 auto operator>(Lhs &&lhs, Rhs &&rhs) {
-  return RelationalOperation(parsing::Token::Type::GREATER, lhs, rhs);
+  return ComparisonExpression(parsing::Token::Type::GREATER, lhs, rhs);
 }
 
 /**
@@ -130,7 +128,7 @@ auto operator>(Lhs &&lhs, Rhs &&rhs) {
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
 auto operator<=(Lhs &&lhs, Rhs &&rhs) {
-  return RelationalOperation(parsing::Token::Type::LESS_EQUAL, lhs, rhs);
+  return ComparisonExpression(parsing::Token::Type::LESS_EQUAL, lhs, rhs);
 }
 
 /**
@@ -144,7 +142,7 @@ auto operator<=(Lhs &&lhs, Rhs &&rhs) {
 template <typename Lhs, typename Rhs,
           typename = std::enable_if_t<AllETLExpr<Lhs, Rhs> && SameValueType<Lhs, Rhs>>>
 auto operator<(Lhs &&lhs, Rhs &&rhs) {
-  return RelationalOperation(parsing::Token::Type::LESS, lhs, rhs);
+  return ComparisonExpression(parsing::Token::Type::LESS, lhs, rhs);
 }
 
 }  // namespace tpl::sql::codegen::edsl

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "sql/codegen/edsl/traits.h"
-#include "sql/codegen/edsl/unary_op.h"
+#include "sql/codegen/edsl/unary_expression.h"
 #include "sql/codegen/edsl/value.h"
 
 namespace tpl::sql::codegen::edsl {
@@ -44,7 +44,7 @@ class Ptr : public Value<Ptr<T>> {
    * @return
    */
   auto Load() const {
-    return UnaryOperation<PointeeType, Ptr<T>>(parsing::Token::Type::STAR, *this);
+    return UnaryExpression<PointeeType, Ptr<T>>(parsing::Token::Type::STAR, *this);
   }
 
   /**
