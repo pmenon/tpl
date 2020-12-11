@@ -11,3 +11,4 @@
 #include "sql/codegen/edsl/literal.h"
 #include "sql/codegen/edsl/pointer.h"
 #include "sql/codegen/edsl/unary_expression.h"
+#include "sql/codegen/edsl/unary_ops.h"

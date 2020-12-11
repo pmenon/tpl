@@ -32,12 +32,23 @@ class Ptr : public Value<Ptr<T>> {
   using Base::operator=;
 
   /**
-   * Create a new pointer type.
+   * Create a new uninitialized pointer.
    * @param codegen The code generator.
    * @param name The name of the value.
    */
   Ptr(CodeGen *codegen, std::string_view name)
       : Base(codegen, codegen->MakeFreshIdentifier(name)) {}
+
+  /**
+   * Create a new pointer with the given value.
+   * @tparam E The ETL expression type.
+   * @param codegen The code generator.
+   * @param name The name of the value.
+   * @param val The initial value of the pointer.
+   */
+  template <typename E,
+            typename = std::enable_if_t<IsETLExpr<E> && std::is_same_v<ValueType, ValueT<E>>>>
+  Ptr(CodeGen *codegen, std::string_view name, E &&val) : Base(codegen, name, std::move(val)) {}
 
   /**
    * Load the value of the pointer.
@@ -59,6 +70,10 @@ class Ptr : public Value<Ptr<T>> {
   }
 };
 
+/**
+ * Specialize traits for pointers.
+ * @tparam T The type of element being pointed to by the pointer.
+ */
 template <typename T>
 struct Traits<Ptr<T>> {
   /** The EDSL value type of the expression. */
@@ -67,6 +82,8 @@ struct Traits<Ptr<T>> {
   using CppType = T *;
   /** Indicates if T is an ETL type. */
   static constexpr bool kIsETL = true;
+  /** Indicates that pointers are NOT a base value class. */
+  static constexpr bool kIsValue = false;
 };
 
 }  // namespace tpl::sql::codegen::edsl

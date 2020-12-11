@@ -136,6 +136,19 @@ class Value : public ValueBase {
   }
 
   /**
+   * Create a named value with the given name and initial value. If the name conflicts with one
+   * appearing in the same scope, a new one version is created.
+   * @tparam E The ETL expression type.
+   * @param codegen The code generator instance.
+   * @param name The name of the value.
+   * @param val The value to assign.
+   */
+  template <typename E,
+            typename = std::enable_if_t<IsETLExpr<E> && std::is_same_v<ValueType, ValueT<E>>>>
+  Value(CodeGen *codegen, std::string_view name, E &&val)
+      : Value(codegen, codegen->MakeFreshIdentifier(name), std::move(val)) {}
+
+  /**
    * Create a named value with the given name. If the name conflicts with one already appearing in
    * the same scope, a new one version is created.
    * @tparam E The ETL expression type.
