@@ -191,10 +191,10 @@ static void CustomArgs(benchmark::internal::Benchmark *b) {
 
 // ---------------------------------------------------------
 // Tuple Size = 16
-//BENCHMARK_TEMPLATE(BM_Base, 1)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 1, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 1, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 1, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Base, 1)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 1, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 1, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 1, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
 
 // ---------------------------------------------------------
 // Tuple Size = 24
@@ -205,23 +205,23 @@ BENCHMARK_TEMPLATE(BM_Build, 2, true, false)->Apply(CustomArgs)->Unit(benchmark:
 
 // ---------------------------------------------------------
 // Tuple Size = 40
-//BENCHMARK_TEMPLATE(BM_Base, 4)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 4, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 1, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 4, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Base, 4)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 4, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 4, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 4, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
 
 // ---------------------------------------------------------
 // Tuple Size = 72
-//BENCHMARK_TEMPLATE(BM_Base, 8)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 8, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 1, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 8, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Base, 8)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 8, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 8, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 8, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
 
 // ---------------------------------------------------------
 // Tuple Size = 136
-//BENCHMARK_TEMPLATE(BM_Base, 16)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 16, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 1, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-//BENCHMARK_TEMPLATE(BM_Build, 16, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Base, 16)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 16, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 16, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(BM_Build, 16, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
 
 }  // namespace tpl
