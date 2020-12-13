@@ -169,7 +169,7 @@ static void BM_Build(benchmark::State &state) {
     // Build.
     jht->Build();
     // Probe.
-    uint64_t count;
+    uint64_t count = 0;
     for (const auto &probe : probe_tuples) {
       count += (jht->template Lookup<Concise>(probe.Hash()) != nullptr);
     }
