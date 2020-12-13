@@ -1181,6 +1181,11 @@ VM_OP_HOT void OpAvgAggregateFree(tpl::sql::AvgAggregate *agg) { agg->~AvgAggreg
 VM_OP void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table,
                                tpl::sql::MemoryPool *memory, uint32_t tuple_size);
 
+VM_OP void OpJoinHashTableInit2(tpl::sql::JoinHashTable *join_hash_table,
+                                tpl::sql::MemoryPool *memory, uint32_t tuple_size,
+                                tpl::sql::JoinHashTable::AnalysisPass analysis_fn,
+                                tpl::sql::JoinHashTable::CompressPass compress_fn);
+
 VM_OP_HOT void OpJoinHashTableAllocTuple(byte **result, tpl::sql::JoinHashTable *join_hash_table,
                                          hash_t hash) {
   *result = join_hash_table->AllocInputTuple(hash);

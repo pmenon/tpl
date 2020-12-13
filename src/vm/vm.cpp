@@ -1407,6 +1407,21 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     DISPATCH_NEXT();
   }
 
+  OP(JoinHashTableInit2) : {
+    auto *join_hash_table = frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());
+    auto *memory = frame->LocalAt<sql::MemoryPool *>(READ_LOCAL_ID());
+    auto tuple_size = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    auto analysis_func_id = READ_FUNC_ID();
+    auto compress_func_id = READ_FUNC_ID();
+
+    auto analysis_fn = reinterpret_cast<sql::JoinHashTable::AnalysisPass>(
+        module_->GetRawFunctionImpl(analysis_func_id));
+    auto compress_fn = reinterpret_cast<sql::JoinHashTable::CompressPass>(
+        module_->GetRawFunctionImpl(compress_func_id));
+    OpJoinHashTableInit2(join_hash_table, memory, tuple_size, analysis_fn, compress_fn);
+    DISPATCH_NEXT();
+  }
+
   OP(JoinHashTableAllocTuple) : {
     auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
     auto *join_hash_table = frame->LocalAt<sql::JoinHashTable *>(READ_LOCAL_ID());

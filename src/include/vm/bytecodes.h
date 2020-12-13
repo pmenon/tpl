@@ -416,6 +416,8 @@ namespace tpl::vm {
                                                                                                                        \
   /* Hash Joins */                                                                                                     \
   F(JoinHashTableInit, OperandType::Local, OperandType::Local, OperandType::Local)                                     \
+  F(JoinHashTableInit2, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,           \
+      OperandType::FunctionId)                                                                                         \
   F(JoinHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                               \
   F(JoinHashTableBuild, OperandType::Local)                                                                            \
   F(JoinHashTableBuildParallel, OperandType::Local, OperandType::Local, OperandType::Local)                            \

@@ -114,6 +114,14 @@ struct Sema::ArgCheck<Function<Ret(Args...)>> {
     static bool Check(ast::Context *, ast::Type *type) { return type->IsPointerType(); }
   };
 
+  template <typename T, bool dummy>
+  struct TypeCheck<Array<T>, dummy> {
+    static bool Check(ast::Context *ctx, ast::Type *type) {
+      auto array_type = type->template SafeAs<ast::ArrayType>();
+      return array_type != nullptr && TypeCheck<T, dummy>::Check(ctx, array_type->GetElementType());
+    }
+  };
+
   template <bool dummy>
   struct TypeCheck<SqlValue, dummy> {
     static bool Check(ast::Context *, ast::Type *type) { return type->IsSqlValueType(); }
@@ -460,7 +468,14 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpression *call, ast::Builtin bu
 void Sema::CheckBuiltinJoinHashTableCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::JoinHashTableInit:
-      GenericBuiltinCheck<void(sql::JoinHashTable *, sql::MemoryPool *, uint32_t)>(call);
+      if (call->NumArgs() <= 3) {
+        GenericBuiltinCheck<void(sql::JoinHashTable *, sql::MemoryPool *, uint32_t)>(call);
+      } else {
+        using AnalysisFunction = Function<void(uint32_t, Array<AnyPointer>, AnyPointer)>;
+        using CompressFunction = Function<void(uint32_t, Array<AnyPointer>, Array<AnyPointer>)>;
+        GenericBuiltinCheck<void(sql::JoinHashTable *, sql::MemoryPool *, uint32_t,
+                                 AnalysisFunction, CompressFunction)>(call);
+      }
       break;
     case ast::Builtin::JoinHashTableInsert:
       GenericBuiltinCheck<byte *(sql::JoinHashTable *, hash_t)>(call);

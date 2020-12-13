@@ -132,6 +132,10 @@ class BytecodeEmitter {
   // Insert a filter flavor into the filter manager builder.
   void EmitFilterManagerInsertFilter(LocalVar filter_manager, FunctionId func);
 
+  // Special JHT initialization.
+  void EmitJoinHashTableInit(LocalVar jht, LocalVar memory, LocalVar entry_size,
+                             FunctionId analysis_fn, FunctionId compress_fn);
+
   // Lookup a single entry in the aggregation hash table.
   void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash, FunctionId key_eq_fn,
                               LocalVar arg);

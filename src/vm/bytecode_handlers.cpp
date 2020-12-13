@@ -69,6 +69,13 @@ void OpJoinHashTableInit(tpl::sql::JoinHashTable *join_hash_table, tpl::sql::Mem
   new (join_hash_table) tpl::sql::JoinHashTable(memory, tuple_size);
 }
 
+void OpJoinHashTableInit2(tpl::sql::JoinHashTable *join_hash_table, tpl::sql::MemoryPool *memory,
+                          uint32_t tuple_size, tpl::sql::JoinHashTable::AnalysisPass analysis_fn,
+                          tpl::sql::JoinHashTable::CompressPass compress_fn) {
+  new (join_hash_table)
+      tpl::sql::JoinHashTable(memory, tuple_size, false, analysis_fn, compress_fn);
+}
+
 void OpJoinHashTableBuild(tpl::sql::JoinHashTable *join_hash_table) { join_hash_table->Build(); }
 
 void OpJoinHashTableBuildParallel(tpl::sql::JoinHashTable *join_hash_table,

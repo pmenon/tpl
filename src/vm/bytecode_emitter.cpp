@@ -310,6 +310,13 @@ void BytecodeEmitter::EmitFilterManagerInsertFilter(LocalVar filter_manager, Fun
   EmitAll(Bytecode::FilterManagerInsertFilter, filter_manager, func);
 }
 
+void BytecodeEmitter::EmitJoinHashTableInit(LocalVar jht, LocalVar memory, LocalVar entry_size,
+                                            FunctionId analysis_fn, FunctionId compress_fn) {
+  TPL_ASSERT(Bytecodes::NumOperands(Bytecode::JoinHashTableInit2) == 5,
+             "JoinHashTableInit2 expects 5 bytecodes");
+  EmitAll(Bytecode::JoinHashTableInit2, jht, memory, entry_size, analysis_fn, compress_fn);
+}
+
 void BytecodeEmitter::EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash,
                                              FunctionId key_eq_fn, LocalVar arg) {
   TPL_ASSERT(Bytecodes::NumOperands(Bytecode::AggregationHashTableLookup) == 5,
