@@ -13,6 +13,7 @@
 
 namespace tpl {
 
+// All keys and values occupy 64 bits.
 template <uint64_t N>
 struct Tuple {
   uint64_t key;
@@ -22,19 +23,10 @@ struct Tuple {
   hash_t Hash() const { return util::HashUtil::Hash(key); }
 };
 
-struct CompressedTuple {
-  uint64_t k_v1_v2;
-};
-
+// All keys and values occupy 8 bits.
 template <uint64_t N>
-struct WrappedTuple {
-  sql::HashTableEntry entry;
-  Tuple<N> tuple;
-};
-
-struct WrappedCompressedTuple {
-  sql::HashTableEntry entry;
-  CompressedTuple tuple;
+struct CompressedTuple {
+  uint8_t parts[N];
 };
 
 namespace {
@@ -63,29 +55,47 @@ uint32_t bounded_rand(RNG &&rng, uint32_t range) {
 template <uint64_t N>
 void PostMaterializationAnalysis(const uint32_t n, const byte **entries,
                                  sql::JoinHashTable::AnalysisStats *stats) {
-  uint64_t bits_k = 0, bits_v1 = 0, bits_v2 = 0;
+  uint64_t bits_k = 0;
+  std::array<uint64_t, N> bits_v = {0};
   auto rows = reinterpret_cast<const Tuple<N> **>(entries);
   for (uint32_t i = 0; i < n; i++) {
     bits_k |= rows[i]->key;
-    bits_v1 |= rows[i]->vals[0];
-    bits_v2 |= rows[i]->vals[1];
+    // N is templated constexpr, so should be unrolled.
+    for (uint32_t j = 0; j < N; j++) bits_v[j] |= rows[i]->vals[j];
   }
-  stats->SetNumCols(3);
+  stats->SetNumCols(N + 1);
   stats->SetBitsForCol(0, 64 - util::BitUtil::CountLeadingZeros(bits_k));
-  stats->SetBitsForCol(1, 64 - util::BitUtil::CountLeadingZeros(bits_v1));
-  stats->SetBitsForCol(2, 64 - util::BitUtil::CountLeadingZeros(bits_v2));
+  // N is templated constexpr, so should be unrolled.
+  for (uint32_t j = 0; j < N; j++) {
+    stats->SetBitsForCol(j + 1, 64 - util::BitUtil::CountLeadingZeros(bits_v[j]));
+  }
 }
 
 template <uint64_t N>
 void CompressJoinHashTable(const uint32_t n, const byte *in[], byte *out[]) {
   auto rows = reinterpret_cast<const Tuple<N> **>(in);
-  auto compressed = reinterpret_cast<CompressedTuple **>(out);
+  auto compressed = reinterpret_cast<CompressedTuple<N + 1> **>(out);
   for (uint32_t i = 0; i < n; i++) {
-    compressed[i]->k_v1_v2 |= rows[i]->key << 32 | rows[i]->vals[0] << 16 | rows[i]->vals[1];
+    compressed[i]->parts[0] |= static_cast<uint8_t>(rows[i]->key);
+    // N is templated constexpr, so should be unrolled.
+    for (uint32_t j = 0; j < N; j++) {
+      compressed[i]->parts[j + 1] = static_cast<uint8_t>(rows[i]->vals[j]);
+    }
   }
 }
 
 #else
+template <uint64_t N>
+struct WrappedTuple {
+  sql::HashTableEntry entry;
+  Tuple<N> tuple;
+};
+
+struct WrappedCompressedTuple {
+  sql::HashTableEntry entry;
+  CompressedTuple tuple;
+};
+
 void PostMaterializationAnalysis(sql::JoinHashTable::ConstTupleIterator iter,
                                  sql::JoinHashTable::ConstTupleIterator end,
                                  sql::JoinHashTable::AnalysisStats *stats) {
@@ -184,31 +194,31 @@ static void BM_Build(benchmark::State &state) {
 // ---------------------------------------------------------
 
 static void CustomArgs(benchmark::internal::Benchmark *b) {
-  for (int64_t i = 10; i < 21; i++) {
+  for (int64_t i = 20; i < 21; i++) {
     b->Arg(1 << i);
   }
 }
 
 // ---------------------------------------------------------
 // Tuple Size = 16
-BENCHMARK_TEMPLATE(BM_Base, 1)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 1, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 1, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 1, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-
-// ---------------------------------------------------------
-// Tuple Size = 24
-BENCHMARK_TEMPLATE(BM_Base, 2)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 2, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 2, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 2, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-
-// ---------------------------------------------------------
-// Tuple Size = 40
-BENCHMARK_TEMPLATE(BM_Base, 4)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 4, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 4, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(BM_Build, 4, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Base, 1)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 1, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 1, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 1, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+//
+//// ---------------------------------------------------------
+//// Tuple Size = 24
+// BENCHMARK_TEMPLATE(BM_Base, 2)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 2, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 2, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 2, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+//
+//// ---------------------------------------------------------
+//// Tuple Size = 40
+// BENCHMARK_TEMPLATE(BM_Base, 4)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 4, false, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 4, false, true)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE(BM_Build, 4, true, false)->Apply(CustomArgs)->Unit(benchmark::kMillisecond);
 
 // ---------------------------------------------------------
 // Tuple Size = 72
