@@ -60,6 +60,21 @@ enum class ColumnEncoding : uint8_t {
 };
 
 /**
+ * All known operators.
+ */
+enum class KnownOperator : uint16_t {
+  Add,
+  Sub,
+  Mul,
+  Div,
+  Rem,
+  BitAnd,
+  BitOr,
+  BitShl,
+  BitShr,
+};
+
+/**
  * All possible date/timestamp formatting types.
  */
 enum class DateTimeFormat : uint8_t { Postgres, SQL, ISO };
