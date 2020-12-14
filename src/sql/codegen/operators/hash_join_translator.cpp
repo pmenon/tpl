@@ -322,12 +322,16 @@ void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
   // The number of columns in the schema.
   const uint32_t num_columns = build_schema->NumColumns();
 
-  // Declare the attributes we'll use to accumulate the bits.
-  std::vector<ast::Identifier> attributes(build_schema->NumColumns());
-  for (uint32_t attr_idx = 0; attr_idx < num_columns; attr_idx++) {
-    attributes[attr_idx] = codegen_->MakeFreshIdentifier("bits_m");
-    auto type = codegen_->PrimitiveTplType(build_schema->GetColumn(attr_idx).GetType());
-    function->Append(codegen_->DeclareVar(attributes[attr_idx], type, codegen_->Const64(0)));
+  // Only these attributes should be checked.
+  std::vector<std::pair<uint32_t, ast::Identifier>> attributes;
+
+  // Find the numeric attributes and set them up for analysis.
+  for (uint32_t idx = 0; idx < num_columns; idx++) {
+    if (const auto type_id = build_schema->GetColumn(idx).GetType(); IsTypeIntegral(type_id)) {
+      attributes.emplace_back(idx, codegen_->MakeFreshIdentifier("bits_m"));
+      ast::Expression *type = codegen_->PrimitiveTplType(type_id);
+      function->Append(codegen_->DeclareVar(attributes[idx].second, type, codegen_->Const64(0)));
+    }
   }
 
   // for (var i = 0; i < n; i++) { ... }
@@ -343,13 +347,11 @@ void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
     ast::Expression *rows = function->GetParameterByPosition(1);
     function->Append(codegen_->DeclareVarWithInit(row_var, codegen_->ArrayAccess(rows, i())));
 
-    // Read all columns.
-    for (uint32_t idx = 0; idx < num_columns; idx++) {
-      if (IsTypeIntegral(build_schema->GetColumn(idx).GetType())) {
-        auto raw_val = storage_.ReadPrimitive(codegen_->MakeExpr(row_var), idx);
-        auto mixed = codegen_->BitOr(codegen_->MakeExpr(attributes[idx]), raw_val);
-        function->Append(codegen_->Assign(codegen_->MakeExpr(attributes[idx]), mixed));
-      }
+    // Read integral columns for analysis.
+    for (const auto &[idx, name] : attributes) {
+      auto raw_val = storage_.ReadPrimitive(codegen_->MakeExpr(row_var), idx);
+      auto mixed = codegen_->BitOr(codegen_->MakeExpr(attributes[idx].second), raw_val);
+      function->Append(codegen_->Assign(codegen_->MakeExpr(attributes[idx].second), mixed));
     }
   }
   loop.EndLoop();
@@ -360,9 +362,9 @@ void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
   // @statsSetColumnBits()
   for (uint32_t idx = 0; idx < num_columns; idx++) {
     if (IsTypeIntegral(build_schema->GetColumn(idx).GetType())) {
-      auto casted = codegen_->CallBuiltin(
-          ast::Builtin::IntCast,
-          {codegen_->BuiltinType(ast::BuiltinType::UInt32), codegen_->MakeExpr(attributes[idx])});
+      auto casted = codegen_->CallBuiltin(ast::Builtin::IntCast,
+                                          {codegen_->BuiltinType(ast::BuiltinType::UInt32),
+                                           codegen_->MakeExpr(attributes[idx].second)});
       auto bits = codegen_->CallBuiltin(ast::Builtin::Ctlz, {casted});
       auto room = codegen_->BinaryOp(parsing::Token::Type::MINUS, codegen_->Const32(64), bits);
       auto stats = function->GetParameterByPosition(2);

@@ -56,15 +56,16 @@ byte *JoinHashTable::AllocInputTuple(const hash_t hash) {
 }
 
 bool JoinHashTable::ShouldCompress(const JoinHashTable::AnalysisStats &stats) const {
-  std::size_t compressed_tuple_size =
+  const std::size_t compressed_tuple_size =
       HashTableEntry::ComputeEntrySize(util::MathUtil::DivRoundUp(stats.TotalNumBits(), 8));
-  std::size_t raw_tuple_size = entries_.element_size();
-  float compression_factor = static_cast<float>(raw_tuple_size) / compressed_tuple_size;
+  const std::size_t raw_tuple_size = entries_.element_size();
+  const float compression_factor = static_cast<float>(raw_tuple_size) / compressed_tuple_size;
   TPL_ASSERT(compression_factor >= 1.0f, "Compression rate cannot be less than 1.0");
-  LOG_DEBUG("Expected compression factor: {:.2f}", compression_factor);
-  float min_compression_rate =
+  const float min_compression_factor =
       Settings::Instance()->GetDouble(Settings::Name::MinCompressionThresholdForTempStructures);
-  return compression_factor >= min_compression_rate;
+  LOG_DEBUG("JHT compression: orig. size={} bytes, compressed size={} bytes, factor={:.2f}",
+            raw_tuple_size, compressed_tuple_size, compression_factor);
+  return compression_factor >= min_compression_factor;
 }
 
 JoinHashTable::AnalysisStats JoinHashTable::AnalyzeBufferedTuples() const {
