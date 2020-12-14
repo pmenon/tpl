@@ -19,10 +19,8 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
       storage_(codegen_, "BuildRow"),
       build_row_var_(codegen_->MakeFreshIdentifier("row")),
       build_mark_index_(plan.GetChild(0)->GetOutputSchema()->NumColumns()),
-      analysis_fn_name_(
-          codegen_->MakeIdentifier(pipeline->CreatePipelineFunctionName("AnalyzeHT"))),
-      compress_fn_name_(
-          codegen_->MakeIdentifier(pipeline->CreatePipelineFunctionName("CompressHT"))),
+      analysis_fn_name_(codegen_->MakeFreshIdentifier("AnalyzeHT")),
+      compress_fn_name_(codegen_->MakeFreshIdentifier("CompressHT")),
       left_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
   TPL_ASSERT(!plan.GetRightHashKeys().empty(), "Hash-join must have join keys from right input");
@@ -330,13 +328,13 @@ void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
     if (const auto type_id = build_schema->GetColumn(idx).GetType(); IsTypeIntegral(type_id)) {
       attributes.emplace_back(idx, codegen_->MakeFreshIdentifier("bits_m"));
       ast::Expression *type = codegen_->PrimitiveTplType(type_id);
-      function->Append(codegen_->DeclareVar(attributes[idx].second, type, codegen_->Const64(0)));
+      function->Append(codegen_->DeclareVar(attributes.back().second, type, codegen_->Const64(0)));
     }
   }
 
   // for (var i = 0; i < n; i++) { ... }
   ast::Identifier i_var = codegen_->MakeIdentifier("i"), row_var = codegen_->MakeIdentifier("row");
-  const auto i = [&, name = codegen_->MakeIdentifier("i")]() { return codegen_->MakeExpr(name); };
+  const auto i = [&]() { return codegen_->MakeExpr(i_var); };
   Loop loop(function,
             codegen_->MakeStatement(
                 codegen_->DeclareVar(i_var, codegen_->UInt32Type(), codegen_->Const32(0))),
@@ -350,8 +348,8 @@ void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
     // Read integral columns for analysis.
     for (const auto &[idx, name] : attributes) {
       auto raw_val = storage_.ReadPrimitive(codegen_->MakeExpr(row_var), idx);
-      auto mixed = codegen_->BitOr(codegen_->MakeExpr(attributes[idx].second), raw_val);
-      function->Append(codegen_->Assign(codegen_->MakeExpr(attributes[idx].second), mixed));
+      auto mixed = codegen_->BitOr(codegen_->MakeExpr(name), raw_val);
+      function->Append(codegen_->Assign(codegen_->MakeExpr(name), mixed));
     }
   }
   loop.EndLoop();
@@ -360,15 +358,17 @@ void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
   function->Append(codegen_->StatsSetColumnCount(function->GetParameterByPosition(2), num_columns));
 
   // @statsSetColumnBits()
+  auto iter = attributes.begin();
   for (uint32_t idx = 0; idx < num_columns; idx++) {
     if (IsTypeIntegral(build_schema->GetColumn(idx).GetType())) {
-      auto casted = codegen_->CallBuiltin(ast::Builtin::IntCast,
-                                          {codegen_->BuiltinType(ast::BuiltinType::UInt32),
-                                           codegen_->MakeExpr(attributes[idx].second)});
+      auto casted = codegen_->CallBuiltin(
+          ast::Builtin::IntCast,
+          {codegen_->BuiltinType(ast::BuiltinType::UInt32), codegen_->MakeExpr(iter->second)});
       auto bits = codegen_->CallBuiltin(ast::Builtin::Ctlz, {casted});
       auto room = codegen_->BinaryOp(parsing::Token::Type::MINUS, codegen_->Const32(64), bits);
       auto stats = function->GetParameterByPosition(2);
       function->Append(codegen_->StatsSetColumnBits(stats, idx, room));
+      ++iter;
     } else {
       auto stats = function->GetParameterByPosition(2);
       function->Append(codegen_->StatsSetColumnBits(stats, idx, codegen_->Const32(64)));
