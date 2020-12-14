@@ -878,6 +878,21 @@ class CodeGen {
                                                    ast::Identifier build_row_type_name);
 
   /**
+   * Call @joinHTInit(). Initialize the provided join hash table with support for compression.
+   * @param join_hash_table The join hash table.
+   * @param mem_pool The memory pool.
+   * @param build_row_type_name The name of the materialized build-side row in the hash table.
+   * @param analysis_fn The name of the generated analysis function.
+   * @param compress_fn The name of the generated compression function.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expression *JoinHashTableInit(ast::Expression *join_hash_table,
+                                                   ast::Expression *mem_pool,
+                                                   ast::Identifier build_row_type_name,
+                                                   ast::Identifier analysis_fn,
+                                                   ast::Identifier compress_fn);
+
+  /**
    * Call @joinHTInsert(). Allocates a new tuple in the join hash table with the given hash value.
    * The returned value is a pointer to an element with the given type.
    * @param join_hash_table The join hash table.

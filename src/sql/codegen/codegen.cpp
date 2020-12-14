@@ -791,6 +791,18 @@ ast::Expression *CodeGen::JoinHashTableInit(ast::Expression *join_hash_table,
   return call;
 }
 
+ast::Expression *CodeGen::JoinHashTableInit(ast::Expression *join_hash_table,
+                                            ast::Expression *mem_pool,
+                                            ast::Identifier build_row_type_name,
+                                            ast::Identifier analysis_fn,
+                                            ast::Identifier compress_fn) {
+  ast::Expression *call = CallBuiltin(ast::Builtin::JoinHashTableInit,
+                                      {join_hash_table, mem_pool, SizeOf(build_row_type_name),
+                                       MakeExpr(analysis_fn), MakeExpr(compress_fn)});
+  call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
+  return call;
+}
+
 ast::Expression *CodeGen::JoinHashTableInsert(ast::Expression *join_hash_table,
                                               ast::Expression *hash_val,
                                               ast::Identifier tuple_type_name) {
