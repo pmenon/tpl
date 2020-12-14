@@ -94,6 +94,10 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
     return {left->GetType(), left, right};
   }
 
+  if (CheckAssignmentConstraints(right->GetType(), left)) {
+    return {right->GetType(), left, right};
+  }
+
   // Error.
   error_reporter_->Report(pos, ErrorMessages::kIllegalTypesForBinary, op, left->GetType(),
                           right->GetType());

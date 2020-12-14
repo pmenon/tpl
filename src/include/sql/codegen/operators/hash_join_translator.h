@@ -157,6 +157,9 @@ class HashJoinTranslator : public OperatorTranslator {
   // For mark-based joins. The index in the row where the mark is stored.
   uint32_t build_mark_index_;
 
+  // The name of the analysis and compression functions.
+  ast::Identifier analysis_fn_name_, compress_fn_name_;
+
   // The left build-side pipeline.
   Pipeline left_pipeline_;
 
