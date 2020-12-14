@@ -149,6 +149,10 @@ namespace tpl::ast {
   F(JoinHashTableLookup, joinHTLookup)                          \
   F(JoinHashTableFree, joinHTFree)                              \
                                                                 \
+  /* Bit-packing Compression. */                                \
+  F(AnalysisStatsSetColumnCount, statsSetColumnCount)           \
+  F(AnalysisStatsSetColumnBits, statsSetColumnBits)             \
+                                                                \
   /* Hash Table Entry */                                        \
   F(HashTableEntryGetHash, htEntryGetHash)                      \
   F(HashTableEntryGetRow, htEntryGetRow)                        \

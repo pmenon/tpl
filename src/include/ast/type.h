@@ -54,6 +54,7 @@ class Context;
                                                                                  \
   /* Non-primitive builtins */                                                   \
   NON_PRIM(AggregationHashTable, tpl::sql::AggregationHashTable)                 \
+  NON_PRIM(AnalysisStats, tpl::sql::JoinHashTable::AnalysisStats)                \
   NON_PRIM(AHTIterator, tpl::sql::AHTIterator)                                   \
   NON_PRIM(AHTVectorIterator, tpl::sql::AHTVectorIterator)                       \
   NON_PRIM(AHTOverflowPartitionIterator, tpl::sql::AHTOverflowPartitionIterator) \

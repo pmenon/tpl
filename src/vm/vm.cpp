@@ -1480,6 +1480,25 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
   // -------------------------------------------------------
+  // Bit packing
+  // -------------------------------------------------------
+
+  OP(AnalysisStatsSetColumnCount) : {
+    auto stats = frame->LocalAt<sql::JoinHashTable::AnalysisStats *>(READ_LOCAL_ID());
+    auto column_count = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    OpAnalysisStatsSetColumnCount(stats, column_count);
+    DISPATCH_NEXT();
+  }
+
+  OP(AnalysisStatsSetColumnBits) : {
+    auto stats = frame->LocalAt<sql::JoinHashTable::AnalysisStats *>(READ_LOCAL_ID());
+    auto column = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    auto bits = frame->LocalAt<uint32_t>(READ_LOCAL_ID());
+    OpAnalysisStatsSetColumnBits(stats, column, bits);
+    DISPATCH_NEXT();
+  }
+
+  // -------------------------------------------------------
   // Sorting
   // -------------------------------------------------------
 

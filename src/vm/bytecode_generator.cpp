@@ -1447,6 +1447,27 @@ void BytecodeGenerator::VisitBuiltinHashTableEntryCall(ast::CallExpression *call
   }
 }
 
+void BytecodeGenerator::VisitBuiltinAnalysisStatsCall(ast::CallExpression *call,
+                                                      ast::Builtin builtin) {
+  LocalVar stats = VisitExpressionForRValue(call->GetArguments()[0]);
+  switch (builtin) {
+    case ast::Builtin::AnalysisStatsSetColumnCount: {
+      LocalVar column_count = VisitExpressionForRValue(call->GetArguments()[1]);
+      GetEmitter()->Emit(Bytecode::AnalysisStatsSetColumnCount, stats, column_count);
+      break;
+    }
+    case ast::Builtin::AnalysisStatsSetColumnBits: {
+      LocalVar column = VisitExpressionForRValue(call->GetArguments()[1]);
+      LocalVar bits = VisitExpressionForRValue(call->GetArguments()[2]);
+      GetEmitter()->Emit(Bytecode::AnalysisStatsSetColumnBits, stats, column, bits);
+      break;
+    }
+    default: {
+      UNREACHABLE("Impossible @stats() call.");
+    }
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinSorterCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::SorterInit: {
@@ -2003,6 +2024,11 @@ void BytecodeGenerator::VisitBuiltinCallExpression(ast::CallExpression *call) {
     case ast::Builtin::HashTableEntryGetRow:
     case ast::Builtin::HashTableEntryGetNext: {
       VisitBuiltinHashTableEntryCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AnalysisStatsSetColumnCount:
+    case ast::Builtin::AnalysisStatsSetColumnBits: {
+      VisitBuiltinAnalysisStatsCall(call, builtin);
       break;
     }
     case ast::Builtin::SorterInit:

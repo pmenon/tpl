@@ -513,6 +513,19 @@ void Sema::CheckBuiltinHashTableEntryCall(ast::CallExpression *call, ast::Builti
   }
 }
 
+void Sema::CheckBuiltinAnalysisStatsCall(ast::CallExpression *call, ast::Builtin builtin) {
+  switch (builtin) {
+    case ast::Builtin::AnalysisStatsSetColumnCount:
+      GenericBuiltinCheck<void(sql::JoinHashTable::AnalysisStats *, uint32_t)>(call);
+      break;
+    case ast::Builtin::AnalysisStatsSetColumnBits:
+      GenericBuiltinCheck<void(sql::JoinHashTable::AnalysisStats *, uint32_t, uint32_t)>(call);
+      break;
+    default:
+      UNREACHABLE("Impossible AnalyisStats call.");
+  }
+}
+
 void Sema::CheckBuiltinExecutionContextCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::ExecutionContextGetMemoryPool:
@@ -1263,6 +1276,11 @@ void Sema::CheckBuiltinCall(ast::CallExpression *call) {
     case ast::Builtin::HashTableEntryGetRow:
     case ast::Builtin::HashTableEntryGetNext: {
       CheckBuiltinHashTableEntryCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::AnalysisStatsSetColumnCount:
+    case ast::Builtin::AnalysisStatsSetColumnBits: {
+      CheckBuiltinAnalysisStatsCall(call, builtin);
       break;
     }
     case ast::Builtin::SorterInit:

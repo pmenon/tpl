@@ -859,6 +859,15 @@ ast::Expression *CodeGen::HTEntryGetNext(ast::Expression *entry) {
   return call;
 }
 
+ast::Expression *CodeGen::StatsSetColumnCount(ast::Expression *stats, uint32_t column_count) {
+  return CallBuiltin(ast::Builtin::AnalysisStatsSetColumnCount, {stats, Const32(column_count)});
+}
+
+ast::Expression *CodeGen::StatsSetColumnBits(ast::Expression *stats, uint32_t column,
+                                             ast::Expression *bits) {
+  return CallBuiltin(ast::Builtin::AnalysisStatsSetColumnBits, {stats, Const32(column), bits});
+}
+
 // ---------------------------------------------------------
 // Hash aggregations
 // ---------------------------------------------------------

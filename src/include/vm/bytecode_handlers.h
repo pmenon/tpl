@@ -1219,6 +1219,16 @@ VM_OP_HOT void OpHashTableEntryGetNext(const tpl::sql::HashTableEntry **next,
 }
 
 // ---------------------------------------------------------
+// Bit packing
+// ---------------------------------------------------------
+
+VM_OP void OpAnalysisStatsSetColumnCount(tpl::sql::JoinHashTable::AnalysisStats *stats,
+                                         uint32_t column_count);
+
+VM_OP void OpAnalysisStatsSetColumnBits(tpl::sql::JoinHashTable::AnalysisStats *stats,
+                                        uint32_t column, uint32_t bits);
+
+// ---------------------------------------------------------
 // Sorting
 // ---------------------------------------------------------
 

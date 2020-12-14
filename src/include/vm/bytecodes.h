@@ -443,6 +443,10 @@ namespace tpl::vm {
   F(SorterIteratorSkipRows, OperandType::Local, OperandType::Local)                                                    \
   F(SorterIteratorFree, OperandType::Local)                                                                            \
                                                                                                                        \
+  /* Bitpacking Compression. */                                                                                        \
+  F(AnalysisStatsSetColumnCount, OperandType::Local, OperandType::Local)                                               \
+  F(AnalysisStatsSetColumnBits, OperandType::Local, OperandType::Local, OperandType::Local)                            \
+                                                                                                                       \
   /* Output */                                                                                                         \
   F(ResultBufferAllocOutputRow, OperandType::Local, OperandType::Local)                                                \
   F(ResultBufferFinalize, OperandType::Local)                                                                          \

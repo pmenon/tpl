@@ -89,6 +89,20 @@ void OpJoinHashTableFree(tpl::sql::JoinHashTable *join_hash_table) {
 }
 
 // ---------------------------------------------------------
+// Bit packing.
+// ---------------------------------------------------------
+
+void OpAnalysisStatsSetColumnCount(tpl::sql::JoinHashTable::AnalysisStats *stats,
+                                   uint32_t column_count) {
+  stats->SetNumCols(column_count);
+}
+
+void OpAnalysisStatsSetColumnBits(tpl::sql::JoinHashTable::AnalysisStats *stats, uint32_t column,
+                                  uint32_t bits) {
+  stats->SetBitsForCol(column, bits);
+}
+
+// ---------------------------------------------------------
 // Aggregation Hash Table
 // ---------------------------------------------------------
 

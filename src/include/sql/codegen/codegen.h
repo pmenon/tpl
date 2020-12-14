@@ -966,6 +966,30 @@ class CodeGen {
 
   // -------------------------------------------------------
   //
+  // Bit packing
+  //
+  // -------------------------------------------------------
+
+  /**
+   * Call @statsSetColumnCount(). Set the column count for the given analysis stats object.
+   * @param stats The stats object to update.
+   * @param column_count The number of columns to set.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expression *StatsSetColumnCount(ast::Expression *stats, uint32_t column_count);
+
+  /**
+   * Call @statsSetColumnBits(). Sets the number of free bits for the given column.
+   * @param stats The stats object to update.
+   * @param column The index of the column.
+   * @param bits The number of free bits.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expression *StatsSetColumnBits(ast::Expression *stats, uint32_t column,
+                                                    ast::Expression *bits);
+
+  // -------------------------------------------------------
+  //
   // Hash aggregation
   //
   // -------------------------------------------------------
