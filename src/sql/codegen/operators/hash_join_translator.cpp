@@ -358,20 +358,24 @@ void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
   function->Append(codegen_->StatsSetColumnCount(function->GetParameterByPosition(2), num_columns));
 
   // @statsSetColumnBits()
-  auto iter = attributes.begin();
+  auto attr_iter = attributes.begin();
   for (uint32_t idx = 0; idx < num_columns; idx++) {
-    if (IsTypeIntegral(build_schema->GetColumn(idx).GetType())) {
+    // The stats object.
+    auto stats = function->GetParameterByPosition(2);
+    // Compute the number of bits required to represent the type.
+    // The actual size must be less than or equal to this value.
+    const auto type_id = build_schema->GetColumn(idx).GetType();
+    const auto type_bits = codegen_->Const32(GetTypeIdSize(type_id) * kBitsPerByte);
+    if (attr_iter != attributes.end() && idx == attr_iter->first) {
       auto casted = codegen_->CallBuiltin(
           ast::Builtin::IntCast,
-          {codegen_->BuiltinType(ast::BuiltinType::UInt32), codegen_->MakeExpr(iter->second)});
+          {codegen_->BuiltinType(ast::BuiltinType::UInt32), codegen_->MakeExpr(attr_iter->second)});
       auto bits = codegen_->CallBuiltin(ast::Builtin::Ctlz, {casted});
-      auto room = codegen_->BinaryOp(parsing::Token::Type::MINUS, codegen_->Const32(64), bits);
-      auto stats = function->GetParameterByPosition(2);
+      auto room = codegen_->BinaryOp(parsing::Token::Type::MINUS, type_bits, bits);
       function->Append(codegen_->StatsSetColumnBits(stats, idx, room));
-      ++iter;
+      ++attr_iter;
     } else {
-      auto stats = function->GetParameterByPosition(2);
-      function->Append(codegen_->StatsSetColumnBits(stats, idx, codegen_->Const32(64)));
+      function->Append(codegen_->StatsSetColumnBits(stats, idx, type_bits));
     }
   }
 }
