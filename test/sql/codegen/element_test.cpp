@@ -20,6 +20,7 @@ class ElementTest : public CodegenBasedTest {
   ast::Context ctx_;
 };
 
+#if 0
 TEST_F(ElementTest, SimpleCheck) {
   CompilationUnit cu(GetContext(), "test");
   CodeGen codegen(&cu);
@@ -49,5 +50,6 @@ TEST_F(ElementTest, SimpleCheck) {
 
   cu.Compile();
 }
+#endif
 
 }  // namespace tpl::sql::codegen
