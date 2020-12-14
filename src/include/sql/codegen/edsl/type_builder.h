@@ -35,13 +35,18 @@ struct TypeBuilder<volatile T> : public TypeBuilder<T> {};
 template <typename T>
 struct TypeBuilder<const volatile T> : public TypeBuilder<T> {};
 
-#define GEN_TYPE_BUILDER(Type, ...)                               \
-  template <>                                                     \
-  struct TypeBuilder<Type> {                                      \
-    /** @return The AST representation of this primitive type. */ \
-    static ast::Expression *MakeTypeRepr(CodeGen *codegen) {      \
-      return codegen->BuiltinType(ast::BuiltinType::Kind::Type);  \
-    }                                                             \
+#define GEN_TYPE_BUILDER(Type, ...)                              \
+  /**                                                            \
+   * A type builder for all primitive/builtin types.             \
+   */                                                            \
+  template <>                                                    \
+  struct TypeBuilder<Type> {                                     \
+    /**                                                          \
+     * @return The AST representation of this primitive type.    \
+     */                                                          \
+    static ast::Expression *MakeTypeRepr(CodeGen *codegen) {     \
+      return codegen->BuiltinType(ast::BuiltinType::Kind::Type); \
+    }                                                            \
   };
 
 BUILTIN_TYPE_LIST(GEN_TYPE_BUILDER, GEN_TYPE_BUILDER, GEN_TYPE_BUILDER)
@@ -54,9 +59,9 @@ BUILTIN_TYPE_LIST(GEN_TYPE_BUILDER, GEN_TYPE_BUILDER, GEN_TYPE_BUILDER)
  */
 template <typename T>
 struct TypeBuilder<Ptr<T>> {
-  /** Pointers cannot participate in arithmetic operations. */
-  static constexpr bool kIsArithmetic = false;
-  /** @return The AST type representation of this pointer type. */
+  /**
+   * @return The AST type representation of this pointer type.
+   */
   static ast::Expression *MakeTypeRepr(CodeGen *codegen) {
     return codegen->PointerType(TypeBuilder<T>::MakeTypeRepr(codegen));
   }
@@ -67,9 +72,9 @@ struct TypeBuilder<Ptr<T>> {
  */
 template <std::size_t N, typename T>
 struct TypeBuilder<Array<N, T>> {
-  /** Arrays cannot participate in arithmetic operations. */
-  static constexpr bool kIsArithmetic = false;
-  /** @return The AST type representation of this unbounded array. */
+  /**
+   * @return The AST type representation of this unbounded array.
+   */
   static ast::Expression *MakeTypeRepr(CodeGen *codegen) {
     return codegen->ArrayType(N, TypeBuilder<T>::MakeTypeRepr(codegen));
   }
