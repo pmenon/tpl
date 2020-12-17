@@ -70,7 +70,7 @@ template <typename T, std::size_t N>
 class TypeBuilder<T[N]> {
  public:
   static ArrayType *Get(Context *context) {
-    return ArrayType::Get(N, TypeBuilder<T>::get(context));
+    return ArrayType::Get(N, TypeBuilder<T>::Get(context));
   }
 };
 

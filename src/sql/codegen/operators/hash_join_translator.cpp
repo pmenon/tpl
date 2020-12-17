@@ -5,7 +5,6 @@
 #include "ast/type.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
-#include "sql/codegen/edsl/type_builder.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
