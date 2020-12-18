@@ -1,6 +1,10 @@
 #include "ast/context.h"
 #include "sema/error_reporter.h"
-#include "sql/codegen/edsl/elements.h"
+#include "sql/codegen/edsl/arithmetic_ops.h"
+#include "sql/codegen/edsl/comparison_ops.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
+#include "sql/codegen/function_builder.h"
 #include "sql/codegen/loop.h"
 #include "vm/module.h"
 
@@ -20,7 +24,6 @@ class ElementTest : public CodegenBasedTest {
   ast::Context ctx_;
 };
 
-#if 0
 TEST_F(ElementTest, SimpleCheck) {
   CompilationUnit cu(GetContext(), "test");
   CodeGen codegen(&cu);
@@ -28,6 +31,29 @@ TEST_F(ElementTest, SimpleCheck) {
   FunctionBuilder func(&codegen, codegen.MakeIdentifier("test"), codegen.MakeEmptyFieldList(),
                        codegen.Nil());
   {
+    edsl::Variable<int *> x(&codegen, "x");
+    edsl::Variable<int> y(&codegen, "y"), yyy(&codegen, "yyy");
+    edsl::Variable<int **> zz(&codegen, "zz");
+    edsl::Variable<int[]> a(&codegen, "a");
+    edsl::Variable<bool> b(&codegen, "b");
+    edsl::Variable<uint64_t> hash(&codegen, "hash");
+    edsl::Variable<sql::HashTableEntry *> entry(&codegen, "entry");
+    edsl::Variable<sql::JoinHashTable *[2]> yy(&codegen, "yy");
+
+    edsl::Declare(x);
+    edsl::Declare(y);
+    edsl::Declare(zz);
+    edsl::Declare(yy);
+    edsl::Declare(yyy);
+    edsl::Declare(hash);
+    edsl::Declare(a);
+    edsl::Declare(b, y == yyy);
+    edsl::Assign(*zz, x);
+
+    //    edsl::Declare(entry, yy[0]->Allocate(hash));
+    edsl::Assign(y, y + y - y * y / y % y);
+    edsl::Assign(a[0], y);
+#if 0
     edsl::UInt8 i(&codegen, "i", 2);
     edsl::UInt8 j(&codegen, "j", i + i);
     edsl::UInt8 k = j;
@@ -45,11 +71,11 @@ TEST_F(ElementTest, SimpleCheck) {
       j *= (i * 4);
       j |= (i * 8);
     }
+#endif
   }
   func.Finish();
 
   cu.Compile();
 }
-#endif
 
 }  // namespace tpl::sql::codegen

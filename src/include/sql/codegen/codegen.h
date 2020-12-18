@@ -1479,7 +1479,36 @@ class CodeGen {
    */
   void UnIndent() { position_.column -= 4; }
 
+  ast::Context *Context() const { return container_->Context(); }
+
+  /// ----------------------------------------------------------------------------------------------
+  ///
+  /// New stuff.
+  ///
+  /// ----------------------------------------------------------------------------------------------
+
+  [[nodiscard]] ast::Expression *Deref(ast::Expression *ptr) const;
+  [[nodiscard]] ast::Expression *MakeExpr(ast::Identifier name, ast::Type *type);
+  [[nodiscard]] ast::VariableDeclaration *DeclareVar(ast::Identifier name, ast::Type *type);
+  [[nodiscard]] ast::Expression *Add(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *Sub(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *Mul(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *Div(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *Mod(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *CompareEq(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *CompareNe(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *CompareLt(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *CompareLe(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *CompareGt(ast::Expression *lhs, ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *CompareGe(ast::Expression *lhs, ast::Expression *rhs);
+
  private:
+  // Build a binary math operation.
+  [[nodiscard]] ast::Expression *BinaryMathOp(parsing::Token::Type op, ast::Expression *lhs,
+                                              ast::Expression *rhs);
+  [[nodiscard]] ast::Expression *ComparisonOp(parsing::Token::Type op, ast::Expression *lhs,
+                                              ast::Expression *rhs);
+
   // Enter a new lexical scope.
   void EnterScope();
 
@@ -1487,7 +1516,6 @@ class CodeGen {
   void ExitScope();
 
   // Return the context.
-  ast::Context *Context() const { return container_->Context(); }
 
   // Return the AST node factory.
   ast::AstNodeFactory *NodeFactory() const;

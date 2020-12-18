@@ -6,6 +6,7 @@
 #include "ast/builtins.h"
 #include "ast/context.h"
 #include "ast/type.h"
+#include "ast/type_visitor.h"
 #include "common/exception.h"
 
 namespace tpl::sql::codegen {
@@ -124,10 +125,7 @@ ast::StructDeclaration *CodeGen::DeclareStruct(
 }
 
 ast::Statement *CodeGen::Assign(ast::Expression *dest, ast::Expression *value) {
-  // TODO(pmenon): Check types?
-  // Set the type of the destination
-  dest->SetType(value->GetType());
-  // Done.
+  TPL_ASSERT(dest->GetType() == value->GetType(), "Mismatched types!");
   return NodeFactory()->NewAssignmentStatement(position_, dest, value);
 }
 
@@ -141,7 +139,9 @@ ast::Expression *CodeGen::ArrayType(uint64_t num_elems, ast::BuiltinType::Kind k
 }
 
 ast::Expression *CodeGen::ArrayAccess(ast::Expression *arr, ast::Expression *idx) {
-  return NodeFactory()->NewIndexExpression(position_, arr, idx);
+  ast::Expression *result = NodeFactory()->NewIndexExpression(position_, arr, idx);
+  result->SetType(arr->GetType()->As<ast::ArrayType>()->GetElementType());
+  return result;
 }
 
 ast::Expression *CodeGen::ArrayAccess(ast::Identifier arr, uint64_t idx) {
@@ -1241,6 +1241,160 @@ void CodeGen::ExitScope() {
   } else {
     delete scope;
   }
+}
+
+ast::Expression *CodeGen::Deref(ast::Expression *ptr) const {
+  ast::Expression *result = UnaryOp(parsing::Token::Type::STAR, ptr);
+  result->SetType(ptr->GetType()->GetPointeeType());
+  return result;
+}
+
+ast::Expression *CodeGen::MakeExpr(ast::Identifier name, ast::Type *type) {
+  ast::Expression *result = MakeExpr(name);
+  result->SetType(type);
+  return result;
+}
+
+namespace {
+
+class TypeReprBuilder : public ast::TypeVisitor<TypeReprBuilder, ast::Expression *> {
+ public:
+  explicit TypeReprBuilder(SourcePosition pos, ast::Context *context) : context_(context) {}
+
+  ast::Expression *GetRepresentation(const ast::Type *type) { return Visit(type); }
+
+#define DECLARE_VISIT_TYPE(Type) ast::Expression *Visit##Type(const ast::Type *type);
+  TYPE_LIST(DECLARE_VISIT_TYPE)
+#undef DECLARE_VISIT_TYPE
+
+ private:
+  ast::AstNodeFactory *GetFactory() { return context_->GetNodeFactory(); }
+
+ private:
+  SourcePosition pos_;
+  ast::Context *context_;
+};
+
+ast::Expression *TypeReprBuilder::VisitPointerType(const ast::PointerType *type) {
+  return GetFactory()->NewPointerType(pos_, GetRepresentation(type->GetBase()));
+}
+
+ast::Expression *TypeReprBuilder::VisitBuiltinType(const ast::BuiltinType *type) {
+  return GetFactory()->NewIdentifierExpression(pos_, context_->GetIdentifier(type->GetTplName()));
+}
+
+ast::Expression *TypeReprBuilder::VisitArrayType(const ast::ArrayType *type) {
+  ast::Expression *length = nullptr, *element_type = GetRepresentation(type->GetElementType());
+  if (type->HasKnownLength()) {
+    length = GetFactory()->NewIntLiteral(pos_, type->GetLength());
+  }
+  return GetFactory()->NewArrayType(pos_, length, element_type);
+}
+
+ast::Expression *TypeReprBuilder::VisitMapType(const ast::MapType *type) {
+  ast::Expression *key_type = GetRepresentation(type->GetKeyType());
+  ast::Expression *val_type = GetRepresentation(type->GetValueType());
+  return GetFactory()->NewMapType(pos_, key_type, val_type);
+}
+ast::Expression *TypeReprBuilder::VisitStructType(const ast::StructType *type) {
+  util::RegionVector<ast::FieldDeclaration *> fields(context_->GetRegion());
+  fields.reserve(type->GetFields().size());
+  for (const auto &field : type->GetFields()) {
+    fields.emplace_back(
+        GetFactory()->NewFieldDeclaration(pos_, field.name, GetRepresentation(field.type)));
+  }
+  return GetFactory()->NewStructType(pos_, std::move(fields));
+}
+
+ast::Expression *TypeReprBuilder::VisitStringType(const ast::StringType *type) {
+  // TODO(pmenon): Fill me in.
+  return TypeVisitor::VisitStringType(type);
+}
+
+ast::Expression *TypeReprBuilder::VisitFunctionType(const ast::FunctionType *type) {
+  // The parameters.
+  util::RegionVector<ast::FieldDeclaration *> params(context_->GetRegion());
+  params.reserve(type->GetNumParams());
+  for (const auto &field : type->GetParams()) {
+    params.emplace_back(
+        GetFactory()->NewFieldDeclaration(pos_, field.name, GetRepresentation(field.type)));
+  }
+  // The return type.
+  ast::Expression *ret_type = GetRepresentation(type->GetReturnType());
+  // Done.
+  return GetFactory()->NewFunctionType(pos_, std::move(params), ret_type);
+}
+
+}  // namespace
+
+ast::VariableDeclaration *CodeGen::DeclareVar(ast::Identifier name, ast::Type *type) {
+  TypeReprBuilder builder(position_, Context());
+  ast::Expression *type_repr = builder.GetRepresentation(type);
+  type_repr->SetType(type);
+  return NodeFactory()->NewVariableDeclaration(position_, name, type_repr, nullptr);
+}
+
+ast::Expression *CodeGen::BinaryMathOp(parsing::Token::Type op, ast::Expression *lhs,
+                                       ast::Expression *rhs) {
+  TPL_ASSERT(lhs->GetType() != nullptr && lhs->GetType() == rhs->GetType(),
+             "Missing or mismatched types in binary math operation.");
+  TPL_ASSERT(lhs->GetType()->IsArithmetic(), "Binary operation on non-arithmetic inputs!");
+  TPL_ASSERT(op != parsing::Token::Type::PERCENT || lhs->GetType()->IsFloatType(),
+             "Floating point operation not allowed.");
+  ast::Expression *result = BinaryOp(op, lhs, rhs);
+  result->SetType(lhs->GetType());
+  return result;
+}
+
+ast::Expression *CodeGen::ComparisonOp(parsing::Token::Type op, ast::Expression *lhs,
+                                       ast::Expression *rhs) {
+  ast::Expression *result = Compare(op, lhs, rhs);
+  result->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Bool));
+  return result;
+}
+
+ast::Expression *CodeGen::Add(ast::Expression *lhs, ast::Expression *rhs) {
+  return BinaryMathOp(parsing::Token::Type::PLUS, lhs, rhs);
+}
+
+ast::Expression *CodeGen::Sub(ast::Expression *lhs, ast::Expression *rhs) {
+  return BinaryMathOp(parsing::Token::Type::MINUS, lhs, rhs);
+}
+
+ast::Expression *CodeGen::Mul(ast::Expression *lhs, ast::Expression *rhs) {
+  return BinaryMathOp(parsing::Token::Type::STAR, lhs, rhs);
+}
+
+ast::Expression *CodeGen::Div(ast::Expression *lhs, ast::Expression *rhs) {
+  return BinaryMathOp(parsing::Token::Type::SLASH, lhs, rhs);
+}
+
+ast::Expression *CodeGen::Mod(ast::Expression *lhs, ast::Expression *rhs) {
+  return BinaryMathOp(parsing::Token::Type::PERCENT, lhs, rhs);
+}
+
+ast::Expression *CodeGen::CompareEq(ast::Expression *lhs, ast::Expression *rhs) {
+  return ComparisonOp(parsing::Token::Type::EQUAL_EQUAL, lhs, rhs);
+}
+
+ast::Expression *CodeGen::CompareNe(ast::Expression *lhs, ast::Expression *rhs) {
+  return ComparisonOp(parsing::Token::Type::BANG_EQUAL, lhs, rhs);
+}
+
+ast::Expression *CodeGen::CompareLt(ast::Expression *lhs, ast::Expression *rhs) {
+  return ComparisonOp(parsing::Token::Type::LESS, lhs, rhs);
+}
+
+ast::Expression *CodeGen::CompareLe(ast::Expression *lhs, ast::Expression *rhs) {
+  return ComparisonOp(parsing::Token::Type::LESS_EQUAL, lhs, rhs);
+}
+
+ast::Expression *CodeGen::CompareGt(ast::Expression *lhs, ast::Expression *rhs) {
+  return ComparisonOp(parsing::Token::Type::GREATER, lhs, rhs);
+}
+
+ast::Expression *CodeGen::CompareGe(ast::Expression *lhs, ast::Expression *rhs) {
+  return ComparisonOp(parsing::Token::Type::GREATER_EQUAL, lhs, rhs);
 }
 
 }  // namespace tpl::sql::codegen
