@@ -18,8 +18,6 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
       storage_(codegen_, "BuildRow"),
       build_row_var_(codegen_->MakeFreshIdentifier("row")),
       build_mark_index_(plan.GetChild(0)->GetOutputSchema()->NumColumns()),
-      analysis_fn_name_(codegen_->MakeFreshIdentifier("AnalyzeHT")),
-      compress_fn_name_(codegen_->MakeFreshIdentifier("CompressHT")),
       left_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
   TPL_ASSERT(!plan.GetRightHashKeys().empty(), "Hash-join must have join keys from right input");
@@ -60,8 +58,7 @@ void HashJoinTranslator::DeclarePipelineDependencies() const {
 
 void HashJoinTranslator::InitializeJoinHashTable(FunctionBuilder *function,
                                                  ast::Expression *jht_ptr) const {
-  function->Append(codegen_->JoinHashTableInit(jht_ptr, GetMemoryPool(), storage_.GetTypeName(),
-                                               analysis_fn_name_, compress_fn_name_));
+  function->Append(codegen_->JoinHashTableInit(jht_ptr, GetMemoryPool(), storage_.GetTypeName()));
 }
 
 void HashJoinTranslator::TearDownJoinHashTable(FunctionBuilder *function,
@@ -311,114 +308,6 @@ ast::Expression *HashJoinTranslator::GetChildOutput(ConsumerContext *context, ui
     return GetBuildRowAttribute(attr_idx);
   }
   return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
-}
-
-void HashJoinTranslator::AnalyzeHashTable(FunctionBuilder *function) {
-  // The schema.
-  const auto build_schema = GetChildOutputSchema(0);
-  // The number of columns in the schema.
-  const uint32_t num_columns = build_schema->NumColumns();
-
-  // Only these attributes should be checked.
-  std::vector<std::pair<uint32_t, ast::Identifier>> attributes;
-
-  // Find the numeric attributes and set them up for analysis.
-  for (uint32_t idx = 0; idx < num_columns; idx++) {
-    if (const auto type_id = build_schema->GetColumn(idx).GetType(); IsTypeIntegral(type_id)) {
-      attributes.emplace_back(idx, codegen_->MakeFreshIdentifier("bits_m"));
-      ast::Expression *type = codegen_->PrimitiveTplType(type_id);
-      function->Append(codegen_->DeclareVar(attributes.back().second, type, codegen_->Const64(0)));
-    }
-  }
-
-  // for (var i = 0; i < n; i++) { ... }
-  ast::Identifier i_var = codegen_->MakeIdentifier("i"), row_var = codegen_->MakeIdentifier("row");
-  const auto i = [&]() { return codegen_->MakeExpr(i_var); };
-  Loop loop(function,
-            codegen_->MakeStatement(
-                codegen_->DeclareVar(i_var, codegen_->UInt32Type(), codegen_->Const32(0))),
-            codegen_->CompareLt(i(), function->GetParameterByPosition(0)),
-            codegen_->Assign(i(), codegen_->Add(i(), codegen_->Const32(1))));
-  {
-    // var row = rows[i]
-    ast::Expression *rows = function->GetParameterByPosition(1);
-    function->Append(codegen_->DeclareVarWithInit(row_var, codegen_->ArrayAccess(rows, i())));
-
-    // Read integral columns for analysis.
-    for (const auto &[idx, name] : attributes) {
-      auto raw_val = storage_.ReadPrimitive(codegen_->MakeExpr(row_var), idx);
-      auto mixed = codegen_->BitOr(codegen_->MakeExpr(name), raw_val);
-      function->Append(codegen_->Assign(codegen_->MakeExpr(name), mixed));
-    }
-  }
-  loop.EndLoop();
-
-  // @statsSetColumnCount()
-  function->Append(codegen_->StatsSetColumnCount(function->GetParameterByPosition(2), num_columns));
-
-  // @statsSetColumnBits()
-  auto attr_iter = attributes.begin();
-  for (uint32_t idx = 0; idx < num_columns; idx++) {
-    // The stats object.
-    auto stats = function->GetParameterByPosition(2);
-    // Compute the number of bits required to represent the type.
-    // The actual size must be less than or equal to this value.
-    const auto type_id = build_schema->GetColumn(idx).GetType();
-    const auto type_bits = codegen_->Const32(GetTypeIdSize(type_id) * kBitsPerByte);
-    if (attr_iter != attributes.end() && idx == attr_iter->first) {
-      auto casted = codegen_->CallBuiltin(
-          ast::Builtin::IntCast,
-          {codegen_->BuiltinType(ast::BuiltinType::UInt32), codegen_->MakeExpr(attr_iter->second)});
-      auto bits = codegen_->CallBuiltin(ast::Builtin::Ctlz, {casted});
-      auto room = codegen_->BinaryOp(parsing::Token::Type::MINUS, type_bits, bits);
-      function->Append(codegen_->StatsSetColumnBits(stats, idx, room));
-      ++attr_iter;
-    } else {
-      function->Append(codegen_->StatsSetColumnBits(stats, idx, type_bits));
-    }
-  }
-}
-
-void HashJoinTranslator::GenerateHashTableAnalysisFunction() {
-  auto args = codegen_->MakeEmptyFieldList();
-  args.resize(3);
-  args[0] = codegen_->MakeField("n", codegen_->UInt32Type());
-  args[1] = codegen_->MakeField(
-      "rows",
-      codegen_->ArrayType(0, codegen_->PointerType(codegen_->MakeExpr(storage_.GetTypeName()))));
-  args[2] = codegen_->MakeField(
-      "stats", codegen_->PointerType(codegen_->BuiltinType(ast::BuiltinType::AnalysisStats)));
-
-  FunctionBuilder function(codegen_, analysis_fn_name_, std::move(args), codegen_->Nil());
-  {  // Body.
-    AnalyzeHashTable(&function);
-  }
-  function.Finish();
-}
-
-void HashJoinTranslator::CompressHashTable(FunctionBuilder *function) {}
-
-void HashJoinTranslator::GenerateHashTableCompressionFunction() {
-  auto args = codegen_->MakeEmptyFieldList();
-  args.resize(3);
-  args[0] = codegen_->MakeField("n", codegen_->UInt32Type());
-  args[1] = codegen_->MakeField(
-      "in_rows",
-      codegen_->ArrayType(0, codegen_->PointerType(codegen_->MakeExpr(storage_.GetTypeName()))));
-  args[2] = codegen_->MakeField(
-      "out_rows",
-      codegen_->ArrayType(0, codegen_->PointerType(codegen_->MakeExpr(storage_.GetTypeName()))));
-
-  FunctionBuilder function(codegen_, compress_fn_name_, std::move(args), codegen_->Nil());
-  {  // Body.
-    CompressHashTable(&function);
-  }
-  function.Finish();
-}
-
-void HashJoinTranslator::DefineStructsAndFunctions() {
-  GenerateHashTableAnalysisFunction();
-  GenerateHashTableCompressionFunction();
 }
 
 }  // namespace tpl::sql::codegen
