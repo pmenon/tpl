@@ -82,6 +82,14 @@ class CastException : public Exception {
 };
 
 /**
+ * An exception thrown during code generation.
+ */
+class CodeGenerationException : public Exception {
+ public:
+  CodeGenerationException(const std::string &msg) : Exception(ExceptionType::CodeGen, msg) {}
+};
+
+/**
  * An exception thrown when a given type cannot be converted into another type.
  */
 class ConversionException : public Exception {
