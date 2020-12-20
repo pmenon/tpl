@@ -1,21 +1,10 @@
 #pragma once
 
+#include <type_traits>
+
 #include "ast/type.h"
+#include "ast/type_proxy.h"
 #include "common/common.h"
-#include "sql/aggregation_hash_table.h"
-#include "sql/aggregators.h"
-#include "sql/compact_storage.h"
-#include "sql/execution_context.h"
-#include "sql/filter_manager.h"
-#include "sql/generic_value.h"
-#include "sql/join_hash_table.h"
-#include "sql/runtime_types.h"
-#include "sql/sorter.h"
-#include "sql/table_vector_iterator.h"
-#include "sql/thread_state_container.h"
-#include "sql/value.h"
-#include "sql/vector_filter_executor.h"
-#include "util/csv_reader.h"
 
 namespace tpl::sql::codegen::edsl::traits {
 
@@ -31,19 +20,29 @@ struct is_builtin_type : std::false_type {};
   struct is_builtin_type<                                                                  \
       std::conditional_t<ast::BuiltinType::kind == ast::BuiltinType::Nil, void, cpp_type>> \
       : std::true_type {};
-BUILTIN_TYPE_LIST(F, F, F)
+PRIMITIVE_BUILTIN_TYPE_LIST(F)
 #undef F
 
 /**
- * Type trait to determine if the given C++ type is a primitive type. These are C++ primitives.
+ * Specialize for non-primitive TPL types. Non-primitive TPL types are TPL builtins, too.
+ * But, we use their proxy type instead of the raw C++ type. This reduces header includes.
+ */
+// clang-format off
+#define F(kind, ...) template <> struct is_builtin_type<tpl::ast::x::kind> : std::true_type {};
+NON_PRIMITIVE_BUILTIN_TYPE_LIST(F)
+SQL_BUILTIN_TYPE_LIST(F)
+#undef F
+// clang-format on
+
+/**
+ * Type trait to determine if the given C++ type is a C++ primitive.
  * @tparam T The C++ type to check.
  */
 template <typename T>
 struct is_primitive_type : std::false_type {};
-
-#define F(cpp_type, ...) \
-  template <>            \
-  struct is_primitive_type<cpp_type> : std::true_type {};
+// clang-format off
+#define F(cpp_type, ...) template <> struct is_primitive_type<cpp_type> : std::true_type {};
+// clang-format on
 ALL_NUMERIC_TYPES(F)
 #undef F
 
@@ -53,10 +52,9 @@ ALL_NUMERIC_TYPES(F)
  */
 template <typename T>
 struct is_primitive_int_type : std::false_type {};
-
-#define F(type, ...) \
-  template <>        \
-  struct is_primitive_int_type<type> : std::true_type {};
+// clang-format off
+#define F(type, ...) template <> struct is_primitive_int_type<type> : std::true_type {};
+// clang-format on
 FOR_EACH_SIGNED_INT_TYPE(F)
 FOR_EACH_UNSIGNED_INT_TYPE(F)
 #undef F
@@ -67,24 +65,22 @@ FOR_EACH_UNSIGNED_INT_TYPE(F)
  */
 template <typename T>
 struct is_primitive_float_type : std::false_type {};
-
-#define F(type, ...) \
-  template <>        \
-  struct is_primitive_float_type<type> : std::true_type {};
+// clang-format off
+#define F(type, ...) template <> struct is_primitive_float_type<type> : std::true_type {};
+// clang-format on
 FOR_EACH_FLOAT_TYPE(F)
 #undef F
 
 /**
- * Type trait to determine if the given C++ type is a builtin TPL class type. These can have
+ * Type trait to determine if the given type is a builtin TPL class type. These can have
  * functions invoked on them.
- * @tparam T The C++ type to check.
+ * @tparam T The type to check.
  */
 template <typename T>
 struct is_cpp_class : std::false_type {};
-
-#define F(kind, cpp_type, ...) \
-  template <>                  \
-  struct is_cpp_class<cpp_type> : std::true_type {};
+// clang-format off
+#define F(kind, ...) template <> struct is_cpp_class<ast::x::kind> : std::true_type {};
+// clang-format on
 BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, F, F)
 #undef F
 
@@ -95,10 +91,9 @@ BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, F, F)
  */
 template <typename T>
 struct is_sql_value_class : std::false_type {};
-
-#define F(kind, cpp_type, ...) \
-  template <>                  \
-  struct is_sql_value_class<cpp_type> : std::true_type {};
+// clang-format off
+#define F(kind, ...) template <> struct is_sql_value_class<ast::x::kind> : std::true_type {};
+// clang-format on
 BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE, F)
 #undef F
 

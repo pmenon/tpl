@@ -2,21 +2,7 @@
 
 #include "ast/context.h"
 #include "ast/type.h"
-
-#include "sql/aggregation_hash_table.h"
-#include "sql/aggregators.h"
-#include "sql/compact_storage.h"
-#include "sql/execution_context.h"
-#include "sql/filter_manager.h"
-#include "sql/generic_value.h"
-#include "sql/join_hash_table.h"
-#include "sql/runtime_types.h"
-#include "sql/sorter.h"
-#include "sql/table_vector_iterator.h"
-#include "sql/thread_state_container.h"
-#include "sql/value.h"
-#include "sql/vector_filter_executor.h"
-#include "util/csv_reader.h"
+#include "ast/type_proxy.h"
 
 namespace tpl::ast {
 
@@ -87,24 +73,9 @@ class TypeBuilder<T[]> {
 };
 
 /**
- * Specialize for std::array<> and alias to the raw array type.
- * @tparam T The type of the elements in the array.
- * @tparam N The number of elements in the array.
+ * Specialize for primitive builtin types. These are C++ primitive types exposed as TPL primitives.
  */
-template <typename T, std::size_t N>
-class TypeBuilder<std::array<T, N>> : public TypeBuilder<T[N]> {};
-
-/**
- * Specialize for std::array<> and alias to the raw array type.
- * @tparam T
- */
-template <typename T>
-class TypeBuilder<std::array<T, 0>> : public TypeBuilder<T[]> {};
-
-#define HANDLE_BUILTIN_TYPE(kind, ctype, ...)                                             \
-  /**                                                                                     \
-   * Specialized builder for primitive types.                                             \
-   */                                                                                     \
+#define F(kind, ctype, ...)                                                               \
   template <>                                                                             \
   class TypeBuilder<                                                                      \
       std::conditional_t<ast::BuiltinType::kind == ast::BuiltinType::Nil, void, ctype>> { \
@@ -113,8 +84,23 @@ class TypeBuilder<std::array<T, 0>> : public TypeBuilder<T[]> {};
       return BuiltinType::Get(context, ast::BuiltinType::kind);                           \
     }                                                                                     \
   };
-BUILTIN_TYPE_LIST(HANDLE_BUILTIN_TYPE, HANDLE_BUILTIN_TYPE, HANDLE_BUILTIN_TYPE)
-#undef HANDLE_BUILTIN_TYPE
+PRIMITIVE_BUILTIN_TYPE_LIST(F)
+#undef F
+
+/**
+ * Specialize for the other TPL builtin types that have non-primitive C++ implementations.
+ */
+#define F(kind, ...)                                            \
+  template <>                                                   \
+  class TypeBuilder<tpl::ast::x::kind> {                        \
+   public:                                                      \
+    static BuiltinType *Get(Context *context) {                 \
+      return BuiltinType::Get(context, ast::BuiltinType::kind); \
+    }                                                           \
+  };
+NON_PRIMITIVE_BUILTIN_TYPE_LIST(F)
+SQL_BUILTIN_TYPE_LIST(F)
+#undef F
 
 /**
  * Specialize for std::byte, which is a TPL type. Alias to uint8_t.
@@ -145,14 +131,5 @@ class TypeBuilder<volatile void *> : public TypeBuilder<byte *> {};
  */
 template <>
 class TypeBuilder<const volatile void *> : public TypeBuilder<byte *> {};
-
-/**
- * Use std::string as TPL strings.
- */
-template <>
-class TypeBuilder<std::string> {
- public:
-  static StringType *Get(Context *context) { return StringType::Get(context); }
-};
 
 }  // namespace tpl::ast

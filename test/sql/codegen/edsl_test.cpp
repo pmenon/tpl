@@ -37,8 +37,8 @@ TEST_F(ElementTest, SimpleCheck) {
     edsl::Variable<int[]> a(&codegen, "a");
     edsl::Variable<bool> b(&codegen, "b");
     edsl::Variable<uint64_t> hash(&codegen, "hash");
-    edsl::Variable<sql::HashTableEntry *> entry(&codegen, "entry");
-    edsl::Variable<sql::JoinHashTable *[2]> yy(&codegen, "yy");
+    edsl::Variable<ast::x::HashTableEntry *> entry(&codegen, "entry");
+    edsl::Variable<ast::x::JoinHashTable *[2]> yy(&codegen, "yy");
 
     edsl::Declare(x);
     edsl::Declare(y);

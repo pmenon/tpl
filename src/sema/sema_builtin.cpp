@@ -208,20 +208,20 @@ bool Sema::GenericBuiltinCheck(ast::CallExpression *call) {
 void Sema::CheckSqlConversionCall(ast::CallExpression *call, ast::Builtin builtin) {
   // clang-format off
   switch (builtin) {
-    case ast::Builtin::BoolToSql:   GenericBuiltinCheck<sql::BoolVal(bool)>(call); break;
-    case ast::Builtin::IntToSql:    GenericBuiltinCheck<sql::Integer(int32_t)>(call); break;
-    case ast::Builtin::FloatToSql:  GenericBuiltinCheck<sql::Real(float)>(call); break;
-    case ast::Builtin::StringToSql: GenericBuiltinCheck<sql::StringVal(StringLiteral)>(call); break;
-    case ast::Builtin::DateToSql:   GenericBuiltinCheck<tpl::sql::DateVal(int32_t, int32_t, int32_t)>(call); break;
-    case ast::Builtin::SqlToBool:   GenericBuiltinCheck<bool(sql::BoolVal)>(call); break;
-    case ast::Builtin::ConvertBoolToInteger:   GenericBuiltinCheck<sql::Integer(sql::BoolVal)>(call); break;
-    case ast::Builtin::ConvertIntegerToReal:   GenericBuiltinCheck<sql::Real(sql::Integer)>(call); break;
-    case ast::Builtin::ConvertDateToTimestamp: GenericBuiltinCheck<sql::TimestampVal(sql::DateVal)>(call); break;
-    case ast::Builtin::ConvertStringToBool: GenericBuiltinCheck<sql::BoolVal(sql::StringVal)>(call); break;
-    case ast::Builtin::ConvertStringToInt:  GenericBuiltinCheck<sql::Integer(sql::StringVal)>(call); break;
-    case ast::Builtin::ConvertStringToReal: GenericBuiltinCheck<sql::Real(sql::StringVal)>(call); break;
-    case ast::Builtin::ConvertStringToDate: GenericBuiltinCheck<sql::DateVal(sql::StringVal)>(call); break;
-    case ast::Builtin::ConvertStringToTime: GenericBuiltinCheck<sql::TimestampVal(sql::StringVal)>(call); break;
+    case ast::Builtin::BoolToSql:   GenericBuiltinCheck<ast::x::BooleanVal(bool)>(call); break;
+    case ast::Builtin::IntToSql:    GenericBuiltinCheck<ast::x::IntegerVal(int32_t)>(call); break;
+    case ast::Builtin::FloatToSql:  GenericBuiltinCheck<ast::x::RealVal(float)>(call); break;
+    case ast::Builtin::StringToSql: GenericBuiltinCheck<ast::x::StringVal(StringLiteral)>(call); break;
+    case ast::Builtin::DateToSql:   GenericBuiltinCheck<tpl::ast::x::DateVal(int32_t, int32_t, int32_t)>(call); break;
+    case ast::Builtin::SqlToBool:   GenericBuiltinCheck<bool(ast::x::BooleanVal)>(call); break;
+    case ast::Builtin::ConvertBoolToInteger:   GenericBuiltinCheck<ast::x::IntegerVal(ast::x::BooleanVal)>(call); break;
+    case ast::Builtin::ConvertIntegerToReal:   GenericBuiltinCheck<ast::x::RealVal(ast::x::IntegerVal)>(call); break;
+    case ast::Builtin::ConvertDateToTimestamp: GenericBuiltinCheck<ast::x::TimestampVal(ast::x::DateVal)>(call); break;
+    case ast::Builtin::ConvertStringToBool: GenericBuiltinCheck<ast::x::BooleanVal(ast::x::StringVal)>(call); break;
+    case ast::Builtin::ConvertStringToInt:  GenericBuiltinCheck<ast::x::IntegerVal(ast::x::StringVal)>(call); break;
+    case ast::Builtin::ConvertStringToReal: GenericBuiltinCheck<ast::x::RealVal(ast::x::StringVal)>(call); break;
+    case ast::Builtin::ConvertStringToDate: GenericBuiltinCheck<ast::x::DateVal(ast::x::StringVal)>(call); break;
+    case ast::Builtin::ConvertStringToTime: GenericBuiltinCheck<ast::x::TimestampVal(ast::x::StringVal)>(call); break;
     default: UNREACHABLE("Impossible SQL conversion call");
   }
   // clang-format on
@@ -260,11 +260,11 @@ void Sema::CheckNullValueCall(ast::CallExpression *call, ast::Builtin builtin) {
 }
 
 void Sema::CheckBuiltinStringLikeCall(ast::CallExpression *call) {
-  GenericBuiltinCheck<sql::BoolVal(sql::StringVal, sql::StringVal)>(call);
+  GenericBuiltinCheck<ast::x::BooleanVal(ast::x::StringVal, ast::x::StringVal)>(call);
 }
 
 void Sema::CheckBuiltinDateFunctionCall(ast::CallExpression *call, UNUSED ast::Builtin builtin) {
-  GenericBuiltinCheck<sql::Integer(sql::DateVal)>(call);
+  GenericBuiltinCheck<ast::x::IntegerVal(ast::x::DateVal)>(call);
 }
 
 void Sema::CheckBuiltinConcat(ast::CallExpression *call) {
@@ -291,43 +291,43 @@ void Sema::CheckBuiltinConcat(ast::CallExpression *call) {
 void Sema::CheckBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::AggHashTableInit:
-      GenericBuiltinCheck<void(sql::AggregationHashTable *, sql::MemoryPool *, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::MemoryPool *, uint32_t)>(call);
       break;
     case ast::Builtin::AggHashTableInsert:
       // Distinguish between partitioned and non-partitioned insertion.
       if (call->NumArgs() == 2) {
-        GenericBuiltinCheck<byte *(sql::AggregationHashTable *, hash_t)>(call);
+        GenericBuiltinCheck<byte *(ast::x::AggregationHashTable *, hash_t)>(call);
       } else {
-        GenericBuiltinCheck<byte *(sql::AggregationHashTable *, hash_t, bool)>(call);
+        GenericBuiltinCheck<byte *(ast::x::AggregationHashTable *, hash_t, bool)>(call);
       }
       break;
     case ast::Builtin::AggHashTableLinkEntry:
-      GenericBuiltinCheck<void(sql::AggregationHashTable *, sql::HashTableEntry *)>(call);
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::HashTableEntry *)>(call);
       break;
     case ast::Builtin::AggHashTableLookup:
       using KeyCheckFunc = Function<bool(AnyPointer, AnyPointer)>;
-      GenericBuiltinCheck<byte *(sql::AggregationHashTable *, hash_t, KeyCheckFunc, AnyPointer)>(
+      GenericBuiltinCheck<byte *(ast::x::AggregationHashTable *, hash_t, KeyCheckFunc, AnyPointer)>(
           call);
       break;
     case ast::Builtin::AggHashTableProcessBatch:
       using VectorProcFunc =
-          Function<void(sql::VectorProjectionIterator *, sql::VectorProjectionIterator *)>;
-      GenericBuiltinCheck<void(sql::AggregationHashTable *, sql::VectorProjectionIterator *,
+          Function<void(ast::x::VectorProjectionIterator *, ast::x::VectorProjectionIterator *)>;
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::VectorProjectionIterator *,
                                uint32_t[], VectorProcFunc, VectorProcFunc, bool)>(call);
       break;
     case ast::Builtin::AggHashTableMovePartitions:
-      using MergeFunc = Function<void(AnyPointer, sql::AggregationHashTable *,
-                                      sql::AHTOverflowPartitionIterator *)>;
-      GenericBuiltinCheck<void(sql::AggregationHashTable *, sql::ThreadStateContainer *, uint32_t,
+      using MergeFunc = Function<void(AnyPointer, ast::x::AggregationHashTable *,
+                                      ast::x::AHTOverflowPartitionIterator *)>;
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::ThreadStateContainer *, uint32_t,
                                MergeFunc)>(call);
       break;
     case ast::Builtin::AggHashTableParallelPartitionedScan:
-      using ScanFunc = Function<void(AnyPointer, AnyPointer, sql::AggregationHashTable *)>;
-      GenericBuiltinCheck<void(sql::AggregationHashTable *, AnyPointer, sql::ThreadStateContainer *,
+      using ScanFunc = Function<void(AnyPointer, AnyPointer, ast::x::AggregationHashTable *)>;
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, AnyPointer, ast::x::ThreadStateContainer *,
                                ScanFunc)>(call);
       break;
     case ast::Builtin::AggHashTableFree:
-      GenericBuiltinCheck<void(sql::AggregationHashTable *)>(call);
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *)>(call);
       break;
     default:
       UNREACHABLE("Impossible aggregation hash table call");
@@ -337,19 +337,19 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin 
 void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::AggHashTableIterInit:
-      GenericBuiltinCheck<void(sql::AHTIterator *, const sql::AggregationHashTable *)>(call);
+      GenericBuiltinCheck<void(ast::x::AHTIterator *, const ast::x::AggregationHashTable *)>(call);
       break;
     case ast::Builtin::AggHashTableIterHasNext:
-      GenericBuiltinCheck<bool(sql::AHTIterator *)>(call);
+      GenericBuiltinCheck<bool(ast::x::AHTIterator *)>(call);
       break;
     case ast::Builtin::AggHashTableIterNext:
-      GenericBuiltinCheck<void(sql::AHTIterator *)>(call);
+      GenericBuiltinCheck<void(ast::x::AHTIterator *)>(call);
       break;
     case ast::Builtin::AggHashTableIterGetRow:
-      GenericBuiltinCheck<byte *(sql::AHTIterator *)>(call);
+      GenericBuiltinCheck<byte *(ast::x::AHTIterator *)>(call);
       break;
     case ast::Builtin::AggHashTableIterClose:
-      GenericBuiltinCheck<void(sql::AHTIterator *)>(call);
+      GenericBuiltinCheck<void(ast::x::AHTIterator *)>(call);
       break;
     default:
       UNREACHABLE("Impossible aggregation hash table iterator call");
@@ -359,19 +359,19 @@ void Sema::CheckBuiltinAggHashTableIterCall(ast::CallExpression *call, ast::Buil
 void Sema::CheckBuiltinAggPartIterCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::AggPartIterHasNext:
-      GenericBuiltinCheck<bool(sql::AHTOverflowPartitionIterator *)>(call);
+      GenericBuiltinCheck<bool(ast::x::AHTOverflowPartitionIterator *)>(call);
       break;
     case ast::Builtin::AggPartIterNext:
-      GenericBuiltinCheck<void(sql::AHTOverflowPartitionIterator *)>(call);
+      GenericBuiltinCheck<void(ast::x::AHTOverflowPartitionIterator *)>(call);
       break;
     case ast::Builtin::AggPartIterGetRowEntry:
-      GenericBuiltinCheck<sql::HashTableEntry *(sql::AHTOverflowPartitionIterator *)>(call);
+      GenericBuiltinCheck<ast::x::HashTableEntry *(ast::x::AHTOverflowPartitionIterator *)>(call);
       break;
     case ast::Builtin::AggPartIterGetRow:
-      GenericBuiltinCheck<byte *(sql::AHTOverflowPartitionIterator *)>(call);
+      GenericBuiltinCheck<byte *(ast::x::AHTOverflowPartitionIterator *)>(call);
       break;
     case ast::Builtin::AggPartIterGetHash:
-      GenericBuiltinCheck<hash_t(sql::AHTOverflowPartitionIterator *)>(call);
+      GenericBuiltinCheck<hash_t(ast::x::AHTOverflowPartitionIterator *)>(call);
       break;
     default:
       UNREACHABLE("Impossible aggregation partition iterator call");
@@ -469,28 +469,28 @@ void Sema::CheckBuiltinJoinHashTableCall(ast::CallExpression *call, ast::Builtin
   switch (builtin) {
     case ast::Builtin::JoinHashTableInit:
       if (call->NumArgs() <= 3) {
-        GenericBuiltinCheck<void(sql::JoinHashTable *, sql::MemoryPool *, uint32_t)>(call);
+        GenericBuiltinCheck<void(ast::x::JoinHashTable *, ast::x::MemoryPool *, uint32_t)>(call);
       } else {
         using AnalysisFunction = Function<void(uint32_t, Array<AnyPointer>, AnyPointer)>;
         using CompressFunction = Function<void(uint32_t, Array<AnyPointer>, Array<AnyPointer>)>;
-        GenericBuiltinCheck<void(sql::JoinHashTable *, sql::MemoryPool *, uint32_t,
+        GenericBuiltinCheck<void(ast::x::JoinHashTable *, ast::x::MemoryPool *, uint32_t,
                                  AnalysisFunction, CompressFunction)>(call);
       }
       break;
     case ast::Builtin::JoinHashTableInsert:
-      GenericBuiltinCheck<byte *(sql::JoinHashTable *, hash_t)>(call);
+      GenericBuiltinCheck<byte *(ast::x::JoinHashTable *, hash_t)>(call);
       break;
     case ast::Builtin::JoinHashTableBuild:
-      GenericBuiltinCheck<void(sql::JoinHashTable *)>(call);
+      GenericBuiltinCheck<void(ast::x::JoinHashTable *)>(call);
       break;
     case ast::Builtin::JoinHashTableBuildParallel:
-      GenericBuiltinCheck<void(sql::JoinHashTable *, sql::ThreadStateContainer *, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::JoinHashTable *, ast::x::ThreadStateContainer *, uint32_t)>(call);
       break;
     case ast::Builtin::JoinHashTableLookup:
-      GenericBuiltinCheck<sql::HashTableEntry *(const sql::JoinHashTable *, hash_t)>(call);
+      GenericBuiltinCheck<ast::x::HashTableEntry *(const ast::x::JoinHashTable *, hash_t)>(call);
       break;
     case ast::Builtin::JoinHashTableFree:
-      GenericBuiltinCheck<void(sql::JoinHashTable *)>(call);
+      GenericBuiltinCheck<void(ast::x::JoinHashTable *)>(call);
       break;
     default:
       UNREACHABLE("Impossible join hash table build call");
@@ -500,13 +500,13 @@ void Sema::CheckBuiltinJoinHashTableCall(ast::CallExpression *call, ast::Builtin
 void Sema::CheckBuiltinHashTableEntryCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::HashTableEntryGetHash:
-      GenericBuiltinCheck<hash_t(const sql::HashTableEntry *)>(call);
+      GenericBuiltinCheck<hash_t(const ast::x::HashTableEntry *)>(call);
       break;
     case ast::Builtin::HashTableEntryGetRow:
-      GenericBuiltinCheck<byte *(const sql::HashTableEntry *)>(call);
+      GenericBuiltinCheck<byte *(const ast::x::HashTableEntry *)>(call);
       break;
     case ast::Builtin::HashTableEntryGetNext:
-      GenericBuiltinCheck<sql::HashTableEntry *(const sql::HashTableEntry *)>(call);
+      GenericBuiltinCheck<ast::x::HashTableEntry *(const ast::x::HashTableEntry *)>(call);
       break;
     default:
       UNREACHABLE("Impossible hash table entry iterator call");
@@ -516,10 +516,10 @@ void Sema::CheckBuiltinHashTableEntryCall(ast::CallExpression *call, ast::Builti
 void Sema::CheckBuiltinAnalysisStatsCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::AnalysisStatsSetColumnCount:
-      GenericBuiltinCheck<void(sql::JoinHashTable::AnalysisStats *, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::AnalysisStats *, uint32_t)>(call);
       break;
     case ast::Builtin::AnalysisStatsSetColumnBits:
-      GenericBuiltinCheck<void(sql::JoinHashTable::AnalysisStats *, uint32_t, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::AnalysisStats *, uint32_t, uint32_t)>(call);
       break;
     default:
       UNREACHABLE("Impossible AnalyisStats call.");
@@ -529,10 +529,10 @@ void Sema::CheckBuiltinAnalysisStatsCall(ast::CallExpression *call, ast::Builtin
 void Sema::CheckBuiltinExecutionContextCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::ExecutionContextGetMemoryPool:
-      GenericBuiltinCheck<sql::MemoryPool *(sql::ExecutionContext *)>(call);
+      GenericBuiltinCheck<ast::x::MemoryPool *(ast::x::ExecutionContext *)>(call);
       break;
     case ast::Builtin::ExecutionContextGetTLS:
-      GenericBuiltinCheck<sql::ThreadStateContainer *(sql::ExecutionContext *)>(call);
+      GenericBuiltinCheck<ast::x::ThreadStateContainer *(ast::x::ExecutionContext *)>(call);
       break;
     default:
       UNREACHABLE("Impossible execution context call");
@@ -542,19 +542,19 @@ void Sema::CheckBuiltinExecutionContextCall(ast::CallExpression *call, ast::Buil
 void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::ThreadStateContainerClear:
-      GenericBuiltinCheck<void(sql::ThreadStateContainer *)>(call);
+      GenericBuiltinCheck<void(ast::x::ThreadStateContainer *)>(call);
       break;
     case ast::Builtin::ThreadStateContainerGetState:
-      GenericBuiltinCheck<uint8_t *(sql::ThreadStateContainer *)>(call);
+      GenericBuiltinCheck<uint8_t *(ast::x::ThreadStateContainer *)>(call);
       break;
     case ast::Builtin::ThreadStateContainerReset:
       using TLSFunc = Function<void(AnyPointer, AnyPointer)>;
-      GenericBuiltinCheck<void(sql::ThreadStateContainer *, uint32_t, TLSFunc, TLSFunc,
+      GenericBuiltinCheck<void(ast::x::ThreadStateContainer *, uint32_t, TLSFunc, TLSFunc,
                                AnyPointer)>(call);
       break;
     case ast::Builtin::ThreadStateContainerIterate:
       using IterateFunc = Function<void(AnyPointer, AnyPointer)>;
-      GenericBuiltinCheck<void(sql::ThreadStateContainer *, AnyPointer, IterateFunc)>(call);
+      GenericBuiltinCheck<void(ast::x::ThreadStateContainer *, AnyPointer, IterateFunc)>(call);
       break;
     default:
       UNREACHABLE("Impossible table iteration call");
@@ -564,21 +564,21 @@ void Sema::CheckBuiltinThreadStateContainerCall(ast::CallExpression *call, ast::
 void Sema::CheckBuiltinTableIterCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::TableIterInit:
-      GenericBuiltinCheck<void(sql::TableVectorIterator *, StringLiteral)>(call);
+      GenericBuiltinCheck<void(ast::x::TableVectorIterator *, StringLiteral)>(call);
       break;
     case ast::Builtin::TableIterAdvance:
-      GenericBuiltinCheck<bool(sql::TableVectorIterator *)>(call);
+      GenericBuiltinCheck<bool(ast::x::TableVectorIterator *)>(call);
       break;
     case ast::Builtin::TableIterGetVPI:
-      GenericBuiltinCheck<sql::VectorProjectionIterator *(sql::TableVectorIterator *)>(call);
+      GenericBuiltinCheck<ast::x::VectorProjectionIterator *(ast::x::TableVectorIterator *)>(call);
       break;
     case ast::Builtin::TableIterParallel:
-      using ScanFunc = Function<void(AnyPointer, AnyPointer, sql::TableVectorIterator *)>;
-      GenericBuiltinCheck<void(StringLiteral, AnyPointer, sql::ThreadStateContainer *, ScanFunc)>(
+      using ScanFunc = Function<void(AnyPointer, AnyPointer, ast::x::TableVectorIterator *)>;
+      GenericBuiltinCheck<void(StringLiteral, AnyPointer, ast::x::ThreadStateContainer *, ScanFunc)>(
           call);
       break;
     case ast::Builtin::TableIterClose:
-      GenericBuiltinCheck<void(sql::TableVectorIterator *)>(call);
+      GenericBuiltinCheck<void(ast::x::TableVectorIterator *)>(call);
       break;
     default:
       UNREACHABLE("Impossible table iteration call");
@@ -588,67 +588,67 @@ void Sema::CheckBuiltinTableIterCall(ast::CallExpression *call, ast::Builtin bui
 void Sema::CheckBuiltinVPICall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::VPIInit:
-      GenericBuiltinCheck<void(sql::VectorProjectionIterator *, sql::VectorProjection *,
-                               sql::TupleIdList *)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::VectorProjection *,
+                               ast::x::TupleIdList *)>(call);
       break;
     case ast::Builtin::VPIFree:
-      GenericBuiltinCheck<void(sql::VectorProjectionIterator *)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *)>(call);
       break;
     case ast::Builtin::VPIIsFiltered:
     case ast::Builtin::VPIHasNext:
     case ast::Builtin::VPIAdvance:
     case ast::Builtin::VPIReset:
-      GenericBuiltinCheck<bool(sql::VectorProjectionIterator *)>(call);
+      GenericBuiltinCheck<bool(ast::x::VectorProjectionIterator *)>(call);
       break;
     case ast::Builtin::VPIGetSelectedRowCount:
-      GenericBuiltinCheck<uint32_t(sql::VectorProjectionIterator *)>(call);
+      GenericBuiltinCheck<uint32_t(ast::x::VectorProjectionIterator *)>(call);
       break;
     case ast::Builtin ::VPIGetVectorProjection:
-      GenericBuiltinCheck<sql::VectorProjection *(sql::VectorProjectionIterator *)>(call);
+      GenericBuiltinCheck<ast::x::VectorProjection *(ast::x::VectorProjectionIterator *)>(call);
       break;
     case ast::Builtin::VPISetPosition:
-      GenericBuiltinCheck<bool(sql::VectorProjectionIterator *, uint32_t)>(call);
+      GenericBuiltinCheck<bool(ast::x::VectorProjectionIterator *, uint32_t)>(call);
       break;
     case ast::Builtin::VPIMatch:
-      GenericBuiltinCheck<void(sql::VectorProjectionIterator *, bool)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, bool)>(call);
       break;
     case ast::Builtin::VPIGetBool:
-      GenericBuiltinCheck<sql::BoolVal(sql::VectorProjectionIterator *, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::BooleanVal(ast::x::VectorProjectionIterator *, uint32_t)>(call);
       break;
     case ast::Builtin::VPIGetTinyInt:
     case ast::Builtin::VPIGetSmallInt:
     case ast::Builtin::VPIGetInt:
     case ast::Builtin::VPIGetBigInt:
-      GenericBuiltinCheck<sql::Integer(sql::VectorProjectionIterator *, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::IntegerVal(ast::x::VectorProjectionIterator *, uint32_t)>(call);
       break;
     case ast::Builtin::VPIGetReal:
     case ast::Builtin::VPIGetDouble:
-      GenericBuiltinCheck<sql::Real(sql::VectorProjectionIterator *, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::RealVal(ast::x::VectorProjectionIterator *, uint32_t)>(call);
       break;
     case ast::Builtin::VPIGetDate:
-      GenericBuiltinCheck<sql::DateVal(sql::VectorProjectionIterator *, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::DateVal(ast::x::VectorProjectionIterator *, uint32_t)>(call);
       break;
     case ast::Builtin::VPIGetString:
-      GenericBuiltinCheck<sql::StringVal(sql::VectorProjectionIterator *, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::StringVal(ast::x::VectorProjectionIterator *, uint32_t)>(call);
       break;
     case ast::Builtin::VPIGetPointer:
-      GenericBuiltinCheck<byte *(sql::VectorProjectionIterator *, uint32_t)>(call);
+      GenericBuiltinCheck<byte *(ast::x::VectorProjectionIterator *, uint32_t)>(call);
       break;
     case ast::Builtin::VPISetTinyInt:
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
-      GenericBuiltinCheck<void(sql::VectorProjectionIterator *, sql::Integer, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::IntegerVal, uint32_t)>(call);
       break;
     case ast::Builtin::VPISetReal:
     case ast::Builtin::VPISetDouble:
-      GenericBuiltinCheck<void(sql::VectorProjectionIterator *, sql::Real, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::RealVal, uint32_t)>(call);
       break;
     case ast::Builtin::VPISetDate:
-      GenericBuiltinCheck<void(sql::VectorProjectionIterator *, sql::DateVal, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::DateVal, uint32_t)>(call);
       break;
     case ast::Builtin::VPISetString:
-      GenericBuiltinCheck<void(sql::VectorProjectionIterator *, sql::StringVal, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::StringVal, uint32_t)>(call);
       break;
     default:
       UNREACHABLE("Impossible VPI call");
@@ -658,34 +658,34 @@ void Sema::CheckBuiltinVPICall(ast::CallExpression *call, ast::Builtin builtin) 
 void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::CompactStorageWriteBool:
-      GenericBuiltinCheck<void(bool *, Array<byte>, uint32_t, sql::BoolVal)>(call);
+      GenericBuiltinCheck<void(bool *, Array<byte>, uint32_t, ast::x::BooleanVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteTinyInt:
-      GenericBuiltinCheck<void(int8_t *, Array<byte>, uint32_t, sql::Integer)>(call);
+      GenericBuiltinCheck<void(int8_t *, Array<byte>, uint32_t, ast::x::IntegerVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteSmallInt:
-      GenericBuiltinCheck<void(int16_t *, Array<byte>, uint32_t, sql::Integer)>(call);
+      GenericBuiltinCheck<void(int16_t *, Array<byte>, uint32_t, ast::x::IntegerVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteInteger:
-      GenericBuiltinCheck<void(int32_t *, Array<byte>, uint32_t, sql::Integer)>(call);
+      GenericBuiltinCheck<void(int32_t *, Array<byte>, uint32_t, ast::x::IntegerVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteBigInt:
-      GenericBuiltinCheck<void(int64_t *, Array<byte>, uint32_t, sql::Integer)>(call);
+      GenericBuiltinCheck<void(int64_t *, Array<byte>, uint32_t, ast::x::IntegerVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteReal:
-      GenericBuiltinCheck<void(float *, Array<byte>, uint32_t, sql::Real)>(call);
+      GenericBuiltinCheck<void(float *, Array<byte>, uint32_t, ast::x::RealVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteDouble:
-      GenericBuiltinCheck<void(double *, Array<byte>, uint32_t, sql::Real)>(call);
+      GenericBuiltinCheck<void(double *, Array<byte>, uint32_t, ast::x::RealVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteDate:
-      GenericBuiltinCheck<void(sql::Date *, Array<byte>, uint32_t, sql::DateVal)>(call);
+      GenericBuiltinCheck<void(ast::x::Date *, Array<byte>, uint32_t, ast::x::DateVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteTimestamp:
-      GenericBuiltinCheck<void(sql::Timestamp *, Array<byte>, uint32_t, sql::TimestampVal)>(call);
+      GenericBuiltinCheck<void(ast::x::Timestamp *, Array<byte>, uint32_t, ast::x::TimestampVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteString:
-      GenericBuiltinCheck<void(sql::VarlenEntry *, Array<byte>, uint32_t, sql::StringVal)>(call);
+      GenericBuiltinCheck<void(ast::x::VarlenEntry *, Array<byte>, uint32_t, ast::x::StringVal)>(call);
       break;
     default:
       UNREACHABLE("Impossible CompactStorage::Write() call!");
@@ -695,34 +695,34 @@ void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpression *call, ast::B
 void Sema::CheckBuiltinCompactStorageReadCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::CompactStorageReadBool:
-      GenericBuiltinCheck<sql::BoolVal(bool *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::BooleanVal(bool *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadTinyInt:
-      GenericBuiltinCheck<sql::Integer(int8_t *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::IntegerVal(int8_t *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadSmallInt:
-      GenericBuiltinCheck<sql::Integer(int16_t *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::IntegerVal(int16_t *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadInteger:
-      GenericBuiltinCheck<sql::Integer(int32_t *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::IntegerVal(int32_t *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadBigInt:
-      GenericBuiltinCheck<sql::Integer(int64_t *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::IntegerVal(int64_t *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadReal:
-      GenericBuiltinCheck<sql::Real(float *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::RealVal(float *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadDouble:
-      GenericBuiltinCheck<sql::Real(double *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::RealVal(double *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadDate:
-      GenericBuiltinCheck<sql::DateVal(sql::Date *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::DateVal(ast::x::Date *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadTimestamp:
-      GenericBuiltinCheck<sql::TimestampVal(sql::Timestamp *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::TimestampVal(ast::x::Timestamp *, Array<byte>, uint32_t)>(call);
       break;
     case ast::Builtin::CompactStorageReadString:
-      GenericBuiltinCheck<sql::StringVal(sql::VarlenEntry *, Array<byte>, uint32_t)>(call);
+      GenericBuiltinCheck<ast::x::StringVal(ast::x::VarlenEntry *, Array<byte>, uint32_t)>(call);
       break;
     default:
       UNREACHABLE("Impossible CompactStorage::Read() call!");
@@ -760,7 +760,7 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpression *call, const ast::B
   switch (builtin) {
     case ast::Builtin::FilterManagerInit:
     case ast::Builtin::FilterManagerFree:
-      GenericBuiltinCheck<void(sql::FilterManager *)>(call);
+      GenericBuiltinCheck<void(ast::x::FilterManager *)>(call);
       break;
     case ast::Builtin::FilterManagerInsertFilter: {
       for (uint32_t arg_idx = 1; arg_idx < call->NumArgs(); arg_idx++) {
@@ -779,7 +779,7 @@ void Sema::CheckBuiltinFilterManagerCall(ast::CallExpression *call, const ast::B
       break;
     }
     case ast::Builtin::FilterManagerRunFilters:
-      GenericBuiltinCheck<void(sql::FilterManager *, sql::VectorProjectionIterator *)>(call);
+      GenericBuiltinCheck<void(ast::x::FilterManager *, ast::x::VectorProjectionIterator *)>(call);
       break;
     default:
       UNREACHABLE("Impossible FilterManager call");
@@ -829,7 +829,7 @@ void Sema::CheckBuiltinVectorFilterCall(ast::CallExpression *call) {
 void Sema::CheckMathTrigCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::ATan2:
-      GenericBuiltinCheck<sql::Real(sql::Real, sql::Real)>(call);
+      GenericBuiltinCheck<ast::x::RealVal(ast::x::RealVal, ast::x::RealVal)>(call);
       break;
     case ast::Builtin::Cos:
     case ast::Builtin::Cot:
@@ -838,7 +838,7 @@ void Sema::CheckMathTrigCall(ast::CallExpression *call, ast::Builtin builtin) {
     case ast::Builtin::ACos:
     case ast::Builtin::ASin:
     case ast::Builtin::ATan:
-      GenericBuiltinCheck<sql::Real(sql::Real)>(call);
+      GenericBuiltinCheck<ast::x::RealVal(ast::x::RealVal)>(call);
       break;
     default:
       UNREACHABLE("Impossible math trig function call");
@@ -860,10 +860,10 @@ void Sema::CheckBuiltinBitsCall(ast::CallExpression *call, UNUSED ast::Builtin b
 void Sema::CheckResultBufferCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::ResultBufferAllocOutRow:
-      GenericBuiltinCheck<uint8_t *(sql::ExecutionContext *)>(call);
+      GenericBuiltinCheck<uint8_t *(ast::x::ExecutionContext *)>(call);
       break;
     case ast::Builtin::ResultBufferFinalize:
-      GenericBuiltinCheck<void(sql::ExecutionContext *)>(call);
+      GenericBuiltinCheck<void(ast::x::ExecutionContext *)>(call);
       break;
     default:
       UNREACHABLE("Impossible ResultBuffer call");
@@ -873,19 +873,19 @@ void Sema::CheckResultBufferCall(ast::CallExpression *call, ast::Builtin builtin
 void Sema::CheckCSVReaderCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::CSVReaderInit:
-      GenericBuiltinCheck<bool(util::CSVReader *, StringLiteral)>(call);
+      GenericBuiltinCheck<bool(ast::x::CSVReader *, StringLiteral)>(call);
       break;
     case ast::Builtin::CSVReaderAdvance:
-      GenericBuiltinCheck<bool(util::CSVReader *)>(call);
+      GenericBuiltinCheck<bool(ast::x::CSVReader *)>(call);
       break;
     case ast::Builtin::CSVReaderGetField:
-      GenericBuiltinCheck<void(util::CSVReader *, uint32_t, sql::StringVal *)>(call);
+      GenericBuiltinCheck<void(ast::x::CSVReader *, uint32_t, ast::x::StringVal *)>(call);
       break;
     case ast::Builtin::CSVReaderGetRecordNumber:
-      GenericBuiltinCheck<uint32_t(util::CSVReader *)>(call);
+      GenericBuiltinCheck<uint32_t(ast::x::CSVReader *)>(call);
       break;
     case ast::Builtin::CSVReaderClose:
-      GenericBuiltinCheck<void(util::CSVReader *)>(call);
+      GenericBuiltinCheck<void(ast::x::CSVReader *)>(call);
       break;
     default:
       UNREACHABLE("Impossible math trig function call");
@@ -1010,29 +1010,29 @@ void Sema::CheckBuiltinSorterCall(ast::CallExpression *call, ast::Builtin builti
   switch (builtin) {
     case ast::Builtin::SorterInit:
       using SortFunc = Function<bool(AnyPointer, AnyPointer)>;
-      GenericBuiltinCheck<void(sql::Sorter *, sql::MemoryPool *, SortFunc, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::Sorter *, ast::x::MemoryPool *, SortFunc, uint32_t)>(call);
       break;
     case ast::Builtin::SorterInsert:
-      GenericBuiltinCheck<uint8_t *(sql::Sorter *)>(call);
+      GenericBuiltinCheck<uint8_t *(ast::x::Sorter *)>(call);
       break;
     case ast::Builtin::SorterInsertTopK:
-      GenericBuiltinCheck<uint8_t *(sql::Sorter *, uint32_t)>(call);
+      GenericBuiltinCheck<uint8_t *(ast::x::Sorter *, uint32_t)>(call);
       break;
     case ast::Builtin::SorterInsertTopKFinish:
-      GenericBuiltinCheck<void(sql::Sorter *, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::Sorter *, uint32_t)>(call);
       break;
     case ast::Builtin::SorterSort:
-      GenericBuiltinCheck<void(sql::Sorter *)>(call);
+      GenericBuiltinCheck<void(ast::x::Sorter *)>(call);
       break;
     case ast::Builtin::SorterSortParallel:
-      GenericBuiltinCheck<void(sql::Sorter *, sql::ThreadStateContainer *, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::Sorter *, ast::x::ThreadStateContainer *, uint32_t)>(call);
       break;
     case ast::Builtin::SorterSortTopKParallel:
-      GenericBuiltinCheck<void(sql::Sorter *, sql::ThreadStateContainer *, uint32_t, uint32_t)>(
+      GenericBuiltinCheck<void(ast::x::Sorter *, ast::x::ThreadStateContainer *, uint32_t, uint32_t)>(
           call);
       break;
     case ast::Builtin::SorterFree:
-      GenericBuiltinCheck<void(sql::Sorter *)>(call);
+      GenericBuiltinCheck<void(ast::x::Sorter *)>(call);
       break;
     default:
       UNREACHABLE("Impossible sorter call.");
@@ -1042,22 +1042,22 @@ void Sema::CheckBuiltinSorterCall(ast::CallExpression *call, ast::Builtin builti
 void Sema::CheckBuiltinSorterIterCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::SorterIterInit:
-      GenericBuiltinCheck<void(sql::SorterIterator *, sql::Sorter *)>(call);
+      GenericBuiltinCheck<void(ast::x::SorterIterator *, ast::x::Sorter *)>(call);
       break;
     case ast::Builtin::SorterIterHasNext:
-      GenericBuiltinCheck<bool(sql::SorterIterator *)>(call);
+      GenericBuiltinCheck<bool(ast::x::SorterIterator *)>(call);
       break;
     case ast::Builtin::SorterIterNext:
-      GenericBuiltinCheck<void(sql::SorterIterator *)>(call);
+      GenericBuiltinCheck<void(ast::x::SorterIterator *)>(call);
       break;
     case ast::Builtin::SorterIterSkipRows:
-      GenericBuiltinCheck<void(sql::SorterIterator *, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::SorterIterator *, uint32_t)>(call);
       break;
     case ast::Builtin::SorterIterGetRow:
-      GenericBuiltinCheck<uint8_t *(sql::SorterIterator *)>(call);
+      GenericBuiltinCheck<uint8_t *(ast::x::SorterIterator *)>(call);
       break;
     case ast::Builtin::SorterIterClose:
-      GenericBuiltinCheck<void(sql::SorterIterator *)>(call);
+      GenericBuiltinCheck<void(ast::x::SorterIterator *)>(call);
       break;
     default:
       UNREACHABLE("Impossible table iteration call");
