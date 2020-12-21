@@ -12,6 +12,7 @@
 #include "ast/builtins.h"
 #include "ast/identifier.h"
 #include "ast/type.h"
+#include "ast/type_builder.h"
 #include "common/common.h"
 #include "parsing/token.h"
 #include "sql/codegen/ast_fwd.h"
@@ -1479,14 +1480,18 @@ class CodeGen {
    */
   void UnIndent() { position_.column -= 4; }
 
-  ast::Context *Context() const { return container_->Context(); }
-
   /// ----------------------------------------------------------------------------------------------
   ///
   /// New stuff.
   ///
   /// ----------------------------------------------------------------------------------------------
 
+  template <typename T>
+  [[nodiscard]] ast::Type *GetType() const {
+    return ast::TypeBuilder<T>::Get(Context());
+  }
+
+  [[nodiscard]] ast::Expression *BuildTypeRepresentation(ast::Type *type);
   [[nodiscard]] ast::Expression *Deref(ast::Expression *ptr) const;
   [[nodiscard]] ast::Expression *MakeExpr(ast::Identifier name, ast::Type *type);
   [[nodiscard]] ast::VariableDeclaration *DeclareVar(ast::Identifier name, ast::Type *type);
@@ -1506,6 +1511,8 @@ class CodeGen {
   // Build a binary math operation.
   [[nodiscard]] ast::Expression *BinaryMathOp(parsing::Token::Type op, ast::Expression *lhs,
                                               ast::Expression *rhs);
+
+  // Build a comparison operation.
   [[nodiscard]] ast::Expression *ComparisonOp(parsing::Token::Type op, ast::Expression *lhs,
                                               ast::Expression *rhs);
 
@@ -1516,6 +1523,7 @@ class CodeGen {
   void ExitScope();
 
   // Return the context.
+  ast::Context *Context() const { return container_->Context(); }
 
   // Return the AST node factory.
   ast::AstNodeFactory *NodeFactory() const;

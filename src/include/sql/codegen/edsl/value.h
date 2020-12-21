@@ -11,11 +11,6 @@
 
 namespace tpl::sql::codegen::edsl {
 
-template <typename T>
-ast::Type *GetType(CodeGen *codegen) {
-  return ast::TypeBuilder<T>::Get(codegen->Context());
-}
-
 // Forward-declare.
 template <traits::TPLType T>
 class Reference;
@@ -43,7 +38,7 @@ class Value {
    * @param val The node representing the value.
    */
   Value(CodeGen *codegen, ast::Expression *val) : codegen_(codegen), val_(val) {
-    TPL_ASSERT(val->GetType() == GetType<T>(codegen), "Expression and template type mismatch!");
+    TPL_ASSERT(val->GetType() == codegen->GetType<T>(), "Expression and template type mismatch!");
   }
 
   /**
@@ -101,12 +96,12 @@ class Value {
   /**
    * @return The code generator instance.
    */
-  CodeGen *GetCodeGen() const { return codegen_; }
+  CodeGen *GetCodeGen() const noexcept { return codegen_; }
 
   /**
    * @return The underlying AST node representing this value.
    */
-  ast::Expression *GetRaw() const { return val_; }
+  ast::Expression *GetRaw() const noexcept { return val_; }
 
  private:
   // The code generator. Immutable by design.
@@ -138,7 +133,15 @@ class Reference : public Value<T> {
   /**
    * @return The reference to the variable.
    */
-  ast::Expression *GetRef() const { return Value<T>::GetRaw(); }
+  ast::Expression *GetRef() const noexcept { return Value<T>::GetRaw(); }
+
+  /**
+   * @return The address of this reference.
+   */
+  Value<T *> Addr() const {
+    CodeGen *codegen = Value<T>::GetCodeGen();
+    return Value<T *>(codegen, codegen->AddressOf(Value<T>::GetRaw()));
+  }
 
  protected:
   /**
@@ -168,7 +171,8 @@ class Variable : public Reference<T> {
    * @param codegen The code generator instance.
    * @param name The name of the variable.
    */
-  Variable(CodeGen *codegen, ast::Identifier name) : Variable(codegen, name, GetType<T>(codegen)) {}
+  Variable(CodeGen *codegen, ast::Identifier name)
+      : Variable(codegen, name, codegen->GetType<T>()) {}
 
   /**
    * Declare a variable with the given name.
@@ -181,7 +185,12 @@ class Variable : public Reference<T> {
   /**
    * @return The name of this variable.
    */
-  ast::Identifier GetName() const { return name_; }
+  ast::Identifier GetName() const noexcept { return name_; }
+
+  /**
+   * @return The type of the variable.
+   */
+  ast::Type *GetType() const noexcept { return type_; }
 
  private:
   // Create a variable with the given name and type.

@@ -48,6 +48,9 @@ TEST_F(ElementTest, SimpleCheck) {
     edsl::Declare(hash);
     edsl::Declare(a);
     edsl::Declare(b, y == yyy);
+
+    edsl::Assign(x, y.Addr());
+    edsl::Assign(zz, x.Addr());
     edsl::Assign(*zz, x);
 
     //    edsl::Declare(entry, yy[0]->Allocate(hash));

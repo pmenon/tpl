@@ -8,7 +8,7 @@
 
 namespace tpl::sql::codegen::edsl {
 
-/// Forward declare.
+// Forward declare.
 class ReferenceVT;
 
 /**
@@ -45,6 +45,16 @@ class ValueVT {
   ast::Type *GetType() const noexcept { return val_->GetType(); }
 
   /**
+   * @return True if the type of this value is a struct; false otherwise.
+   */
+  bool IsStructType() const noexcept { return GetType()->IsStructType(); }
+
+  /**
+   * @return True if the type of this value is a pointer; false otherwise;
+   */
+  bool IsPointerType() const noexcept { return GetType()->IsPointerType(); }
+
+  /**
    * @return The raw value.
    */
   ast::Expression *GetRaw() const noexcept { return val_; }
@@ -62,7 +72,7 @@ class ValueVT {
    */
   template <typename T>
   operator Value<T>() const {
-    TPL_ASSERT(GetType() == GetType<T>(codegen_), "Type mismatch!");
+    TPL_ASSERT(GetType() == codegen_->GetType<T>(), "Type mismatch: Cannot recast to typed value!");
     return Value<T>(codegen_, val_);
   }
 
@@ -119,6 +129,11 @@ class ReferenceVT : public ValueVT {
     TPL_ASSERT(val->GetType() != nullptr, "Value being referenced must have a type!");
     TPL_ASSERT(val->GetType()->IsPointerType(), "Value being referenced isn't a pointer!");
   }
+
+  /**
+   * @return The address of this reference.
+   */
+  ValueVT Addr() const { return ValueVT(GetCodeGen(), GetCodeGen()->AddressOf(GetRaw())); }
 
  protected:
   /**
