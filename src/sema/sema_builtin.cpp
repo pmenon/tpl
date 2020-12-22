@@ -291,7 +291,8 @@ void Sema::CheckBuiltinConcat(ast::CallExpression *call) {
 void Sema::CheckBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin builtin) {
   switch (builtin) {
     case ast::Builtin::AggHashTableInit:
-      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::MemoryPool *, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::MemoryPool *, uint32_t)>(
+          call);
       break;
     case ast::Builtin::AggHashTableInsert:
       // Distinguish between partitioned and non-partitioned insertion.
@@ -318,13 +319,13 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin 
     case ast::Builtin::AggHashTableMovePartitions:
       using MergeFunc = Function<void(AnyPointer, ast::x::AggregationHashTable *,
                                       ast::x::AHTOverflowPartitionIterator *)>;
-      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::ThreadStateContainer *, uint32_t,
-                               MergeFunc)>(call);
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::ThreadStateContainer *,
+                               uint32_t, MergeFunc)>(call);
       break;
     case ast::Builtin::AggHashTableParallelPartitionedScan:
       using ScanFunc = Function<void(AnyPointer, AnyPointer, ast::x::AggregationHashTable *)>;
-      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, AnyPointer, ast::x::ThreadStateContainer *,
-                               ScanFunc)>(call);
+      GenericBuiltinCheck<void(ast::x::AggregationHashTable *, AnyPointer,
+                               ast::x::ThreadStateContainer *, ScanFunc)>(call);
       break;
     case ast::Builtin::AggHashTableFree:
       GenericBuiltinCheck<void(ast::x::AggregationHashTable *)>(call);
@@ -484,7 +485,8 @@ void Sema::CheckBuiltinJoinHashTableCall(ast::CallExpression *call, ast::Builtin
       GenericBuiltinCheck<void(ast::x::JoinHashTable *)>(call);
       break;
     case ast::Builtin::JoinHashTableBuildParallel:
-      GenericBuiltinCheck<void(ast::x::JoinHashTable *, ast::x::ThreadStateContainer *, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::JoinHashTable *, ast::x::ThreadStateContainer *, uint32_t)>(
+          call);
       break;
     case ast::Builtin::JoinHashTableLookup:
       GenericBuiltinCheck<ast::x::HashTableEntry *(const ast::x::JoinHashTable *, hash_t)>(call);
@@ -574,8 +576,8 @@ void Sema::CheckBuiltinTableIterCall(ast::CallExpression *call, ast::Builtin bui
       break;
     case ast::Builtin::TableIterParallel:
       using ScanFunc = Function<void(AnyPointer, AnyPointer, ast::x::TableVectorIterator *)>;
-      GenericBuiltinCheck<void(StringLiteral, AnyPointer, ast::x::ThreadStateContainer *, ScanFunc)>(
-          call);
+      GenericBuiltinCheck<void(StringLiteral, AnyPointer, ast::x::ThreadStateContainer *,
+                               ScanFunc)>(call);
       break;
     case ast::Builtin::TableIterClose:
       GenericBuiltinCheck<void(ast::x::TableVectorIterator *)>(call);
@@ -638,17 +640,21 @@ void Sema::CheckBuiltinVPICall(ast::CallExpression *call, ast::Builtin builtin) 
     case ast::Builtin::VPISetSmallInt:
     case ast::Builtin::VPISetInt:
     case ast::Builtin::VPISetBigInt:
-      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::IntegerVal, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::IntegerVal, uint32_t)>(
+          call);
       break;
     case ast::Builtin::VPISetReal:
     case ast::Builtin::VPISetDouble:
-      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::RealVal, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::RealVal, uint32_t)>(
+          call);
       break;
     case ast::Builtin::VPISetDate:
-      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::DateVal, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::DateVal, uint32_t)>(
+          call);
       break;
     case ast::Builtin::VPISetString:
-      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::StringVal, uint32_t)>(call);
+      GenericBuiltinCheck<void(ast::x::VectorProjectionIterator *, ast::x::StringVal, uint32_t)>(
+          call);
       break;
     default:
       UNREACHABLE("Impossible VPI call");
@@ -682,10 +688,12 @@ void Sema::CheckBuiltinCompactStorageWriteCall(ast::CallExpression *call, ast::B
       GenericBuiltinCheck<void(ast::x::Date *, Array<byte>, uint32_t, ast::x::DateVal)>(call);
       break;
     case ast::Builtin::CompactStorageWriteTimestamp:
-      GenericBuiltinCheck<void(ast::x::Timestamp *, Array<byte>, uint32_t, ast::x::TimestampVal)>(call);
+      GenericBuiltinCheck<void(ast::x::Timestamp *, Array<byte>, uint32_t, ast::x::TimestampVal)>(
+          call);
       break;
     case ast::Builtin::CompactStorageWriteString:
-      GenericBuiltinCheck<void(ast::x::VarlenEntry *, Array<byte>, uint32_t, ast::x::StringVal)>(call);
+      GenericBuiltinCheck<void(ast::x::VarlenEntry *, Array<byte>, uint32_t, ast::x::StringVal)>(
+          call);
       break;
     default:
       UNREACHABLE("Impossible CompactStorage::Write() call!");
@@ -1028,8 +1036,8 @@ void Sema::CheckBuiltinSorterCall(ast::CallExpression *call, ast::Builtin builti
       GenericBuiltinCheck<void(ast::x::Sorter *, ast::x::ThreadStateContainer *, uint32_t)>(call);
       break;
     case ast::Builtin::SorterSortTopKParallel:
-      GenericBuiltinCheck<void(ast::x::Sorter *, ast::x::ThreadStateContainer *, uint32_t, uint32_t)>(
-          call);
+      GenericBuiltinCheck<void(ast::x::Sorter *, ast::x::ThreadStateContainer *, uint32_t,
+                               uint32_t)>(call);
       break;
     case ast::Builtin::SorterFree:
       GenericBuiltinCheck<void(ast::x::Sorter *)>(call);
