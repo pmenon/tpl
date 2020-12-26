@@ -77,13 +77,15 @@ class ExecutableQuery {
  private:
   // The plan.
   const planner::AbstractPlanNode &plan_;
+  // The compiled query fragments that make up the query.
+  // This needs to be placed here to ensure it is destroyed before the context.
+  std::vector<std::unique_ptr<vm::Module>> modules_;
   // The AST error reporter.
   std::unique_ptr<sema::ErrorReporter> errors_;
   // The AST context used to generate the TPL AST.
   std::unique_ptr<ast::Context> ast_context_;
-  // The compiled query fragments that make up the query.
-  std::vector<std::unique_ptr<vm::Module>> modules_;
   // The module holding the query initialization and tear-down logic.
+  // References one of the owned modules.
   vm::Module *main_module_;
   // The IDs of the initialization and tear-down functions.
   std::string init_fn_, tear_down_fn_;

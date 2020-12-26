@@ -62,19 +62,16 @@ void ExecutableQuery::Run(ExecutionContext *exec_ctx, vm::ExecutionMode mode) {
 
   // Pull out init and tear-down functions.
   ExecStepFn init, tear_down;
-  bool found_init = main_module_->GetFunction(init_fn_, mode, init);
-  bool found_destroy = main_module_->GetFunction(tear_down_fn_, mode, tear_down);
-  // clang-format off
-  (void)found_init; (void)found_destroy;  // Force use.
-  // clang-format on
+  UNUSED bool found_init = main_module_->GetFunction(init_fn_, mode, init);
+  UNUSED bool found_destroy = main_module_->GetFunction(tear_down_fn_, mode, tear_down);
   TPL_ASSERT(found_init, "Query initialization function does not exist in module!");
   TPL_ASSERT(found_destroy, "Query tear-down function does not exist in module!");
 
-  // Defer the query tear-down logic so that it is run in case of any error.
-  DEFER(tear_down(query_state.get()));
-
   // Run the query initialization function.
   init(query_state.get());
+
+  // Defer the query tear-down logic so that it is run in case of any error.
+  DEFER(tear_down(query_state.get()));
 
   // Now, run the main execution plan!
   execution_plan_.Run(query_state.get(), mode);
