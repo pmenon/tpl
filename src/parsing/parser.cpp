@@ -609,6 +609,7 @@ ast::Expression *Parser::ParseType() {
       return ParseArrayType();
     }
     case Token::Type::STRUCT: {
+      Next();
       return ParseStructType();
     }
     default: {
