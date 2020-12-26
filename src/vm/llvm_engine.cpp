@@ -255,10 +255,18 @@ llvm::StructType *LLVMEngine::TypeMap::GetLLVMStructType(const ast::StructType *
     fields.push_back(member_type);
   }
 
-  llvm::StructType *type = llvm::StructType::create(fields, "struct.TPL");
-  TPL_ASSERT(
-      struct_type->GetSize() == module_->getDataLayout().getStructLayout(type)->getSizeInBytes(),
-      "Mismatched TPL and LLVM struct sizes!");
+  llvm::StructType *type;
+  if (struct_type->IsNamed()) {
+    type = llvm::StructType::create(fields, struct_type->GetName().GetView());
+  } else {
+    type = llvm::StructType::create(fields, "struct.TPL");
+  }
+
+#ifndef NDEBUG
+  const auto struct_layout = module_->getDataLayout().getStructLayout(type);
+  TPL_ASSERT(struct_type->GetSize() == struct_layout->getSizeInBytes(),
+             "Mismatched TPL and LLVM struct sizes!");
+#endif
   return type;
 }
 

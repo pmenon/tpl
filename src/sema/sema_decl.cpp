@@ -20,6 +20,8 @@ void Sema::VisitVariableDeclaration(ast::VariableDeclaration *node) {
              "Variable has neither a type declaration or an initial expression. This should have "
              "been caught during parsing.");
 
+  DeclarationContextScope scope(this, node);
+
   ast::Type *declared_type = nullptr, *initializer_type = nullptr;
 
   if (node->HasDeclaredType()) {
@@ -61,7 +63,10 @@ void Sema::VisitVariableDeclaration(ast::VariableDeclaration *node) {
   scope_->Declare(node->GetName(), resolved_type);
 }
 
-void Sema::VisitFieldDeclaration(ast::FieldDeclaration *node) { Visit(node->GetTypeRepr()); }
+void Sema::VisitFieldDeclaration(ast::FieldDeclaration *node) {
+  DeclarationContextScope scope(this, node);
+  Visit(node->GetTypeRepr());
+}
 
 namespace {
 
@@ -85,6 +90,8 @@ bool HasDuplicatesNames(const util::RegionVector<ast::FieldDeclaration *> &field
 }  // namespace
 
 void Sema::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
+  DeclarationContextScope scope(this, node);
+
   // Resolve **JUST** the function's type representation, not the function body.
   ast::Type *func_type = Resolve(node->GetTypeRepr());
 
@@ -114,6 +121,8 @@ void Sema::VisitFunctionDeclaration(ast::FunctionDeclaration *node) {
 }
 
 void Sema::VisitStructDeclaration(ast::StructDeclaration *node) {
+  DeclarationContextScope scope(this, node);
+
   ast::Type *struct_type = Resolve(node->GetTypeRepr());
 
   if (struct_type == nullptr) {
