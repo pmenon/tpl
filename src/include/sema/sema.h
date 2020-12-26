@@ -230,8 +230,26 @@ class Sema : public ast::AstVisitor<Sema> {
     SemaScope block_scope_;
   };
 
+  // RAII scope class to track the current declaration being type-checked.
+  class DeclarationContextScope {
+   public:
+    DeclarationContextScope(Sema *sema, ast::Declaration *declaration)
+        : sema_(sema), saved_decl_context_(sema->curr_decl_context_) { sema_->curr_decl_context_ = declaration; }
+
+    ~DeclarationContextScope() { sema_->curr_decl_context_ = saved_decl_context_; }
+
+   private:
+    // The semantic analyzer;
+    Sema *sema_;
+    // The previous declaration being checked.
+    ast::Declaration *saved_decl_context_;
+  };
+
   // Return the function that's currently getting type-checked.
   ast::FunctionLiteralExpression *GetCurrentFunction() const { return curr_func_; }
+
+  // Return the current declaration context.
+  ast::Declaration *GetCurrentDeclarationContext() const { return curr_decl_context_; }
 
  private:
   // By default, we keep pre-allocate four scopes for four levels of nesting.
@@ -250,6 +268,8 @@ class Sema : public ast::AstVisitor<Sema> {
   std::unique_ptr<Scope> scope_cache_[kScopeCacheSize] = {nullptr};
   // The current in-flight function being type-checked.
   ast::FunctionLiteralExpression *curr_func_;
+  // The current in-flight declaration context.
+  ast::Declaration *curr_decl_context_;
 };
 
 }  // namespace sema

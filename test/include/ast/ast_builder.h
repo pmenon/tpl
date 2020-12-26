@@ -81,8 +81,7 @@ class TestAstBuilder {
   StructDeclaration *DeclStruct(Identifier name,
                                 std::initializer_list<ast::FieldDeclaration *> fields) {
     util::RegionVector<FieldDeclaration *> f(fields.begin(), fields.end(), ctx()->GetRegion());
-    ast::StructTypeRepr *type = node_factory()->NewStructType(empty_, std::move(f));
-    return node_factory()->NewStructDeclaration(empty_, name, type);
+    return node_factory()->NewStructDeclaration(empty_, name, StructRepr(fields));
   }
 
   Expression *DeclRef(Declaration *decl) { return IdentExpr(decl->GetName()); }
@@ -116,6 +115,11 @@ class TestAstBuilder {
   }
   Expression *ArrayTypeRepr(Expression *type, uint32_t len) {
     return node_factory()->NewArrayType(empty_, IntLit(len), type);
+  }
+
+  StructTypeRepr *StructRepr(std::initializer_list<ast::FieldDeclaration *> fields) {
+    util::RegionVector<FieldDeclaration *> f(fields.begin(), fields.end(), ctx()->GetRegion());
+    return node_factory()->NewStructType(empty_, std::move(f));
   }
 
   Expression *ArrayIndex(Expression *arr, Expression *idx) {

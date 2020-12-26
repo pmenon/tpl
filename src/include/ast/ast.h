@@ -1555,6 +1555,11 @@ class ArrayTypeRepr : public Expression {
 class FunctionTypeRepr : public Expression {
  public:
   /**
+   * @return The number of function parameters.
+   */
+  std::size_t NumParameters() const noexcept { return param_types_.size(); }
+
+  /**
    * @return The parameters to the function.
    */
   const util::RegionVector<FieldDeclaration *> &GetParameters() const { return param_types_; }
@@ -1658,6 +1663,11 @@ class PointerTypeRepr : public Expression {
  */
 class StructTypeRepr : public Expression {
  public:
+  /**
+   * @return The number of fields in this struct.
+   */
+  std::size_t NumFields() const noexcept { return fields_.size(); }
+
   /**
    * @return The fields of the struct.
    */

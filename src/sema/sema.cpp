@@ -12,7 +12,8 @@ Sema::Sema(ast::Context *context)
       error_reporter_(context->GetErrorReporter()),
       scope_(nullptr),
       num_cached_scopes_(0),
-      curr_func_(nullptr) {
+      curr_func_(nullptr),
+      curr_decl_context_(nullptr) {
   // Fill scope cache.
   for (auto &scope : scope_cache_) {
     scope = std::make_unique<Scope>(nullptr, Scope::Kind::File);

@@ -8,7 +8,11 @@
 // LLVM data structures.
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
+
+// For string formatting.
+#include "spdlog/fmt/fmt.h"
 
 #include "ast/ast_node_factory.h"
 #include "ast/builtins.h"
@@ -128,7 +132,7 @@ struct FunctionTypeKeyInfo {
 };
 
 struct Context::Implementation {
-  static constexpr const uint32_t kDefaultStringTableCapacity = 32;
+  static constexpr const uint32_t kDefaultTableCapacity = 32;
 
   // -------------------------------------------------------
   // Builtin types
@@ -150,11 +154,15 @@ struct Context::Implementation {
   llvm::DenseMap<Type *, PointerType *> pointer_types;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types;
-  llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types;
+  llvm::DenseSet<StructType *, StructTypeKeyInfo> anonymous_struct_types;
+  llvm::StringMap<StructType *, util::LLVMRegionAllocator> named_struct_types;
+  uint64_t named_struct_types_unique_id;
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types;
 
   explicit Implementation(Context *ctx)
-      : identifier_table(kDefaultStringTableCapacity, util::LLVMRegionAllocator(ctx->GetRegion())) {
+      : identifier_table(kDefaultTableCapacity, util::LLVMRegionAllocator(ctx->GetRegion())),
+        named_struct_types(kDefaultTableCapacity, util::LLVMRegionAllocator(ctx->GetRegion())),
+        named_struct_types_unique_id(0) {
     // Instantiate all the builtin types.
 #define F(BKind, CppType, ...)         \
   BKind##Type = new (ctx->GetRegion()) \
@@ -279,9 +287,9 @@ MapType *MapType::Get(Type *key_type, Type *value_type) {
 
 // static
 StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
-  // Empty structs get an artificial element
+  // Empty structs get an artificial element.
   if (fields.empty()) {
-    // Empty structs get an artificial byte field to ensure non-zero size
+    // Empty structs get an artificial byte field to ensure non-zero size.
     ast::Identifier name = ctx->GetIdentifier("__field$0$");
     ast::Type *byte_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::Int8);
     fields.emplace_back(name, byte_type);
@@ -289,47 +297,23 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
 
   const StructTypeKeyInfo::KeyTy key(fields);
 
-  auto [iter, inserted] = ctx->Impl()->struct_types.insert_as(nullptr, key);
+  // To avoid two lookups into the map, here we instead lookup based on 'key'
+  // and update the reference to the struct type in-place to a fresh struct
+  // ONLY IF one isn't found.
+  auto [iter, inserted] = ctx->Impl()->anonymous_struct_types.insert_as(nullptr, key);
 
-  StructType *struct_type = nullptr;
+  StructType *struct_type;
 
   if (inserted) {
-    // Compute size and alignment. Alignment of struct is alignment of largest
-    // struct element.
-    uint32_t size = 0;
-    uint32_t alignment = 0;
-    util::RegionVector<uint32_t> field_offsets(ctx->GetRegion());
-    for (const auto &field : fields) {
-      // Check if the type needs to be padded
-      uint32_t field_align = field.type->GetAlignment();
-      if (!util::MathUtil::IsAligned(size, field_align)) {
-        size = static_cast<uint32_t>(util::MathUtil::AlignTo(size, field_align));
-      }
-
-      // Update size and calculate alignment
-      field_offsets.push_back(size);
-      size += field.type->GetSize();
-      alignment = std::max(alignment, field.type->GetAlignment());
-    }
-
-    // Empty structs have an alignment of 1 byte
-    if (alignment == 0) {
-      alignment = 1;
-    }
-
-    // Add padding at end so that these structs can be placed compactly in an
-    // array and still respect alignment
-    if (!util::MathUtil::IsAligned(size, alignment)) {
-      size = static_cast<uint32_t>(util::MathUtil::AlignTo(size, alignment));
-    }
-
-    // Create type
-    struct_type = new (ctx->GetRegion())
-        StructType(ctx, size, alignment, std::move(fields), std::move(field_offsets));
-
-    // Set in cache
+    // The struct wasn't found. Allocate ona dn update the map in-place.
+    LayoutHelper helper(fields);
+    const auto &offsets = helper.GetOffsets();
+    struct_type = new (ctx->GetRegion()) StructType(
+        ctx, helper.GetSize(), helper.GetAlignment(), ast::Identifier{}, std::move(fields),
+        util::RegionVector<uint32_t>{offsets.begin(), offsets.end(), ctx->GetRegion()});
     *iter = struct_type;
   } else {
+    // The struct type was found, so return it.
     struct_type = *iter;
   }
 
@@ -340,6 +324,49 @@ StructType *StructType::Get(Context *ctx, util::RegionVector<Field> &&fields) {
 StructType *StructType::Get(util::RegionVector<Field> &&fields) {
   TPL_ASSERT(!fields.empty(), "Cannot use StructType::Get(fields) with an empty list of fields");
   return StructType::Get(fields[0].type->GetContext(), std::move(fields));
+}
+
+// static
+StructType *StructType::Get(Context *ctx, ast::Identifier name,
+                            util::RegionVector<Field> &&fields) {
+  // Lookup the name in the named struct types map to ensure uniqueness.
+  auto iter_bool = ctx->Impl()->named_struct_types.insert(std::make_pair(name.GetView(), nullptr));
+
+  // While there is a name collision, try to find a unique version.
+  if (!iter_bool.second) {
+    llvm::SmallString<64> temp(name.GetView());
+    temp.push_back('_');
+    const auto name_len = name.GetLength();
+    do {
+      fmt::format_int int_str(ctx->Impl()->named_struct_types_unique_id++);
+      temp.resize(name_len + 1);
+      temp.append(std::string_view(int_str.data(), int_str.size()));
+
+      iter_bool = ctx->Impl()->named_struct_types.insert(std::make_pair(temp.str(), nullptr));
+    } while (!iter_bool.second);
+
+    // The name.
+    name = ctx->GetIdentifier(temp.str());
+  }
+
+  // Compute the struct layout.
+  LayoutHelper helper(fields);
+  const auto &offsets = helper.GetOffsets();
+
+  StructType *struct_type = new (ctx->GetRegion())
+      StructType(ctx, helper.GetSize(), helper.GetAlignment(), name, std::move(fields),
+                 util::RegionVector<uint32_t>{offsets.begin(), offsets.end(), ctx->GetRegion()});
+
+  iter_bool.first->setValue(struct_type);
+
+  return struct_type;
+}
+
+// static
+StructType *StructType::Get(ast::Identifier name, util::RegionVector<Field> &&fields) {
+  TPL_ASSERT(!fields.empty(),
+             "Cannot use StructType::Get(name, fields) with an empty list of fields");
+  return StructType::Get(fields[0].type->GetContext(), name, std::move(fields));
 }
 
 // static

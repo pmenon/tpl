@@ -17,6 +17,7 @@
 #include "sql/vector_filter_executor.h"
 #include "sql/vector_projection_iterator.h"
 #include "util/csv_reader.h"
+#include "util/math_util.h"
 
 namespace tpl::ast {
 
@@ -103,10 +104,39 @@ MapType::MapType(Type *key_type, Type *val_type)
 // Struct Type
 // ---------------------------------------------------------
 
-StructType::StructType(Context *ctx, uint32_t size, uint32_t alignment,
+StructType::LayoutHelper::LayoutHelper(const util::RegionVector<Field> &fields)
+    : size_(0), alignment_(0) {
+  offsets_.reserve(fields.size());
+  for (const auto &field : fields) {
+    // Check if the type needs to be padded.
+    uint32_t field_align = field.type->GetAlignment();
+    if (!util::MathUtil::IsAligned(size_, field_align)) {
+      size_ = static_cast<uint32_t>(util::MathUtil::AlignTo(size_, field_align));
+    }
+
+    // Update size and calculate alignment.
+    offsets_.push_back(size_);
+    size_ += field.type->GetSize();
+    alignment_ = std::max(alignment_, field.type->GetAlignment());
+  }
+
+  // Empty structs have an alignment of 1 byte.
+  if (alignment_ == 0) {
+    alignment_ = 1;
+  }
+
+  // Add padding at end so that these structs can be placed compactly in an
+  // array and still respect alignment.
+  if (!util::MathUtil::IsAligned(size_, alignment_)) {
+    size_ = static_cast<uint32_t>(util::MathUtil::AlignTo(size_, alignment_));
+  }
+}
+
+StructType::StructType(Context *ctx, uint32_t size, uint32_t alignment,ast::Identifier name,
                        util::RegionVector<Field> &&fields,
                        util::RegionVector<uint32_t> &&field_offsets)
     : Type(ctx, size, alignment, TypeId::StructType),
+      name_(name),
       fields_(std::move(fields)),
       field_offsets_(std::move(field_offsets)) {}
 

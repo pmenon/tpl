@@ -633,6 +633,21 @@ class MapType : public Type {
 class StructType : public Type {
  public:
   /**
+   * @return True if the struct is anonymous; false otherwise.
+   */
+  bool IsAnonymous() const noexcept { return name_.IsEmpty(); }
+
+  /**
+   * @return True if the struct is named; false otherwise.
+   */
+  bool IsNamed() const noexcept { return !IsAnonymous(); }
+
+  /**
+   * @return The name of the struct, if it is named.
+   */
+  ast::Identifier GetName() const noexcept { return name_; }
+
+  /**
    * @return A const-reference to the fields in the struct.
    */
   const util::RegionVector<Field> &GetFields() const { return fields_; }
@@ -672,7 +687,7 @@ class StructType : public Type {
   }
 
   /**
-   * Create a structure with the given fields.
+   * Create an anonymous structure with the given fields.
    * @param ctx The context to use.
    * @param fields The fields of the structure.
    * @return The structure type.
@@ -680,12 +695,30 @@ class StructType : public Type {
   static StructType *Get(Context *ctx, util::RegionVector<Field> &&fields);
 
   /**
-   * Create a structure with the given fields.
+   * Create an anonymous structure with the given fields.
    * @pre The fields vector cannot be empty!
    * @param fields The non-empty fields making up the struct.
    * @return The structure type.
    */
   static StructType *Get(util::RegionVector<Field> &&fields);
+
+  /**
+   * Create a named structure with the given fields.
+   * @param ctx The context to use.
+   * @param name The name of the struct.
+   * @param fields The fields of the structure.
+   * @return The structure type.
+   */
+  static StructType *Get(Context *ctx, ast::Identifier name, util::RegionVector<Field> &&fields);
+
+  /**
+   * Create an anonymous structure with the given fields.
+   * @pre The fields vector cannot be empty!
+   * @param fields The non-empty fields making up the struct.
+   * @param name The name of the struct.
+   * @return The structure type.
+   */
+  static StructType *Get(ast::Identifier name, util::RegionVector<Field> &&fields);
 
   /**
    * Is the given type a struct type? Needed as part of the custom type RTTI infrastructure.
@@ -695,11 +728,31 @@ class StructType : public Type {
   static bool classof(const Type *type) { return type->GetTypeId() == TypeId::StructType; }
 
  private:
-  explicit StructType(Context *ctx, uint32_t size, uint32_t alignment,
+  // Helper struct to compute the layout of a struct.
+  class LayoutHelper {
+   public:
+    // Constructor given the list of fields making up the struct.
+    LayoutHelper(const util::RegionVector<Field> &fields);
+    // The final size of the struct.
+    std::uint32_t GetSize() const noexcept { return size_; }
+    // The final alignment of the struct.
+    std::uint32_t GetAlignment() const noexcept { return alignment_; }
+    // The final list of byte-offsets of each field.
+    const std::vector<uint32_t> &GetOffsets() const noexcept { return offsets_; }
+
+   private:
+    // The computed/final size and alignment.
+    std::uint32_t size_, alignment_;
+    // The offsets.
+    std::vector<uint32_t> offsets_;
+  };
+
+  explicit StructType(Context *ctx, uint32_t size, uint32_t alignment, ast::Identifier name,
                       util::RegionVector<Field> &&fields,
                       util::RegionVector<uint32_t> &&field_offsets);
 
  private:
+  ast::Identifier name_;
   util::RegionVector<Field> fields_;
   util::RegionVector<uint32_t> field_offsets_;
 };

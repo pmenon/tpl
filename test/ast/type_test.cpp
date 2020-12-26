@@ -13,11 +13,11 @@ class TypeTest : public TplTest {
  public:
   TypeTest() : errors_(), ctx_(&errors_) {}
 
-  ast::Context *ctx() { return &ctx_; }
+  ast::Context *Ctx() { return &ctx_; }
 
-  util::Region *region() { return ctx()->GetRegion(); }
+  util::Region *Region() { return Ctx()->GetRegion(); }
 
-  ast::Identifier Name(const std::string &s) { return ctx()->GetIdentifier(s); }
+  ast::Identifier Name(std::string_view str) { return Ctx()->GetIdentifier(str); }
 
  private:
   sema::ErrorReporter errors_;
@@ -34,7 +34,7 @@ TEST_F(TypeTest, StructPaddingTest) {
 
   // clang-format off
   struct Test {
-    bool a;
+    bool     a;
     int64_t  b;
     int8_t   c;
     int32_t  d;
@@ -46,15 +46,15 @@ TEST_F(TypeTest, StructPaddingTest) {
 
   auto fields = util::RegionVector<ast::Field>(
       {
-          {Name("a"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool)},
-          {Name("b"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int64)},
-          {Name("c"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int8)},
-          {Name("d"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int32)},
-          {Name("e"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int8)},
-          {Name("f"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int16)},
-          {Name("g"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int64)->PointerTo()},
+          {Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)},
+          {Name("b"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int64)},
+          {Name("c"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int8)},
+          {Name("d"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int32)},
+          {Name("e"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int8)},
+          {Name("f"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int16)},
+          {Name("g"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int64)->PointerTo()},
       },
-      region());
+      Region());
 
   auto *type = ast::StructType::Get(std::move(fields));
 
@@ -79,8 +79,8 @@ TEST_F(TypeTest, PrimitiveTypeCacheTest) {
 
 #define GEN_INT_TEST(Kind)                                                            \
   {                                                                                   \
-    auto *type1 = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Kind);               \
-    auto *type2 = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Kind);               \
+    auto *type1 = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Kind);               \
+    auto *type2 = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Kind);               \
     EXPECT_EQ(type1, type2) << "Received two different " #Kind " types from context"; \
   }
   GEN_INT_TEST(Int8);
@@ -101,8 +101,8 @@ TEST_F(TypeTest, PrimitiveTypeCacheTest) {
 
 #define GEN_FLOAT_TEST(Kind)                                                          \
   {                                                                                   \
-    auto *type1 = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Kind);               \
-    auto *type2 = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Kind);               \
+    auto *type1 = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Kind);               \
+    auto *type2 = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Kind);               \
     EXPECT_EQ(type1, type2) << "Received two different " #Kind " types from context"; \
   }
   GEN_FLOAT_TEST(Float32)
@@ -113,46 +113,83 @@ TEST_F(TypeTest, PrimitiveTypeCacheTest) {
   // Really simple types
   //
 
-  EXPECT_EQ(ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool),
-            ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool));
-  EXPECT_EQ(ast::BuiltinType::Get(ctx(), ast::BuiltinType::Nil),
-            ast::BuiltinType::Get(ctx(), ast::BuiltinType::Nil));
+  EXPECT_EQ(ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool),
+            ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool));
+  EXPECT_EQ(ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Nil),
+            ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Nil));
 }
 
 TEST_F(TypeTest, StructTypeCacheTest) {
-  //
-  // Create two structurally equivalent types and ensure only one struct
-  // instantiation is created in the context
-  //
+  // Test 1:
+  // Create two structurally equivalent anonymous struct types and ensure only
+  // one struct instantiation is created in the context.
 
   {
     auto *type1 = ast::StructType::Get(util::RegionVector<ast::Field>(
-        {{Name("a"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool)},
-         {Name("b"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int64)}},
-        region()));
+        {{Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)},
+         {Name("b"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int64)}},
+        Region()));
 
     auto *type2 = ast::StructType::Get(util::RegionVector<ast::Field>(
-        {{Name("a"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool)},
-         {Name("b"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int64)}},
-        region()));
+        {{Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)},
+         {Name("b"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int64)}},
+        Region()));
 
+    EXPECT_TRUE(type1->IsAnonymous()) << "First struct isn't anonymous when it should be";
+    EXPECT_TRUE(type2->IsAnonymous()) << "Second struct isn't anonymous when it should be";
     EXPECT_EQ(type1, type2) << "Received two different pointers to same struct type";
   }
 
-  //
-  // Create two **DIFFERENT** structures and ensure they have different
-  // instantiations in the context
-  //
+  // Test 2:
+  // Create two **DIFFERENT** anonymous structures and ensure they have
+  // different instantiations in the context.
 
   {
     auto *type1 = ast::StructType::Get(util::RegionVector<ast::Field>(
-        {{Name("a"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool)}}, region()));
+        {{Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)}}, Region()));
 
     auto *type2 = ast::StructType::Get(util::RegionVector<ast::Field>(
-        {{Name("a"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int64)}}, region()));
+        {{Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int64)}}, Region()));
 
+    EXPECT_TRUE(type1->IsAnonymous()) << "First struct isn't anonymous when it should be";
+    EXPECT_TRUE(type2->IsAnonymous()) << "Second struct isn't anonymous when it should be";
     EXPECT_NE(type1, type2) << "Received two equivalent pointers for different struct types";
   }
+}
+
+TEST_F(TypeTest, NamedStructTypeTest) {
+  auto *type1 = ast::StructType::Get(
+      Name("A"), util::RegionVector<ast::Field>(
+                     {{Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)},
+                      {Name("b"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int64)}},
+                     Region()));
+
+  auto *type2 = ast::StructType::Get(
+      Name("A"), util::RegionVector<ast::Field>(
+                     {{Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)},
+                      {Name("b"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int64)}},
+                     Region()));
+
+  auto *type3 = ast::StructType::Get(
+      Name("A"),
+      util::RegionVector<ast::Field>(
+          {{Name("x"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)}}, Region()));
+
+  auto *type4 = ast::StructType::Get(util::RegionVector<ast::Field>(
+      {{Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)},
+       {Name("b"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int64)}},
+      Region()));
+
+  EXPECT_TRUE(type1->IsNamed());
+  EXPECT_TRUE(type2->IsNamed());
+  EXPECT_TRUE(type3->IsNamed());
+  EXPECT_FALSE(type4->IsNamed());
+  EXPECT_NE(type1->GetName(), type2->GetName());
+  EXPECT_NE(type2->GetName(), type3->GetName());
+  EXPECT_NE(type1, type2);
+  EXPECT_NE(type2, type3);
+  EXPECT_NE(type1, type3);
+  EXPECT_NE(type1, type4);
 }
 
 TEST_F(TypeTest, PointerTypeCacheTest) {
@@ -163,8 +200,8 @@ TEST_F(TypeTest, PointerTypeCacheTest) {
 
 #define GEN_INT_TEST(Kind)                                                             \
   {                                                                                    \
-    auto *type1 = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Kind)->PointerTo();   \
-    auto *type2 = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Kind)->PointerTo();   \
+    auto *type1 = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Kind)->PointerTo();   \
+    auto *type2 = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Kind)->PointerTo();   \
     EXPECT_EQ(type1, type2) << "Received two different *" #Kind " types from context"; \
   }
   GEN_INT_TEST(Int8);
@@ -186,7 +223,7 @@ TEST_F(TypeTest, PointerTypeCacheTest) {
 
   {
     auto *struct_type = ast::StructType::Get(util::RegionVector<ast::Field>(
-        {{Name("a"), ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool)}}, region()));
+        {{Name("a"), ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool)}}, Region()));
     EXPECT_EQ(struct_type->PointerTo(), struct_type->PointerTo());
   }
 }
@@ -198,13 +235,13 @@ TEST_F(TypeTest, FunctionTypeCacheTest) {
   //
 
   {
-    auto *bool_type_1 = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool);
+    auto *bool_type_1 = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool);
     auto *type1 = ast::FunctionType::Get(
-        util::RegionVector<ast::Field>({{Name("a"), bool_type_1}}, region()), bool_type_1);
+        util::RegionVector<ast::Field>({{Name("a"), bool_type_1}}, Region()), bool_type_1);
 
-    auto *bool_type_2 = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool);
+    auto *bool_type_2 = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool);
     auto *type2 = ast::FunctionType::Get(
-        util::RegionVector<ast::Field>({{Name("a"), bool_type_2}}, region()), bool_type_2);
+        util::RegionVector<ast::Field>({{Name("a"), bool_type_2}}, Region()), bool_type_2);
 
     EXPECT_EQ(type1, type2);
   }
@@ -217,13 +254,13 @@ TEST_F(TypeTest, FunctionTypeCacheTest) {
 
   {
     // The first function has type: (bool)->bool
-    auto *bool_type = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Bool);
+    auto *bool_type = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Bool);
     auto *type1 = ast::FunctionType::Get(
-        util::RegionVector<ast::Field>({{Name("a"), bool_type}}, region()), bool_type);
+        util::RegionVector<ast::Field>({{Name("a"), bool_type}}, Region()), bool_type);
 
-    auto *int_type = ast::BuiltinType::Get(ctx(), ast::BuiltinType::Int32);
+    auto *int_type = ast::BuiltinType::Get(Ctx(), ast::BuiltinType::Int32);
     auto *type2 = ast::FunctionType::Get(
-        util::RegionVector<ast::Field>({{Name("a"), int_type}}, region()), int_type);
+        util::RegionVector<ast::Field>({{Name("a"), int_type}}, Region()), int_type);
 
     EXPECT_NE(type1, type2);
   }
