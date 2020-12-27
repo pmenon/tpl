@@ -649,6 +649,11 @@ class StructType : public Type {
   ast::Identifier GetName() const noexcept { return name_; }
 
   /**
+   * @return The number of fields in the struct.
+   */
+  std::size_t NumFields() const noexcept { return fields_.size(); }
+
+  /**
    * @return A const-reference to the fields in the struct.
    */
   const util::RegionVector<Field> &GetFields() const { return fields_; }
@@ -668,7 +673,7 @@ class StructType : public Type {
 
   /**
    * @return The offset of the field in the structure with name @em name. This accounts for all
-   *         required padding by all structur members on the machine. If no field exists with the
+   *         required padding by all structure members on the machine. If no field exists with the
    *         given name, returns null.
    */
   uint32_t GetOffsetOfFieldByName(Identifier name) const {
@@ -679,6 +684,12 @@ class StructType : public Type {
     }
     return 0;
   }
+
+  /**
+   * @return The byte-offset of the field at the given index from the start of the struct,
+   *         accounting for any potential padding in earlier fields AND this field.
+   */
+  uint32_t GetFieldOffset(uint32_t field_idx) const noexcept { return field_offsets_[field_idx]; }
 
   /**
    * @return True if the layout of the provided structure @em other is equivalent to this struct.

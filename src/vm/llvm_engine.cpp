@@ -239,35 +239,40 @@ llvm::StructType *LLVMEngine::TypeMap::GetLLVMStructType(const ast::StructType *
   llvm::SmallVector<llvm::Type *, 8> fields;
 
   std::size_t struct_size = 0;
-  for (const auto &field : struct_type->GetFields()) {
-    llvm::Type *member_type = GetLLVMType(field.type);
+  for (std::size_t i = 0; i < struct_type->NumFields(); i++) {
+    const auto field = struct_type->GetFields()[i];
+    const auto field_offset = struct_type->GetFieldOffset(i);
+    TPL_ASSERT(field_offset >= struct_size, "Offset of field is smaller than current struct size?");
 
-    // TPL structs include padding that we need to replicate here.
-    const std::size_t field_size = field.type->GetSize();
-    const std::size_t field_alignment = field.type->GetAlignment();
-    if (!util::MathUtil::IsAligned(struct_size, field_alignment)) {
-      const std::size_t aligned_size = util::MathUtil::AlignTo(struct_size, field_alignment);
-      fields.push_back(llvm::ArrayType::get(Int8Type(), aligned_size - struct_size));
-      struct_size = aligned_size;
+    // Derive the LLVM type of the field.
+    auto member_type = GetLLVMType(struct_type->GetFields()[i].type);
+
+    // Add padding, if needed.
+    if (field_offset > struct_size) {
+      const std::size_t padding = field_offset - struct_size;
+      fields.push_back(llvm::ArrayType::get(Int8Type(), padding));
+      struct_size += padding;
     }
 
-    struct_size += field_size;
     fields.push_back(member_type);
+    struct_size += field.type->GetSize();
   }
 
-  llvm::StructType *type;
+  llvm::StructType *llvm_type;
   if (struct_type->IsNamed()) {
-    type = llvm::StructType::create(fields, struct_type->GetName().GetView());
+    llvm_type =
+        llvm::StructType::create(module_->getContext(), fields, struct_type->GetName().GetView());
   } else {
-    type = llvm::StructType::create(fields, "struct.TPL");
+    llvm_type = llvm::StructType::create(module_->getContext(), fields, "anon.TPL");
   }
 
 #ifndef NDEBUG
-  const auto struct_layout = module_->getDataLayout().getStructLayout(type);
+  const auto struct_layout = module_->getDataLayout().getStructLayout(llvm_type);
   TPL_ASSERT(struct_type->GetSize() == struct_layout->getSizeInBytes(),
              "Mismatched TPL and LLVM struct sizes!");
 #endif
-  return type;
+
+  return llvm_type;
 }
 
 llvm::FunctionType *LLVMEngine::TypeMap::GetLLVMFunctionType(const ast::FunctionType *func_type) {
