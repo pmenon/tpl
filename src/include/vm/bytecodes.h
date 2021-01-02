@@ -257,6 +257,7 @@ namespace tpl::vm {
   F(AbsReal, OperandType::Local, OperandType::Local)                                                                   \
   F(ValIsNull, OperandType::Local, OperandType::Local)                                                                 \
   F(ValIsNotNull, OperandType::Local, OperandType::Local)                                                              \
+  F(LogicalNotBoolVal, OperandType::Local, OperandType::Local)                                                         \
   /* SQL value binary operations */                                                                                    \
   F(AddInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \
   F(SubInteger, OperandType::Local, OperandType::Local, OperandType::Local)                                            \

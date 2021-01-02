@@ -594,6 +594,13 @@ void BytecodeGenerator::VisitNullValueCall(ast::CallExpression *call, ast::Built
   }
 }
 
+void BytecodeGenerator::VisitLNotCall(ast::CallExpression *call) {
+  LocalVar dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  LocalVar input = VisitExpressionForSQLValue(call->GetArguments()[0]);
+  GetEmitter()->Emit(Bytecode::LogicalNotBoolVal, dest, input);
+  GetExecutionResult()->SetDestination(dest);
+}
+
 void BytecodeGenerator::VisitSqlStringLikeCall(ast::CallExpression *call) {
   LocalVar dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
   LocalVar input = VisitExpressionForSQLValue(call->GetArguments()[0]);
@@ -1864,6 +1871,10 @@ void BytecodeGenerator::VisitBuiltinCallExpression(ast::CallExpression *call) {
     case ast::Builtin::IsValNull:
     case ast::Builtin::InitSqlNull: {
       VisitNullValueCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::LNot: {
+      VisitLNotCall(call);
       break;
     }
     case ast::Builtin::Like: {

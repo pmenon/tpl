@@ -63,6 +63,15 @@ struct BoolVal : public Val {
   bool ForceTruth() const noexcept { return !is_null && val; }
 
   /**
+   * @return The logical compliment of this value.
+   */
+  BoolVal LogicalNot() const noexcept {
+    BoolVal result(!val);
+    result.is_null = is_null;
+    return result;
+  }
+
+  /**
    * @return A NULL boolean value.
    */
   static BoolVal Null() {

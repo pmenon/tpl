@@ -1446,6 +1446,10 @@ VM_OP_WARM void OpValIsNotNull(bool *result, const tpl::sql::Val *val) {
   *result = tpl::sql::IsNullPredicate::IsNotNull(*val);
 }
 
+VM_OP_HOT void OpLogicalNotBoolVal(tpl::sql::BoolVal *result, const tpl::sql::BoolVal *input) {
+  *result = input->LogicalNot();
+}
+
 // ---------------------------------------------------------
 // String functions
 // ---------------------------------------------------------

@@ -28,6 +28,7 @@ namespace tpl::ast {
   F(ConvertStringToTime, convertStringToTime)                   \
                                                                 \
   /* SQL Functions */                                           \
+  F(LNot, lnot)                                                 \
   F(Like, like)                                                 \
   F(ExtractYear, extractYear)                                   \
   F(Concat, concat)                                             \

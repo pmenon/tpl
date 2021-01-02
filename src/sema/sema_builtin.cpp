@@ -1126,6 +1126,10 @@ void Sema::CheckBuiltinCall(ast::CallExpression *call) {
       CheckNullValueCall(call, builtin);
       break;
     }
+    case ast::Builtin::LNot: {
+      GenericBuiltinCheck<ast::x::BooleanVal(ast::x::BooleanVal)>(call);
+      break;
+    }
     case ast::Builtin::Like: {
       CheckBuiltinStringLikeCall(call);
       break;
