@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0
 #include "sql/codegen/expression/expression_translator.h"
 #include "sql/planner/expressions/builtin_function_expression.h"
 
@@ -29,3 +30,4 @@ class BuiltinFunctionTranslator : public ExpressionTranslator {
 };
 
 }  // namespace tpl::sql::codegen
+#endif

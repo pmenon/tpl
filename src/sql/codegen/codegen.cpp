@@ -244,13 +244,15 @@ ast::Expression *CodeGen::PrimitiveTplType(TypeId type) {
   }
 }
 
-ast::Expression *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId ret_type) const {
-  switch (agg_type) {
-    case planner::ExpressionType::AGGREGATE_COUNT:
-      return BuiltinType(ast::BuiltinType::Kind::CountAggregate);
-    case planner::ExpressionType::AGGREGATE_AVG:
+ast::Expression *CodeGen::AggregateType(planner::AggregateKind agg_kind, TypeId ret_type) const {
+  switch (agg_kind) {
+    case planner::AggregateKind::COUNT_STAR:
+      return BuiltinType(ast::BuiltinType::CountStarAggregate);
+    case planner::AggregateKind::COUNT:
+      return BuiltinType(ast::BuiltinType::CountAggregate);
+    case planner::AggregateKind::AVG:
       return BuiltinType(ast::BuiltinType::AvgAggregate);
-    case planner::ExpressionType::AGGREGATE_MIN:
+    case planner::AggregateKind::MIN:
       if (IsTypeIntegral(ret_type)) {
         return BuiltinType(ast::BuiltinType::IntegerMinAggregate);
       } else if (IsTypeFloatingPoint(ret_type)) {
@@ -263,7 +265,7 @@ ast::Expression *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId
         throw NotImplementedException(
             fmt::format("MIN() aggregates on type {}", TypeIdToString(ret_type)));
       }
-    case planner::ExpressionType::AGGREGATE_MAX:
+    case planner::AggregateKind::MAX:
       if (IsTypeIntegral(ret_type)) {
         return BuiltinType(ast::BuiltinType::IntegerMaxAggregate);
       } else if (IsTypeFloatingPoint(ret_type)) {
@@ -276,7 +278,7 @@ ast::Expression *CodeGen::AggregateType(planner::ExpressionType agg_type, TypeId
         throw NotImplementedException(
             fmt::format("MAX() aggregates on type {}", TypeIdToString(ret_type)));
       }
-    case planner::ExpressionType::AGGREGATE_SUM:
+    case planner::AggregateKind::SUM:
       TPL_ASSERT(IsTypeNumeric(ret_type), "Only arithmetic types have sums.");
       if (IsTypeIntegral(ret_type)) {
         return BuiltinType(ast::BuiltinType::IntegerSumAggregate);
@@ -655,34 +657,34 @@ ast::Expression *CodeGen::VPIGet(ast::Expression *vpi, sql::TypeId type_id, bool
   return call;
 }
 
-ast::Expression *CodeGen::VPIFilter(ast::Expression *vp, planner::ExpressionType comp_type,
+ast::Expression *CodeGen::VPIFilter(ast::Expression *vp, planner::ComparisonKind cmp_kind,
                                     uint32_t col_idx, ast::Expression *filter_val,
                                     ast::Expression *tids) {
   // Call @FilterComp(vpi, col_idx, col_type, filter_val)
   ast::Builtin builtin;
-  switch (comp_type) {
-    case planner::ExpressionType::COMPARE_EQUAL:
+  switch (cmp_kind) {
+    case planner::ComparisonKind::EQUAL:
       builtin = ast::Builtin::VectorFilterEqual;
       break;
-    case planner::ExpressionType::COMPARE_NOT_EQUAL:
+    case planner::ComparisonKind::NOT_EQUAL:
       builtin = ast::Builtin::VectorFilterNotEqual;
       break;
-    case planner::ExpressionType::COMPARE_LESS_THAN:
+    case planner::ComparisonKind::LESS_THAN:
       builtin = ast::Builtin::VectorFilterLessThan;
       break;
-    case planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
+    case planner::ComparisonKind::LESS_THAN_OR_EQUAL_TO:
       builtin = ast::Builtin::VectorFilterLessThanEqual;
       break;
-    case planner::ExpressionType::COMPARE_GREATER_THAN:
+    case planner::ComparisonKind::GREATER_THAN:
       builtin = ast::Builtin::VectorFilterGreaterThan;
       break;
-    case planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
+    case planner::ComparisonKind::GREATER_THAN_OR_EQUAL_TO:
       builtin = ast::Builtin::VectorFilterGreaterThanEqual;
       break;
     default:
       throw NotImplementedException(
           fmt::format("CodeGen: Vector filter type {} from VPI not supported.",
-                      planner::ExpressionTypeToString(comp_type, true)));
+                      planner::ComparisonKindToString(cmp_kind, true)));
   }
   ast::Expression *call = CallBuiltin(builtin, {vp, Const32(col_idx), filter_val, tids});
   call->SetType(ast::BuiltinType::Get(Context(), ast::BuiltinType::Nil));
@@ -1135,7 +1137,9 @@ ast::Expression *CodeGen::Like(ast::Expression *str, ast::Expression *pattern) {
 }
 
 ast::Expression *CodeGen::NotLike(ast::Expression *str, ast::Expression *pattern) {
-  return UnaryOp(parsing::Token::Type::BANG, Like(str, pattern));
+  // TODO(pmenon): This is wrong! We need to preserve the NULL across NOT LIKE.
+  return UnaryOp(parsing::Token::Type::BANG,
+                 CallBuiltin(ast::Builtin::SqlToBool, {Like(str, pattern)}));
 }
 
 // ---------------------------------------------------------

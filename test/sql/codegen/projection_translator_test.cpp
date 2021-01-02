@@ -27,9 +27,9 @@ TEST_F(ProjectionTranslatorTest, SimpleArithmeticProjections) {
   planner::OutputSchemaHelper projection_out(&expr_maker, 0);
   {
     planner::ExpressionMaker::Expression col1 =
-        expr_maker.BuiltinFunction(ast::Builtin::Cos, {expr_maker.Constant(1.0F)}, TypeId::Double);
+        expr_maker.UnaryOperator(KnownOperator::Cos, TypeId::Double, expr_maker.Constant(1.0F));
     planner::ExpressionMaker::Expression col2 =
-        expr_maker.BuiltinFunction(ast::Builtin::Sin, {expr_maker.Constant(90.0F)}, TypeId::Double);
+        expr_maker.UnaryOperator(KnownOperator::Sin, TypeId::Double, expr_maker.Constant(90.0F));
     planner::ExpressionMaker::Expression col3 =
         expr_maker.OpSum(expr_maker.Constant(1), expr_maker.Constant(2));
     planner::ExpressionMaker::Expression col4 =

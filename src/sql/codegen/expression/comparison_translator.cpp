@@ -23,24 +23,24 @@ ast::Expression *ComparisonTranslator::DeriveValue(ConsumerContext *context,
   auto left_val = context->DeriveValue(*GetExpression().GetChild(0), provider);
   auto right_val = context->DeriveValue(*GetExpression().GetChild(1), provider);
 
-  switch (const auto expr_type = GetExpression().GetExpressionType(); expr_type) {
-    case planner::ExpressionType::COMPARE_EQUAL:
+  switch (auto cmp_kind = GetExpressionAs<planner::ComparisonExpression>().GetKind(); cmp_kind) {
+    case planner::ComparisonKind::EQUAL:
       return codegen_->Compare(parsing::Token::Type::EQUAL_EQUAL, left_val, right_val);
-    case planner::ExpressionType::COMPARE_GREATER_THAN:
+    case planner::ComparisonKind::GREATER_THAN:
       return codegen_->Compare(parsing::Token::Type::GREATER, left_val, right_val);
-    case planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
+    case planner::ComparisonKind::GREATER_THAN_OR_EQUAL_TO:
       return codegen_->Compare(parsing::Token::Type::GREATER_EQUAL, left_val, right_val);
-    case planner::ExpressionType::COMPARE_LESS_THAN:
+    case planner::ComparisonKind::LESS_THAN:
       return codegen_->Compare(parsing::Token::Type::LESS, left_val, right_val);
-    case planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
+    case planner::ComparisonKind::LESS_THAN_OR_EQUAL_TO:
       return codegen_->Compare(parsing::Token::Type::LESS_EQUAL, left_val, right_val);
-    case planner::ExpressionType::COMPARE_NOT_EQUAL:
+    case planner::ComparisonKind::NOT_EQUAL:
       return codegen_->Compare(parsing::Token::Type::BANG_EQUAL, left_val, right_val);
-    case planner::ExpressionType::COMPARE_LIKE:
+    case planner::ComparisonKind::LIKE:
       return codegen_->Like(left_val, right_val);
-    case planner::ExpressionType::COMPARE_NOT_LIKE:
+    case planner::ComparisonKind::NOT_LIKE:
       return codegen_->NotLike(left_val, right_val);
-    case planner::ExpressionType::COMPARE_BETWEEN: {
+    case planner::ComparisonKind::BETWEEN: {
       auto lo = right_val, hi = context->DeriveValue(*GetExpression().GetChild(2), provider);
       return codegen_->BinaryOp(
           parsing::Token::Type::AND,
@@ -49,7 +49,7 @@ ast::Expression *ComparisonTranslator::DeriveValue(ConsumerContext *context,
     }
     default: {
       throw NotImplementedException(fmt::format("Translation of comparison type {}",
-                                                planner::ExpressionTypeToString(expr_type, true)));
+                                                planner::ComparisonKindToString(cmp_kind, true)));
     }
   }
 }

@@ -14,12 +14,21 @@ class ConjunctionExpression : public AbstractExpression {
  public:
   /**
    * Instantiates a new conjunction expression.
-   * @param cmp_type type of conjunction
-   * @param children vector containing exactly two children, left then right
+   * @param kind The kind of the conjunction.
+   * @param children vector containing exactly two children, left then right.
    */
-  ConjunctionExpression(const ExpressionType cmp_type,
-                        std::vector<const AbstractExpression *> &&children)
-      : AbstractExpression(cmp_type, sql::TypeId::Boolean, std::move(children)) {}
+  ConjunctionExpression(ConjunctionKind kind, std::vector<const AbstractExpression *> &&children)
+      : AbstractExpression(ExpressionType::CONJUNCTION, sql::TypeId::Boolean, std::move(children)),
+        kind_(kind) {}
+
+  /**
+   * @return The kind of conjunction.
+   */
+  ConjunctionKind GetKind() const { return kind_; }
+
+ private:
+  // The kind of the conjunction.
+  ConjunctionKind kind_;
 };
 
 }  // namespace tpl::sql::planner

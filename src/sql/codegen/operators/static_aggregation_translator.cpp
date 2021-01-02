@@ -55,7 +55,7 @@ ast::StructDeclaration *StaticAggregationTranslator::GeneratePayloadStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto name = codegen_->MakeIdentifier(kAggAttrPrefix + std::to_string(term_idx++));
-    auto type = codegen_->AggregateType(term->GetExpressionType(), term->GetReturnValueType());
+    auto type = codegen_->AggregateType(term->GetKind(), term->GetReturnValueType());
     fields.push_back(codegen_->MakeField(name, type));
   }
   return codegen_->DeclareStruct(agg_payload_type_, std::move(fields));

@@ -4,7 +4,7 @@
 #include "sql/codegen/expression/expression_translator.h"
 
 namespace tpl::sql::planner {
-class OperatorExpression;
+class CastExpression;
 }  // namespace tpl::sql::planner
 
 namespace tpl::sql::codegen {
@@ -19,7 +19,7 @@ class CastTranslator : public ExpressionTranslator {
    * @param expr The expression to translate.
    * @param compilation_context The context in which translation occurs.
    */
-  CastTranslator(const planner::OperatorExpression &expr, CompilationContext *compilation_context);
+  CastTranslator(const planner::CastExpression &expr, CompilationContext *compilation_context);
 
   /**
    * Derive the value of the expression.
@@ -29,6 +29,11 @@ class CastTranslator : public ExpressionTranslator {
    */
   ast::Expression *DeriveValue(ConsumerContext *context,
                                const ColumnValueProvider *provider) const override;
+
+ private:
+  const planner::CastExpression &GetCastExpression() const {
+    return GetExpressionAs<planner::CastExpression>();
+  }
 };
 
 }  // namespace tpl::sql::codegen

@@ -8,14 +8,15 @@
 #include "ast/builtins.h"
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/aggregate_expression.h"
-#include "sql/planner/expressions/builtin_function_expression.h"
+#include "sql/planner/expressions/binary_expression.h"
 #include "sql/planner/expressions/case_expression.h"
+#include "sql/planner/expressions/cast_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
 #include "sql/planner/expressions/conjunction_expression.h"
 #include "sql/planner/expressions/constant_value_expression.h"
 #include "sql/planner/expressions/derived_value_expression.h"
-#include "sql/planner/expressions/operator_expression.h"
+#include "sql/planner/expressions/unary_expression.h"
 #include "sql/value.h"
 
 namespace tpl::sql::planner {
@@ -88,51 +89,51 @@ class ExpressionMaker {
   /**
    * Create a Comparison expression
    */
-  Expression Compare(planner::ExpressionType comp_type, Expression child1, Expression child2) {
+  Expression Compare(planner::ComparisonKind cmp_kind, Expression child1, Expression child2) {
     return Alloc(std::make_unique<planner::ComparisonExpression>(
-        comp_type, std::vector<Expression>{child1, child2}));
+        cmp_kind, std::vector<Expression>{child1, child2}));
   }
 
   /**
    *  expression for child1 == child2
    */
   Expression CompareEq(Expression child1, Expression child2) {
-    return Compare(planner::ExpressionType::COMPARE_EQUAL, child1, child2);
+    return Compare(planner::ComparisonKind::EQUAL, child1, child2);
   }
 
   /**
    * Create expression for child1 == child2
    */
   Expression CompareNeq(Expression child1, Expression child2) {
-    return Compare(planner::ExpressionType::COMPARE_NOT_EQUAL, child1, child2);
+    return Compare(planner::ComparisonKind::NOT_EQUAL, child1, child2);
   }
 
   /**
    * Create expression for child1 < child2
    */
   Expression CompareLt(Expression child1, Expression child2) {
-    return Compare(planner::ExpressionType::COMPARE_LESS_THAN, child1, child2);
+    return Compare(planner::ComparisonKind::LESS_THAN, child1, child2);
   }
 
   /**
    * Create expression for child1 <= child2
    */
   Expression CompareLe(Expression child1, Expression child2) {
-    return Compare(planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO, child1, child2);
+    return Compare(planner::ComparisonKind::LESS_THAN_OR_EQUAL_TO, child1, child2);
   }
 
   /**
    * Create expression for child1 > child2
    */
   Expression CompareGt(Expression child1, Expression child2) {
-    return Compare(planner::ExpressionType::COMPARE_GREATER_THAN, child1, child2);
+    return Compare(planner::ComparisonKind::GREATER_THAN, child1, child2);
   }
 
   /**
    * Create expression for child1 >= child2
    */
   Expression CompareGe(Expression child1, Expression child2) {
-    return Compare(planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO, child1, child2);
+    return Compare(planner::ComparisonKind::GREATER_THAN_OR_EQUAL_TO, child1, child2);
   }
 
   /**
@@ -140,164 +141,150 @@ class ExpressionMaker {
    */
   Expression CompareBetween(Expression input, Expression low, Expression high) {
     return Alloc(std::make_unique<planner::ComparisonExpression>(
-        planner::ExpressionType::COMPARE_BETWEEN, std::vector<Expression>({input, low, high})));
+        planner::ComparisonKind::BETWEEN, std::vector<Expression>({input, low, high})));
   }
 
   /**
    * Create a LIKE() expression.
    */
   Expression CompareLike(Expression input, Expression s) {
-    return Alloc(std::make_unique<planner::BuiltinFunctionExpression>(
-        ast::Builtin::Like, std::vector<Expression>({input, s}), TypeId::Boolean));
+    return Compare(planner::ComparisonKind::LIKE, input, s);
   }
 
   /**
    * Create a NOT LIKE() expression.
    */
-  Expression CompareNotLike(Expression input, Expression s) { return OpNot(CompareLike(input, s)); }
+  Expression CompareNotLike(Expression input, Expression s) {
+    return Compare(planner::ComparisonKind::NOT_LIKE, input, s);
+  }
 
   /**
    * Create a unary operation expression
    */
-  Expression Operator(planner::ExpressionType op_type, sql::TypeId ret_type, Expression child) {
-    return Alloc(std::make_unique<planner::OperatorExpression>(op_type, ret_type,
-                                                               std::vector<Expression>{child}));
+  Expression UnaryOperator(KnownOperator op, sql::TypeId ret_type, Expression child) {
+    return Alloc(std::make_unique<planner::UnaryExpression>(ret_type, op, child));
   }
 
   /**
    * Create a binary operation expression
    */
-  Expression Operator(planner::ExpressionType op_type, sql::TypeId ret_type, Expression child1,
-                      Expression child2) {
-    return Alloc(std::make_unique<planner::OperatorExpression>(
-        op_type, ret_type, std::vector<Expression>{child1, child2}));
+  Expression BinaryOperator(KnownOperator op, sql::TypeId ret_type, Expression child1,
+                            Expression child2) {
+    return Alloc(std::make_unique<planner::BinaryExpression>(ret_type, op, child1, child2));
   }
 
   /**
    * Cast the input expression to the given type.
    */
   Expression OpCast(Expression input, sql::TypeId to_type) {
-    return Operator(planner::ExpressionType::OPERATOR_CAST, to_type, input);
+    return Alloc(std::make_unique<planner::CastExpression>(to_type, input));
   }
 
   /**
    * create expression for child1 + child2
    */
   Expression OpSum(Expression child1, Expression child2) {
-    return Operator(planner::ExpressionType::OPERATOR_PLUS, child1->GetReturnValueType(), child1,
-                    child2);
+    return BinaryOperator(KnownOperator::Add, child1->GetReturnValueType(), child1, child2);
   }
 
   /**
    * create expression for child1 - child2
    */
   Expression OpMin(Expression child1, Expression child2) {
-    return Operator(planner::ExpressionType::OPERATOR_MINUS, child1->GetReturnValueType(), child1,
-                    child2);
+    return BinaryOperator(KnownOperator::Sub, child1->GetReturnValueType(), child1, child2);
   }
 
   /**
    * create expression for child1 * child2
    */
   Expression OpMul(Expression child1, Expression child2) {
-    return Operator(planner::ExpressionType::OPERATOR_MULTIPLY, child1->GetReturnValueType(),
-                    child1, child2);
+    return BinaryOperator(KnownOperator::Mul, child1->GetReturnValueType(), child1, child2);
   }
 
   /**
    * create expression for child1 / child2
    */
   Expression OpDiv(Expression child1, Expression child2) {
-    return Operator(planner::ExpressionType::OPERATOR_DIVIDE, child1->GetReturnValueType(), child1,
-                    child2);
+    return BinaryOperator(KnownOperator::Div, child1->GetReturnValueType(), child1, child2);
   }
 
   /**
    * Create expression for NOT(child)
    */
   Expression OpNot(Expression child) {
-    return Operator(planner::ExpressionType::OPERATOR_NOT, sql::TypeId::Boolean, child);
+    return UnaryOperator(KnownOperator::LogicalNot, sql::TypeId::Boolean, child);
   }
 
   /**
    * Create expression for child1 AND/OR child2
    */
-  Expression Conjunction(planner::ExpressionType op_type, Expression child1, Expression child2) {
+  Expression Conjunction(planner::ConjunctionKind kind, Expression child1, Expression child2) {
     return Alloc(std::make_unique<planner::ConjunctionExpression>(
-        op_type, std::vector<Expression>{child1, child2}));
+        kind, std::vector<Expression>{child1, child2}));
   }
 
   /**
    * Create expression for child1 AND child2
    */
   Expression ConjunctionAnd(Expression child1, Expression child2) {
-    return Conjunction(planner::ExpressionType::CONJUNCTION_AND, child1, child2);
+    return Conjunction(planner::ConjunctionKind::AND, child1, child2);
   }
 
   /**
    * Create expression for child1 OR child2
    */
   Expression ConjunctionOr(Expression child1, Expression child2) {
-    return Conjunction(planner::ExpressionType::CONJUNCTION_OR, child1, child2);
-  }
-
-  /**
-   * Create an expression for a builtin call.
-   */
-  Expression BuiltinFunction(ast::Builtin builtin, std::vector<Expression> args,
-                             const sql::TypeId return_value_type) {
-    return Alloc(std::make_unique<planner::BuiltinFunctionExpression>(builtin, std::move(args),
-                                                                      return_value_type));
+    return Conjunction(planner::ConjunctionKind::OR, child1, child2);
   }
 
   /**
    * Create an aggregate expression
    */
-  AggExpression AggregateTerm(planner::ExpressionType agg_type, Expression child, bool distinct) {
+  AggExpression AggregateTerm(planner::AggregateKind kind, Expression child, bool distinct) {
     return Alloc(std::make_unique<planner::AggregateExpression>(
-        agg_type, std::vector<Expression>{child}, distinct));
+        kind, std::vector<Expression>{child}, distinct));
   }
 
   /**
    * Create a sum aggregate expression
    */
   AggExpression AggSum(Expression child, bool distinct = false) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_SUM, child, distinct);
+    return AggregateTerm(planner::AggregateKind::SUM, child, distinct);
   }
 
   /**
    * Create a sum aggregate expression
    */
   AggExpression AggMin(Expression child, bool distinct = false) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_MIN, child, distinct);
+    return AggregateTerm(planner::AggregateKind::MIN, child, distinct);
   }
 
   /**
    * Create a sum aggregate expression
    */
   AggExpression AggMax(Expression child, bool distinct = false) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_MAX, child, distinct);
+    return AggregateTerm(planner::AggregateKind::MAX, child, distinct);
   }
 
   /**
    * Create a avg aggregate expression
    */
   AggExpression AggAvg(Expression child, bool distinct = false) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_AVG, child, distinct);
+    return AggregateTerm(planner::AggregateKind::AVG, child, distinct);
   }
 
   /**
    * Create a count aggregate expression
    */
   AggExpression AggCount(Expression child, bool distinct = false) {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_COUNT, child, distinct);
+    return AggregateTerm(planner::AggregateKind::COUNT, child, distinct);
   }
 
   /**
    * Create a count aggregate expression
    */
   AggExpression AggCountStar() {
-    return AggregateTerm(planner::ExpressionType::AGGREGATE_COUNT, Constant(1), false);
+    return AggregateTerm(planner::AggregateKind::COUNT_STAR, Constant(1), false);
   }
 
   /**

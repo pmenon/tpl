@@ -81,8 +81,7 @@ TEST_F(SeqScanTranslatorTest, ScanWithNullCheckTest) {
     auto colb = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
     seq_scan_out.AddOutput("colb", colb);
     // Predicate.
-    auto predicate =
-        expr_maker.Operator(planner::ExpressionType::OPERATOR_IS_NULL, TypeId::Boolean, colb);
+    auto predicate = expr_maker.UnaryOperator(KnownOperator::IsNull, TypeId::Boolean, colb);
     // Build plan.
     seq_scan = planner::SeqScanPlanNode::Builder()
                    .SetOutputSchema(seq_scan_out.MakeSchema())

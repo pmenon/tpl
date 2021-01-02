@@ -7,112 +7,63 @@
 namespace tpl::sql::planner {
 
 /**
- * All possible expression types.
- * TODO(WAN): Do we really need some of this stuff? e.g. HASH_RANGE for elastic
+ * All possible comparison types.
  */
-enum class ExpressionType : uint8_t {
-  INVALID,
-
-  OPERATOR_UNARY_MINUS,
-  OPERATOR_PLUS,
-  OPERATOR_MINUS,
-  OPERATOR_MULTIPLY,
-  OPERATOR_DIVIDE,
-  OPERATOR_CONCAT,
-  OPERATOR_MOD,
-  OPERATOR_CAST,
-  OPERATOR_NOT,
-  OPERATOR_IS_NULL,
-  OPERATOR_IS_NOT_NULL,
-  OPERATOR_EXISTS,
-
-  COMPARE_EQUAL,
-  COMPARE_NOT_EQUAL,
-  COMPARE_LESS_THAN,
-  COMPARE_GREATER_THAN,
-  COMPARE_LESS_THAN_OR_EQUAL_TO,
-  COMPARE_GREATER_THAN_OR_EQUAL_TO,
-  COMPARE_LIKE,
-  COMPARE_NOT_LIKE,
-  COMPARE_IN,
-  COMPARE_IS_DISTINCT_FROM,
-  COMPARE_BETWEEN,
-
-  CONJUNCTION_AND,
-  CONJUNCTION_OR,
-
-  COLUMN_VALUE,
-
-  VALUE_CONSTANT,
-  VALUE_PARAMETER,
-  VALUE_TUPLE,
-  VALUE_TUPLE_ADDRESS,
-  VALUE_NULL,
-  VALUE_VECTOR,
-  VALUE_SCALAR,
-  VALUE_DEFAULT,
-
-  AGGREGATE_COUNT,
-  AGGREGATE_SUM,
-  AGGREGATE_MIN,
-  AGGREGATE_MAX,
-  AGGREGATE_AVG,
-
-  FUNCTION,
-  BUILTIN_FUNCTION,
-
-  HASH_RANGE,
-
-  OPERATOR_CASE_EXPR,
-  OPERATOR_NULL_IF,
-  OPERATOR_COALESCE,
-
-  ROW_SUBQUERY,
-
-  STAR,
-  PLACEHOLDER,
-  COLUMN_REF,
-  FUNCTION_REF,
-  TABLE_REF
+enum class ComparisonKind : uint8_t {
+  EQUAL,
+  NOT_EQUAL,
+  LESS_THAN,
+  GREATER_THAN,
+  LESS_THAN_OR_EQUAL_TO,
+  GREATER_THAN_OR_EQUAL_TO,
+  LIKE,
+  NOT_LIKE,
+  IN,
+  BETWEEN,
 };
 
 /**
- * @return True if the given expression type is a comparison expression; false otherwise.
+ * All possible aggregates.
  */
-static inline bool IsComparisonExpression(ExpressionType type) {
-  return type <= planner::ExpressionType::COMPARE_IS_DISTINCT_FROM &&
-         type >= planner::ExpressionType::COMPARE_EQUAL;
-}
+enum class AggregateKind : uint8_t {
+  COUNT,
+  COUNT_STAR,
+  SUM,
+  MIN,
+  MAX,
+  AVG,
+};
 
 /**
- * @return True if the given expression type is an arithmetic expression; false otherwise.
+ * All possible conjunctions ... just two.
  */
-static inline bool IsArithmeticExpression(ExpressionType type) {
-  return type <= planner::ExpressionType::OPERATOR_MOD &&
-         type >= planner::ExpressionType::OPERATOR_PLUS;
-}
+enum class ConjunctionKind : uint8_t { AND, OR };
 
 /**
- * @return True if the given expression type is a column-reference expression; false otherwise.
+ * All possible expression types.
  */
-static inline bool IsColumnRefExpression(ExpressionType type) {
-  return type == ExpressionType::COLUMN_VALUE;
-}
+enum class ExpressionType : uint8_t {
+  // Specialized.
+  AGGREGATE,
+  CASE,
+  CAST,
+  COLUMN_VALUE,
+  COMPARISON,
+  CONJUNCTION,
+  CONSTANT,
+  DERIVED_VALUE,
+  // Generic (builtins).
+  UNARY_OPERATOR,
+  BINARY_OPERATOR,
+  NARY_OPERATOR,
+};
 
-/**
- * @return True if the given expression type is a constant value expression; false otherwise.
- */
-static inline bool IsConstantExpression(ExpressionType type) {
-  return type == ExpressionType::VALUE_CONSTANT;
-}
+std::string ComparisonKindToString(ComparisonKind kind, bool short_str);
 
-/**
- * Convert an expression type into a string representation. When short_str is true, return a short
- * version of ExpressionType string. For example, "+" instead of "Operator_Plus".
- * @param type The expression type.
- * @param short_str If a terse version of the expression type should be returned.
- * @return A representation of the expression type.
- */
-std::string ExpressionTypeToString(ExpressionType type, bool short_str);
+std::string AggregateKindToString(AggregateKind kind);
+
+std::string ConjunctionKindToString(ConjunctionKind kind);
+
+std::string ExpressionTypeToString(ExpressionType type);
 
 }  // namespace tpl::sql::planner

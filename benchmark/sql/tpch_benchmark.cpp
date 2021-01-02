@@ -1025,9 +1025,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
     l_seq_scan_out.AddOutput("volume", volume);
     l_seq_scan_out.AddOutput("l_orderkey", l_orderkey);
     l_seq_scan_out.AddOutput("l_suppkey", l_suppkey);
-    // TODO(Amadou): Add a BuiltinFunctionExpression for @extractYear.
     auto extract_year =
-        expr_maker.BuiltinFunction(ast::Builtin::ExtractYear, {l_shipdate}, sql::TypeId::Integer);
+        expr_maker.UnaryOperator(KnownOperator::ExtractYear, sql::TypeId::Integer, l_shipdate);
     l_seq_scan_out.AddOutput("l_year", extract_year);
     auto schema = l_seq_scan_out.MakeSchema();
     // Predicate
@@ -1207,7 +1206,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
 
   // Compile plan
   auto last_op = order_by.get();
-  NoOpResultConsumer consumer;
+//  NoOpResultConsumer consumer;
+  PrintingConsumer consumer(std::cout, last_op->GetOutputSchema());
   sql::MemoryPool memory(nullptr);
   sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
   auto query = CompilationContext::Compile(*last_op);
@@ -1542,8 +1542,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     auto o_orderdate = hash_join_out5.GetOutput("o_orderdate");
     // Output Schema.
     proj_out.AddOutput("n_name", n_name);
-    proj_out.AddOutput("o_year", expr_maker.BuiltinFunction(ast::Builtin::ExtractYear,
-                                                            {o_orderdate}, TypeId::Integer));
+    proj_out.AddOutput("o_year", expr_maker.UnaryOperator(KnownOperator::ExtractYear,
+                                                          TypeId::Integer, o_orderdate));
     proj_out.AddOutput(
         "amount", expr_maker.OpMin(
                       // l_extendedprice * (1.0 - l_discount)
@@ -2185,12 +2185,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
 
     // Predicate
     auto brand_comp = expr_maker.CompareNeq(p_brand, expr_maker.Constant("Brand#45"));
-    auto type_like = expr_maker.Constant("MEDIUM POLISHED%");
-    auto like_call =
-        expr_maker.BuiltinFunction(ast::Builtin::Like, {p_type, type_like}, sql::TypeId::Boolean);
-    auto conversion_call =
-        expr_maker.BuiltinFunction(ast::Builtin::SqlToBool, {like_call}, sql::TypeId::Boolean);
-    auto type_comp = expr_maker.OpNot(conversion_call);
+    auto type_comp = expr_maker.CompareNotLike(p_type, expr_maker.Constant("MEDIUM POLISHED%"));
     auto size_comp = expr_maker.ConjunctionOr(
         expr_maker.CompareEq(p_size, expr_maker.Constant(49)),
         expr_maker.ConjunctionOr(
@@ -2227,11 +2222,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
     s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
     auto schema = s_seq_scan_out.MakeSchema();
     // Predicate
-    auto comment_like = expr_maker.Constant("%Customer%Complaints%");
-    auto like_call = expr_maker.BuiltinFunction(ast::Builtin::Like, {s_comment, comment_like},
-                                                sql::TypeId::Boolean);
     auto predicate =
-        expr_maker.BuiltinFunction(ast::Builtin::SqlToBool, {like_call}, sql::TypeId::Boolean);
+        expr_maker.CompareLike(s_comment, expr_maker.Constant("%Customer%Complaints%"));
     // Build
     planner::SeqScanPlanNode::Builder builder;
     s_seq_scan = builder.SetOutputSchema(std::move(schema))

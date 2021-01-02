@@ -12,13 +12,13 @@ namespace tpl::sql::planner {
 class DerivedValueExpression : public AbstractExpression {
  public:
   /**
-   * This constructor is called by the optimizer
-   * @param type type of the return value of the expression
-   * @param tuple_idx index of the tuple
-   * @param value_idx offset of the value in the tuple
+   * Instantiate a DVE expression.
+   * @param type The type of the return value of the expression.
+   * @param tuple_idx The index of the tuple.
+   * @param value_idx The offset of the value in the tuple.
    */
   DerivedValueExpression(sql::TypeId type, int32_t tuple_idx, int32_t value_idx)
-      : AbstractExpression(ExpressionType::VALUE_TUPLE, type, {}),
+      : AbstractExpression(ExpressionType::DERIVED_VALUE, type, {}),
         tuple_idx_(tuple_idx),
         value_idx_(value_idx) {}
 

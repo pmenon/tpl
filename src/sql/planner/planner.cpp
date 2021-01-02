@@ -8,7 +8,7 @@
 #include "sql/planner/expressions/constant_value_expression.h"
 #include "sql/planner/expressions/derived_value_expression.h"
 #include "sql/planner/expressions/expression_defs.h"
-#include "sql/planner/expressions/operator_expression.h"
+#include "sql/planner/expressions/unary_expression.h"
 
 #include "sql/planner/plannodes/abstract_join_plan_node.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"

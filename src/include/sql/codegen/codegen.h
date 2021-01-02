@@ -266,11 +266,11 @@ class CodeGen {
 
   /**
    * Return the appropriate aggregate type for the given input aggregation expression.
-   * @param agg_type The aggregate expression type.
+   * @param agg_kind The aggregate expression type.
    * @param ret_type The return type of the aggregate.
    * @return The corresponding TPL aggregate type.
    */
-  [[nodiscard]] ast::Expression *AggregateType(planner::ExpressionType agg_type,
+  [[nodiscard]] ast::Expression *AggregateType(planner::AggregateKind agg_kind,
                                                TypeId ret_type) const;
 
   /**
@@ -750,12 +750,12 @@ class CodeGen {
    * Call @filter[Comparison](). Invokes the vectorized filter on the provided vector projection
    * and column index, populating the results in the provided tuple ID list.
    * @param vp The vector projection.
-   * @param comp_type The comparison type.
+   * @param cmp_kind The comparison type.
    * @param col_idx The index of the column in the vector projection to apply the filter on.
    * @param filter_val The filtering value.
    * @param The TID list.
    */
-  ast::Expression *VPIFilter(ast::Expression *vp, planner::ExpressionType comp_type,
+  ast::Expression *VPIFilter(ast::Expression *vp, planner::ComparisonKind cmp_kind,
                              uint32_t col_idx, ast::Expression *filter_val, ast::Expression *tids);
 
   // -------------------------------------------------------

@@ -22,14 +22,14 @@ ast::Expression *ConjunctionTranslator::DeriveValue(ConsumerContext *context,
   auto left_val = context->DeriveValue(*GetExpression().GetChild(0), provider);
   auto right_val = context->DeriveValue(*GetExpression().GetChild(1), provider);
 
-  switch (const auto expr_type = GetExpression().GetExpressionType(); expr_type) {
-    case planner::ExpressionType::CONJUNCTION_AND:
+  switch (auto cmp_kind = GetExpressionAs<planner::ConjunctionExpression>().GetKind(); cmp_kind) {
+    case planner::ConjunctionKind::AND:
       return codegen_->BinaryOp(parsing::Token::Type::AND, left_val, right_val);
-    case planner::ExpressionType::CONJUNCTION_OR:
+    case planner::ConjunctionKind::OR:
       return codegen_->BinaryOp(parsing::Token::Type::OR, left_val, right_val);
     default: {
       throw NotImplementedException(fmt::format("Translation of conjunction type {}",
-                                                planner::ExpressionTypeToString(expr_type, true)));
+                                                planner::ConjunctionKindToString(cmp_kind)));
     }
   }
 }

@@ -49,6 +49,14 @@ class AbstractExpression {
   ExpressionType GetExpressionType() const { return expression_type_; }
 
   /**
+   * @return True if this expression is of the provided template type; false otherwise.
+   */
+  template <ExpressionType Type>
+  bool Is() const noexcept {
+    return expression_type_ == Type;
+  }
+
+  /**
    * @return The SQL type of value this expression produces and returns.
    */
   TypeId GetReturnValueType() const { return return_value_type_; }

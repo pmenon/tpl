@@ -3,23 +3,22 @@
 #include "common/macros.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
-#include "sql/planner/expressions/operator_expression.h"
+#include "sql/planner/expressions/cast_expression.h"
 
 namespace tpl::sql::codegen {
 
-CastTranslator::CastTranslator(const planner::OperatorExpression &expr,
+CastTranslator::CastTranslator(const planner::CastExpression &expr,
                                CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {
   TPL_ASSERT(expr.NumChildren() == 1, "Cast expression expected to have single input.");
-  compilation_context->Prepare(*expr.GetChild(0));
+  compilation_context->Prepare(*expr.GetInput());
 }
 
 ast::Expression *CastTranslator::DeriveValue(ConsumerContext *context,
                                              const ColumnValueProvider *provider) const {
-  ast::Expression *input = context->DeriveValue(*GetExpression().GetChild(0), provider);
-  const auto input_type = GetExpression().GetChild(0)->GetReturnValueType();
-  const auto output_type = GetExpression().GetReturnValueType();
-  return codegen_->ConvertSql(input, input_type, output_type);
+  const auto &expr = GetCastExpression();
+  const auto input = context->DeriveValue(*expr.GetInput(), provider);
+  return codegen_->ConvertSql(input, expr.GetInputType(), expr.GetTargetType());
 }
 
 }  // namespace tpl::sql::codegen

@@ -79,7 +79,7 @@ ast::StructDeclaration *HashAggregationTranslator::GeneratePayloadStruct() {
   term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto field_name = codegen_->MakeIdentifier(kAggregateTermPrefix + std::to_string(term_idx));
-    auto type = codegen_->AggregateType(term->GetExpressionType(), term->GetReturnValueType());
+    auto type = codegen_->AggregateType(term->GetKind(), term->GetReturnValueType());
     fields.push_back(codegen_->MakeField(field_name, type));
     term_idx++;
   }

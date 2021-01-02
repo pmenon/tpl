@@ -1,5 +1,6 @@
 #include "sql/codegen/expression/builtin_function_translator.h"
 
+#if 0
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
@@ -30,3 +31,4 @@ ast::Expression *BuiltinFunctionTranslator::DeriveValue(ConsumerContext *context
 }
 
 }  // namespace tpl::sql::codegen
+#endif

@@ -30,7 +30,7 @@ class CaseExpression : public AbstractExpression {
    */
   CaseExpression(TypeId return_value_type, std::vector<WhenClause> when_clauses,
                  const AbstractExpression *default_expr)
-      : AbstractExpression(ExpressionType::OPERATOR_CASE_EXPR, return_value_type, {}),
+      : AbstractExpression(ExpressionType::CASE, return_value_type, {}),
         when_clauses_(std::move(when_clauses)),
         default_expr_(default_expr) {}
 

@@ -14,12 +14,21 @@ class ComparisonExpression : public AbstractExpression {
  public:
   /**
    * Instantiates a new comparison expression.
-   * @param cmp_type type of comparison
-   * @param children vector containing exactly two children, left then right
+   * @param cmp_kind The kind of comparison.
+   * @param children vector containing exactly two children, left then right.
    */
-  ComparisonExpression(const ExpressionType cmp_type,
-                       std::vector<const AbstractExpression *> &&children)
-      : AbstractExpression(cmp_type, sql::TypeId::Boolean, std::move(children)) {}
+  ComparisonExpression(ComparisonKind cmp_kind, std::vector<const AbstractExpression *> &&children)
+      : AbstractExpression(ExpressionType::COMPARISON, sql::TypeId::Boolean, std::move(children)),
+        cmp_kind_(cmp_kind) {}
+
+  /**
+   * @return The kind of the comparison.
+   */
+  ComparisonKind GetKind() const { return cmp_kind_; }
+
+ private:
+  // The kind of the comparison.
+  ComparisonKind cmp_kind_;
 };
 
 }  // namespace tpl::sql::planner

@@ -15,7 +15,7 @@ class ConstantValueExpression : public AbstractExpression {
    * @param value value to be held.
    */
   explicit ConstantValueExpression(const GenericValue &value)
-      : AbstractExpression(ExpressionType::VALUE_CONSTANT, value.GetTypeId(), {}), value_(value) {}
+      : AbstractExpression(ExpressionType::CONSTANT, value.GetTypeId(), {}), value_(value) {}
 
   /**
    * @return The constant value this expression represents.

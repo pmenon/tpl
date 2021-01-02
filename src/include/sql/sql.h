@@ -63,6 +63,8 @@ enum class ColumnEncoding : uint8_t {
  * All known operators.
  */
 enum class KnownOperator : uint16_t {
+  // Simple
+  Neg,
   Add,
   Sub,
   Mul,
@@ -72,6 +74,26 @@ enum class KnownOperator : uint16_t {
   BitOr,
   BitShl,
   BitShr,
+
+  // Null check
+  IsNull,
+  IsNotNull,
+
+  // Logical
+  LogicalNot,
+
+  // Dates
+  ExtractYear,
+
+  // Trig.
+  ACos,
+  ASin,
+  ATan,
+  ATan2,
+  Cos,
+  Cot,
+  Sin,
+  Tan,
 };
 
 /**
@@ -162,5 +184,10 @@ bool IsTypeNumeric(TypeId type);
  * @return A string representation of the input type ID @em type.
  */
 std::string TypeIdToString(TypeId type);
+
+/**
+ * @return A string representation of the given operator.
+ */
+std::string KnownOperatorToString(KnownOperator op, bool short_str);
 
 }  // namespace tpl::sql

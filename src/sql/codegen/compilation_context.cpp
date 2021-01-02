@@ -14,16 +14,14 @@
 #include "sql/codegen/executable_query.h"
 #include "sql/codegen/execution_plan.h"
 #include "sql/codegen/expression//derived_value_translator.h"
-#include "sql/codegen/expression/arithmetic_translator.h"
-#include "sql/codegen/expression/builtin_function_translator.h"
+#include "sql/codegen/expression/binary_expression_translator.h"
 #include "sql/codegen/expression/case_translator.h"
 #include "sql/codegen/expression/cast_translator.h"
 #include "sql/codegen/expression/column_value_translator.h"
 #include "sql/codegen/expression/comparison_translator.h"
 #include "sql/codegen/expression/conjunction_translator.h"
 #include "sql/codegen/expression/constant_translator.h"
-#include "sql/codegen/expression/null_check_translator.h"
-#include "sql/codegen/expression/unary_translator.h"
+#include "sql/codegen/expression/unary_expression_translator.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/operators/csv_scan_translator.h"
 #include "sql/codegen/operators/hash_aggregation_translator.h"
@@ -41,11 +39,12 @@
 #include "sql/codegen/pipeline_graph.h"
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/case_expression.h"
+#include "sql/planner/expressions/cast_expression.h"
 #include "sql/planner/expressions/column_value_expression.h"
 #include "sql/planner/expressions/comparison_expression.h"
 #include "sql/planner/expressions/conjunction_expression.h"
 #include "sql/planner/expressions/derived_value_expression.h"
-#include "sql/planner/expressions/operator_expression.h"
+#include "sql/planner/expressions/unary_expression.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
 #include "sql/planner/plannodes/aggregate_plan_node.h"
 #include "sql/planner/plannodes/csv_scan_plan_node.h"
@@ -293,13 +292,13 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
   std::unique_ptr<ExpressionTranslator> translator;
 
   switch (expression.GetExpressionType()) {
-    case planner::ExpressionType::OPERATOR_CASE_EXPR: {
+    case planner::ExpressionType::CASE: {
       const auto &case_expr = static_cast<const planner::CaseExpression &>(expression);
       translator = std::make_unique<CaseTranslator>(case_expr, this);
       break;
     }
-    case planner::ExpressionType::OPERATOR_CAST: {
-      const auto &cast_expr = static_cast<const planner::OperatorExpression &>(expression);
+    case planner::ExpressionType::CAST: {
+      const auto &cast_expr = static_cast<const planner::CastExpression &>(expression);
       translator = std::make_unique<CastTranslator>(cast_expr, this);
       break;
     }
@@ -308,66 +307,40 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
       translator = std::make_unique<ColumnValueTranslator>(column_value, this);
       break;
     }
-    case planner::ExpressionType::COMPARE_EQUAL:
-    case planner::ExpressionType::COMPARE_GREATER_THAN:
-    case planner::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
-    case planner::ExpressionType::COMPARE_LESS_THAN:
-    case planner::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
-    case planner::ExpressionType::COMPARE_NOT_EQUAL:
-    case planner::ExpressionType::COMPARE_LIKE:
-    case planner::ExpressionType::COMPARE_NOT_LIKE:
-    case planner::ExpressionType::COMPARE_BETWEEN: {
+    case planner::ExpressionType::COMPARISON: {
       const auto &comparison = static_cast<const planner::ComparisonExpression &>(expression);
       translator = std::make_unique<ComparisonTranslator>(comparison, this);
       break;
     }
-    case planner::ExpressionType::CONJUNCTION_AND:
-    case planner::ExpressionType::CONJUNCTION_OR: {
+    case planner::ExpressionType::CONJUNCTION: {
       const auto &conjunction = static_cast<const planner::ConjunctionExpression &>(expression);
       translator = std::make_unique<ConjunctionTranslator>(conjunction, this);
       break;
     }
-    case planner::ExpressionType::OPERATOR_PLUS:
-    case planner::ExpressionType::OPERATOR_MINUS:
-    case planner::ExpressionType::OPERATOR_MULTIPLY:
-    case planner::ExpressionType::OPERATOR_DIVIDE:
-    case planner::ExpressionType::OPERATOR_MOD: {
-      const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
-      translator = std::make_unique<ArithmeticTranslator>(operator_expr, this);
+    case planner::ExpressionType::UNARY_OPERATOR: {
+      const auto &unary_expression = static_cast<const planner::UnaryExpression &>(expression);
+      translator = std::make_unique<UnaryExpressionTranslator>(unary_expression, this);
       break;
     }
-    case planner::ExpressionType::OPERATOR_NOT:
-    case planner::ExpressionType::OPERATOR_UNARY_MINUS: {
-      const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
-      translator = std::make_unique<UnaryTranslator>(operator_expr, this);
+    case planner::ExpressionType::BINARY_OPERATOR: {
+      const auto &binary_expression = static_cast<const planner::BinaryExpression &>(expression);
+      translator = std::make_unique<BinaryExpressionTranslator>(binary_expression, this);
       break;
     }
-    case planner::ExpressionType::OPERATOR_IS_NULL:
-    case planner::ExpressionType::OPERATOR_IS_NOT_NULL: {
-      const auto &operator_expr = static_cast<const planner::OperatorExpression &>(expression);
-      translator = std::make_unique<NullCheckTranslator>(operator_expr, this);
-      break;
-    }
-    case planner::ExpressionType::VALUE_CONSTANT: {
+    case planner::ExpressionType::CONSTANT: {
       const auto &constant = static_cast<const planner::ConstantValueExpression &>(expression);
       translator = std::make_unique<ConstantTranslator>(constant, this);
       break;
     }
-    case planner::ExpressionType::VALUE_TUPLE: {
+    case planner::ExpressionType::DERIVED_VALUE: {
       const auto &derived_value = static_cast<const planner::DerivedValueExpression &>(expression);
       translator = std::make_unique<DerivedValueTranslator>(derived_value, this);
-      break;
-    }
-    case planner::ExpressionType::BUILTIN_FUNCTION: {
-      const auto &builtin_func =
-          static_cast<const planner::BuiltinFunctionExpression &>(expression);
-      translator = std::make_unique<BuiltinFunctionTranslator>(builtin_func, this);
       break;
     }
     default: {
       throw NotImplementedException(
           fmt::format("Code generation for expression type '{}' not supported",
-                      planner::ExpressionTypeToString(expression.GetExpressionType(), false)));
+                      planner::ExpressionTypeToString(expression.GetExpressionType())));
     }
   }
 

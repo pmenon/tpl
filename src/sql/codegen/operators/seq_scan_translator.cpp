@@ -10,6 +10,8 @@
 #include "sql/codegen/loop.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/planner/expressions/column_value_expression.h"
+#include "sql/planner/expressions/comparison_expression.h"
+#include "sql/planner/expressions/conjunction_expression.h"
 #include "sql/planner/expressions/expression_util.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
 #include "sql/table.h"
@@ -66,20 +68,25 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
                                                       std::vector<ast::Identifier> *curr_clause,
                                                       bool seen_conjunction) {
   // The top-most disjunctions in the tree form separate clauses in the filter manager.
-  if (!seen_conjunction &&
-      predicate->GetExpressionType() == planner::ExpressionType::CONJUNCTION_OR) {
-    std::vector<ast::Identifier> next_clause;
-    GenerateFilterClauseFunctions(predicate->GetChild(0), &next_clause, false);
-    filters_.emplace_back(std::move(next_clause));
-    GenerateFilterClauseFunctions(predicate->GetChild(1), curr_clause, false);
-    return;
+  if (!seen_conjunction && predicate->Is<planner::ExpressionType::CONJUNCTION>()) {
+    auto conj = static_cast<const planner::ConjunctionExpression *>(predicate);
+    if (conj->GetKind() == planner::ConjunctionKind::OR) {
+      std::vector<ast::Identifier> next_clause;
+      GenerateFilterClauseFunctions(predicate->GetChild(0), &next_clause, false);
+      filters_.emplace_back(std::move(next_clause));
+      GenerateFilterClauseFunctions(predicate->GetChild(1), curr_clause, false);
+      return;
+    }
   }
 
   // Consecutive conjunctions are part of the same clause.
-  if (predicate->GetExpressionType() == planner::ExpressionType::CONJUNCTION_AND) {
-    GenerateFilterClauseFunctions(predicate->GetChild(0), curr_clause, true);
-    GenerateFilterClauseFunctions(predicate->GetChild(1), curr_clause, true);
-    return;
+  if (predicate->Is<planner::ExpressionType::CONJUNCTION>()) {
+    auto conj = static_cast<const planner::ConjunctionExpression *>(predicate);
+    if (conj->GetKind() == planner::ConjunctionKind::AND) {
+      GenerateFilterClauseFunctions(predicate->GetChild(0), curr_clause, true);
+      GenerateFilterClauseFunctions(predicate->GetChild(1), curr_clause, true);
+      return;
+    }
   }
 
   // At this point, we create a term.
@@ -98,15 +105,17 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
   {
     ast::Expression *vector_proj = builder.GetParameterByPosition(0);
     ast::Expression *tid_list = builder.GetParameterByPosition(1);
-    if (planner::ExpressionUtil::IsColumnCompareWithConst(*predicate)) {
+    if (planner::ExpressionUtil::IsColumnCompareWithConst(*predicate) &&
+        !planner::ExpressionUtil::IsLikeComparison(*predicate)) {
+      auto cmp = static_cast<const planner::ComparisonExpression *>(predicate);
       auto cve = static_cast<const planner::ColumnValueExpression *>(predicate->GetChild(0));
       auto translator = GetCompilationContext()->LookupTranslator(*predicate->GetChild(1));
       auto const_val = translator->DeriveValue(nullptr, nullptr);
-      builder.Append(codegen_->VPIFilter(vector_proj,                     // The vector projection
-                                         predicate->GetExpressionType(),  // Comparison type
-                                         cve->GetColumnOid(),             // Column index
-                                         const_val,                       // Constant value
-                                         tid_list));                      // TID list
+      builder.Append(codegen_->VPIFilter(vector_proj,          // The vector projection
+                                         cmp->GetKind(),       // Comparison type
+                                         cve->GetColumnOid(),  // Column index
+                                         const_val,            // Constant value
+                                         tid_list));           // TID list
     } else if (planner::ExpressionUtil::IsConstCompareWithColumn(*predicate)) {
       throw NotImplementedException("const <op> col vector filter comparison not implemented");
     } else {
