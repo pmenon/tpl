@@ -132,7 +132,7 @@ StructType::LayoutHelper::LayoutHelper(const util::RegionVector<Field> &fields)
   }
 }
 
-StructType::StructType(Context *ctx, uint32_t size, uint32_t alignment,ast::Identifier name,
+StructType::StructType(Context *ctx, uint32_t size, uint32_t alignment, ast::Identifier name,
                        util::RegionVector<Field> &&fields,
                        util::RegionVector<uint32_t> &&field_offsets)
     : Type(ctx, size, alignment, TypeId::StructType),

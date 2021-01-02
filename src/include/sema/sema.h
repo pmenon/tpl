@@ -235,7 +235,9 @@ class Sema : public ast::AstVisitor<Sema> {
   class DeclarationContextScope {
    public:
     DeclarationContextScope(Sema *sema, ast::Declaration *declaration)
-        : sema_(sema), saved_decl_context_(sema->curr_decl_context_) { sema_->curr_decl_context_ = declaration; }
+        : sema_(sema), saved_decl_context_(sema->curr_decl_context_) {
+      sema_->curr_decl_context_ = declaration;
+    }
 
     ~DeclarationContextScope() { sema_->curr_decl_context_ = saved_decl_context_; }
 

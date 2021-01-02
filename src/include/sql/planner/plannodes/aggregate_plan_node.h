@@ -131,9 +131,19 @@ class AggregatePlanNode : public AbstractPlanNode {
   //===--------------------------------------------------------------------===//
 
   /**
-   * @return pointer to predicate for having clause
+   * @return True if the plan has a having clause; false otherwise.
+   */
+  bool HasHavingClause() const { return having_clause_predicate_ != nullptr; }
+
+  /**
+   * @return The having clause to apply to aggregates. Null if not present.
    */
   const AbstractExpression *GetHavingClausePredicate() const { return having_clause_predicate_; }
+
+  /**
+   * @return The number of aggregate terms.
+   */
+  std::size_t NumAggregateTerms() const { return aggregate_terms_.size(); }
 
   /**
    * @return vector of aggregate terms
@@ -141,17 +151,22 @@ class AggregatePlanNode : public AbstractPlanNode {
   const std::vector<AggregateTerm> &GetAggregateTerms() const { return aggregate_terms_; }
 
   /**
-   * @return vector of group by terms
+   * @return The number of group-by terms. Zero for static aggregations.
+   */
+  std::size_t NumGroupByTerms() const { return group_by_terms_.size(); }
+
+  /**
+   * @return The list of group-by terms.
    */
   const std::vector<GroupByTerm> &GetGroupByTerms() const { return group_by_terms_; }
 
   /**
-   * @return aggregation strategy
+   * @return The aggregation strategy to use.
    */
   AggregateStrategyType GetAggregateStrategyType() const { return aggregate_strategy_; }
 
   /**
-   * @return the type of this plan node
+   * @return The type of this plan node.
    */
   PlanNodeType GetPlanNodeType() const override { return PlanNodeType::AGGREGATE; }
 
