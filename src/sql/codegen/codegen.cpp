@@ -1137,9 +1137,7 @@ ast::Expression *CodeGen::Like(ast::Expression *str, ast::Expression *pattern) {
 }
 
 ast::Expression *CodeGen::NotLike(ast::Expression *str, ast::Expression *pattern) {
-  // TODO(pmenon): This is wrong! We need to preserve the NULL across NOT LIKE.
-  return UnaryOp(parsing::Token::Type::BANG,
-                 CallBuiltin(ast::Builtin::SqlToBool, {Like(str, pattern)}));
+  return CallBuiltin(ast::Builtin::LNot, {Like(str, pattern)});
 }
 
 // ---------------------------------------------------------
