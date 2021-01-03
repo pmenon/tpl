@@ -7,6 +7,9 @@
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/compilation_unit.h"
+#include "sql/codegen/edsl/struct.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "sql/codegen/expression/column_value_provider.h"
 #include "sql/codegen/state_descriptor.h"
 #include "util/region_containers.h"
@@ -187,14 +190,14 @@ class OperatorTranslator : public ColumnValueProvider {
   /**
    * @return The value (vector) of the attribute at the given index in this operator's output.
    */
-  ast::Expression *GetOutput(ConsumerContext *context, uint32_t attr_idx) const;
+  edsl::ValueVT GetOutput(ConsumerContext *context, uint32_t attr_idx) const;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                  uint32_t attr_idx) const override;
+  edsl::ValueVT GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                               uint32_t attr_idx) const override;
 
   /**
    * @return The plan the translator is generating.
@@ -208,22 +211,34 @@ class OperatorTranslator : public ColumnValueProvider {
 
  protected:
   // Get a pointer to the query state.
-  ast::Expression *GetQueryStatePtr() const;
+  edsl::ValueVT GetQueryStatePtr() const;
 
-  // Get the value of a entry in the query state at the given slot.
-  ast::Expression *GetQueryStateEntry(StateDescriptor::Slot slot) const;
+  // Get an untyped reference to element in the query state at the given index.
+  edsl::ReferenceVT GetQueryStateEntryGeneric(StateDescriptor::Slot slot) const;
 
-  // Get a pointer to the entry in the query state at the given slot.
-  ast::Expression *GetQueryStateEntryPtr(StateDescriptor::Slot slot) const;
+  // Get a typed reference to element in the query state at the given index.
+  template <typename T>
+  edsl::Value<T> GetQueryStateEntry(StateDescriptor::Slot slot) const {
+    return edsl::Value<T>(GetQueryStateEntryGeneric(slot));
+  }
+
+  // Get an untyped pointer to element in the query state at the given index.
+  edsl::ValueVT GetQueryStateEntryPtrGeneric(StateDescriptor::Slot slot) const;
+
+  // Get a typed pointer to element in the query state at the given index.
+  template <typename T>
+  edsl::Value<T *> GetQueryStateEntryPtr(StateDescriptor::Slot slot) const {
+    return edsl::Value<T *>(GetQueryStateEntryPtrGeneric(slot));
+  }
 
   // Get the execution context pointer in the current function.
-  ast::Expression *GetExecutionContext() const;
+  edsl::Value<ast::x::ExecutionContext *> GetExecutionContext() const;
 
   // Get the thread state container pointer from the execution context stored in the query state.
-  ast::Expression *GetThreadStateContainer() const;
+  edsl::Value<ast::x::ThreadStateContainer *> GetThreadStateContainer() const;
 
   // Get the memory pool pointer from the execution context stored in the query state.
-  ast::Expression *GetMemoryPool() const;
+  edsl::Value<ast::x::MemoryPool *> GetMemoryPool() const;
 
   // The pipeline this translator is a part of.
   Pipeline *GetPipeline() const { return pipeline_; }
@@ -243,8 +258,7 @@ class OperatorTranslator : public ColumnValueProvider {
   // The child index refers to which specific child to inspect.
   // The prefix is added to each field/attribute of the child.
   // The fields vector collects the resulting field declarations.
-  void GetAllChildOutputFields(uint32_t child_index, const std::string &field_name_prefix,
-                               util::RegionVector<ast::FieldDeclaration *> *fields) const;
+  void GetAllChildOutputFields(uint32_t child_idx, std::string_view prefix, edsl::Struct *s) const;
 
  private:
   // The plan node.

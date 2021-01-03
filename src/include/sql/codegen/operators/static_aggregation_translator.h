@@ -2,6 +2,9 @@
 
 #include <vector>
 
+#include "sql/codegen/edsl/struct.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_driver.h"
@@ -91,13 +94,13 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                  uint32_t attr_idx) const override;
+  edsl::ValueVT GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                               uint32_t attr_idx) const override;
 
   /**
    * Static aggregations do not touch base table columns.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Static aggregations do not produce columns from base tables.");
   }
 
@@ -107,24 +110,22 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
     return GetPlanAs<planner::AggregatePlanNode>();
   }
 
-  ast::Expression *GetAggregateTerm(ast::Expression *agg_row, uint32_t attr_idx) const;
-  ast::Expression *GetAggregateTermPtr(ast::Expression *agg_row, uint32_t attr_idx) const;
+  void GeneratePayloadStruct();
+  void GenerateValuesStruct();
 
-  ast::StructDeclaration *GeneratePayloadStruct();
-  ast::StructDeclaration *GenerateValuesStruct();
+  void InitializeAggregates(FunctionBuilder *function, const edsl::ReferenceVT &agg) const;
 
-  template <typename F>
-  void InitializeAggregates(FunctionBuilder *function, F agg_provider) const;
+  void UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *function,
+                       const edsl::ReferenceVT &agg) const;
 
-  template <typename F>
-  void UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *function, F agg_provider) const;
+  void ProduceAggregates(ConsumerContext *context, FunctionBuilder *function) const;
 
   void GenerateAggregateMergeFunction(const PipelineContext &pipeline_ctx) const;
 
  private:
-  ast::Identifier agg_row_var_;
-  ast::Identifier agg_payload_type_;
-  ast::Identifier agg_values_type_;
+  std::unique_ptr<edsl::VariableVT> agg_row_;
+  edsl::Struct payload_struct_;
+  edsl::Struct values_struct_;
 
   // The name of the merging function.
   ast::Identifier merge_func_;
@@ -135,7 +136,6 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   // States.
   StateDescriptor::Slot global_aggs_;
   StateDescriptor::Slot local_aggs_;
-  void ProduceAggregates(ConsumerContext *context, FunctionBuilder *function) const;
 };
 
 }  // namespace tpl::sql::codegen

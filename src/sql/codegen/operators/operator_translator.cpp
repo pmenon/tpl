@@ -1,10 +1,12 @@
 #include "sql/codegen/operators/operator_translator.h"
 
+// For string formatting.
 #include "spdlog/fmt/fmt.h"
 
 #include "common/exception.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
+#include "sql/codegen/edsl/ops.h"
 #include "sql/planner/plannodes/abstract_plan_node.h"
 
 namespace tpl::sql::codegen {
@@ -24,7 +26,7 @@ OperatorTranslator::OperatorTranslator(const planner::AbstractPlanNode &plan,
   }
 }
 
-ast::Expression *OperatorTranslator::GetOutput(ConsumerContext *context, uint32_t attr_idx) const {
+edsl::ValueVT OperatorTranslator::GetOutput(ConsumerContext *context, uint32_t attr_idx) const {
   // Check valid output column.
   const auto output_schema = plan_.GetOutputSchema();
   if (attr_idx >= output_schema->NumColumns()) {
@@ -38,8 +40,8 @@ ast::Expression *OperatorTranslator::GetOutput(ConsumerContext *context, uint32_
   return context->DeriveValue(*output_expression, this);
 }
 
-ast::Expression *OperatorTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                                    uint32_t attr_idx) const {
+edsl::ValueVT OperatorTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                                 uint32_t attr_idx) const {
   // Check valid child.
   if (child_idx >= plan_.GetChildrenSize()) {
     throw Exception(ExceptionType::CodeGen,
@@ -53,46 +55,41 @@ ast::Expression *OperatorTranslator::GetChildOutput(ConsumerContext *context, ui
   return child_translator->GetOutput(context, attr_idx);
 }
 
-ast::Expression *OperatorTranslator::GetQueryStatePtr() const {
-  return compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
+edsl::ValueVT OperatorTranslator::GetQueryStatePtr() const {
+  return compilation_ctx_->GetQueryState()->GetStatePtr(codegen_);
 }
 
-ast::Expression *OperatorTranslator::GetQueryStateEntry(StateDescriptor::Slot slot) const {
-  return compilation_ctx_->GetQueryState()->GetStateEntry(codegen_, slot);
+edsl::ReferenceVT OperatorTranslator::GetQueryStateEntryGeneric(StateDescriptor::Slot slot) const {
+  return compilation_ctx_->GetQueryState()->GetStateEntryGeneric(codegen_, slot);
 }
 
-ast::Expression *OperatorTranslator::GetQueryStateEntryPtr(StateDescriptor::Slot slot) const {
-  return compilation_ctx_->GetQueryState()->GetStateEntryPtr(codegen_, slot);
+edsl::ValueVT OperatorTranslator::GetQueryStateEntryPtrGeneric(StateDescriptor::Slot slot) const {
+  return compilation_ctx_->GetQueryState()->GetStateEntryPtrGeneric(codegen_, slot);
 }
 
-ast::Expression *OperatorTranslator::GetExecutionContext() const {
+edsl::Value<ast::x::ExecutionContext *> OperatorTranslator::GetExecutionContext() const {
   return compilation_ctx_->GetExecutionContextPtrFromQueryState();
 }
 
-ast::Expression *OperatorTranslator::GetThreadStateContainer() const {
-  return codegen_->ExecCtxGetTLS(GetExecutionContext());
+edsl::Value<ast::x::ThreadStateContainer *> OperatorTranslator::GetThreadStateContainer() const {
+  return GetExecutionContext()->GetThreadStateContainer();
 }
 
-ast::Expression *OperatorTranslator::GetMemoryPool() const {
-  return codegen_->ExecCtxGetMemoryPool(GetExecutionContext());
+edsl::Value<ast::x::MemoryPool *> OperatorTranslator::GetMemoryPool() const {
+  return GetExecutionContext()->GetMemoryPool();
 }
 
 const planner::OutputSchema *OperatorTranslator::GetChildOutputSchema(uint32_t child_idx) const {
   return plan_.GetChild(child_idx)->GetOutputSchema();
 }
 
-void OperatorTranslator::GetAllChildOutputFields(
-    const uint32_t child_index, const std::string &field_name_prefix,
-    util::RegionVector<ast::FieldDeclaration *> *fields) const {
-  // Reserve now to reduce allocations.
-  fields->reserve(GetChildOutputSchema(child_index)->NumColumns());
-
-  // Add columns to output.
+void OperatorTranslator::GetAllChildOutputFields(uint32_t child_idx, std::string_view prefix,
+                                                 edsl::Struct *s) const {
   uint32_t attr_idx = 0;
-  for (const auto &col : plan_.GetChild(child_index)->GetOutputSchema()->GetColumns()) {
-    auto field_name = codegen_->MakeIdentifier(field_name_prefix + std::to_string(attr_idx++));
-    auto type = codegen_->TplType(col.GetExpr()->GetReturnValueType());
-    fields->emplace_back(codegen_->MakeField(field_name, type));
+  for (const auto &col : plan_.GetChild(child_idx)->GetOutputSchema()->GetColumns()) {
+    auto name = fmt::format("{}{}", prefix, attr_idx++);
+    auto type = codegen_->GetTPLType(col.GetExpr()->GetReturnValueType());
+    s->AddMember(name, type);
   }
 }
 

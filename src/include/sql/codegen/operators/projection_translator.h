@@ -35,11 +35,10 @@ class ProjectionTranslator : public OperatorTranslator, PipelineDriver {
    */
   void DrivePipeline(const PipelineContext &pipeline_ctx) const override;
 
- public:
   /**
    * Projections do not produce columns from base tables.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Projections do not produce columns from base tables.");
   }
 };

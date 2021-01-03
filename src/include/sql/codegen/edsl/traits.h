@@ -43,6 +43,7 @@ struct is_primitive_type : std::false_type {};
 // clang-format off
 #define F(cpp_type, ...) template <> struct is_primitive_type<cpp_type> : std::true_type {};
 // clang-format on
+F(bool)
 ALL_NUMERIC_TYPES(F)
 #undef F
 

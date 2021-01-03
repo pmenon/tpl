@@ -5,6 +5,9 @@
 
 #include "ast/identifier.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/edsl/struct.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "sql/sql.h"
 
 namespace tpl::sql::codegen {
@@ -33,18 +36,13 @@ class CompactStorage {
   void Setup(const std::vector<TypeId> &schema);
 
   /**
-   * @return The name of the constructed compact type.
-   */
-  ast::Identifier GetTypeName() const { return type_name_; }
-
-  /**
    * Write the value, @em val, into the attribute index @em index in the row pointed to by @em ptr.
    * @param ptr The pointer to the row's buffer space (i.e., NOT a pointer to where you think the
    *            attribute should be stored, but where the ROW's contents are stored).
    * @param index The index in the input schema whose attribute/column we're to store.
    * @param val The SQL value to store.
    */
-  void WriteSQL(ast::Expression *ptr, uint32_t index, ast::Expression *val) const;
+  void WriteSQL(const edsl::ReferenceVT &ptr, uint32_t index, const edsl::ValueVT &val) const;
 
   /**
    * Read the value of the column/attribute at index @em index in the row pointed to by @em ptr.
@@ -53,7 +51,14 @@ class CompactStorage {
    * @param index The index in the input schema whose attribute/column we're to read.
    * @return A pair storing the read value and NULL-indication flag.
    */
-  ast::Expression *ReadSQL(ast::Expression *ptr, uint32_t index) const;
+  edsl::ValueVT ReadSQL(const edsl::ReferenceVT &ptr, uint32_t index) const;
+
+  /**
+   *
+   * @param ptr
+   * @param val
+   */
+  void WritePrimitive(const edsl::ReferenceVT &ptr, uint32_t index, const edsl::ValueVT &val) const;
 
   /**
    * Read the raw primitive component of the SQL value.
@@ -62,31 +67,35 @@ class CompactStorage {
    * @param index The index in the input schema whose attribute/column we're to read.
    * @return The value.
    */
-  ast::Expression *ReadPrimitive(ast::Expression *ptr, uint32_t index) const;
+  edsl::ValueVT ReadPrimitive(const edsl::ReferenceVT &ptr, uint32_t index) const;
 
   /**
-   * @return The name of the field at the given index in the compact struct.
+   * @return The name of the constructed compact type.
    */
-  ast::Identifier FieldNameAtIndex(uint32_t index) const;
+  ast::Identifier GetTypeName() const { return struct_.GetName(); }
 
- private:
-  // Given a pointer to the storage space, return a pointer to the NULL
-  // indications array.
-  ast::Expression *Nulls(ast::Expression *ptr) const;
+  /**
+   * @return The constructed type for the row.
+   */
+  ast::Type *GetType() const { return struct_.GetType(); }
 
-  // Given a pointer to the storage space and the index of the column
-  // to access, return a pointer to the attribute's column data.
-  ast::Expression *ColumnPtr(ast::Expression *ptr, uint32_t index) const;
+  /**
+   * @return A type representing a pointer to the constructed type for the row.
+   */
+  ast::Type *GetPtrToType() const { return struct_.GetPtrToType(); }
+
+  /**
+   * @return The size of the construct type, in bytes.
+   */
+  edsl::Value<uint32_t> GetTypeSize() const { return struct_.GetSize(); }
 
  private:
   // Code generation instance.
   CodeGen *codegen_;
-  // The name of the declared type.
-  ast::Identifier type_name_;
-  // The names of all the fields, excluding the nulls.
-  std::vector<std::pair<TypeId, ast::Identifier>> col_info_;
-  // The name of the null-indicator array field.
-  ast::Identifier nulls_;
+  // The types of each column.
+  std::vector<TypeId> col_types_;
+  // The compact structure.
+  edsl::Struct struct_;
 };
 
 }  // namespace tpl::sql::codegen

@@ -28,8 +28,7 @@ TEST_F(ElementTest, SimpleCheck) {
   CompilationUnit cu(GetContext(), "test");
   CodeGen codegen(&cu);
 
-  FunctionBuilder func(&codegen, codegen.MakeIdentifier("test"), codegen.MakeEmptyFieldList(),
-                       codegen.Nil());
+  FunctionBuilder func(&codegen, codegen.MakeIdentifier("test"), {}, codegen.GetType<void>());
   {
     edsl::Variable<int *> x(&codegen, "x");
     edsl::Variable<int> y(&codegen, "y"), yyy(&codegen, "yyy");
@@ -37,25 +36,26 @@ TEST_F(ElementTest, SimpleCheck) {
     edsl::Variable<int[]> a(&codegen, "a");
     edsl::Variable<bool> b(&codegen, "b");
     edsl::Variable<uint64_t> hash(&codegen, "hash");
-    edsl::Variable<ast::x::HashTableEntry *> entry(&codegen, "entry");
+    edsl::Variable<uint8_t *> row(&codegen, "row");
     edsl::Variable<ast::x::JoinHashTable *[2]> yy(&codegen, "yy");
 
-    edsl::Declare(x);
-    edsl::Declare(y);
-    edsl::Declare(zz);
-    edsl::Declare(yy);
-    edsl::Declare(yyy);
-    edsl::Declare(hash);
-    edsl::Declare(a);
-    edsl::Declare(b, y == yyy);
+    func.Append(edsl::Declare(x));
+    func.Append(edsl::Declare(y));
+    func.Append(edsl::Declare(zz));
+    func.Append(edsl::Declare(yy));
+    func.Append(edsl::Declare(yyy));
+    func.Append(edsl::Declare(hash));
+    func.Append(edsl::Declare(a));
+    func.Append(edsl::Declare(b, y == yyy));
 
-    edsl::Assign(x, y.Addr());
-    edsl::Assign(zz, x.Addr());
-    edsl::Assign(*zz, x);
+    func.Append(edsl::Assign(x, y.Addr()));
+    func.Append(edsl::Assign(zz, x.Addr()));
+    func.Append(edsl::Assign(*zz, x));
 
-    //    edsl::Declare(entry, yy[0]->Allocate(hash));
-    edsl::Assign(y, y + y - y * y / y % y);
-    edsl::Assign(a[0], y);
+    func.Append(edsl::Declare(row, yy[0]->Insert(hash)));
+    func.Append(edsl::Assign(y, y + y - y * y / y % y));
+    func.Append(edsl::Assign(y, 1 - y));
+    func.Append(edsl::Assign(a[0], y));
 #if 0
     edsl::UInt8 i(&codegen, "i", 2);
     edsl::UInt8 j(&codegen, "j", i + i);

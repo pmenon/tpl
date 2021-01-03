@@ -41,31 +41,51 @@ class PipelineContext {
   /**
    * Declare an entry in this pipeline's state.
    * @param name The name of the element.
-   * @param type_repr The TPL type representation of the element.
+   * @param type The TPL type of the element.
    * @return The slot where the inserted state exists.
    */
-  StateDescriptor::Slot DeclarePipelineStateEntry(const std::string &name,
-                                                  ast::Expression *type_repr);
+  StateDescriptor::Slot DeclarePipelineStateEntry(const std::string &name, ast::Type *type);
 
   /**
    * @return The finalized and constructed state type.
    */
-  ast::StructDeclaration *ConstructPipelineStateType();
+  void ConstructPipelineStateType();
 
   /**
    * @return The value of the element at the given slot within this pipeline's state.
    */
-  ast::Expression *GetStateEntry(StateDescriptor::Slot slot) const;
+  edsl::ReferenceVT GetStateEntryGeneric(StateDescriptor::Slot slot) const;
+
+  /**
+   * @return A typed reference to the state element at the given slot.
+   */
+  template <typename T>
+  edsl::Reference<T> GetStateEntry(StateDescriptor::Slot slot) const {
+    return edsl::Reference<T>(GetStateEntryGeneric(slot));
+  }
 
   /**
    * @return A pointer to the element at the given slot within this pipeline's state.
    */
-  ast::Expression *GetStateEntryPtr(StateDescriptor::Slot slot) const;
+  edsl::ValueVT GetStateEntryPtrGeneric(StateDescriptor::Slot slot) const;
+
+  /**
+   * @return A pointer to the element at the given slot within this pipeline's state.
+   */
+  template <typename T>
+  edsl::Value<T *> GetStateEntryPtr(StateDescriptor::Slot slot) const {
+    return edsl::Value<T *>(GetStateEntryPtrGeneric(slot));
+  }
+
+  /**
+   * @return The size of the pipeline state.
+   */
+  edsl::Value<uint32_t> GetStateSize() const;
 
   /**
    * @return The byte offset of the element at the given slot in the pipeline state.
    */
-  ast::Expression *GetStateEntryByteOffset(StateDescriptor::Slot slot) const;
+  edsl::Value<uint32_t> GetStateEntryByteOffset(StateDescriptor::Slot slot) const;
 
   /**
    * @return True if this context is for the provided input pipeline; false otherwise.
@@ -84,11 +104,11 @@ class PipelineContext {
 
   // TODO(pmenon): Make private and use PipelineFunctionBuilder.
   // Pipeline function arguments.
-  util::RegionVector<ast::FieldDeclaration *> PipelineParams() const;
+  std::vector<std::pair<ast::Identifier, ast::Type *>> PipelineParams() const;
 
  private:
   // Access the current thread's pipeline state.
-  ast::Expression *AccessCurrentThreadState() const;
+  edsl::ValueVT AccessCurrentThreadState() const;
 
  private:
   // The pipeline.
@@ -304,9 +324,10 @@ class Pipeline {
    * @param dispatch The dispatch function.
    * @param additional_params The list of any additional parameters. Optional.
    */
-  void LaunchParallel(const PipelineContext &pipeline_ctx,
-                      std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
-                      std::vector<ast::FieldDeclaration *> &&additional_params) const;
+  void LaunchParallel(
+      const PipelineContext &pipeline_ctx,
+      std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
+      std::vector<std::pair<ast::Identifier, ast::Type *>> &&additional_params) const;
 
  private:
   // Declare all pipeline state.
@@ -332,9 +353,10 @@ class Pipeline {
   ast::FunctionDeclaration *GenerateTearDownPipelineFunction() const;
 
   // Common launch logic.
-  void LaunchInternal(const PipelineContext &pipeline_ctx,
-                      std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
-                      std::vector<ast::FieldDeclaration *> &&additional_params) const;
+  void LaunchInternal(
+      const PipelineContext &pipeline_ctx,
+      std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
+      std::vector<std::pair<ast::Identifier, ast::Type *>> &&additional_params) const;
 
  private:
   // A unique pipeline ID.

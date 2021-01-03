@@ -27,11 +27,11 @@ class CaseTranslator : public ExpressionTranslator {
    * @param provider A provider for specific column values.
    * @return The value of the expression.
    */
-  ast::Expression *DeriveValue(ConsumerContext *context,
-                               const ColumnValueProvider *provider) const override;
+  edsl::ValueVT DeriveValue(ConsumerContext *context,
+                            const ColumnValueProvider *provider) const override;
 
  private:
-  void GenerateCases(ast::Identifier ret, std::size_t clause_idx, ConsumerContext *context,
+  void GenerateCases(const edsl::VariableVT &ret, std::size_t clause_idx, ConsumerContext *context,
                      const ColumnValueProvider *provider) const;
 };
 

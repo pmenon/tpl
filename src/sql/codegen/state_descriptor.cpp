@@ -2,68 +2,35 @@
 
 #include <utility>
 
-#include "ast/ast.h"
-#include "sql/codegen/codegen.h"
-#include "sql/codegen/function_builder.h"
-
 namespace tpl::sql::codegen {
 
-StateDescriptor::StateDescriptor(ast::Identifier name, StateDescriptor::InstanceProvider access)
-    : name_(name), access_(std::move(access)), state_type_(nullptr) {}
+StateDescriptor::StateDescriptor(CodeGen *codegen, std::string_view name, InstanceProvider access)
+    : struct_(codegen, name, false), access_(std::move(access)) {}
 
-StateDescriptor::Slot StateDescriptor::DeclareStateEntry(CodeGen *codegen, const std::string &name,
-                                                         ast::Expression *type_repr) {
-  TPL_ASSERT(state_type_ == nullptr, "Cannot add to state after it's been finalized");
-  ast::Identifier member = codegen->MakeFreshIdentifier(name);
-  slots_.emplace_back(member, type_repr);
-  return slots_.size() - 1;
+StateDescriptor::Slot StateDescriptor::DeclareStateEntry(std::string_view name, ast::Type *type) {
+  return Slot{struct_.AddMember(name, type)};
 }
 
-ast::StructDeclaration *StateDescriptor::ConstructFinalType(CodeGen *codegen) {
-  // Early exit if the state is already constructed.
-  if (state_type_ != nullptr) {
-    return state_type_;
-  }
+void StateDescriptor::ConstructFinalType() { struct_.Seal(); }
 
-  // Collect fields and build the structure type.
-  util::RegionVector<ast::FieldDeclaration *> fields = codegen->MakeEmptyFieldList();
-  fields.reserve(slots_.size());
-  for (auto &slot : slots_) {
-    fields.push_back(codegen->MakeField(slot.name, slot.type_repr));
-  }
-  state_type_ = codegen->DeclareStruct(name_, std::move(fields));
-
-  // Done
-  return state_type_;
-}
-
-ast::Expression *StateDescriptor::GetStatePointer(CodeGen *codegen) const {
+edsl::ValueVT StateDescriptor::GetStatePtr(CodeGen *codegen) const {
   TPL_ASSERT(access_ != nullptr, "No instance accessor provided");
   return access_(codegen);
 }
 
-ast::Expression *StateDescriptor::GetStateEntry(CodeGen *codegen,
-                                                StateDescriptor::Slot slot) const {
-  TPL_ASSERT(slot < slots_.size(), "Invalid slot");
-  return codegen->AccessStructMember(GetStatePointer(codegen), slots_[slot].name);
+edsl::ReferenceVT StateDescriptor::GetStateEntryGeneric(CodeGen *codegen, Slot slot) const {
+  return struct_.MemberGeneric(GetStatePtr(codegen), slot);
 }
 
-ast::Expression *StateDescriptor::GetStateEntryPtr(CodeGen *codegen,
-                                                   StateDescriptor::Slot slot) const {
+edsl::ValueVT StateDescriptor::GetStateEntryPtrGeneric(CodeGen *codegen, Slot slot) const {
   TPL_ASSERT(slot < slots_.size(), "Invalid slot");
-  return codegen->AddressOf(GetStateEntry(codegen, slot));
+  return struct_.MemberPtrGeneric(GetStatePtr(codegen), slot);
 }
 
-ast::Expression *StateDescriptor::GetStateEntryOffset(CodeGen *codegen,
-                                                      StateDescriptor::Slot slot) const {
-  TPL_ASSERT(slot < slots_.size(), "Invalid slot");
-  return codegen->OffsetOf(state_type_->GetName(), slots_[slot].name);
+edsl::Value<uint32_t> StateDescriptor::GetStateEntryOffset(CodeGen *codegen, Slot slot) const {
+  return struct_.OffsetOf(slot);
 }
 
-std::size_t StateDescriptor::GetSize() const {
-  TPL_ASSERT(state_type_ != nullptr, "State has not been constructed");
-  TPL_ASSERT(state_type_->GetTypeRepr()->GetType() != nullptr, "Type-checking not completed!");
-  return state_type_->GetTypeRepr()->GetType()->GetSize();
-}
+std::size_t StateDescriptor::GetSizeRaw() const { return struct_.GetSizeRaw(); }
 
 }  // namespace tpl::sql::codegen

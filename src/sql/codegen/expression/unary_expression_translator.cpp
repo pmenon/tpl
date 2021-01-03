@@ -14,35 +14,34 @@ UnaryExpressionTranslator::UnaryExpressionTranslator(const planner::UnaryExpress
   compilation_context->Prepare(*expr.GetInput());
 }
 
-ast::Expression *UnaryExpressionTranslator::DeriveValue(ConsumerContext *context,
-                                                        const ColumnValueProvider *provider) const {
+edsl::ValueVT UnaryExpressionTranslator::DeriveValue(ConsumerContext *context,
+                                                     const ColumnValueProvider *provider) const {
   auto input = context->DeriveValue(*GetUnaryExpression().GetInput(), provider);
   switch (const auto op = GetUnaryExpression().GetOp()) {
     case KnownOperator::Neg:
-      return codegen_->UnaryOp(parsing::Token::Type::MINUS, input);
+      return edsl::Negate(input);
     case KnownOperator::LogicalNot:
-      return codegen_->UnaryOp(parsing::Token::Type::BANG, input);
+      return !edsl::Value<bool>(input);
     case KnownOperator::IsNull:
-      return codegen_->CallBuiltin(ast::Builtin::IsValNull, {input});
+      return edsl::IsValNull(input);
     case KnownOperator::IsNotNull:
-      return codegen_->UnaryOp(parsing::Token::Type::BANG,
-                               codegen_->CallBuiltin(ast::Builtin::IsValNull, {input}));
+      return edsl::IsValNotNull(input);
     case KnownOperator::ExtractYear:
-      return codegen_->CallBuiltin(ast::Builtin::ExtractYear, {input});
+      return edsl::ExtractYear(edsl::Value<ast::x::DateVal>(input));
     case KnownOperator::ACos:
-      return codegen_->CallBuiltin(ast::Builtin::ACos, {input});
+      return edsl::ACos(edsl::Value<ast::x::RealVal>(input));
     case KnownOperator::ASin:
-      return codegen_->CallBuiltin(ast::Builtin::ASin, {input});
+      return edsl::ASin(edsl::Value<ast::x::RealVal>(input));
     case KnownOperator::ATan:
-      return codegen_->CallBuiltin(ast::Builtin::ATan, {input});
+      return edsl::ATan(edsl::Value<ast::x::RealVal>(input));
     case KnownOperator::Cos:
-      return codegen_->CallBuiltin(ast::Builtin::Cos, {input});
+      return edsl::Cos(edsl::Value<ast::x::RealVal>(input));
     case KnownOperator::Cot:
-      return codegen_->CallBuiltin(ast::Builtin::Cot, {input});
+      return edsl::Cot(edsl::Value<ast::x::RealVal>(input));
     case KnownOperator::Sin:
-      return codegen_->CallBuiltin(ast::Builtin::Sin, {input});
+      return edsl::Sin(edsl::Value<ast::x::RealVal>(input));
     case KnownOperator::Tan:
-      return codegen_->CallBuiltin(ast::Builtin::Tan, {input});
+      return edsl::Tan(edsl::Value<ast::x::RealVal>(input));
     default:
       throw NotImplementedException(fmt::format("Translation of unary operator expression type {}",
                                                 KnownOperatorToString(op, true)));

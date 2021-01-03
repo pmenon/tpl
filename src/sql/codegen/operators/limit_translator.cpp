@@ -1,8 +1,11 @@
 #include "sql/codegen/operators/limit_translator.h"
 
-#include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
+#include "sql/codegen/edsl/arithmetic_ops.h"
+#include "sql/codegen/edsl/boolean_ops.h"
+#include "sql/codegen/edsl/comparison_ops.h"
+#include "sql/codegen/edsl/value.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/planner/plannodes/limit_plan_node.h"
@@ -20,41 +23,32 @@ LimitTranslator::LimitTranslator(const planner::LimitPlanNode &plan,
 }
 
 void LimitTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
-  tuple_count_ = pipeline_ctx->DeclarePipelineStateEntry("num_tuples", codegen_->Int32Type());
+  count_ = pipeline_ctx->DeclarePipelineStateEntry("num_tuples", codegen_->GetType<uint64_t>());
 }
 
 void LimitTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
-  ast::Expression *count = pipeline_ctx.GetStateEntry(tuple_count_);
-  function->Append(codegen_->Assign(count, codegen_->Const64(0)));
+  auto count = pipeline_ctx.GetStateEntry<uint64_t>(count_);
+  function->Append(edsl::Assign(count, edsl::Literal(codegen_, 0ul)));
 }
 
 void LimitTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   const auto &plan = GetPlanAs<planner::LimitPlanNode>();
+  const auto offset = plan.GetOffset(), limit = plan.GetLimit();
 
-  const auto count = [&]() { return context->GetStateEntry(tuple_count_); };
-
-  // Build the limit/offset condition check:
-  // if (numTuples >= plan.offset and numTuples < plan.limit)
-  ast::Expression *cond = nullptr;
-  if (plan.GetOffset() != 0) {
-    ast::Expression *lower = codegen_->Const32(plan.GetOffset());
-    cond = codegen_->Compare(parsing::Token::Type::GREATER_EQUAL, count(), lower);
-  }
-  if (plan.GetLimit() != 0) {
-    ast::Expression *upper = codegen_->Const32(plan.GetOffset() + plan.GetLimit());
-    ast::Expression *limit_check = codegen_->Compare(parsing::Token::Type::LESS, count(), upper);
-    cond = cond == nullptr ? limit_check
-                           : codegen_->BinaryOp(parsing::Token::Type::AND, cond, limit_check);
+  const auto count = context->GetStateEntry<uint64_t>(count_);
+  if (offset != 0 && limit != 0) {
+    If check_limit(function, count >= offset && count < offset + limit);
+    context->Consume(function);
+  } else if (offset != 0) {
+    If check_limit(function, count >= offset);
+    context->Consume(function);
+  } else {
+    If check_limit(function, count < limit);
+    context->Consume(function);
   }
 
-  If check_limit(function, cond);
-  context->Consume(function);
-  check_limit.EndIf();
-
-  // Update running count: numTuples += 1
-  auto increment = codegen_->BinaryOp(parsing::Token::Type::PLUS, count(), codegen_->Const32(1));
-  function->Append(codegen_->Assign(count(), increment));
+  function->Append(edsl::Assign(count, count + 1ul));
 }
 
 }  // namespace tpl::sql::codegen

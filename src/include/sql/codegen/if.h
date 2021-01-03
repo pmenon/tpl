@@ -2,6 +2,7 @@
 
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/edsl/value.h"
 
 namespace tpl::sql::codegen {
 
@@ -13,8 +14,7 @@ class FunctionBuilder;
  * generated statement.
  *
  * @code
- * auto cond = codegen->CompareLt(a, b);
- * If a_lt_b(codegen, cond);
+ * If a_lt_b(codegen, a < b);
  * {
  *   // This code will appear in the "then" block of the statement.
  * }
@@ -28,11 +28,11 @@ class FunctionBuilder;
 class If {
  public:
   /**
-   * Create a new if-statement using the provided boolean if-condition.
-   * @param function The function this if statement is appended to.
+   * Instantiate an if-clause using the primitive boolean condition.
+   * @param function The function containing the statement.
    * @param condition The boolean condition.
    */
-  If(FunctionBuilder *function, ast::Expression *condition);
+  If(FunctionBuilder *function, const edsl::Value<bool> &condition);
 
   /**
    * Destructor will complete the statement.

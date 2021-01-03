@@ -6,11 +6,11 @@
 
 namespace tpl::sql::codegen {
 
-If::If(FunctionBuilder *function, ast::Expression *condition)
+If::If(FunctionBuilder *function, const edsl::Value<bool> &condition)
     : function_(function),
       position_(function_->GetCodeGen()->GetPosition()),
       prev_func_stmt_list_(nullptr),
-      condition_(condition),
+      condition_(condition.GetRaw()),
       then_stmts_(function_->GetCodeGen()->MakeEmptyBlock()),
       else_stmts_(nullptr),
       completed_(false) {

@@ -3,11 +3,9 @@
 #include <type_traits>
 
 #include "ast/ast.h"
-#include "ast/ast_node_factory.h"
 #include "ast/type_builder.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/edsl/traits.h"
-#include "sql/codegen/function_builder.h"
 
 namespace tpl::sql::codegen::edsl {
 
@@ -89,8 +87,7 @@ class Value {
                                          traits::is_primitive_int_type<I>::value> * = nullptr>
   Reference<std::remove_pointer_t<std::decay_t<T>>> operator[](I index) const {
     using ArrayElementType = std::remove_pointer_t<std::decay_t<T>>;
-    return Reference<ArrayElementType>(codegen_,
-                                       codegen_->ArrayAccess(GetRaw(), codegen_->Const32(index)));
+    return Reference<ArrayElementType>(codegen_, codegen_->ArrayAccess(GetRaw(), index));
   }
 
   /**
@@ -110,6 +107,29 @@ class Value {
   // there isn't a reason to modify it after construction; and it catches
   // errors like a = b which should use Assign(a, b).
   ast::Expression *const val_;
+};
+
+/**
+ * A specialization for values wrapping non-expression AST nodes. These nodes have a void type and,
+ * since they cannot participate in any expressions, do not hold a pointer to the codegen instance.
+ */
+template <>
+class Value<void> {
+ public:
+  /**
+   * Construct a non-expression value that wraps the node.
+   * @param node The node to wrap.
+   */
+  Value(ast::Statement *node) : node_(node) {}
+
+  /**
+   * @return The wrapped node.
+   */
+  ast::Statement *GetNode() const noexcept { return node_; }
+
+ private:
+  // The node.
+  ast::Statement *const node_;
 };
 
 /**
@@ -171,16 +191,8 @@ class Variable : public Reference<T> {
    * @param codegen The code generator instance.
    * @param name The name of the variable.
    */
-  Variable(CodeGen *codegen, ast::Identifier name)
-      : Variable(codegen, name, codegen->GetType<T>()) {}
-
-  /**
-   * Declare a variable with the given name.
-   * @param codegen The code generator instance.
-   * @param name The name of the variable.
-   */
   Variable(CodeGen *codegen, std::string_view name)
-      : Variable(codegen, codegen->MakeIdentifier(name)) {}
+      : Variable(codegen, codegen->MakeFreshIdentifier(name), codegen->GetType<T>()) {}
 
   /**
    * @return The name of this variable.
@@ -205,15 +217,37 @@ class Variable : public Reference<T> {
 };
 
 /**
+ * Construct a TPL literal from a C++ literal.
+ *
+ * Example, the C++:
+ * @code
+ * Variable<int32_t> x("x");
+ * Declare(x, Literal<int32_t>(-100));
+ * @endcode
+ *
+ * generates the following TPL code:
+ *
+ * @code
+ * var x: int32_t = -100
+ * @endcode
+ *
+ * @tparam T The C++ type of the literal.
+ * @param x The literal value.
+ * @return The value.
+ */
+template <typename T>
+inline Value<T> Literal(CodeGen *codegen, T val) {
+  return Value<T>(codegen, codegen->Literal<T>(val));
+}
+
+/**
  * Declare an uninitialized variable.
  * @tparam T The type of variable.
  * @param var The variable to declare.
  */
 template <typename T>
-void Declare(const Variable<T> &var) {
-  CodeGen *codegen = var.GetCodeGen();
-  FunctionBuilder *function = codegen->GetCurrentFunction();
-  function->Append(codegen->DeclareVar(var.GetName(), var.GetRaw()->GetType()));
+inline Value<void> Declare(const Variable<T> &var) {
+  return Value<void>(var.GetCodeGen()->DeclareVar(var.GetName(), var.GetRaw()->GetType()));
 }
 
 /**
@@ -223,10 +257,21 @@ void Declare(const Variable<T> &var) {
  * @param value The value to assign the variable at declaration time.
  */
 template <typename T>
-void Declare(const Variable<T> &var, const Value<T> &value) {
-  CodeGen *codegen = var.GetCodeGen();
-  FunctionBuilder *function = codegen->GetCurrentFunction();
-  function->Append(codegen->DeclareVarWithInit(var.GetName(), value.GetRaw()));
+inline Value<void> Declare(const Variable<T> &var, const Value<T> &value) {
+  return Value<void>(var.GetCodeGen()->DeclareVarWithInit(var.GetName(), value.GetRaw()));
+}
+
+/**
+ * Declare a variable with the given initial value.
+ * @tparam T The type of the variable and value.
+ * @param var The variable to declare.
+ * @param value The value to assign the variable at declaration time.
+ */
+template <typename T>
+inline Value<void> Declare(const Variable<T> &var, T value) {
+  static_assert(traits::is_primitive_type<T>::value,
+                "Can only constant-initialize primitive variable types.");
+  return Declare(var, Literal<T>(var.GetCodeGen(), value));
 }
 
 /**
@@ -237,10 +282,48 @@ void Declare(const Variable<T> &var, const Value<T> &value) {
  * @return The result (unusable) value.
  */
 template <typename T>
-void Assign(const Reference<T> &lhs, const Value<T> &rhs) {
-  CodeGen *codegen = lhs.GetCodeGen();
-  FunctionBuilder *function = codegen->GetCurrentFunction();
-  function->Append(codegen->Assign(lhs.GetRef(), rhs.GetRaw()));
+inline Value<void> Assign(const Reference<T> &lhs, const Value<T> &rhs) {
+  return Value<void>(lhs.GetCodeGen()->Assign(lhs.GetRef(), rhs.GetRaw()));
+}
+
+/**
+ * Assign a value to the given reference element.
+ * @tparam T The type of elements being assigned.
+ * @param lhs The destination of the assignment.
+ * @param rhs The source value of the assignment.
+ * @return The result (unusable) value.
+ */
+template <typename T>
+inline Value<void> Assign(const Reference<T> &lhs, T value) {
+  static_assert(traits::is_primitive_type<T>::value, "Can only assign primitive variable types.");
+  return Assign(lhs, Literal<T>(lhs.GetCodeGen(), value));
+}
+
+/**
+ * Return from the function.
+ * @return A void-value.
+ */
+inline Value<void> Return(CodeGen *codegen) { return Value<void>(codegen->Return()); }
+
+/**
+ * A return statement with a non-void return value.
+ * @tparam T The return type.
+ * @param val The value to return.
+ * @return A void-value.
+ */
+template <typename T>
+inline Value<void> Return(const Value<T> &val) {
+  static_assert(!std::is_void_v<T>, "Cannot return a void-value. Use Return() instead.");
+  return Value<void>(val.GetCodeGen()->Return(val.GetRaw()));
+}
+
+/**
+ * Return the given boolean value.
+ * @param val The boolean value to return.
+ * @return A void-value.
+ */
+inline Value<void> Return(CodeGen *codegen, bool val) {
+  return Return(Literal<bool>(codegen, val));
 }
 
 }  // namespace tpl::sql::codegen::edsl

@@ -944,22 +944,23 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpression *call) {
     return;
   }
 
-  // The first argument will be a UnaryOpExpr with the '*' (star) op. This is
-  // because parsing function calls assumes expression arguments, not types. So,
-  // something like '*Type', which would be the first argument to @ptrCast, will
-  // get parsed as a dereference expression before a type expression.
-  // TODO(pmenon): Fix the above to parse correctly
+  // If the AST was generated from the front-end parser, the first argument will
+  // be a UnaryOpExpr with the '*' (star) op. This is because parsing function
+  // calls assumes expression arguments, not types. So, something like '*Type',
+  // which would be the first argument to @ptrCast, will get parsed as a
+  // dereference expression before a type expression.
+  // TODO(pmenon): Fix the above to parse correctly.
 
-  auto unary_op = call->GetArguments()[0]->SafeAs<ast::UnaryOpExpression>();
-  if (unary_op == nullptr || unary_op->Op() != parsing::Token::Type::STAR) {
-    error_reporter_->Report(call->Position(), ErrorMessages::kBadArgToPtrCast,
-                            call->GetArguments()[0]->GetType(), 1);
-    return;
+  if (auto unary_op = call->GetArguments()[0]->SafeAs<ast::UnaryOpExpression>()) {
+    if (unary_op->Op() != parsing::Token::Type::STAR) {
+      error_reporter_->Report(call->Position(), ErrorMessages::kBadArgToPtrCast,
+                              call->GetArguments()[0]->GetType(), 1);
+      return;
+    }
+    // Replace the unary with a PointerTypeRepr node and resolve it.
+    call->SetArgument(0, context_->GetNodeFactory()->NewPointerType(
+                             call->GetArguments()[0]->Position(), unary_op->GetInput()));
   }
-
-  // Replace the unary with a PointerTypeRepr node and resolve it
-  call->SetArgument(0, context_->GetNodeFactory()->NewPointerType(
-                           call->GetArguments()[0]->Position(), unary_op->GetInput()));
 
   for (auto *arg : call->GetArguments()) {
     auto *resolved_type = Resolve(arg);

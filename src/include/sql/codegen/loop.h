@@ -2,6 +2,7 @@
 
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/edsl/value.h"
 
 namespace tpl::sql::codegen {
 
@@ -12,8 +13,9 @@ class FunctionBuilder;
  * current active function are appended to the loop's body.
  *
  * @code
- * auto cond = codegen->CompareLt(a, b);
- * Loop loop(codegen, cond);
+ * Value<int> a, b;
+ * ...
+ * Loop loop(codegen, a < b);
  * {
  *   // This code will appear in the "then" block of the statement.
  * }
@@ -29,21 +31,15 @@ class Loop {
    * @param condition The loop condition.
    * @param next The next statements.
    */
-  explicit Loop(FunctionBuilder *function, ast::Statement *init, ast::Expression *condition,
-                ast::Statement *next);
+  explicit Loop(FunctionBuilder *function, const edsl::Value<void> &init,
+                const edsl::Value<bool> &condition, const edsl::Value<void> &next);
 
   /**
    * Create a while-loop.
    * @param codegen The code generator instance.
    * @param condition The loop condition.
    */
-  explicit Loop(FunctionBuilder *function, ast::Expression *condition);
-
-  /**
-   * Create an infinite loop.
-   * @param codegen The code generator instance.
-   */
-  explicit Loop(FunctionBuilder *function);
+  explicit Loop(FunctionBuilder *function, const edsl::Value<bool> &condition);
 
   /**
    * Destructor.
@@ -64,10 +60,10 @@ class Loop {
   ast::BlockStatement *prev_statements_;
   // The initial statements, loop condition, and next statements.
   ast::Statement *init_;
-  ast::Expression *condition_;
+  ast::Expression *cond_;
   ast::Statement *next_;
   // The loop body.
-  ast::BlockStatement *loop_body_;
+  ast::BlockStatement *body_;
   // Completion flag.
   bool completed_;
 };

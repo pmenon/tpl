@@ -29,27 +29,29 @@ PipelineContext::PipelineContext(const Pipeline &pipeline)
     : pipeline_(pipeline),
       codegen_(pipeline.GetCompilationContext()->GetCodeGen()),
       state_var_(codegen_->MakeIdentifier("p_state")),
-      state_(codegen_->MakeIdentifier(fmt::format("P{}_State", pipeline_.GetId())),
-             [this](CodeGen *codegen) { return codegen->MakeExpr(state_var_); }) {}
+      state_(codegen_, fmt::format("P{}_State", pipeline_.GetId()), [](CodeGen *codegen) {
+        auto func = codegen->GetCurrentFunction();
+        return func->GetParameterByPosition(1);
+      }) {}
 
 StateDescriptor::Slot PipelineContext::DeclarePipelineStateEntry(const std::string &name,
-                                                                 ast::Expression *type_repr) {
-  return state_.DeclareStateEntry(codegen_, name, type_repr);
+                                                                 ast::Type *type) {
+  return state_.DeclareStateEntry(name, type);
 }
 
-ast::StructDeclaration *PipelineContext::ConstructPipelineStateType() {
-  return state_.ConstructFinalType(codegen_);
+void PipelineContext::ConstructPipelineStateType() { state_.ConstructFinalType(); }
+
+edsl::ReferenceVT PipelineContext::GetStateEntryGeneric(StateDescriptor::Slot slot) const {
+  return state_.GetStateEntryGeneric(codegen_, slot);
 }
 
-ast::Expression *PipelineContext::GetStateEntry(StateDescriptor::Slot slot) const {
-  return state_.GetStateEntry(codegen_, slot);
+edsl::ValueVT PipelineContext::GetStateEntryPtrGeneric(StateDescriptor::Slot slot) const {
+  return state_.GetStateEntryPtrGeneric(codegen_, slot);
 }
 
-ast::Expression *PipelineContext::GetStateEntryPtr(StateDescriptor::Slot slot) const {
-  return state_.GetStateEntryPtr(codegen_, slot);
-}
+edsl::Value<uint32_t> PipelineContext::GetStateSize() const { return state_.GetSize(); }
 
-ast::Expression *PipelineContext::GetStateEntryByteOffset(StateDescriptor::Slot slot) const {
+edsl::Value<uint32_t> PipelineContext::GetStateEntryByteOffset(StateDescriptor::Slot slot) const {
   return state_.GetStateEntryOffset(codegen_, slot);
 }
 
@@ -59,20 +61,15 @@ bool PipelineContext::IsParallel() const { return pipeline_.IsParallel(); }
 
 bool PipelineContext::IsVectorized() const { return pipeline_.IsVectorized(); }
 
-ast::Expression *PipelineContext::AccessCurrentThreadState() const {
-  ast::Expression *exec_ctx =
-      pipeline_.GetCompilationContext()->GetExecutionContextPtrFromQueryState();
-  ast::Expression *tls = codegen_->ExecCtxGetTLS(exec_ctx);
-  return codegen_->TLSAccessCurrentThreadState(tls, state_.GetTypeName());
+edsl::ValueVT PipelineContext::AccessCurrentThreadState() const {
+  auto execution_ctx = pipeline_.GetCompilationContext()->GetExecutionContextPtrFromQueryState();
+  auto tls_container = execution_ctx->GetThreadStateContainer();
+  return edsl::PtrCast(state_.GetPointerToType(), tls_container->AccessCurrentThreadState());
 }
 
-util::RegionVector<ast::FieldDeclaration *> PipelineContext::PipelineParams() const {
-  // The main query parameters.
-  util::RegionVector<ast::FieldDeclaration *> query_params =
-      pipeline_.GetCompilationContext()->QueryParams();
-  // Tag on the pipeline state.
-  ast::Expression *pipeline_state = codegen_->PointerType(codegen_->MakeExpr(state_.GetTypeName()));
-  query_params.push_back(codegen_->MakeField(state_var_, pipeline_state));
+std::vector<std::pair<ast::Identifier, ast::Type *>> PipelineContext::PipelineParams() const {
+  auto query_params = pipeline_.GetCompilationContext()->QueryParams();
+  query_params.emplace_back(state_var_, state_.GetPointerToType());
   return query_params;
 }
 
@@ -169,10 +166,9 @@ std::string Pipeline::ConstructPipelinePath() const {
 ast::FunctionDeclaration *Pipeline::GenerateSetupPipelineStateFunction(
     PipelineContext *pipeline_ctx) const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("InitPipelineState"));
-  FunctionBuilder builder(codegen_, name, pipeline_ctx->PipelineParams(), codegen_->Nil());
+  FunctionBuilder builder(codegen_, name, pipeline_ctx->PipelineParams(),
+                          codegen_->GetType<void>());
   {
-    // Request new scope for the function.
-    CodeGen::CodeScope code_scope(codegen_);
     for (auto op : operators_) {
       op->InitializePipelineState(*pipeline_ctx, &builder);
     }
@@ -183,10 +179,9 @@ ast::FunctionDeclaration *Pipeline::GenerateSetupPipelineStateFunction(
 ast::FunctionDeclaration *Pipeline::GenerateTearDownPipelineStateFunction(
     PipelineContext *pipeline_ctx) const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("TearDownPipelineState"));
-  FunctionBuilder builder(codegen_, name, pipeline_ctx->PipelineParams(), codegen_->Nil());
+  FunctionBuilder builder(codegen_, name, pipeline_ctx->PipelineParams(),
+                          codegen_->GetType<void>());
   {
-    // Request new scope for the function.
-    CodeGen::CodeScope code_scope(codegen_);
     for (auto op : operators_) {
       op->TearDownPipelineState(*pipeline_ctx, &builder);
     }
@@ -200,20 +195,19 @@ ast::FunctionDeclaration *Pipeline::GenerateInitPipelineFunction(
   ast::FunctionDeclaration *cleanup_state_fn = GenerateTearDownPipelineStateFunction(pipeline_ctx);
 
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Init"));
-  FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(), codegen_->Nil());
+  FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(),
+                          codegen_->GetType<void>());
   {
-    CodeGen::CodeScope code_scope(codegen_);
-    // var tls = @execCtxGetTLS(exec_ctx)
-    ast::Expression *exec_ctx = compilation_ctx_->GetExecutionContextPtrFromQueryState();
-    ast::Identifier tls = codegen_->MakeFreshIdentifier("thread_state_container");
-    builder.Append(codegen_->DeclareVarWithInit(tls, codegen_->ExecCtxGetTLS(exec_ctx)));
+    // var tls_container = @execCtxGetTLS(exec_ctx)
+    auto exec_ctx = compilation_ctx_->GetExecutionContextPtrFromQueryState();
+    edsl::Variable<ast::x::ThreadStateContainer *> tls_container(codegen_, "tls_container");
+    builder.Append(edsl::Declare(tls_container, exec_ctx->GetThreadStateContainer()));
 
-    // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
-    ast::Expression *state_ptr = compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
-    ast::Declaration *state_type = pipeline_ctx->ConstructPipelineStateType();
-    builder.Append(codegen_->TLSReset(codegen_->MakeExpr(tls), state_type->GetName(),
-                                      setup_state_fn->GetName(), cleanup_state_fn->GetName(),
-                                      state_ptr));
+    // @tlsReset(tls_container, @sizeOf(ThreadState), init, tearDown, queryState)
+    auto q_state = compilation_ctx_->GetQueryState()->GetStatePtr(codegen_);
+    builder.Append(tls_container->Reset(pipeline_ctx->GetStateSize(), setup_state_fn->GetName(),
+                                        cleanup_state_fn->GetName(),
+                                        edsl::PtrCast<uint8_t *>(q_state)));
   }
   return builder.Finish();
 }
@@ -221,11 +215,9 @@ ast::FunctionDeclaration *Pipeline::GenerateInitPipelineFunction(
 ast::FunctionDeclaration *Pipeline::GenerateRunPipelineFunction(
     PipelineContext *pipeline_ctx) const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
-  FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(), codegen_->Nil());
+  FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(),
+                          codegen_->GetType<void>());
   {
-    // Begin a new code scope for fresh variables.
-    CodeGen::CodeScope code_scope(codegen_);
-
     // Let all operators perform some pre-pipeline work.
     // This is before we invoke the core pipeline logic in single-threaded code.
     for (auto op : operators_) {
@@ -246,13 +238,12 @@ ast::FunctionDeclaration *Pipeline::GenerateRunPipelineFunction(
 
 ast::FunctionDeclaration *Pipeline::GenerateTearDownPipelineFunction() const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("TearDown"));
-  FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(), codegen_->Nil());
+  FunctionBuilder builder(codegen_, name, compilation_ctx_->QueryParams(),
+                          codegen_->GetType<void>());
   {
-    // Begin a new code scope for fresh variables.
-    CodeGen::CodeScope code_scope(codegen_);
     // Tear down thread local state if parallel pipeline.
-    ast::Expression *exec_ctx = compilation_ctx_->GetExecutionContextPtrFromQueryState();
-    builder.Append(codegen_->TLSClear(codegen_->ExecCtxGetTLS(exec_ctx)));
+    auto exec_ctx = compilation_ctx_->GetExecutionContextPtrFromQueryState();
+    builder.Append(exec_ctx->GetThreadStateContainer()->Clear());
   }
   return builder.Finish();
 }
@@ -293,29 +284,30 @@ void Pipeline::LaunchSerial(const PipelineContext &pipeline_ctx) const {
   LaunchInternal(pipeline_ctx, nullptr, {});
 }
 
-void Pipeline::LaunchParallel(const PipelineContext &pipeline_ctx,
-                              std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
-                              std::vector<ast::FieldDeclaration *> &&additional_params) const {
+void Pipeline::LaunchParallel(
+    const PipelineContext &pipeline_ctx,
+    std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
+    std::vector<std::pair<ast::Identifier, ast::Type *>> &&additional_params) const {
   LaunchInternal(pipeline_ctx, dispatch, std::move(additional_params));
 }
 
-void Pipeline::LaunchInternal(const PipelineContext &pipeline_ctx,
-                              std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
-                              std::vector<ast::FieldDeclaration *> &&additional_params) const {
+void Pipeline::LaunchInternal(
+    const PipelineContext &pipeline_ctx,
+    std::function<void(FunctionBuilder *, ast::Identifier)> dispatch,
+    std::vector<std::pair<ast::Identifier, ast::Type *>> &&additional_params) const {
   // First, make the work function.
-  util::RegionVector<ast::FieldDeclaration *> pipeline_params = pipeline_ctx.PipelineParams();
+  auto pipeline_params = pipeline_ctx.PipelineParams();
   pipeline_params.reserve(pipeline_params.size() + additional_params.size());
   pipeline_params.insert(pipeline_params.end(), additional_params.begin(), additional_params.end());
 
   auto worker_name = codegen_->MakeIdentifier(
       CreatePipelineFunctionName(IsParallel() ? "ParallelWork" : "SerialWork"));
   {
-    FunctionBuilder builder(codegen_, worker_name, std::move(pipeline_params), codegen_->Nil());
+    FunctionBuilder builder(codegen_, worker_name, std::move(pipeline_params),
+                            codegen_->GetType<void>());
     {
-      // Begin a new code scope for fresh variables.
-      CodeGen::CodeScope code_scope(codegen_);
-      ConsumerContext context(compilation_ctx_, pipeline_ctx);
       // Main pipeline logic.
+      ConsumerContext context(compilation_ctx_, pipeline_ctx);
       (*Begin())->Consume(&context, &builder);
     }
     builder.Finish();
@@ -327,13 +319,14 @@ void Pipeline::LaunchInternal(const PipelineContext &pipeline_ctx,
     dispatch(run_function, worker_name);
   } else {
     // var p_state = @tlsGetCurrentThreadState(...)
-    ast::Expression *q_state = compilation_ctx_->GetQueryState()->GetStatePointer(codegen_);
-    ast::Expression *p_state = pipeline_ctx.AccessCurrentThreadState();
-    ast::Identifier p_state_name = codegen_->MakeFreshIdentifier("p_state");
-    run_function->Append(codegen_->DeclareVarWithInit(p_state_name, p_state));
+    edsl::VariableVT p_state(codegen_, "p_state", pipeline_ctx.state_.GetPointerToType());
+    run_function->Append(edsl::Declare(p_state, pipeline_ctx.AccessCurrentThreadState()));
+    auto q_state = compilation_ctx_->GetQueryState()->GetStatePtr(codegen_);
     // Call the work function directly.
     // SerialWork(q_state, p_state)
-    run_function->Append(codegen_->Call(worker_name, {q_state, codegen_->MakeExpr(p_state_name)}));
+    // TODO(pmenon): Fix me
+    auto call = codegen_->Call(worker_name, {q_state.GetRaw(), p_state.GetRaw()});
+    run_function->Append(edsl::Value<void>(codegen_->MakeStatement(call)));
   }
 }
 

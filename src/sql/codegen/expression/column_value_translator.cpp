@@ -8,8 +8,8 @@ ColumnValueTranslator::ColumnValueTranslator(const planner::ColumnValueExpressio
                                              CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {}
 
-ast::Expression *ColumnValueTranslator::DeriveValue(UNUSED ConsumerContext *context,
-                                                    const ColumnValueProvider *provider) const {
+edsl::ValueVT ColumnValueTranslator::DeriveValue(UNUSED ConsumerContext *context,
+                                                 const ColumnValueProvider *provider) const {
   auto &col_expr = GetExpressionAs<const planner::ColumnValueExpression>();
   return provider->GetTableColumn(col_expr.GetColumnOid());
 }

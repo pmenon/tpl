@@ -19,6 +19,7 @@
 #include "sql/codegen/expression/cast_translator.h"
 #include "sql/codegen/expression/column_value_translator.h"
 #include "sql/codegen/expression/comparison_translator.h"
+#include "sql/codegen/expression/like_translator.h"
 #include "sql/codegen/expression/conjunction_translator.h"
 #include "sql/codegen/expression/constant_translator.h"
 #include "sql/codegen/expression/unary_expression_translator.h"
@@ -34,9 +35,9 @@
 #include "sql/codegen/operators/seq_scan_translator.h"
 #include "sql/codegen/operators/sort_translator.h"
 #include "sql/codegen/operators/static_aggregation_translator.h"
-#include "sql/codegen/operators/union_all_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_graph.h"
+#include "sql/planner/expressions/expression_util.h"
 #include "sql/planner/expressions/abstract_expression.h"
 #include "sql/planner/expressions/case_expression.h"
 #include "sql/planner/expressions/cast_expression.h"
@@ -70,16 +71,15 @@ CompilationContext::CompilationContext(ExecutableQuery *query)
       query_(query),
       codegen_(MakeContainer()),
       query_state_var_(codegen_.MakeIdentifier("q_state")),
-      query_state_type_(codegen_.MakeIdentifier("QueryState")),
-      query_state_(query_state_type_,
-                   [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }) {}
+      query_state_(&codegen_, "QueryState", [](CodeGen *codegen) {
+        auto function = codegen->GetCurrentFunction();
+        return function->GetParameterByPosition(0);
+      }) {}
 
 ast::FunctionDeclaration *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
-  FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
+  FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.GetType<void>());
   {
-    // Request new scope for the function.
-    CodeGen::CodeScope code_scope(&codegen_);
     for (const auto &kv : operators_) {
       kv.second->InitializeQueryState(&builder);
     }
@@ -89,10 +89,8 @@ ast::FunctionDeclaration *CompilationContext::GenerateInitFunction() {
 
 ast::FunctionDeclaration *CompilationContext::GenerateTearDownFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_TearDown");
-  FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.Nil());
+  FunctionBuilder builder(&codegen_, name, QueryParams(), codegen_.GetType<void>());
   {
-    // Request new scope for the function.
-    CodeGen::CodeScope code_scope(&codegen_);
     for (const auto &kv : operators_) {
       kv.second->TearDownQueryState(&builder);
     }
@@ -101,9 +99,8 @@ ast::FunctionDeclaration *CompilationContext::GenerateTearDownFunction() {
 }
 
 void CompilationContext::DeclareCommonQueryState() {
-  // Just the execution context.
-  exec_ctx_ = query_state_.DeclareStateEntry(
-      GetCodeGen(), "exec_ctx", codegen_.PointerType(ast::BuiltinType::ExecutionContext));
+  exec_ctx_ =
+      query_state_.DeclareStateEntry("exec_ctx", codegen_.GetType<ast::x::ExecutionContext *>());
 }
 
 void CompilationContext::EstablishPipelineDependencies() {
@@ -118,7 +115,7 @@ void CompilationContext::DeclareCommonStructsAndFunctions() {
     kv.second->DefineStructsAndFunctions();
   }
   // Finally, declare the query state.
-  query_state_.ConstructFinalType(&codegen_);
+  query_state_.ConstructFinalType();
 }
 
 void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
@@ -169,7 +166,7 @@ void CompilationContext::GenerateQueryLogic(const PipelineGraph &pipeline_graph,
                 init_fn->GetName().ToString(),       // The init() function.
                 tear_down_fn->GetName().ToString(),  // The teardown() function.
                 ExecutionPlan(std::move(steps)),     // The generated plan.
-                query_state_.GetSize());
+                query_state_.GetSizeRaw());
 }
 
 void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
@@ -273,11 +270,6 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
       translator = std::make_unique<SeqScanTranslator>(seq_scan, this, pipeline);
       break;
     }
-    case planner::PlanNodeType::SETOP: {
-      const auto &set_op = static_cast<const planner::SetOpPlanNode &>(plan);
-      translator = std::make_unique<UnionAllTranslator>(set_op, this, pipeline);
-      break;
-    }
     default: {
       throw NotImplementedException(
           fmt::format("code generation for plan node type '{}'",
@@ -309,7 +301,11 @@ void CompilationContext::Prepare(const planner::AbstractExpression &expression) 
     }
     case planner::ExpressionType::COMPARISON: {
       const auto &comparison = static_cast<const planner::ComparisonExpression &>(expression);
-      translator = std::make_unique<ComparisonTranslator>(comparison, this);
+      if (planner::ExpressionUtil::IsLikeComparison(comparison)) {
+        translator = std::make_unique<LikeTranslator>(comparison, this);
+      } else {
+        translator = std::make_unique<ComparisonTranslator>(comparison, this);
+      }
       break;
     }
     case planner::ExpressionType::CONJUNCTION: {
@@ -367,14 +363,12 @@ std::string CompilationContext::GetFunctionPrefix() const {
   return "Query" + std::to_string(unique_id_);
 }
 
-util::RegionVector<ast::FieldDeclaration *> CompilationContext::QueryParams() const {
-  ast::Expression *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_));
-  ast::FieldDeclaration *field = codegen_.MakeField(query_state_var_, state_type);
-  return codegen_.MakeFieldList({field});
+std::vector<std::pair<ast::Identifier, ast::Type *>> CompilationContext::QueryParams() const {
+  return {{query_state_var_, query_state_.GetPointerToType()}};
 }
 
-ast::Expression *CompilationContext::GetExecutionContextPtrFromQueryState() {
-  return query_state_.GetStateEntry(&codegen_, exec_ctx_);
+edsl::Value<ast::x::ExecutionContext *> CompilationContext::GetExecutionContextPtrFromQueryState() {
+  return query_state_.GetStateEntry<ast::x::ExecutionContext *>(&codegen_, exec_ctx_);
 }
 
 CompilationUnit *CompilationContext::MakeContainer() {

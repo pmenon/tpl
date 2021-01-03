@@ -6,31 +6,27 @@
 
 namespace tpl::sql::codegen {
 
-Loop::Loop(FunctionBuilder *function, ast::Statement *init, ast::Expression *condition,
-           ast::Statement *next)
+Loop::Loop(FunctionBuilder *function, const edsl::Value<void> &init,
+           const edsl::Value<bool> &condition, const edsl::Value<void> &next)
     : function_(function),
       position_(function_->GetCodeGen()->GetPosition()),
       prev_statements_(nullptr),
-      init_(init),
-      condition_(condition),
-      next_(next),
-      loop_body_(function_->GetCodeGen()->MakeEmptyBlock()),
+      init_(init.GetNode()),
+      cond_(condition.GetRaw()),
+      next_(next.GetNode()),
+      body_(function_->GetCodeGen()->MakeEmptyBlock()),
       completed_(false) {
   // Stash the previous statement list so we can restore it upon completion.
   prev_statements_ = function_->statements_;
   // Swap in our loop-body statement list as the active statement list.
-  function_->statements_ = loop_body_;
+  function_->statements_ = body_;
   // Bump indent for loop body.
   function_->GetCodeGen()->Indent();
 }
 
 // Static cast to disambiguate constructor.
-Loop::Loop(FunctionBuilder *function, ast::Expression *condition)
-    : Loop(function, static_cast<ast::Statement *>(nullptr), condition, nullptr) {}
-
-// Static cast to disambiguate constructor.
-Loop::Loop(FunctionBuilder *function)
-    : Loop(function, static_cast<ast::Statement *>(nullptr), nullptr, nullptr) {}
+Loop::Loop(FunctionBuilder *function, const edsl::Value<bool> &condition)
+    : Loop(function, edsl::Value<void>(nullptr), condition, edsl::Value<void>(nullptr)) {}
 
 Loop::~Loop() { EndLoop(); }
 
@@ -44,8 +40,7 @@ void Loop::EndLoop() {
 
   // Create and append the if statement.
   auto codegen = function_->GetCodeGen();
-  auto loop =
-      codegen->NodeFactory()->NewForStatement(position_, init_, condition_, next_, loop_body_);
+  auto loop = codegen->NodeFactory()->NewForStatement(position_, init_, cond_, next_, body_);
   function_->Append(loop);
 
   // Bump line.

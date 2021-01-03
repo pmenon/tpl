@@ -89,13 +89,13 @@ class HashJoinTranslator : public OperatorTranslator {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                  uint32_t attr_idx) const override;
+  edsl::ValueVT GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                               uint32_t attr_idx) const override;
 
   /**
    * Hash-joins do not produce columns from base tables.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Hash-joins do not produce columns from base tables.");
   }
 
@@ -105,17 +105,12 @@ class HashJoinTranslator : public OperatorTranslator {
     return GetPlanAs<planner::HashJoinPlanNode>();
   }
 
-  // Functions to initialize and tear-down the given join hash table.
-  void InitializeJoinHashTable(FunctionBuilder *function, ast::Expression *jht_ptr) const;
-  void TearDownJoinHashTable(FunctionBuilder *function, ast::Expression *jht_ptr) const;
-
   // Access an attribute at the given index in the provided build row.
-  ast::Expression *GetBuildRowAttribute(uint32_t attr_idx) const;
+  edsl::ValueVT GetBuildRowAttribute(uint32_t attr_idx) const;
 
   // Evaluate the provided hash keys in the provided context and return the
   // results in the provided results output vector.
-  ast::Identifier HashKeys(ConsumerContext *ctx, FunctionBuilder *function,
-                           const std::vector<const planner::AbstractExpression *> &hash_keys) const;
+  edsl::Variable<hash_t> HashKeys(ConsumerContext *ctx, FunctionBuilder *function, bool left) const;
 
   // Fill the build row with the columns from the given context.
   void WriteBuildRow(ConsumerContext *context, FunctionBuilder *function) const;
@@ -128,10 +123,10 @@ class HashJoinTranslator : public OperatorTranslator {
 
   // Check the right mark.
   void CheckRightMark(ConsumerContext *ctx, FunctionBuilder *function,
-                      ast::Identifier right_mark) const;
+                      const edsl::Variable<bool> &right_mark) const;
 
   // Check the join predicate.
-  void CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilder *function) const;
+  void CheckJoinPredicate(ConsumerContext *condition, FunctionBuilder *function) const;
 
   // When probing the hash table, should we compare hash values?
   // This is useful to speed up probes when complex keys are present
@@ -142,7 +137,7 @@ class HashJoinTranslator : public OperatorTranslator {
   // Storage used to read/write rows into/from hash table.
   CompactStorage storage_;
   // The name of the materialized row when inserting or probing the hash table.
-  ast::Identifier build_row_var_;
+  std::unique_ptr<edsl::VariableVT> build_row_;
   // For mark-based joins. The index in the row where the mark is stored.
   uint32_t build_mark_index_;
 

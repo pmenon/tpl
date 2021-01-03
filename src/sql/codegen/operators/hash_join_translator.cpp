@@ -5,6 +5,11 @@
 #include "ast/type.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
+#include "sql/codegen/edsl/boolean_ops.h"
+#include "sql/codegen/edsl/comparison_ops.h"
+#include "sql/codegen/edsl/ops.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/codegen/loop.h"
@@ -16,7 +21,6 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
                                        CompilationContext *compilation_context, Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
       storage_(codegen_, "BuildRow"),
-      build_row_var_(codegen_->MakeFreshIdentifier("row")),
       build_mark_index_(plan.GetChild(0)->GetOutputSchema()->NumColumns()),
       left_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
@@ -47,103 +51,94 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   storage_.Setup(types);
 
   // Declare global hash table.
-  ast::Expression *join_ht_type = codegen_->BuiltinType(ast::BuiltinType::JoinHashTable);
   global_join_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      codegen_, "join_hash_table", join_ht_type);
+      "join_ht", codegen_->GetType<ast::x::JoinHashTable>());
+
+  // Make the variable we use to hold rows.
+  build_row_ = std::make_unique<edsl::VariableVT>(codegen_, "row", storage_.GetPtrToType());
 }
 
 void HashJoinTranslator::DeclarePipelineDependencies() const {
   GetPipeline()->AddDependency(left_pipeline_);
 }
 
-void HashJoinTranslator::InitializeJoinHashTable(FunctionBuilder *function,
-                                                 ast::Expression *jht_ptr) const {
-  function->Append(codegen_->JoinHashTableInit(jht_ptr, GetMemoryPool(), storage_.GetTypeName()));
-}
-
-void HashJoinTranslator::TearDownJoinHashTable(FunctionBuilder *function,
-                                               ast::Expression *jht_ptr) const {
-  function->Append(codegen_->JoinHashTableFree(jht_ptr));
-}
-
 void HashJoinTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  InitializeJoinHashTable(function, GetQueryStateEntryPtr(global_join_ht_));
+  auto jht = GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
+  function->Append(jht->Init(GetMemoryPool(), storage_.GetTypeSize()));
 }
 
 void HashJoinTranslator::TearDownQueryState(FunctionBuilder *function) const {
-  TearDownJoinHashTable(function, GetQueryStateEntryPtr(global_join_ht_));
+  auto jht = GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
+  function->Append(jht->Free());
 }
 
 void HashJoinTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (pipeline_ctx->IsForPipeline(left_pipeline_) && pipeline_ctx->IsParallel()) {
-    ast::Expression *join_ht_type = codegen_->BuiltinType(ast::BuiltinType::JoinHashTable);
-    local_join_ht_ = pipeline_ctx->DeclarePipelineStateEntry("join_hash_table", join_ht_type);
+    local_join_ht_ = pipeline_ctx->DeclarePipelineStateEntry(
+        "join_ht", codegen_->GetType<ast::x::JoinHashTable>());
   }
 }
 
 void HashJoinTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                                  FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(left_pipeline_) && pipeline_ctx.IsParallel()) {
-    ast::Expression *local_hash_table = pipeline_ctx.GetStateEntryPtr(local_join_ht_);
-    InitializeJoinHashTable(function, local_hash_table);
+    auto jht = pipeline_ctx.GetStateEntryPtr<ast::x::JoinHashTable>(local_join_ht_);
+    function->Append(jht->Init(GetMemoryPool(), storage_.GetTypeSize()));
   }
 }
 
 void HashJoinTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                                FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(left_pipeline_) && pipeline_ctx.IsParallel()) {
-    ast::Expression *local_hash_table = pipeline_ctx.GetStateEntryPtr(local_join_ht_);
-    TearDownJoinHashTable(function, local_hash_table);
+    auto jht = pipeline_ctx.GetStateEntryPtr<ast::x::JoinHashTable>(local_join_ht_);
+    function->Append(jht->Free());
   }
 }
 
-ast::Identifier HashJoinTranslator::HashKeys(
-    ConsumerContext *ctx, FunctionBuilder *function,
-    const std::vector<const planner::AbstractExpression *> &hash_keys) const {
-  std::vector<ast::Expression *> key_values;
-  key_values.reserve(hash_keys.size());
-  for (const auto hash_key : hash_keys) {
+edsl::Variable<hash_t> HashJoinTranslator::HashKeys(ConsumerContext *ctx, FunctionBuilder *function,
+                                                    bool left) const {
+  const auto &keys = left ? GetJoinPlan().GetLeftHashKeys() : GetJoinPlan().GetRightHashKeys();
+
+  std::vector<edsl::ValueVT> key_values;
+  key_values.reserve(keys.size());
+  for (const auto hash_key : keys) {
     key_values.push_back(ctx->DeriveValue(*hash_key, this));
   }
 
-  ast::Identifier hash_val_name = codegen_->MakeFreshIdentifier("hash_val");
-  function->Append(codegen_->DeclareVarWithInit(hash_val_name, codegen_->Hash(key_values)));
-
-  return hash_val_name;
+  edsl::Variable<hash_t> hash_val(codegen_, "hash_val");
+  function->Append(edsl::Declare(hash_val, edsl::Hash(key_values)));
+  return hash_val;
 }
 
-ast::Expression *HashJoinTranslator::GetBuildRowAttribute(uint32_t attr_idx) const {
-  return storage_.ReadSQL(codegen_->MakeExpr(build_row_var_), attr_idx);
+edsl::ValueVT HashJoinTranslator::GetBuildRowAttribute(uint32_t attr_idx) const {
+  return storage_.ReadSQL(*build_row_, attr_idx);
 }
 
 void HashJoinTranslator::WriteBuildRow(ConsumerContext *context, FunctionBuilder *function) const {
   // @csWrite() for each attribute.
   const auto child_schema = GetPlan().GetChild(0)->GetOutputSchema();
   for (uint32_t attr_idx = 0; attr_idx < child_schema->NumColumns(); attr_idx++) {
-    ast::Expression *val = GetChildOutput(context, 0, attr_idx);
-    storage_.WriteSQL(codegen_->MakeExpr(build_row_var_), attr_idx, val);
+    storage_.WriteSQL(*build_row_, attr_idx, GetChildOutput(context, 0, attr_idx));
   }
 
   // @csWrite() the mark, if needed.
   if (GetJoinPlan().RequiresLeftMark()) {
-    storage_.WriteSQL(codegen_->MakeExpr(build_row_var_), build_mark_index_,
-                      codegen_->BoolToSql(true));
+    storage_.WritePrimitive(*build_row_, build_mark_index_, edsl::Literal<bool>(codegen_, true));
   }
 }
 
 void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *context,
                                                  FunctionBuilder *function) const {
-  ast::Expression *hash_table = context->IsParallel() ? context->GetStateEntryPtr(local_join_ht_)
-                                                      : GetQueryStateEntryPtr(global_join_ht_);
+  auto hash_table = context->IsParallel()
+                        ? context->GetStateEntryPtr<ast::x::JoinHashTable>(local_join_ht_)
+                        : GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
 
   // var hashVal = @hash(...)
-  const auto &left_keys = GetPlanAs<planner::HashJoinPlanNode>().GetLeftHashKeys();
-  ast::Identifier hash_val = HashKeys(context, function, left_keys);
+  edsl::Variable<hash_t> hash_val = HashKeys(context, function, true);
 
   // var buildRow = @joinHTInsert(...)
-  ast::Expression *insert_call = codegen_->JoinHashTableInsert(
-      hash_table, codegen_->MakeExpr(hash_val), storage_.GetTypeName());
-  function->Append(codegen_->DeclareVarWithInit(build_row_var_, insert_call));
+  function->Append(edsl::Declare(
+      *build_row_, edsl::PtrCast(storage_.GetPtrToType(), hash_table->Insert(hash_val))));
 
   // Fill row.
   WriteBuildRow(context, function);
@@ -161,77 +156,47 @@ bool HashJoinTranslator::ShouldValidateHashOnProbe() const {
 }
 
 void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const {
-  // Compute hash.
-  ast::Identifier hash_val = HashKeys(ctx, function, GetJoinPlan().GetRightHashKeys());
+  // The hash table.
+  auto hash_table = GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
 
-  // var entry = @jhtLookup(hash)
-  ast::Identifier entry_var = codegen_->MakeFreshIdentifier("entry");
-  const auto entry = [&]() { return codegen_->MakeExpr(entry_var); };
-  auto lookup_call = codegen_->MakeStatement(codegen_->DeclareVarWithInit(
-      entry_var, codegen_->JoinHashTableLookup(GetQueryStateEntryPtr(global_join_ht_),
-                                               codegen_->MakeExpr(hash_val))));
+  edsl::Variable<ast::x::HashTableEntry *> entry(codegen_, "entry");
+  edsl::Variable<hash_t> hash_val = HashKeys(ctx, function, false);
 
-  // entry != null
-  auto valid_entry = codegen_->Compare(parsing::Token::Type::BANG_EQUAL, entry(), codegen_->Nil());
-
-  // entry = @htEntryGetNext(entry)
-  auto next_call = codegen_->Assign(entry(), codegen_->HTEntryGetNext(entry()));
-
-  // TODO(pmenon): Only check/validate hash collisions if using complex keys.
-  //               Use HashJoinTranslator::ShouldValidateHashOnProbe()
-
-  // The probe depends on the join type
   if (GetJoinPlan().RequiresRightMark()) {
-    // First declare the right mark.
-    ast::Identifier right_mark_var = codegen_->MakeFreshIdentifier("right_mark");
-    ast::Expression *right_mark = codegen_->MakeExpr(right_mark_var);
-    function->Append(codegen_->DeclareVarWithInit(right_mark_var, codegen_->ConstBool(true)));
+    edsl::Variable<bool> right_mark(codegen_, "right_mark");
+    function->Append(edsl::Declare(right_mark, true));
 
     // Probe hash table and check for a match. Loop condition becomes false as
     // soon as a match is found.
-    auto loop_cond = codegen_->BinaryOp(parsing::Token::Type::AND, right_mark, valid_entry);
-    Loop entry_loop(function, lookup_call, loop_cond, next_call);
+    Loop entry_loop(function, edsl::Declare(entry, hash_table->Lookup(hash_val)),
+                    entry != nullptr && right_mark, edsl::Assign(entry, entry->Next()));
     {
-      // if (entry->hash == hash) {
-      //   var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-      //   ...
-      // }
-      If check_hash(function, codegen_->CompareEq(codegen_->MakeExpr(hash_val),
-                                                  codegen_->HTEntryGetHash(entry())));
+      If check_hash(function, hash_val == entry->GetHash());
       {
-        ast::Expression *build_row = codegen_->HTEntryGetRow(entry(), storage_.GetTypeName());
-        function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
-        CheckRightMark(ctx, function, right_mark_var);
+        function->Append(
+            edsl::Declare(*build_row_, edsl::PtrCast(storage_.GetPtrToType(), entry->GetRow())));
+        CheckRightMark(ctx, function, right_mark);
       }
     }
     entry_loop.EndLoop();
 
     if (GetJoinPlan().GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_ANTI) {
       // If the right mark is true, the row didn't find a matches.
-      // if (right_mark)
-      If right_anti_check(function, codegen_->MakeExpr(right_mark_var));
+      If right_anti_check(function, right_mark);
       ctx->Consume(function);
     } else if (GetJoinPlan().GetLogicalJoinType() == planner::LogicalJoinType::RIGHT_SEMI) {
       // If the right mark is unset, then there is at least one match.
-      // if (!right_mark)
-      auto cond = codegen_->UnaryOp(parsing::Token::Type::BANG, codegen_->MakeExpr(right_mark_var));
-      If right_semi_check(function, cond);
+      If right_semi_check(function, !right_mark);
       ctx->Consume(function);
     }
   } else {
-    // For regular joins:
-    // for (var entry = @jhtLookup(); entry != nil; entry = @htEntryNext(entry)) { }
-    Loop entry_loop(function, lookup_call, valid_entry, next_call);
+    Loop entry_loop(function, edsl::Declare(entry, hash_table->Lookup(hash_val)), entry != nullptr,
+                    edsl::Assign(entry, entry->Next()));
     {
-      // if (entry->hash == hash) {
-      //   var buildRow = @ptrCast(*BuildRow, @htEntryIterGetRow())
-      //   ...
-      // }
-      If check_hash(function, codegen_->CompareEq(codegen_->MakeExpr(hash_val),
-                                                  codegen_->HTEntryGetHash(entry())));
+      If check_hash(function, hash_val == entry->GetHash());
       {
-        ast::Expression *build_row = codegen_->HTEntryGetRow(entry(), storage_.GetTypeName());
-        function->Append(codegen_->DeclareVarWithInit(build_row_var_, build_row));
+        function->Append(
+            edsl::Declare(*build_row_, edsl::PtrCast(storage_.GetPtrToType(), entry->GetRow())));
         CheckJoinPredicate(ctx, function);
       }
     }
@@ -240,40 +205,39 @@ void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilde
 }
 
 void HashJoinTranslator::CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilder *function) const {
-  auto cond = ctx->DeriveValue(*GetJoinPlan().GetJoinPredicate(), this);
+  const auto process = [&](const edsl::Value<bool> &condition) {
+    If check_condition(function, condition);
+    {  // Valid tuple, pass to next pipeline operator.
+      if (GetJoinPlan().RequiresLeftMark()) {
+        storage_.WritePrimitive(*build_row_, build_mark_index_, edsl::Literal<bool>(codegen_, false));
+      }
+      ctx->Consume(function);
+    }
+  };
+
+  // Derive the value of the join condition.
+  edsl::Value<bool> join_condition = ctx->DeriveValue(*GetJoinPlan().GetJoinPredicate(), this);
+
   if (GetJoinPlan().GetLogicalJoinType() == planner::LogicalJoinType::LEFT_SEMI) {
     // For left-semi joins, we also need to make sure the build-side tuple
     // has not already found an earlier join partner. We enforce the check
     // by modifying the join predicate.
-    auto left_mark = storage_.ReadSQL(codegen_->MakeExpr(build_row_var_), build_mark_index_);
-    cond = codegen_->BinaryOp(parsing::Token::Type::AND, left_mark, cond);
+    edsl::Value<bool> left_mark = storage_.ReadPrimitive(*build_row_, build_mark_index_);
+    process(join_condition && left_mark);
+  } else {
+    process(join_condition);
   }
-
-  If check_condition(function, cond);
-  {
-    if (GetJoinPlan().RequiresLeftMark()) {
-      // Mark this tuple as accessed.
-      auto val = codegen_->BoolToSql(false);
-      storage_.WriteSQL(codegen_->MakeExpr(build_row_var_), build_mark_index_, val);
-    }
-    // Move along.
-    ctx->Consume(function);
-  }
-  check_condition.EndIf();
 }
 
 void HashJoinTranslator::CheckRightMark(ConsumerContext *ctx, FunctionBuilder *function,
-                                        ast::Identifier right_mark) const {
-  // Generate the join condition.
-  const auto join_predicate = GetPlanAs<planner::HashJoinPlanNode>().GetJoinPredicate();
-  auto cond = ctx->DeriveValue(*join_predicate, this);
+                                        const edsl::Variable<bool> &right_mark) const {
+  // Derive the value of the join condition.
+  edsl::Value<bool> join_condition(ctx->DeriveValue(*GetJoinPlan().GetJoinPredicate(), this));
 
-  If check_condition(function, cond);
-  {
-    // If there is a match, unset the right mark now.
-    function->Append(codegen_->Assign(codegen_->MakeExpr(right_mark), codegen_->ConstBool(false)));
+  If check_condition(function, join_condition);
+  {  // Set the mark if valid tuple pair.
+    function->Append(edsl::Assign(right_mark, false));
   }
-  check_condition.EndIf();
 }
 
 void HashJoinTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
@@ -288,19 +252,18 @@ void HashJoinTranslator::Consume(ConsumerContext *context, FunctionBuilder *func
 void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                             FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(left_pipeline_)) {
-    ast::Expression *global_hash_table = GetQueryStateEntryPtr(global_join_ht_);
+    auto hash_table = GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
     if (left_pipeline_.IsParallel()) {
-      ast::Expression *tls = GetThreadStateContainer();
-      ast::Expression *offset = pipeline_ctx.GetStateEntryByteOffset(local_join_ht_);
-      function->Append(codegen_->JoinHashTableBuildParallel(global_hash_table, tls, offset));
+      auto offset = pipeline_ctx.GetStateEntryByteOffset(local_join_ht_);
+      function->Append(hash_table->BuildParallel(GetThreadStateContainer(), offset));
     } else {
-      function->Append(codegen_->JoinHashTableBuild(global_hash_table));
+      function->Append(hash_table->Build());
     }
   }
 }
 
-ast::Expression *HashJoinTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                                    uint32_t attr_idx) const {
+edsl::ValueVT HashJoinTranslator::GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                                                 uint32_t attr_idx) const {
   // If the request is in the probe pipeline and for an attribute in the left
   // child, we read it from the probe/materialized build row. Otherwise, we
   // propagate to the appropriate child.

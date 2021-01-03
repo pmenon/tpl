@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "sql/codegen/edsl/struct.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_driver.h"
@@ -98,49 +99,46 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                  uint32_t attr_idx) const override;
+  edsl::ValueVT GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                               uint32_t attr_idx) const override;
 
   /**
    * Order-by operators do not produce columns from base tables.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Order-by operators do not produce columns from base tables");
   }
 
  private:
-  // Initialize and destroy the given sorter.
-  void InitializeSorter(FunctionBuilder *function, ast::Expression *sorter_ptr) const;
-  void TearDownSorter(FunctionBuilder *function, ast::Expression *sorter_ptr) const;
-
   // Access the attribute at the given index within the provided sort row.
-  ast::Expression *GetSortRowAttribute(ast::Identifier sort_row, uint32_t attr_idx) const;
+  edsl::ReferenceVT GetSortRowAttribute(const edsl::ReferenceVT &row_ptr, uint32_t attr_idx) const;
 
   // Called to scan the global sorter instance.
-  void ScanSorter(ConsumerContext *context, FunctionBuilder *function) const;
+  void ScanSorter(ConsumerContext *context, FunctionBuilder *function,
+                  const edsl::Value<ast::x::Sorter *> &sorter) const;
 
   // Insert tuple data into the provided sort row.
   void FillSortRow(ConsumerContext *ctx, FunctionBuilder *function) const;
 
   // Called to insert the tuple in the context into the sorter instance.
-  template <typename F>
   void InsertIntoSorter(ConsumerContext *context, FunctionBuilder *function,
-                        F sorter_provider) const;
+                        const edsl::Value<ast::x::Sorter *> &sorter) const;
 
   // Generate the struct used to represent the sorting row.
-  ast::StructDeclaration *GenerateSortRowStructType() const;
+  void GenerateSortRowStructType();
 
   // Generate the sorting function.
-  ast::FunctionDeclaration *GenerateComparisonFunction();
+  void GenerateComparisonFunction();
   void GenerateComparisonLogic(FunctionBuilder *function);
 
  private:
-  // The name of the materialized sort row when inserting into sorter or pulling
-  // from an iterator.
-  ast::Identifier sort_row_var_;
-  ast::Identifier sort_row_type_;
-  ast::Identifier lhs_row_, rhs_row_;
+  // The struct representing the attributes in a sort-row.
+  edsl::Struct row_struct_;
+  // The name of the comparison function.
   ast::Identifier compare_func_;
+
+  // The main sorting row, and the left and right inputs to the sorting function.
+  std::unique_ptr<edsl::VariableVT> row_, lhs_row_, rhs_row_;
 
   // Build-side pipeline.
   Pipeline build_pipeline_;

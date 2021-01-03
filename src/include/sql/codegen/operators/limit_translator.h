@@ -30,7 +30,12 @@ class LimitTranslator : public OperatorTranslator {
   LimitTranslator(const planner::LimitPlanNode &plan, CompilationContext *compilation_context,
                   Pipeline *pipeline);
 
+  /**
+   * Declare the count.
+   * @param pipeline_ctx The pipeline context.
+   */
   void DeclarePipelineState(PipelineContext *pipeline_ctx) override;
+
   /**
    * Initialize the tuple counter in the pipeline local state.
    * @param pipeline The pipeline that's being generated.
@@ -49,13 +54,13 @@ class LimitTranslator : public OperatorTranslator {
   /**
    * Limits never touch raw table data.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("LIMITs do not touch base table columns.");
   }
 
  private:
   // The tuple counter.
-  StateDescriptor::Slot tuple_count_;
+  StateDescriptor::Slot count_;
 };
 
 }  // namespace tpl::sql::codegen

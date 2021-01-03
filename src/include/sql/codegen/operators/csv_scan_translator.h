@@ -68,7 +68,7 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
    * @param col_oid The ID of the column to read.
    * @return The value of the column.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override;
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override;
 
  private:
   // Return the plan.
@@ -77,14 +77,16 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
   }
 
   // Access the given field in the CSV row.
-  ast::Expression *GetField(ast::Identifier row, uint32_t field_index) const;
+  edsl::Reference<ast::x::StringVal> GetField(uint32_t field_index) const;
+
   // Access a pointer to the field in the CSV row.
-  ast::Expression *GetFieldPtr(ast::Identifier row, uint32_t field_index) const;
+  edsl::Value<ast::x::StringVal *> GetFieldPtr(uint32_t field_index) const;
 
  private:
-  // The name of the CSV row type, and the CSV row.
-  ast::Identifier base_row_type_;
-  ast::Identifier row_var_;
+  // The struct capturing information about one CSV row.
+  edsl::Struct row_struct_;
+  // The CSV row; the type of this row is the type of the struct above.
+  std::unique_ptr<edsl::VariableVT> row_var_;
   // The slot in pipeline state where the CSV reader is.
   StateDescriptor::Slot csv_reader_;
   // The boolean flag indicating if the reader is valid.

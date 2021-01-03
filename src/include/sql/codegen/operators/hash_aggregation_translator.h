@@ -2,6 +2,9 @@
 
 #include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/consumer_context.h"
+#include "sql/codegen/edsl/struct.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_driver.h"
@@ -103,13 +106,13 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
    *         child at the given index (@em child_idx).
    */
-  ast::Expression *GetChildOutput(ConsumerContext *context, uint32_t child_idx,
-                                  uint32_t attr_idx) const override;
+  edsl::ValueVT GetChildOutput(ConsumerContext *context, uint32_t child_idx,
+                               uint32_t attr_idx) const override;
 
   /**
    * Hash-based aggregations do not produce columns from base tables.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Hash-based aggregations do not produce columns from base tables.");
   }
 
@@ -119,26 +122,17 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
     return GetPlanAs<planner::AggregatePlanNode>();
   }
 
+  std::size_t KeyId(std::size_t id) const;
+  std::size_t AggId(std::size_t id) const;
+
   // Declare the payload and input structures. Called from DefineHelperStructs().
-  ast::StructDeclaration *GeneratePayloadStruct();
-  ast::StructDeclaration *GenerateInputValuesStruct();
+  void GeneratePayloadStruct();
+  void GenerateInputValuesStruct();
 
   // Generate the overflow partition merging process.
-  ast::FunctionDeclaration *GenerateKeyCheckFunction();
-  ast::FunctionDeclaration *GeneratePartialKeyCheckFunction();
-  ast::FunctionDeclaration *GenerateMergeOverflowPartitionsFunction();
-  template <typename F1, typename F2>
-  void MergeOverflowPartitions(FunctionBuilder *function, F1 hash_table_provider, F2 iter_provider);
-
-  // Initialize and destroy the input aggregation hash table. These are called
-  // from InitializeQueryState() and InitializePipelineState().
-  void InitializeAggregationHashTable(FunctionBuilder *function, ast::Expression *agg_ht) const;
-  void TearDownAggregationHashTable(FunctionBuilder *function, ast::Expression *agg_ht) const;
-
-  // Access an attribute at the given index in the provided aggregate row.
-  ast::Expression *GetGroupByTerm(ast::Identifier agg_row, uint32_t attr_idx) const;
-  ast::Expression *GetAggregateTerm(ast::Identifier agg_row, uint32_t attr_idx) const;
-  ast::Expression *GetAggregateTermPtr(ast::Identifier agg_row, uint32_t attr_idx) const;
+  void GenerateKeyCheckFunction();
+  void GeneratePartialKeyCheckFunction();
+  void GenerateMergeOverflowPartitionsFunction();
 
   // These functions define steps in the "build" phase of the aggregation.
   // 1. Filling input values.
@@ -147,36 +141,38 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   //   2b. Performing lookup.
   // 3. Initializing new aggregates.
   // 4. Advancing existing aggregates.
-  ast::Identifier FillInputValues(FunctionBuilder *function, ConsumerContext *context) const;
-  ast::Identifier HashInputKeys(FunctionBuilder *function, ast::Identifier agg_values) const;
-  template <typename F>
-  ast::Identifier PerformLookup(FunctionBuilder *function, F agg_ht_provider,
-                                ast::Identifier hash_val, ast::Identifier agg_values) const;
-  template <typename F>
-  void ConstructNewAggregate(FunctionBuilder *function, F agg_ht_provider,
-                             ast::Identifier agg_payload, ast::Identifier agg_values,
-                             ast::Identifier hash_val) const;
-  void AdvanceAggregate(FunctionBuilder *function, ast::Identifier agg_payload,
-                        ast::Identifier agg_values) const;
+  edsl::VariableVT FillInputValues(FunctionBuilder *function, ConsumerContext *context) const;
+  edsl::Variable<hash_t> HashInputKeys(FunctionBuilder *function,
+                                       const edsl::ValueVT &input_values) const;
+  edsl::VariableVT PerformLookup(FunctionBuilder *function,
+                                 const edsl::Value<ast::x::AggregationHashTable *> &hash_table,
+                                 const edsl::Value<hash_t> &hash_val,
+                                 const edsl::ReferenceVT &agg_values) const;
+  void ConstructNewAggregate(FunctionBuilder *function,
+                             const edsl::Value<ast::x::AggregationHashTable *> &hash_table,
+                             const edsl::ReferenceVT &agg_payload,
+                             const edsl::ValueVT &input_values,
+                             const edsl::Value<hash_t> &hash_val) const;
+  void AdvanceAggregate(FunctionBuilder *function, const edsl::ReferenceVT &agg_payload,
+                        const edsl::ReferenceVT &input_values) const;
 
   // Merge the input row into the aggregation hash table.
-  template <typename F>
   void UpdateAggregates(ConsumerContext *context, FunctionBuilder *function,
-                        F agg_ht_provider) const;
+                        const edsl::Variable<ast::x::AggregationHashTable *> &hash_table) const;
 
   // Scan the final aggregation hash table.
-  template <typename F>
-  void ScanAggregationHashTable(ConsumerContext *context, FunctionBuilder *function,
-                                F agg_ht_provider) const;
+  void ScanAggregationHashTable(
+      ConsumerContext *context, FunctionBuilder *function,
+      const edsl::Variable<ast::x::AggregationHashTable *> &hash_table) const;
 
  private:
   // The name of the variable used to:
   // 1. Materialize an input row and insert into the aggregation hash table.
   // 2. Read from an iterator when iterating over all aggregates.
-  ast::Identifier agg_row_var_;
+  std::unique_ptr<edsl::VariableVT> agg_row_;
   // The names of the payload and input values struct.
-  ast::Identifier agg_payload_type_;
-  ast::Identifier agg_values_type_;
+  edsl::Struct agg_payload_;
+  edsl::Struct agg_values_;
   // The names of the full key-check function, the partial key check function
   // and the overflow partition merging functions, respectively.
   ast::Identifier key_check_fn_;

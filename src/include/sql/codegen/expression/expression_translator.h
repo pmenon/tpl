@@ -5,6 +5,7 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "sql/codegen/expression/column_value_provider.h"
 
 namespace tpl::sql::planner {
@@ -48,13 +49,18 @@ class ExpressionTranslator {
    * @param provider A provider for specific column values.
    * @return The TPL value of the expression.
    */
-  virtual ast::Expression *DeriveValue(ConsumerContext *ctx,
-                                       const ColumnValueProvider *provider) const = 0;
+  virtual edsl::ValueVT DeriveValue(ConsumerContext *ctx,
+                                    const ColumnValueProvider *provider) const = 0;
 
   /**
    * @return The expression being translated.
    */
   const planner::AbstractExpression &GetExpression() const { return expr_; }
+
+  /**
+   * @return The child of this expression at the provided index.
+   */
+  const planner::AbstractExpression *GetChild(uint32_t idx) const;
 
  protected:
   // The expression for this translator as its concrete type.

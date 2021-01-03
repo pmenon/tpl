@@ -59,7 +59,7 @@ class Date {
    * @param[out] month The month corresponding to this date.
    * @param[out] day The day corresponding to this date.
    */
-  void ExtractComponents(int32_t *year, int32_t *month, int32_t *day);
+  void ExtractComponents(int32_t *year, int32_t *month, int32_t *day) const;
 
   /**
    * Convert this date instance into a timestamp instance.

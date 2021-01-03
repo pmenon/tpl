@@ -1,5 +1,8 @@
 #include "sql/codegen/operators/static_aggregation_translator.h"
 
+// For string formatting.
+#include "spdlog/fmt/fmt.h"
+
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
 #include "sql/codegen/function_builder.h"
@@ -9,16 +12,15 @@
 namespace tpl::sql::codegen {
 
 namespace {
-constexpr char kAggAttrPrefix[] = "agg";
+constexpr std::string_view kAggAttrPrefix = "agg";
 }  // namespace
 
 StaticAggregationTranslator::StaticAggregationTranslator(const planner::AggregatePlanNode &plan,
                                                          CompilationContext *compilation_context,
                                                          Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
-      agg_row_var_(codegen_->MakeFreshIdentifier("agg_row")),
-      agg_payload_type_(codegen_->MakeFreshIdentifier("AggPayload")),
-      agg_values_type_(codegen_->MakeFreshIdentifier("AggValues")),
+      payload_struct_(codegen_, "AggPayload", false),
+      values_struct_(codegen_, "AggValues", false),
       merge_func_(codegen_->MakeFreshIdentifier("MergeAggregates")),
       build_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(plan.GetGroupByTerms().empty(), "Global aggregations shouldn't have grouping keys");
@@ -39,63 +41,66 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
     compilation_context->Prepare(*having_clause);
   }
 
-  ast::Expression *payload_type = codegen_->MakeExpr(agg_payload_type_);
+  // Build up the structure.
+  GeneratePayloadStruct();
+  GenerateValuesStruct();
+
+  agg_row_ =
+      std::make_unique<edsl::VariableVT>(codegen_, "agg_row", payload_struct_.GetPtrToType());
+
   global_aggs_ =
-      compilation_context->GetQueryState()->DeclareStateEntry(codegen_, "aggs", payload_type);
+      compilation_context->GetQueryState()->DeclareStateEntry("aggs", payload_struct_.GetType());
 }
 
 void StaticAggregationTranslator::DeclarePipelineDependencies() const {
   GetPipeline()->AddDependency(build_pipeline_);
 }
 
-ast::StructDeclaration *StaticAggregationTranslator::GeneratePayloadStruct() {
-  auto fields = codegen_->MakeEmptyFieldList();
-  fields.reserve(GetAggPlan().GetAggregateTerms().size());
-
+void StaticAggregationTranslator::GeneratePayloadStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto name = codegen_->MakeIdentifier(kAggAttrPrefix + std::to_string(term_idx++));
+    auto name = fmt::format("{}{}", kAggAttrPrefix, term_idx++);
     auto type = codegen_->AggregateType(term->GetKind(), term->GetReturnValueType());
-    fields.push_back(codegen_->MakeField(name, type));
+    payload_struct_.AddMember(name, type);
   }
-  return codegen_->DeclareStruct(agg_payload_type_, std::move(fields));
+  payload_struct_.Seal();
 }
 
-ast::StructDeclaration *StaticAggregationTranslator::GenerateValuesStruct() {
-  auto fields = codegen_->MakeEmptyFieldList();
-  fields.reserve(GetAggPlan().GetAggregateTerms().size());
-
+void StaticAggregationTranslator::GenerateValuesStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto field_name = codegen_->MakeIdentifier(kAggAttrPrefix + std::to_string(term_idx));
-    auto type = codegen_->TplType(term->GetChild(0)->GetReturnValueType());
-    fields.push_back(codegen_->MakeField(field_name, type));
-    term_idx++;
+    auto name = fmt::format("{}{}", kAggAttrPrefix, term_idx++);
+    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType());
+    values_struct_.AddMember(name, type);
   }
-  return codegen_->DeclareStruct(agg_values_type_, std::move(fields));
+  values_struct_.Seal();
 }
 
 void StaticAggregationTranslator::DefineStructsAndFunctions() {
-  GeneratePayloadStruct();
-  GenerateValuesStruct();
+  //  GeneratePayloadStruct();
+  //  GenerateValuesStruct();
+  //  agg_row_ =
+  //      std::make_unique<edsl::VariableVT>(codegen_, "agg_row",
+  //      payload_struct_.GetPtrToType());
 }
 
 void StaticAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (pipeline_ctx->IsForPipeline(build_pipeline_) && pipeline_ctx->IsParallel()) {
-    ast::Expression *payload_type = codegen_->MakeExpr(agg_payload_type_);
-    local_aggs_ = pipeline_ctx->DeclarePipelineStateEntry("aggs", payload_type);
+    local_aggs_ = pipeline_ctx->DeclarePipelineStateEntry("aggs", payload_struct_.GetType());
   }
 }
 
 void StaticAggregationTranslator::GenerateAggregateMergeFunction(
     const PipelineContext &pipeline_ctx) const {
-  util::RegionVector<ast::FieldDeclaration *> params = pipeline_ctx.PipelineParams();
-  FunctionBuilder function(codegen_, merge_func_, std::move(params), codegen_->Nil());
+  auto params = pipeline_ctx.PipelineParams();
+  FunctionBuilder function(codegen_, merge_func_, std::move(params), codegen_->GetType<void>());
   {
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-      auto lhs = GetAggregateTermPtr(GetQueryStateEntry(global_aggs_), term_idx);
-      auto rhs = GetAggregateTermPtr(pipeline_ctx.GetStateEntry(local_aggs_), term_idx);
-      function.Append(codegen_->AggregatorMerge(lhs, rhs));
+      auto lhs =
+          payload_struct_.MemberPtrGeneric(GetQueryStateEntryGeneric(global_aggs_), term_idx);
+      auto rhs = payload_struct_.MemberPtrGeneric(pipeline_ctx.GetStateEntryGeneric(local_aggs_),
+                                                  term_idx);
+      function.Append(edsl::AggregatorMerge(lhs, rhs));
     }
   }
   function.Finish();
@@ -107,71 +112,57 @@ void StaticAggregationTranslator::DefinePipelineFunctions(const PipelineContext 
   }
 }
 
-ast::Expression *StaticAggregationTranslator::GetAggregateTerm(ast::Expression *agg_row,
-                                                               uint32_t attr_idx) const {
-  auto member = codegen_->MakeIdentifier(kAggAttrPrefix + std::to_string(attr_idx));
-  return codegen_->AccessStructMember(agg_row, member);
-}
-
-ast::Expression *StaticAggregationTranslator::GetAggregateTermPtr(ast::Expression *agg_row,
-                                                                  uint32_t attr_idx) const {
-  return codegen_->AddressOf(GetAggregateTerm(agg_row, attr_idx));
-}
-
-template <typename F>
 void StaticAggregationTranslator::InitializeAggregates(FunctionBuilder *function,
-                                                       F agg_provider) const {
+                                                       const edsl::ReferenceVT &agg) const {
   for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-    ast::Expression *agg_term = GetAggregateTermPtr(agg_provider(), term_idx);
-    function->Append(codegen_->AggregatorInit(agg_term));
+    function->Append(edsl::AggregatorInit(payload_struct_.MemberPtrGeneric(agg, term_idx)));
   }
 }
 
 void StaticAggregationTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  InitializeAggregates(function, [&]() { return GetQueryStateEntry(global_aggs_); });
+  InitializeAggregates(function, GetQueryStateEntryGeneric(global_aggs_));
 }
 
 void StaticAggregationTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                                           FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    InitializeAggregates(function, [&]() { return pipeline_ctx.GetStateEntry(local_aggs_); });
+    InitializeAggregates(function, pipeline_ctx.GetStateEntryGeneric(local_aggs_));
   }
 }
 
 void StaticAggregationTranslator::ProduceAggregates(ConsumerContext *context,
                                                     FunctionBuilder *function) const {
   // var agg_row = &state.aggs
-  function->Append(codegen_->DeclareVarWithInit(agg_row_var_, GetQueryStateEntryPtr(global_aggs_)));
+  function->Append(edsl::Declare(*agg_row_, GetQueryStateEntryPtrGeneric(global_aggs_)));
 
   if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
-    If check_having(function, context->DeriveValue(*having, this));
+    edsl::Value<bool> condition(context->DeriveValue(*having, this));
+    If check_having(function, condition);
     context->Consume(function);
-    check_having.EndIf();
   } else {
     context->Consume(function);
   }
 }
 
-template <typename F>
 void StaticAggregationTranslator::UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *function,
-                                                  F agg_provider) const {
-  // var aggValues: AggValues
-  auto agg_values = codegen_->MakeFreshIdentifier("agg_values");
-  function->Append(codegen_->DeclareVarNoInit(agg_values, codegen_->MakeExpr(agg_values_type_)));
+                                                  const edsl::ReferenceVT &agg) const {
+  // var agg_values: AggValues
+  edsl::VariableVT agg_values(codegen_, "agg_values", values_struct_.GetType());
+  function->Append(edsl::Declare(agg_values));
 
   // Fill values.
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    ast::Expression *lhs = GetAggregateTerm(codegen_->MakeExpr(agg_values), term_idx++);
-    ast::Expression *rhs = ctx->DeriveValue(*term->GetChild(0), this);
-    function->Append(codegen_->Assign(lhs, rhs));
+    auto lhs = values_struct_.MemberGeneric(agg_values, term_idx++);
+    auto rhs = ctx->DeriveValue(*term->GetChild(0), this);
+    function->Append(edsl::Assign(lhs, rhs));
   }
 
   // Update aggregate.
   for (term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-    ast::Expression *aggregate = GetAggregateTermPtr(agg_provider(), term_idx);
-    ast::Expression *advance_val = GetAggregateTermPtr(codegen_->MakeExpr(agg_values), term_idx);
-    function->Append(codegen_->AggregatorAdvance(aggregate, advance_val));
+    auto aggregate = payload_struct_.MemberPtrGeneric(agg, term_idx);
+    auto advance_val = values_struct_.MemberPtrGeneric(agg_values, term_idx);
+    function->Append(edsl::AggregatorAdvance(aggregate, advance_val));
   }
 }
 
@@ -181,32 +172,28 @@ void StaticAggregationTranslator::Consume(ConsumerContext *context,
     ProduceAggregates(context, function);
   } else {
     if (context->IsParallel()) {
-      const auto agg_provider = [&]() { return context->GetStateEntry(local_aggs_); };
-      UpdateAggregate(context, function, agg_provider);
+      function->Append(edsl::Declare(*agg_row_, context->GetStateEntryPtrGeneric(local_aggs_)));
     } else {
-      const auto agg_provider = [&]() { return GetQueryStateEntry(global_aggs_); };
-      UpdateAggregate(context, function, agg_provider);
+      function->Append(edsl::Declare(*agg_row_, GetQueryStateEntryPtrGeneric(global_aggs_)));
     }
+    UpdateAggregate(context, function, *agg_row_);
   }
 }
 
 void StaticAggregationTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                                      FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    // Merge thread-local aggregates into one.
-    ast::Expression *thread_state_container = GetThreadStateContainer();
-    ast::Expression *query_state = GetQueryStatePtr();
-    function->Append(codegen_->TLSIterate(thread_state_container, query_state, merge_func_));
+    auto opaque_state = edsl::PtrCast<uint8_t *>(GetQueryStatePtr());
+    function->Append(GetThreadStateContainer()->Iterate(opaque_state, merge_func_));
   }
 }
 
-ast::Expression *StaticAggregationTranslator::GetChildOutput(ConsumerContext *context,
-                                                             UNUSED uint32_t child_idx,
-                                                             uint32_t attr_idx) const {
+edsl::ValueVT StaticAggregationTranslator::GetChildOutput(ConsumerContext *context,
+                                                          UNUSED uint32_t child_idx,
+                                                          uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");
   if (context->IsForPipeline(*GetPipeline())) {
-    return codegen_->AggregatorResult(
-        GetAggregateTermPtr(codegen_->MakeExpr(agg_row_var_), attr_idx));
+    return edsl::AggregatorResult(payload_struct_.MemberPtrGeneric(*agg_row_, attr_idx));
   }
 
   // The request is in the build pipeline. Forward to child translator.

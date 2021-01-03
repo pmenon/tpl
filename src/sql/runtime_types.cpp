@@ -388,7 +388,7 @@ int32_t Date::ExtractDay() const {
   return day;
 }
 
-void Date::ExtractComponents(int32_t *year, int32_t *month, int32_t *day) {
+void Date::ExtractComponents(int32_t *year, int32_t *month, int32_t *day) const {
   SplitJulianDate(value_, year, month, day);
 }
 

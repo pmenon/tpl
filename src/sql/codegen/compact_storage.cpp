@@ -21,9 +21,7 @@ namespace tpl::sql::codegen {
   F(TypeId::Varchar, CompactStorageWriteString, CompactStorageReadString)
 
 CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name)
-    : codegen_(codegen),
-      type_name_(codegen->MakeFreshIdentifier(fmt::format("{}_Compact", name))),
-      nulls_(codegen_->MakeIdentifier("nulls")) {}
+    : codegen_(codegen), struct_(codegen, fmt::format("{}_Compact", name), true) {}
 
 CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name,
                                const std::vector<TypeId> &schema)
@@ -32,76 +30,64 @@ CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name,
 }
 
 void CompactStorage::Setup(const std::vector<TypeId> &schema) {
-  std::vector<uint32_t> reordered(schema.size()), reordered_offsets(schema.size());
-  std::iota(reordered.begin(), reordered.end(), 0u);
+  // Set the types.
+  col_types_ = schema;
 
-  // Re-order attributes by decreasing size to minimize padding.
-  std::ranges::stable_sort(reordered, [&](auto left_idx, auto right_idx) {
-    return GetTypeIdSize(schema[left_idx]) > GetTypeIdSize(schema[right_idx]);
-  });
-
-  col_info_.resize(schema.size());
-
-  // Generate the compact struct.
-  util::RegionVector<ast::FieldDeclaration *> members = codegen_->MakeEmptyFieldList();
-  members.resize(schema.size());
+  // Add the fields as described in the schema.
   for (uint32_t i = 0; i < schema.size(); i++) {
-    ast::Identifier name = codegen_->MakeIdentifier(fmt::format("member{}", i));
-    members[i] = codegen_->MakeField(name, codegen_->PrimitiveTplType(schema[reordered[i]]));
-    col_info_[reordered[i]] = std::make_pair(schema[reordered[i]], name);
+    const auto name = fmt::format("member{}", i);
+    const auto type = codegen_->GetPrimitiveTPLType(schema[i]);
+    struct_.AddMember(name, type);
   }
+
   // Tack on the NULL indicators for all fields as a bitmap byte array.
-  const auto null_byte = ast::BuiltinType::UInt8;
   const auto num_null_bytes = util::MathUtil::DivRoundUp(schema.size(), 8);
-  members.push_back(codegen_->MakeField(nulls_, codegen_->ArrayType(num_null_bytes, null_byte)));
+  const auto null_arr_type = codegen_->ArrayType(num_null_bytes, codegen_->GetType<uint8_t>());
+  struct_.AddMember("nulls", null_arr_type);
 
-  // Build the final type.
-  codegen_->DeclareStruct(type_name_, std::move(members));
+  // Seal.
+  struct_.Seal();
 }
 
-ast::Expression *CompactStorage::Nulls(ast::Expression *ptr) const {
-  return codegen_->AddressOf(codegen_->AccessStructMember(ptr, nulls_));
-}
-
-ast::Expression *CompactStorage::ColumnPtr(ast::Expression *ptr, uint32_t index) const {
-  return codegen_->AddressOf(codegen_->AccessStructMember(ptr, col_info_[index].second));
-}
-
-void CompactStorage::WriteSQL(ast::Expression *ptr, uint32_t index, ast::Expression *val) const {
-  TPL_ASSERT(ptr != nullptr, "Buffer pointer cannot be null.");
-  TPL_ASSERT(val != nullptr, "Input value cannot be null.");
-  TPL_ASSERT(index < col_info_.size(), "Out-of-bounds index access.");
+void CompactStorage::WriteSQL(const edsl::ReferenceVT &ptr, uint32_t index,
+                              const edsl::ValueVT &val) const {
+  TPL_ASSERT(ptr.GetType()->IsPointerType() != nullptr, "Buffer must be a pointer!");
+  TPL_ASSERT(index < col_types_.size(), "Out-of-bounds index access.");
 
   FunctionBuilder *function = codegen_->GetCurrentFunction();
 
   ast::Builtin op;
 
-  // clang-format off
-#define GEN_CASE(Type, WriteCall, ReadCall) case (Type): op = ast::Builtin::WriteCall; break;
-  // clang-format on
-  switch (col_info_[index].first) {
+#define GEN_CASE(Type, WriteCall, ReadCall) \
+  case (Type):                              \
+    op = ast::Builtin::WriteCall;           \
+    break;
+  switch (col_types_[index]) {
     CODE_LIST(GEN_CASE)
     default:
       UNREACHABLE("Impossible type in CompactStorage::Write() call!");
   }
 #undef GEN_CASE
 
-  // Call.
-  ast::Expression *col_ptr = ColumnPtr(ptr, index);
-  ast::Expression *nulls = Nulls(ptr);
-  function->Append(codegen_->CallBuiltin(op, {col_ptr, nulls, codegen_->Const32(index), val}));
+  // TODO(pmenon): Fix this ...
+  auto col_ptr = struct_.MemberPtrGeneric(ptr, index);
+  auto nulls = struct_.MemberPtr<uint8_t[]>(ptr, col_types_.size());
+  auto call = codegen_->CallBuiltin(
+      op, {col_ptr.GetRaw(), nulls.GetRaw(), codegen_->Literal<uint32_t>(index), val.GetRaw()});
+  function->Append(edsl::Value<void>(codegen_->MakeStatement(call)));
 }
 
-ast::Expression *CompactStorage::ReadSQL(ast::Expression *ptr, uint32_t index) const {
+edsl::ValueVT CompactStorage::ReadSQL(const edsl::ReferenceVT &ptr, uint32_t index) const {
   TPL_ASSERT(ptr != nullptr, "Buffer pointer cannot be null.");
-  TPL_ASSERT(index < col_info_.size(), "Out-of-bounds index access.");
+  TPL_ASSERT(index < col_types_.size(), "Out-of-bounds index access.");
 
   ast::Builtin op;
 
-  // clang-format off
-#define GEN_CASE(Type, WriteCall, ReadCall) case (Type): op = ast::Builtin::ReadCall; break;
-  // clang-format on
-  switch (col_info_[index].first) {
+#define GEN_CASE(Type, WriteCall, ReadCall) \
+  case (Type):                              \
+    op = ast::Builtin::ReadCall;            \
+    break;
+  switch (col_types_[index]) {
     CODE_LIST(GEN_CASE)
     default:
       UNREACHABLE("Impossible type in CompactStorage::Read() call!");
@@ -109,16 +95,21 @@ ast::Expression *CompactStorage::ReadSQL(ast::Expression *ptr, uint32_t index) c
 #undef GEN_CASE
 
   // Call.
-  return codegen_->CallBuiltin(op, {ColumnPtr(ptr, index), Nulls(ptr), codegen_->Const32(index)});
+  auto col_ptr = struct_.MemberPtrGeneric(ptr, index);
+  auto nulls = struct_.MemberPtr<uint8_t[]>(ptr, col_types_.size());
+  auto val = codegen_->CallBuiltin(
+      op, {col_ptr.GetRaw(), nulls.GetRaw(), codegen_->Literal<uint32_t>(index)});
+  val->SetType(codegen_->GetTPLType(col_types_[index]));
+  return edsl::ValueVT(codegen_, val);
 }
 
-ast::Expression *CompactStorage::ReadPrimitive(ast::Expression *ptr, uint32_t index) const {
-  return codegen_->AccessStructMember(ptr, col_info_[index].second);
+void CompactStorage::WritePrimitive(const edsl::ReferenceVT &ptr, uint32_t index, const edsl::ValueVT &val) const {
+  auto col_ref = struct_.MemberGeneric(ptr, index);
+  ptr.GetCodeGen()->GetCurrentFunction()->Append(edsl::Assign(col_ref, val));
 }
 
-ast::Identifier CompactStorage::FieldNameAtIndex(uint32_t index) const {
-  TPL_ASSERT(index < col_info_.size(), "Out-of-bounds field access.");
-  return col_info_[index].second;
+edsl::ValueVT CompactStorage::ReadPrimitive(const edsl::ReferenceVT &ptr, uint32_t index) const {
+  return struct_.MemberGeneric(ptr, index);
 }
 
 }  // namespace tpl::sql::codegen

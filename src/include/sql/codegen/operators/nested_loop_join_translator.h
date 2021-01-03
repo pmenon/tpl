@@ -29,7 +29,10 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
    */
   void Consume(ConsumerContext *context, FunctionBuilder *function) const override;
 
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
+  /**
+   * NLJ plans do not touch base tables.
+   */
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Nested-loop joins do not produce columns from base tables.");
   }
 

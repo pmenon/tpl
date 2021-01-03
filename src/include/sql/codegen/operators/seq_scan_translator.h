@@ -77,7 +77,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
    * @return The value (or value vector) of the column with the provided column OID in the table
    *         this sequential scan is operating over.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override;
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override;
 
  private:
   // Does the scan have a predicate?
@@ -88,7 +88,8 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
 
   // Generate a generic filter term.
   void GenerateGenericTerm(FunctionBuilder *function, const planner::AbstractExpression *term,
-                           ast::Expression *vector_proj, ast::Expression *tid_list);
+                           const edsl::Value<ast::x::VectorProjection *> &vector_proj,
+                           const edsl::Value<ast::x::TupleIdList *> &tid_list);
 
   // Generate all filter clauses.
   void GenerateFilterClauseFunctions(const planner::AbstractExpression *predicate,
@@ -96,19 +97,14 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
                                      bool seen_conjunction);
 
   // Perform a table scan using the provided table vector iterator pointer.
-  void ScanTable(ConsumerContext *context, FunctionBuilder *function) const;
-
-  // Generate a scan over the VPI.
-  void ScanVPI(ConsumerContext *ctx, FunctionBuilder *function) const;
+  void ScanTable(ConsumerContext *context, FunctionBuilder *function,
+                 const edsl::Value<ast::x::TableVectorIterator *> &tvi) const;
 
  private:
-  // The name of the declared TVI and VPI.
-  ast::Identifier tvi_var_;
-  ast::Identifier vpi_var_;
-
+  // The declared VPI.
+  edsl::Variable<ast::x::VectorProjectionIterator *> vpi_;
   // Where the filter manager exists.
   StateDescriptor::Slot local_filter_;
-
   // The list of filter manager clauses. Populated during helper function
   // definition, but only if there's a predicate.
   std::vector<std::vector<ast::Identifier>> filters_;

@@ -1,22 +1,22 @@
 #pragma once
 
 #include "sql/codegen/expression/expression_translator.h"
-#include "sql/planner/expressions/binary_expression.h"
+#include "sql/planner/expressions/comparison_expression.h"
 
 namespace tpl::sql::codegen {
 
 /**
- * A translator for arithmetic expressions.
+ * A translator for a like-comparison.
  */
-class BinaryExpressionTranslator : public ExpressionTranslator {
+class LikeTranslator : public ExpressionTranslator {
  public:
   /**
-   * Create a translator for the given arithmetic expression.
+   * Create a translator for the given like-comparison expression.
    * @param expr The expression to translate.
    * @param compilation_context The context in which translation occurs.
    */
-  BinaryExpressionTranslator(const planner::BinaryExpression &expr,
-                             CompilationContext *compilation_context);
+  LikeTranslator(const planner::ComparisonExpression &expr,
+                 CompilationContext *compilation_context);
 
   /**
    * Derive the value of the expression.
@@ -28,8 +28,8 @@ class BinaryExpressionTranslator : public ExpressionTranslator {
                             const ColumnValueProvider *provider) const override;
 
  private:
-  const planner::BinaryExpression &GetBinaryExpression() const {
-    return GetExpressionAs<planner::BinaryExpression>();
+  const planner::ComparisonExpression &GetComparisonExpression() const {
+    return GetExpressionAs<planner::ComparisonExpression>();
   }
 };
 

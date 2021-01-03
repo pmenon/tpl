@@ -20,9 +20,7 @@ namespace tpl::sql::codegen {
 
 SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan,
                                      CompilationContext *compilation_context, Pipeline *pipeline)
-    : OperatorTranslator(plan, compilation_context, pipeline),
-      tvi_var_(codegen_->MakeFreshIdentifier("tvi")),
-      vpi_var_(codegen_->MakeFreshIdentifier("vpi")) {
+    : OperatorTranslator(plan, compilation_context, pipeline), vpi_(codegen_, "vpi") {
   pipeline->RegisterSource(this, Pipeline::Parallelism::Parallel);
   if (HasPredicate()) compilation_context->Prepare(*plan.GetScanPredicate());
 }
@@ -36,30 +34,24 @@ std::string_view SeqScanTranslator::GetTableName() const {
   return Catalog::Instance()->LookupTableById(table_oid)->GetName();
 }
 
-void SeqScanTranslator::GenerateGenericTerm(FunctionBuilder *function,
-                                            const planner::AbstractExpression *term,
-                                            ast::Expression *vector_proj,
-                                            ast::Expression *tid_list) {
-  // var vpi_base: VectorProjectionIterator
-  // var vpi = &vpi_base
-  ast::Identifier vpi_base = codegen_->MakeFreshIdentifier("vpi_base");
-  function->Append(
-      codegen_->DeclareVarNoInit(vpi_base, ast::BuiltinType::VectorProjectionIterator));
-  function->Append(
-      codegen_->DeclareVarWithInit(vpi_var_, codegen_->AddressOf(codegen_->MakeExpr(vpi_base))));
+void SeqScanTranslator::GenerateGenericTerm(
+    FunctionBuilder *function, const planner::AbstractExpression *term,
+    const edsl::Value<ast::x::VectorProjection *> &vector_proj,
+    const edsl::Value<ast::x::TupleIdList *> &tid_list) {
+  edsl::Variable<ast::x::VectorProjectionIterator> vpi_base(codegen_, "vpi_base");
 
-  // @vpiInit()
-  const auto vpi = [&]() { return codegen_->MakeExpr(vpi_var_); };
-  function->Append(codegen_->VPIInit(vpi(), vector_proj, tid_list));
+  function->Append(edsl::Declare(vpi_base));
+  function->Append(edsl::Declare(vpi_, vpi_base.Addr()));
+  function->Append(vpi_->Init(vector_proj, tid_list));
 
-  Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(vpi()),
-                codegen_->MakeStatement(codegen_->VPIAdvance(vpi())));
+  Loop vpi_loop(function, nullptr, vpi_->HasNext(), vpi_->Advance());
   {
     PipelineContext pipeline_context(*GetPipeline());
     ConsumerContext context(GetCompilationContext(), pipeline_context);
     auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
-    auto match = cond_translator->DeriveValue(&context, this);
-    function->Append(codegen_->VPIMatch(vpi(), match));
+    auto match_gen = cond_translator->DeriveValue(&context, this);
+    auto match = match_gen.IsSQLType() ? edsl::ForceTruth(match_gen) : edsl::Value<bool>(match_gen);
+    function->Append(vpi_->Match(match));
   }
   vpi_loop.EndLoop();
 }
@@ -91,31 +83,31 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
 
   // At this point, we create a term.
   // Signature: (vp: *VectorProjection, tids: *TupleIdList, ctx: *uint8) -> nil
+
   auto fn_name =
       codegen_->MakeFreshIdentifier(GetPipeline()->CreatePipelineFunctionName("FilterClause"));
-  util::RegionVector<ast::FieldDeclaration *> params = codegen_->MakeFieldList({
-      codegen_->MakeField(codegen_->MakeIdentifier("vp"),
-                          codegen_->PointerType(ast::BuiltinType::VectorProjection)),
-      codegen_->MakeField(codegen_->MakeIdentifier("tids"),
-                          codegen_->PointerType(ast::BuiltinType::TupleIdList)),
-      codegen_->MakeField(codegen_->MakeIdentifier("context"),
-                          codegen_->PointerType(ast::BuiltinType::UInt8)),
-  });
-  FunctionBuilder builder(codegen_, fn_name, std::move(params), codegen_->Nil());
+
+  std::vector<FunctionBuilder::Param> params = {
+      {codegen_->MakeIdentifier("vp"), codegen_->GetType<ast::x::VectorProjection *>()},
+      {codegen_->MakeIdentifier("tids"), codegen_->GetType<ast::x::TupleIdList *>()},
+      {codegen_->MakeIdentifier("ctx"), codegen_->GetType<uint8_t *>()},
+  };
+
+  FunctionBuilder builder(codegen_, fn_name, std::move(params), codegen_->GetType<void>());
   {
-    ast::Expression *vector_proj = builder.GetParameterByPosition(0);
-    ast::Expression *tid_list = builder.GetParameterByPosition(1);
+    edsl::Value<ast::x::VectorProjection *> vector_proj = builder.GetParameterByPosition(0);
+    edsl::Value<ast::x::TupleIdList *> tid_list = builder.GetParameterByPosition(1);
     if (planner::ExpressionUtil::IsColumnCompareWithConst(*predicate) &&
         !planner::ExpressionUtil::IsLikeComparison(*predicate)) {
       auto cmp = static_cast<const planner::ComparisonExpression *>(predicate);
       auto cve = static_cast<const planner::ColumnValueExpression *>(predicate->GetChild(0));
       auto translator = GetCompilationContext()->LookupTranslator(*predicate->GetChild(1));
       auto const_val = translator->DeriveValue(nullptr, nullptr);
-      builder.Append(codegen_->VPIFilter(vector_proj,          // The vector projection
-                                         cmp->GetKind(),       // Comparison type
-                                         cve->GetColumnOid(),  // Column index
-                                         const_val,            // Constant value
-                                         tid_list));           // TID list
+      builder.Append(edsl::VPIFilter(vector_proj,          // Vector projection.
+                                     cmp->GetKind(),       // Comparison type.
+                                     cve->GetColumnOid(),  // Column index.
+                                     const_val,            // Constant value.
+                                     tid_list));           // TID list.
     } else if (planner::ExpressionUtil::IsConstCompareWithColumn(*predicate)) {
       throw NotImplementedException("const <op> col vector filter comparison not implemented");
     } else {
@@ -131,8 +123,8 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
 
 void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (HasPredicate()) {
-    ast::Expression *fm_type = codegen_->BuiltinType(ast::BuiltinType::FilterManager);
-    local_filter_ = pipeline_ctx->DeclarePipelineStateEntry("filter_manager", fm_type);
+    local_filter_ = pipeline_ctx->DeclarePipelineStateEntry(
+        "filter_mgr", codegen_->GetType<ast::x::FilterManager>());
   }
 }
 
@@ -145,33 +137,27 @@ void SeqScanTranslator::DefinePipelineFunctions(UNUSED const PipelineContext &pi
   }
 }
 
-void SeqScanTranslator::ScanVPI(ConsumerContext *ctx, FunctionBuilder *function) const {
-  Loop vpi_loop(function, nullptr, codegen_->VPIHasNext(codegen_->MakeExpr(vpi_var_)),
-                codegen_->MakeStatement(codegen_->VPIAdvance(codegen_->MakeExpr(vpi_var_))));
-  {  // Tuple-at-a-time scan over the VPI.
-    ctx->Consume(function);
-  }
-  vpi_loop.EndLoop();
-}
-
-void SeqScanTranslator::ScanTable(ConsumerContext *context, FunctionBuilder *function) const {
-  Loop tvi_loop(function, codegen_->TableIterAdvance(codegen_->MakeExpr(tvi_var_)));
+void SeqScanTranslator::ScanTable(ConsumerContext *context, FunctionBuilder *function,
+                                  const edsl::Value<ast::x::TableVectorIterator *> &tvi) const {
+  Loop tvi_loop(function, tvi->Advance());
   {
     // var vpi = @tableIterGetVPI()
-    ast::Expression *get_vpi_call = codegen_->TableIterGetVPI(codegen_->MakeExpr(tvi_var_));
-    function->Append(codegen_->DeclareVarWithInit(vpi_var_, get_vpi_call));
+    function->Append(edsl::Declare(vpi_, tvi->GetVPI()));
 
     if (HasPredicate()) {
-      ast::Expression *vpi = codegen_->MakeExpr(vpi_var_);
-      ast::Expression *filter_manager = context->GetStateEntryPtr(local_filter_);
-      function->Append(codegen_->FilterManagerRunFilters(filter_manager, vpi));
+      auto fm = context->GetStateEntryPtr<ast::x::FilterManager>(local_filter_);
+      function->Append(fm->RunFilters(vpi_));
     }
 
     if (context->IsVectorized()) {
       // Push the (potentially filtered) VPI directly to consumer.
       context->Consume(function);
     } else {
-      ScanVPI(context, function);
+      Loop vpi_loop(function, nullptr, vpi_->HasNext(), vpi_->Advance());
+      {  // Tuple-at-a-time scan over the VPI.
+        context->Consume(function);
+      }
+      vpi_loop.EndLoop();
     }
   }
   tvi_loop.EndLoop();
@@ -181,11 +167,12 @@ void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_
                                                 FunctionBuilder *function) const {
   if (HasPredicate()) {
     // @filterManagerInit()
-    function->Append(codegen_->FilterManagerInit(pipeline_ctx.GetStateEntryPtr(local_filter_)));
+    auto fm = pipeline_ctx.GetStateEntryPtr<ast::x::FilterManager>(local_filter_);
+    function->Append(fm->Init());
     // @filterManagerInsert() for each clause.
     for (const auto &clause : filters_) {
-      ast::Expression *filter = pipeline_ctx.GetStateEntryPtr(local_filter_);
-      function->Append(codegen_->FilterManagerInsert(filter, clause));
+      auto fm = pipeline_ctx.GetStateEntryPtr<ast::x::FilterManager>(local_filter_);
+      function->Append(fm->Insert(clause));
     }
   }
 }
@@ -193,48 +180,54 @@ void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_
 void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
   if (HasPredicate()) {
-    ast::Expression *filter = pipeline_ctx.GetStateEntryPtr(local_filter_);
-    function->Append(codegen_->FilterManagerFree(filter));
+    auto fm = pipeline_ctx.GetStateEntryPtr<ast::x::FilterManager>(local_filter_);
+    function->Append(fm->Free());
   }
 }
 
 void SeqScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
-  const bool declare_local_tvi = !GetPipeline()->IsParallel() || !GetPipeline()->IsDriver(this);
-  if (declare_local_tvi) {
-    // var tviBase: TableVectorIterator
-    // var tvi = &tviBase
-    auto tvi_base = codegen_->MakeFreshIdentifier("tvi_base");
-    function->Append(codegen_->DeclareVarNoInit(tvi_base, ast::BuiltinType::TableVectorIterator));
-    function->Append(codegen_->DeclareVarWithInit(tvi_var_, codegen_->AddressOf(tvi_base)));
-    function->Append(codegen_->TableIterInit(codegen_->MakeExpr(tvi_var_), GetTableName()));
+  if (!GetPipeline()->IsParallel() || !GetPipeline()->IsDriver(this)) {
+    // A serial pipeline, or one that we aren't driving. Declare TVI.
+    edsl::Variable<ast::x::TableVectorIterator> tvi_base(codegen_, "tvi_base");
+    edsl::Variable<ast::x::TableVectorIterator *> tvi(codegen_, "tvi");
+    function->Append(edsl::Declare(tvi_base));
+    function->Append(edsl::Declare(tvi, tvi_base.Addr()));
+    function->Append(tvi->Init(GetTableName()));
+
+    // Scan the table.
+    ScanTable(context, function, tvi);
+
+    // Close the TVI.
+    function->Append(tvi->Close());
+    return;
   }
+
+  // This is a parallel pipeline, a TVI is provided as a function argument.
+  edsl::Value<ast::x::TableVectorIterator *> tvi(
+      function->GetParameterByPosition(function->GetParameterCount() - 1));
 
   // Scan it.
-  ScanTable(context, function);
-
-  // Close TVI, if need be.
-  if (declare_local_tvi) {
-    function->Append(codegen_->TableIterClose(codegen_->MakeExpr(tvi_var_)));
-  }
+  ScanTable(context, function, tvi);
 }
 
-ast::Expression *SeqScanTranslator::GetTableColumn(uint16_t col_oid) const {
+edsl::ValueVT SeqScanTranslator::GetTableColumn(uint16_t col_oid) const {
   const auto table_oid = GetPlanAs<planner::SeqScanPlanNode>().GetTableOid();
   const auto schema = &Catalog::Instance()->LookupTableById(table_oid)->GetSchema();
   auto type = schema->GetColumnInfo(col_oid)->type.GetPrimitiveTypeId();
   auto nullable = schema->GetColumnInfo(col_oid)->type.IsNullable();
-  return codegen_->VPIGet(codegen_->MakeExpr(vpi_var_), type, nullable, col_oid);
+  return vpi_->Get(type, nullable, col_oid);
 }
 
 void SeqScanTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const {
   TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "Table scan driving unknown pipeline!");
   if (pipeline_ctx.IsParallel()) {
     const auto dispatch = [&](FunctionBuilder *function, ast::Identifier work_func) {
-      function->Append(codegen_->IterateTableParallel(GetTableName(), GetQueryStatePtr(),
-                                                      GetThreadStateContainer(), work_func));
+      function->Append(edsl::IterateTableParallel(GetTableName(), GetQueryStatePtr(),
+                                                  GetThreadStateContainer(), work_func));
     };
-    std::vector<ast::FieldDeclaration *> params = {codegen_->MakeField(
-        tvi_var_, codegen_->PointerType(ast::BuiltinType::TableVectorIterator))};
+    std::vector<FunctionBuilder::Param> params = {
+        {codegen_->MakeFreshIdentifier("tvi"), codegen_->GetType<ast::x::TableVectorIterator *>()},
+    };
     GetPipeline()->LaunchParallel(pipeline_ctx, dispatch, std::move(params));
   } else {
     GetPipeline()->LaunchSerial(pipeline_ctx);

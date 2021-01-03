@@ -38,8 +38,8 @@ class ConsumerContext {
    * @param expr The expression.
    * @return The TPL value of the expression.
    */
-  ast::Expression *DeriveValue(const planner::AbstractExpression &expr,
-                               const ColumnValueProvider *provider);
+  edsl::ValueVT DeriveValue(const planner::AbstractExpression &expr,
+                            const ColumnValueProvider *provider);
 
   /**
    * Push this context to the next operator in the pipeline.
@@ -53,19 +53,35 @@ class ConsumerContext {
   OperatorTranslator *CurrentOp() const { return *pipeline_iter_; }
 
   /**
-   * @return The value of the element at the given slot within this pipeline's state.
+   * @return An untyped reference to the element at the given slot within this pipeline state.
    */
-  ast::Expression *GetStateEntry(StateDescriptor::Slot slot) const;
+  edsl::ReferenceVT GetStateEntryGeneric(StateDescriptor::Slot slot) const;
 
   /**
-   * @return A pointer to the element at the given slot within this pipeline's state.
+   * @return A typed reference to the state element at the given slot in this pipeline's state.
    */
-  ast::Expression *GetStateEntryPtr(StateDescriptor::Slot slot) const;
+  template <typename T>
+  edsl::Reference<T> GetStateEntry(StateDescriptor::Slot slot) const {
+    return edsl::Reference<T>(GetStateEntryGeneric(slot));
+  }
+
+  /**
+   * @return An untyped pointer to the element at the given slot within this pipeline's state.
+   */
+  edsl::ValueVT GetStateEntryPtrGeneric(StateDescriptor::Slot slot) const;
+
+  /**
+   * @return A typed pointer to the element at the given slot within this pipeline's state.
+   */
+  template <typename T>
+  edsl::Value<T *> GetStateEntryPtr(StateDescriptor::Slot slot) const {
+    return edsl::Value<T *>(GetStateEntryPtrGeneric(slot));
+  }
 
   /**
    * @return The byte offset of the element at the given slot in the pipeline state.
    */
-  ast::Expression *GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const;
+  edsl::Value<uint32_t> GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const;
 
   /**
    * @return True if the pipeline this work is flowing on is parallel; false otherwise.

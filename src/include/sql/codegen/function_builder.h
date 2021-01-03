@@ -6,6 +6,8 @@
 #include "ast/identifier.h"
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "util/region_containers.h"
 
 namespace tpl::sql::codegen {
@@ -20,6 +22,8 @@ class FunctionBuilder {
   friend class Loop;
 
  public:
+  using Param = std::pair<ast::Identifier, ast::Type *>;
+
   /**
    * Create a builder for a function with the provided name, return type, and arguments.
    * @param codegen The code generation instance.
@@ -27,8 +31,8 @@ class FunctionBuilder {
    * @param params The parameters to the function.
    * @param ret_type The return type representation of the function.
    */
-  FunctionBuilder(CodeGen *codegen, ast::Identifier name,
-                  util::RegionVector<ast::FieldDeclaration *> &&params, ast::Expression *ret_type);
+  FunctionBuilder(CodeGen *codegen, ast::Identifier name, std::vector<Param> &&params,
+                  ast::Type *ret_type);
 
   /**
    * Destructor.
@@ -38,38 +42,25 @@ class FunctionBuilder {
   /**
    * @return A reference to a function parameter by its ordinal position.
    */
-  ast::Expression *GetParameterByPosition(uint32_t param_idx);
+  edsl::ValueVT GetParameterByPosition(uint32_t param_idx) const;
+
+  /**
+   * @return The number of parameters this function takes.
+   */
+  std::size_t GetParameterCount() const noexcept { return params_.size(); }
 
   /**
    * Append a statement to the list of statements in this function.
    * @param stmt The statement to append.
    */
-  void Append(ast::Statement *stmt);
-
-  /**
-   * Append an expression as a statement to the list of statements in this function.
-   * @param expr The expression to append as a statement.
-   */
-  void Append(ast::Expression *expr);
-
-  /**
-   * Append a variable declaration as a statement to the list of statements in this function.
-   * @param decl The declaration to append to the statement.
-   */
-  void Append(ast::VariableDeclaration *decl);
+  void Append(const edsl::Value<void> &stmt);
 
   /**
    * Finish constructing the function.
    * @param ret The value to return from the function. Use a null pointer to return nothing.
    * @return The build function declaration.
    */
-  ast::FunctionDeclaration *Finish(ast::Expression *ret = nullptr);
-
-  /**
-   * @return The final constructed function; null if the builder hasn't been constructed through
-   *         FunctionBuilder::Finish().
-   */
-  ast::FunctionDeclaration *GetConstructedFunction() const { return decl_; }
+  ast::FunctionDeclaration *Finish();
 
   /**
    * @return The code generator instance.
@@ -84,9 +75,9 @@ class FunctionBuilder {
   // The function's name.
   ast::Identifier name_;
   // The function's arguments.
-  util::RegionVector<ast::FieldDeclaration *> params_;
+  std::vector<edsl::VariableVT> params_;
   // The return type of the function.
-  ast::Expression *ret_type_;
+  ast::Type *ret_type_;
   // The start and stop position of statements in the function.
   SourcePosition start_;
   // The list of generated statements making up the function.

@@ -14,19 +14,17 @@ ConsumerContext::ConsumerContext(CompilationContext *compilation_context,
       pipeline_iter_(pipeline_ctx_.pipeline_.Begin()),
       pipeline_end_(pipeline_ctx_.pipeline_.End()) {}
 
-ast::Expression *ConsumerContext::DeriveValue(const planner::AbstractExpression &expr,
-                                              const ColumnValueProvider *provider) {
+edsl::ValueVT ConsumerContext::DeriveValue(const planner::AbstractExpression &expr,
+                                           const ColumnValueProvider *provider) {
   auto translator = compilation_context_->LookupTranslator(expr);
   if (translator == nullptr) {
-    return nullptr;
+    throw CodeGenerationException("Missing translator for expression!");
   }
   return translator->DeriveValue(this, provider);
 }
 
 void ConsumerContext::Consume(FunctionBuilder *function) {
-  if (++pipeline_iter_ == pipeline_end_) {
-    return;
-  }
+  if (++pipeline_iter_ == pipeline_end_) return;
   (*pipeline_iter_)->Consume(this, function);
 }
 
@@ -38,15 +36,15 @@ bool ConsumerContext::IsForPipeline(const Pipeline &pipeline) const {
   return pipeline_ctx_.IsForPipeline(pipeline);
 }
 
-ast::Expression *ConsumerContext::GetStateEntry(StateDescriptor::Slot slot) const {
-  return pipeline_ctx_.GetStateEntry(slot);
+edsl::ReferenceVT ConsumerContext::GetStateEntryGeneric(StateDescriptor::Slot slot) const {
+  return pipeline_ctx_.GetStateEntryGeneric(slot);
 }
 
-ast::Expression *ConsumerContext::GetStateEntryPtr(StateDescriptor::Slot slot) const {
-  return pipeline_ctx_.GetStateEntryPtr(slot);
+edsl::ValueVT ConsumerContext::GetStateEntryPtrGeneric(StateDescriptor::Slot slot) const {
+  return pipeline_ctx_.GetStateEntryPtrGeneric(slot);
 }
 
-ast::Expression *ConsumerContext::GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const {
+edsl::Value<uint32_t> ConsumerContext::GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const {
   return pipeline_ctx_.GetStateEntryByteOffset(slot);
 }
 

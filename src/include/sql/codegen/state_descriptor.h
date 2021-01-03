@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -9,6 +8,9 @@
 #include "common/common.h"
 #include "common/macros.h"
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/edsl/struct.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 
 namespace tpl::sql::codegen {
 
@@ -26,40 +28,41 @@ class CodeGen;
 class StateDescriptor {
  public:
   // A slot in a state structure.
-  using Slot = std::size_t;
+  using Slot = edsl::Struct::MemberId;
 
   // Function to provide the instance of a state structure in a given context.
-  using InstanceProvider = std::function<ast::Expression *(CodeGen *)>;
+  using InstanceProvider = std::function<edsl::ValueVT(CodeGen *)>;
 
   /**
    * Create a new empty state using the provided name for the final constructed TPL type. The
    * provided state accessor can be used to load an instance of this state in a given context.
-   * @param type_name The name to give the final constructed type for this state.
+   * @param name The name to give the final constructed type for this state.
    * @param access A generic accessor to an instance of this state, used to access state elements.
    */
-  StateDescriptor(ast::Identifier type_name, InstanceProvider access);
+  StateDescriptor(CodeGen *codegen, std::string_view name, InstanceProvider access);
 
   /**
    * Declare a state entry with the provided name and type in the execution runtime query state.
    * @param codegen The code-generation instance.
    * @param name The name of the element.
-   * @param type_repr The TPL type representation of the element.
+   * @param type The type of the element.
    * @return The slot where the inserted state exists.
    */
-  Slot DeclareStateEntry(CodeGen *codegen, const std::string &name, ast::Expression *type_repr);
+  Slot DeclareStateEntry(std::string_view name, ast::Type *type);
 
   /**
    * Seal the state and build the final structure. After this point, additional state elements
-   * cannot be added.
+   * cannot be added. Only the first call to this function has an effect. All calls after the first
+   * return the declaration constructed on the first call.
    * @param codegen The code generation instance.
    * @return The finalized structure declaration.
    */
-  ast::StructDeclaration *ConstructFinalType(CodeGen *codegen);
+  void ConstructFinalType();
 
   /**
    * @return The query state pointer from the current code generation context.
    */
-  ast::Expression *GetStatePointer(CodeGen *codegen) const;
+  edsl::ValueVT GetStatePtr(CodeGen *codegen) const;
 
   /**
    * Return the value of the state entry at the given slot.
@@ -67,15 +70,37 @@ class StateDescriptor {
    * @param slot The slot of the state to read.
    * @return The value of the state entry at the given slot.
    */
-  ast::Expression *GetStateEntry(CodeGen *codegen, Slot slot) const;
+  edsl::ReferenceVT GetStateEntryGeneric(CodeGen *codegen, Slot slot) const;
+
+  /**
+   * Return the value of the state entry at the given slot assuming the given templated type. An
+   * assertion is triggered if the types do not match.
+   * @tparam T The template type of the state element.
+   * @param codegen The code generation instance.
+   * @param slot The slot of the state to read.
+   * @return The value of the state entry at the given slot.
+   */
+  template <typename T>
+  edsl::Reference<T> GetStateEntry(CodeGen *codegen, Slot slot) const {
+    return edsl::Reference<T>(GetStateEntryGeneric(codegen, slot));
+  }
 
   /**
    * Return a pointer to the value of the state entry at the given slot.
-   * @param codegen The code generation instance.
    * @param slot The slot of the state to read.
    * @return The a pointer to the state entry at the given slot.
    */
-  ast::Expression *GetStateEntryPtr(CodeGen *codegen, Slot slot) const;
+  edsl::ValueVT GetStateEntryPtrGeneric(CodeGen *codegen, Slot slot) const;
+
+  /**
+   * Return a pointer to the value of the state entry at the given slot.
+   * @param slot The slot of the state to read.
+   * @return The a pointer to the state entry at the given slot.
+   */
+  template <typename T>
+  edsl::Value<T *> GetStateEntryPtr(CodeGen *codegen, Slot slot) const {
+    return edsl::Value<T *>(GetStateEntryPtrGeneric(codegen, slot));
+  }
 
   /**
    * Return an expression representing the offset of the entry at the given slot in this state.
@@ -83,43 +108,38 @@ class StateDescriptor {
    * @param slot The slot of the state to read.
    * @return The offset of the state entry at the given slot in this state, in bytes.
    */
-  ast::Expression *GetStateEntryOffset(CodeGen *codegen, Slot slot) const;
+  edsl::Value<uint32_t> GetStateEntryOffset(CodeGen *codegen, Slot slot) const;
 
   /**
    * @return The finalized type of the runtime query state; null if the state hasn't been finalized.
    */
-  ast::StructDeclaration *GetType() const { return state_type_; }
+  ast::Type *GetType() const { return struct_.GetType(); }
+
+  /**
+   * @return A pointer to the finalized query state type.
+   */
+  ast::Type *GetPointerToType() const { return struct_.GetPtrToType(); }
 
   /**
    * @return The name of the state's type.
    */
-  ast::Identifier GetTypeName() const { return name_; }
+  ast::Identifier GetTypeName() const { return struct_.GetName(); }
 
   /**
    * @return The size of the constructed state type, in bytes. This is only possible
    */
-  std::size_t GetSize() const;
+  std::size_t GetSizeRaw() const;
+
+  /**
+   * @return The EDSL value of the size of the constructed state, in bytes.
+   */
+  edsl::Value<uint32_t> GetSize() const { return struct_.GetSize(); }
 
  private:
-  // Metadata for a single state entry.
-  struct SlotInfo {
-    // The unique name of the element in the state.
-    ast::Identifier name;
-    // The type representation for the state.
-    ast::Expression *type_repr;
-    // Constructor.
-    SlotInfo(ast::Identifier name, ast::Expression *type_repr) : name(name), type_repr(type_repr) {}
-  };
-
- private:
-  // The name of the state type.
-  ast::Identifier name_;
+  // The struct capturing all state.
+  edsl::Struct struct_;
   // State access object.
   InstanceProvider access_;
-  // All state metadata
-  std::vector<SlotInfo> slots_;
-  // The finalized type
-  ast::StructDeclaration *state_type_;
 };
 
 }  // namespace tpl::sql::codegen

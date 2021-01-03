@@ -1,12 +1,11 @@
 #pragma once
 
-#include <string_view>
-#include <vector>
+#include <memory>
 
-#include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/edsl/struct.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/schema.h"
 
 namespace tpl::sql::planner {
 class AbstractExpression;
@@ -55,13 +54,15 @@ class OutputTranslator : public OperatorTranslator {
   /**
    * Does not interact with tables.
    */
-  ast::Expression *GetTableColumn(uint16_t col_oid) const override {
+  edsl::ValueVT GetTableColumn(uint16_t col_oid) const override {
     UNREACHABLE("Output does not interact with tables.");
   }
 
  private:
-  ast::Identifier output_var_;
-  ast::Identifier output_struct_;
+  // The output struct.
+  edsl::Struct out_struct_;
+  // The row whose type is that of the output structure above.
+  std::unique_ptr<edsl::VariableVT> out_row_;
 };
 
 }  // namespace tpl::sql::codegen

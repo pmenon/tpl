@@ -6,82 +6,62 @@
 namespace tpl::sql::codegen {
 
 FunctionBuilder::FunctionBuilder(CodeGen *codegen, ast::Identifier name,
-                                 util::RegionVector<ast::FieldDeclaration *> &&params,
-                                 ast::Expression *ret_type)
+                                 std::vector<Param> &&params, ast::Type *ret_type)
     : codegen_(codegen),
       prev_function_(nullptr),
       name_(name),
-      params_(std::move(params)),
       ret_type_(ret_type),
       start_(codegen->GetPosition()),
       statements_(codegen->MakeEmptyBlock()),
       decl_(nullptr) {
-  // Stash the previously active function so we can restore it upon completion.
+  // Populate the parameters.
+  params_.reserve(params.size());
+  for (const auto &[p_name, p_type] : params) {
+    params_.emplace_back(codegen, p_name, p_type);
+  }
+
+  // Swap in this function as the "active" function in the code-gen instance.
   prev_function_ = codegen_->function_;
-  // Swap in ourselves in as the current active function.
   codegen_->function_ = this;
 }
 
 FunctionBuilder::~FunctionBuilder() { Finish(); }
 
-ast::Expression *FunctionBuilder::GetParameterByPosition(uint32_t param_idx) {
-  if (param_idx < params_.size()) {
-    return codegen_->MakeExpr(params_[param_idx]->GetName());
-  }
-  return nullptr;
+edsl::ValueVT FunctionBuilder::GetParameterByPosition(const uint32_t param_idx) const {
+  TPL_ASSERT(param_idx < params_.size(), "Out-of-bounds parameter access.");
+  return params_[param_idx];
 }
 
-void FunctionBuilder::Append(ast::Statement *stmt) {
-  // Append the statement to the block.
-  statements_->AppendStatement(stmt);
-  // Bump line number.
+void FunctionBuilder::Append(const edsl::Value<void> &stmt) {
+  if (stmt.GetNode() == nullptr) return;
+  statements_->AppendStatement(stmt.GetNode());
   codegen_->NewLine();
 }
 
-void FunctionBuilder::Append(ast::Expression *expr) {
-  Append(codegen_->NodeFactory()->NewExpressionStatement(expr));
-}
+ast::FunctionDeclaration *FunctionBuilder::Finish() {
+  if (decl_ != nullptr) return decl_;
 
-void FunctionBuilder::Append(ast::VariableDeclaration *decl) {
-  Append(codegen_->NodeFactory()->NewDeclStatement(decl));
-}
-
-ast::FunctionDeclaration *FunctionBuilder::Finish(ast::Expression *ret) {
-  if (decl_ != nullptr) {
-    return decl_;
-  }
-
-  TPL_ASSERT(
-      ret == nullptr || statements_->IsEmpty() || !statements_->GetLast()->IsReturnStatement(),
-      "Double-return at end of function. You should either call FunctionBuilder::Finish() "
-      "with an explicit return expression, or use the factory to manually append a return "
-      "statement and call FunctionBuilder::Finish() with a null return.");
-
-  // Add the return.
-  if (!statements_->IsEmpty() && !statements_->GetLast()->IsReturnStatement()) {
-    Append(codegen_->NodeFactory()->NewReturnStatement(codegen_->GetPosition(), ret));
-  }
-
-  // Finalize everything.
   statements_->SetRightBracePosition(codegen_->GetPosition());
 
-  // Build the function's type.
-  auto func_type = codegen_->NodeFactory()->NewFunctionType(start_, std::move(params_), ret_type_);
-
-  // Create the declaration.
+  // Build the function's type by building the type representations of the
+  // parameters and return type.
+  util::RegionVector<ast::FieldDeclaration *> param_decls(codegen_->Context()->GetRegion());
+  param_decls.reserve(params_.size());
+  for (const auto &p : params_) {
+    auto type = codegen_->BuildTypeRepresentation(p.GetType(), false /* not for struct */);
+    param_decls.push_back(codegen_->NodeFactory()->NewFieldDeclaration(start_, p.GetName(), type));
+  }
+  auto ret = codegen_->BuildTypeRepresentation(ret_type_, false /* not for struct */);
+  auto func_type = codegen_->NodeFactory()->NewFunctionType(start_, std::move(param_decls), ret);
   auto func_lit = codegen_->NodeFactory()->NewFunctionLiteralExpression(func_type, statements_);
   decl_ = codegen_->NodeFactory()->NewFunctionDeclaration(start_, name_, func_lit);
 
-  // Register the function in the container.
   codegen_->container_->RegisterFunction(decl_);
 
-  // Restore the previous function in the codegen instance.
   codegen_->function_ = prev_function_;
 
-  // Next line.
   codegen_->NewLine();
 
-  // Done
   return decl_;
 }
 

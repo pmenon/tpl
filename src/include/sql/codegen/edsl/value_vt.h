@@ -23,16 +23,17 @@ class ValueVT {
    * @param val The underlying value.
    */
   ValueVT(CodeGen *codegen, ast::Expression *val) : codegen_(codegen), val_(val) {
+    TPL_ASSERT(val != nullptr, "No input expression provided!");
     TPL_ASSERT(val->GetType() != nullptr, "Value MUST have a type at the point of instantiation!");
   }
 
   /**
    * Construct a variable-typed value from the strongly typed value.
    * @tparam T The type of the value.
-   * @param v The value to wrap.
+   * @param that The value to wrap.
    */
   template <typename T>
-  ValueVT(const Value<T> &v) : val_(v.GetRaw()) {}
+  ValueVT(const Value<T> &that) : codegen_(that.GetCodeGen()), val_(that.GetRaw()) {}
 
   /**
    * @return True if this value has a type and its type is equivalent to the provided type.
@@ -48,6 +49,11 @@ class ValueVT {
    * @return True if the type of this value is a struct; false otherwise.
    */
   bool IsStructType() const noexcept { return GetType()->IsStructType(); }
+
+  /**
+   * @return True it the type of this value is a SQL type; false otherwise.
+   */
+  bool IsSQLType() const noexcept { return GetType()->IsSqlValueType(); }
 
   /**
    * @return True if the type of this value is a pointer; false otherwise;
@@ -125,9 +131,22 @@ class ReferenceVT : public ValueVT {
    * @param codegen The code generator instance.
    * @param val The raw value to reference.
    */
-  ReferenceVT(CodeGen *codegen, ast::Expression *val) : ValueVT(codegen, codegen->Deref(val)) {
+  ReferenceVT(CodeGen *codegen, ast::Expression *val) : ValueVT(codegen, val) {
     TPL_ASSERT(val->GetType() != nullptr, "Value being referenced must have a type!");
     TPL_ASSERT(val->GetType()->IsPointerType(), "Value being referenced isn't a pointer!");
+  }
+
+  /**
+   * Implicitly convert this untyped reference into a strongly-styped reference. We can't validate
+   * anything at runtime, but we trigger a runtime assertion if the types do not match up.
+   * @tparam T The C++ build-time type to cast to.
+   * @return The value.
+   */
+  template <typename T>
+  operator Reference<T>() const noexcept {
+    TPL_ASSERT(GetType() == GetCodeGen()->GetType<T>(),
+               "Type mismatch: cannot recast to typed reference!");
+    return Reference<T>(GetCodeGen(), GetRaw());
   }
 
   /**
@@ -163,7 +182,7 @@ inline ReferenceVT ValueVT::operator[](const ValueVT &index) {
 template <typename I, std::enable_if_t<traits::is_primitive_int_type<I>::value> *>
 inline ReferenceVT ValueVT::operator[](const Value<I> &index) {
   if (!GetType()->IsArrayType()) {
-    throw CodeGenerationException("Value is not an array type; cannot use array access!");
+    throw CodeGenerationException("Attempted array access of non-array type!");
   }
   return ReferenceVT(codegen_, codegen_->ArrayAccess(val_, index.GetRaw()));
 }
@@ -171,9 +190,9 @@ inline ReferenceVT ValueVT::operator[](const Value<I> &index) {
 template <typename I, std::enable_if_t<traits::is_primitive_int_type<I>::value> *>
 inline ReferenceVT ValueVT::operator[](I index) const {
   if (!GetType()->IsArrayType()) {
-    throw CodeGenerationException("Value is not an array type; cannot use array access!");
+    throw CodeGenerationException("Attempted array access of non-array type!");
   }
-  return ReferenceVT(codegen_, codegen_->ArrayAccess(val_, codegen_->Const32(index)));
+  return ReferenceVT(codegen_, codegen_->ArrayAccess(val_, index));
 }
 
 /**
@@ -198,7 +217,7 @@ class VariableVT : public ReferenceVT {
    * @param type The type of the variable.
    */
   VariableVT(CodeGen *codegen, std::string_view name, ast::Type *type)
-      : VariableVT(codegen, codegen->MakeIdentifier(name), type) {}
+      : VariableVT(codegen, codegen->MakeFreshIdentifier(name), type) {}
 
   /**
    * @return The name of this variable.
@@ -211,13 +230,100 @@ class VariableVT : public ReferenceVT {
 };
 
 /**
+ * Declare the given value.
+ * @param var The variable to declare.
+ * @return A void value representing the declaration.
+ */
+inline Value<void> Declare(const VariableVT &var) {
+  return Value<void>(var.GetCodeGen()->DeclareVar(var.GetName(), var.GetType()));
+}
+
+/**
+ * Declare the given variable using the @em value as the initial value.
+ * @param var The variable to declare.
+ * @param value The initial value.
+ * @return A void value representing the declaration.
+ */
+inline Value<void> Declare(const VariableVT &var, const ValueVT &value) {
+  TPL_ASSERT(var.GetType() == value.GetType(), "Type mismatch in declaration!");
+  CodeGen *codegen = var.GetCodeGen();
+  return Value<void>(codegen->DeclareVarWithInit(var.GetName(), value.GetRaw()));
+}
+
+/**
  * Assign the given value @em rhs to the reference @em lhs.
  * @param lhs The destination of the assignment.
  * @param rhs The source value of the assignment.
  */
-inline void Assign(const ReferenceVT &lhs, const ValueVT &rhs) {
+inline Value<void> Assign(const ReferenceVT &lhs, const ValueVT &rhs) {
+  return Value<void>(lhs.GetCodeGen()->Assign(lhs.GetRaw(), rhs.GetRaw()));
+}
+
+/**
+ * @return The arithmetic negation of the input value.
+ */
+inline ValueVT Negate(const ValueVT &input) {
+  CodeGen *codegen = input.GetCodeGen();
+  return ValueVT(codegen, codegen->Neg(input.GetRaw()));
+}
+
+/**
+ * Perform an binary arithmetic operation on @em lhs and @rhs and return the result.
+ * @param op The operation to perform.
+ * @param lhs The left input to the operation.
+ * @param rhs The right input to the operation.
+ * @return The result of the operation.
+ */
+inline ValueVT ArithmeticOp(parsing::Token::Type op, const ValueVT &lhs, const ValueVT &rhs) {
   CodeGen *codegen = lhs.GetCodeGen();
-  codegen->GetCurrentFunction()->Append(codegen->Assign(lhs.GetRaw(), rhs.GetRaw()));
+  return ValueVT(codegen, codegen->ArithmeticOp(op, lhs.GetRaw(), rhs.GetRaw()));
+}
+
+/**
+ * Perform the binary comparison @em op between @em lhs and @em rhs, returning a boolean result.
+ * @pre The provided operation must be a comparison between compatible types, otherwise an assertion
+ * is raised.
+ * @param op The comparison to perform.
+ * @param lhs The left input to the comparison.
+ * @param rhs The right input to the comparison.
+ * @return The boolean result of the comparison.
+ */
+inline Value<bool> ComparisonOp(parsing::Token::Type op, const ValueVT &lhs, const ValueVT &rhs) {
+  CodeGen *codegen = lhs.GetCodeGen();
+  return Value<bool>(codegen, codegen->ComparisonOp(op, lhs.GetRaw(), rhs.GetRaw()));
+}
+
+/**
+ * @return True if the input pointer is nil; false otherwise.
+ */
+inline Value<bool> IsNilPtr(const ValueVT &ptr) {
+  CodeGen *codegen = ptr.GetCodeGen();
+  return Value<bool>(codegen, codegen->CompareEq(ptr.GetRaw(), codegen->Nil()));
+}
+
+/**
+ * Re-cast the pointer input @em ptr to the type @em type. Both inputs must be pointer types.
+ * @pre The type of the input and the target type must both be pointers.
+ * @tparam T The type of the pointer to cast.
+ * @param type The (pointer) type to cast the input into.
+ * @param ptr The pointer value to case.
+ * @return The result of the cast operation.
+ */
+template <typename T, typename = std::enable_if_t<std::is_pointer_v<T>>>
+inline ValueVT PtrCast(ast::Type *type, const Value<T> &ptr) {
+  CodeGen *codegen = ptr.GetCodeGen();
+  return ValueVT(codegen, codegen->PtrCast(type, ptr.GetRaw()));
+}
+
+inline ValueVT PtrCast(ast::Type *type, const ValueVT &ptr) {
+  CodeGen *codegen = ptr.GetCodeGen();
+  return ValueVT(codegen, codegen->PtrCast(type, ptr.GetRaw()));
+}
+
+template <typename T, typename = std::enable_if_t<std::is_pointer_v<T>>>
+inline Value<T> PtrCast(const ValueVT &ptr) {
+  CodeGen *codegen = ptr.GetCodeGen();
+  return Value<T>(codegen, codegen->PtrCast(codegen->template GetType<T>(), ptr.GetRaw()));
 }
 
 }  // namespace tpl::sql::codegen::edsl

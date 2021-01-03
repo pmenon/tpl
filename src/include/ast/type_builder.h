@@ -10,33 +10,32 @@ namespace tpl::ast {
  * Type builders provide a simple API for building TPL types for C/C++ types known at compile time.
  * @tparam T The C/C++ type to build.
  */
-template <typename T>
-class TypeBuilder {};
+template <typename T, typename Enable = void>
+struct TypeBuilder {};
 
 /**
  * Const C/C++ types don't have counterparts in TPL.
  */
 template <typename T>
-class TypeBuilder<const T> : public TypeBuilder<T> {};
+struct TypeBuilder<const T> : TypeBuilder<T> {};
 
 /**
  * Volatile C/C++ types don't have counterparts in TPL.
  **/
 template <typename T>
-class TypeBuilder<volatile T> : public TypeBuilder<T> {};
+struct TypeBuilder<volatile T> : TypeBuilder<T> {};
 
 /**
  * Const-volatile C/C++ types don't have counterparts in TPL.
  **/
 template <typename T>
-class TypeBuilder<const volatile T> : public TypeBuilder<T> {};
+struct TypeBuilder<const volatile T> : TypeBuilder<T> {};
 
 /**
  * Pointers.
  */
 template <typename T>
-class TypeBuilder<T *> {
- public:
+struct TypeBuilder<T *> {
   static PointerType *Get(Context *context) {
     return PointerType::Get(TypeBuilder<T>::Get(context));
   }
@@ -46,15 +45,14 @@ class TypeBuilder<T *> {
  * References don't exist in TPL.
  */
 template <typename T>
-class TypeBuilder<T &> {};
+struct TypeBuilder<T &> {};
 
 /**
  * Arrays with a known compile-time size.
  * @tparam T The type of the elements in the array.
  */
 template <typename T, std::size_t N>
-class TypeBuilder<T[N]> {
- public:
+struct TypeBuilder<T[N]> {
   static ArrayType *Get(Context *context) {
     return ArrayType::Get(N, TypeBuilder<T>::Get(context));
   }
@@ -65,8 +63,7 @@ class TypeBuilder<T[N]> {
  * @tparam T The type of the elements in the array.
  */
 template <typename T>
-class TypeBuilder<T[]> {
- public:
+struct TypeBuilder<T[]> {
   static ArrayType *Get(Context *context) {
     return ArrayType::Get(0, TypeBuilder<T>::Get(context));
   }
@@ -77,9 +74,8 @@ class TypeBuilder<T[]> {
  */
 #define F(kind, ctype, ...)                                                               \
   template <>                                                                             \
-  class TypeBuilder<                                                                      \
+  struct TypeBuilder<                                                                     \
       std::conditional_t<ast::BuiltinType::kind == ast::BuiltinType::Nil, void, ctype>> { \
-   public:                                                                                \
     static BuiltinType *Get(Context *context) {                                           \
       return BuiltinType::Get(context, ast::BuiltinType::kind);                           \
     }                                                                                     \
@@ -92,8 +88,7 @@ PRIMITIVE_BUILTIN_TYPE_LIST(F)
  */
 #define F(kind, ...)                                            \
   template <>                                                   \
-  class TypeBuilder<tpl::ast::x::kind> {                        \
-   public:                                                      \
+  struct TypeBuilder<tpl::ast::x::kind> {                       \
     static BuiltinType *Get(Context *context) {                 \
       return BuiltinType::Get(context, ast::BuiltinType::kind); \
     }                                                           \
@@ -106,30 +101,44 @@ SQL_BUILTIN_TYPE_LIST(F)
  * Specialize for std::byte, which is a TPL type. Alias to uint8_t.
  */
 template <>
-class TypeBuilder<byte> : public TypeBuilder<uint8_t> {};
+struct TypeBuilder<byte> : TypeBuilder<uint8_t> {};
 
 /**
  * void* isn't a TPL type, but occurs enough that we special-case it here.
  */
 template <>
-class TypeBuilder<void *> : public TypeBuilder<byte *> {};
+struct TypeBuilder<void *> : TypeBuilder<byte *> {};
 
 /**
  * const void* isn't a TPL type, but occurs enough that we special-case it here.
  */
 template <>
-class TypeBuilder<const void *> : public TypeBuilder<byte *> {};
+struct TypeBuilder<const void *> : TypeBuilder<byte *> {};
 
 /**
  * volatile void* isn't a TPL type, but occurs enough that we special-case it here.
  */
 template <>
-class TypeBuilder<volatile void *> : public TypeBuilder<byte *> {};
+struct TypeBuilder<volatile void *> : TypeBuilder<byte *> {};
 
 /**
  * const volatile void* isn't a TPL type, but occurs enough that we special-case it here.
  */
 template <>
-class TypeBuilder<const volatile void *> : public TypeBuilder<byte *> {};
+struct TypeBuilder<const volatile void *> : TypeBuilder<byte *> {};
+
+/**
+ * Specialize a nullptr as Nil.
+ */
+template <>
+struct TypeBuilder<std::nullptr_t> : TypeBuilder<void> {};
+
+/**
+ * Specialize std::string_view (or anything convertible to it) as a TPL string type.
+ */
+template <typename T>
+struct TypeBuilder<T, std::enable_if_t<std::is_convertible_v<T, std::string_view>>> {
+  static ast::Type *Get(Context *context) { return ast::StringType::Get(context); }
+};
 
 }  // namespace tpl::ast

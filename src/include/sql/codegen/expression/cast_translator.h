@@ -27,8 +27,8 @@ class CastTranslator : public ExpressionTranslator {
    * @param provider A provider for specific column values.
    * @return The value of the expression.
    */
-  ast::Expression *DeriveValue(ConsumerContext *context,
-                               const ColumnValueProvider *provider) const override;
+  edsl::ValueVT DeriveValue(ConsumerContext *context,
+                            const ColumnValueProvider *provider) const override;
 
  private:
   const planner::CastExpression &GetCastExpression() const {

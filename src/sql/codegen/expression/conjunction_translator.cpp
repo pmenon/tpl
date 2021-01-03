@@ -6,6 +6,9 @@
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
+#include "sql/codegen/edsl/boolean_ops.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 
 namespace tpl::sql::codegen {
 
@@ -17,16 +20,16 @@ ConjunctionTranslator::ConjunctionTranslator(const planner::ConjunctionExpressio
   compilation_context->Prepare(*expr.GetChild(1));
 }
 
-ast::Expression *ConjunctionTranslator::DeriveValue(ConsumerContext *context,
-                                                    const ColumnValueProvider *provider) const {
-  auto left_val = context->DeriveValue(*GetExpression().GetChild(0), provider);
-  auto right_val = context->DeriveValue(*GetExpression().GetChild(1), provider);
+edsl::ValueVT ConjunctionTranslator::DeriveValue(ConsumerContext *context,
+                                                 const ColumnValueProvider *provider) const {
+  edsl::Value<bool> left_val = context->DeriveValue(*GetChild(0), provider);
+  edsl::Value<bool> right_val = context->DeriveValue(*GetChild(1), provider);
 
   switch (auto cmp_kind = GetExpressionAs<planner::ConjunctionExpression>().GetKind(); cmp_kind) {
     case planner::ConjunctionKind::AND:
-      return codegen_->BinaryOp(parsing::Token::Type::AND, left_val, right_val);
+      return left_val && right_val;
     case planner::ConjunctionKind::OR:
-      return codegen_->BinaryOp(parsing::Token::Type::OR, left_val, right_val);
+      return left_val || right_val;
     default: {
       throw NotImplementedException(fmt::format("Translation of conjunction type {}",
                                                 planner::ConjunctionKindToString(cmp_kind)));

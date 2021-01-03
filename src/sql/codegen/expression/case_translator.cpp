@@ -2,6 +2,9 @@
 
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
+#include "sql/codegen/edsl/ops.h"
+#include "sql/codegen/edsl/value.h"
+#include "sql/codegen/edsl/value_vt.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
 #include "sql/planner/expressions/case_expression.h"
@@ -22,7 +25,7 @@ CaseTranslator::CaseTranslator(const planner::CaseExpression &expr,
   }
 }
 
-void CaseTranslator::GenerateCases(const ast::Identifier ret, const std::size_t clause_idx,
+void CaseTranslator::GenerateCases(const edsl::VariableVT &ret, const std::size_t clause_idx,
                                    ConsumerContext *context,
                                    const ColumnValueProvider *provider) const {
   const auto &expr = GetExpressionAs<planner::CaseExpression>();
@@ -33,10 +36,9 @@ void CaseTranslator::GenerateCases(const ast::Identifier ret, const std::size_t 
   // Base case.
   if (clause_idx == expr.GetWhenClauseSize()) {
     if (const auto default_val = expr.GetDefaultClause()) {
-      ast::Expression *default_result = context->DeriveValue(*default_val, provider);
-      function->Append(codegen_->Assign(codegen_->MakeExpr(ret), default_result));
+      function->Append(edsl::Assign(ret, context->DeriveValue(*default_val, provider)));
     } else {
-      function->Append(codegen_->InitSqlNull(codegen_->MakeExpr(ret)));
+      function->Append(edsl::InitSqlNull(ret));
     }
     return;
   }
@@ -44,32 +46,35 @@ void CaseTranslator::GenerateCases(const ast::Identifier ret, const std::size_t 
   // if (when_clause) {
   //   case_result = when_clause_result()
   // }
-  If condition(function, context->DeriveValue(*expr.GetWhenClauseCondition(clause_idx), provider));
+  auto condition_gen = context->DeriveValue(*expr.GetWhenClauseCondition(clause_idx), provider);
+  auto condition = condition_gen.IsSQLType() ? edsl::ForceTruth(condition_gen)
+                                             : edsl::Value<bool>(condition_gen);
+  If check_condition(function, condition);
   {
-    ast::Expression *when_result =
-        context->DeriveValue(*expr.GetWhenClauseResult(clause_idx), provider);
-    function->Append(codegen_->Assign(codegen_->MakeExpr(ret), when_result));
+    auto when_result = context->DeriveValue(*expr.GetWhenClauseResult(clause_idx), provider);
+    function->Append(edsl::Assign(ret, when_result));
   }
-  condition.Else();
+  check_condition.Else();
   {
     // Recurse.
     GenerateCases(ret, clause_idx + 1, context, provider);
   }
-  condition.EndIf();
+  check_condition.EndIf();
 }
 
-ast::Expression *CaseTranslator::DeriveValue(ConsumerContext *context,
-                                             const ColumnValueProvider *provider) const {
+edsl::ValueVT CaseTranslator::DeriveValue(ConsumerContext *context,
+                                          const ColumnValueProvider *provider) const {
+  FunctionBuilder *function = codegen_->GetCurrentFunction();
+
   // var case_result: TYPE
-  ast::Identifier ret = codegen_->MakeFreshIdentifier("case_result");
-  codegen_->GetCurrentFunction()->Append(
-      codegen_->DeclareVarNoInit(ret, codegen_->TplType(GetExpression().GetReturnValueType())));
+  edsl::VariableVT ret(codegen_, "ret", codegen_->GetTPLType(GetExpression().GetReturnValueType()));
+  function->Append(edsl::Declare(ret));
 
   // Generate all clauses.
   GenerateCases(ret, 0, context, provider);
 
   // Done.
-  return codegen_->MakeExpr(ret);
+  return std::move(ret);
 }
 
 }  // namespace tpl::sql::codegen

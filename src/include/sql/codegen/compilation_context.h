@@ -84,12 +84,12 @@ class CompilationContext {
   /**
    * @return The list of parameters common to all query functions. For now, just the query state.
    */
-  util::RegionVector<ast::FieldDeclaration *> QueryParams() const;
+  std::vector<std::pair<ast::Identifier, ast::Type *>> QueryParams() const;
 
   /**
-   * @return The slot in the query state where the execution context can be found.
+   * @return The execution context pointer from the query state.
    */
-  ast::Expression *GetExecutionContextPtrFromQueryState();
+  edsl::Value<ast::x::ExecutionContext *> GetExecutionContextPtrFromQueryState();
 
  private:
   // Private to force use of static Compile() function.
@@ -133,7 +133,6 @@ class CompilationContext {
   CodeGen codegen_;
   // Cached identifiers.
   ast::Identifier query_state_var_;
-  ast::Identifier query_state_type_;
   // The query state and the slot in the state where the execution context is.
   StateDescriptor query_state_;
   StateDescriptor::Slot exec_ctx_;
