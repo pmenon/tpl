@@ -977,7 +977,7 @@ inline Value<ast::x::BooleanVal> Like(const Value<ast::x::StringVal> &str,
  * @return The call.
  */
 inline Value<ast::x::BooleanVal> NotLike(const Value<ast::x::StringVal> &str,
-                           const Value<ast::x::StringVal> &pattern) {
+                                         const Value<ast::x::StringVal> &pattern) {
   CodeGen *codegen = str.GetCodeGen();
   auto call = codegen->CallBuiltin(ast::Builtin::LNot, {Like(str, pattern).GetRaw()});
   call->SetType(codegen->GetType<ast::x::BooleanVal>());

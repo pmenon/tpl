@@ -8,7 +8,7 @@
 #include "ast/identifier.h"
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/codegen_defs.h"
-#include "sql/codegen/state_descriptor.h"
+#include "sql/codegen/execution_state.h"
 
 namespace tpl::sql::planner {
 class AbstractExpression;
@@ -62,7 +62,7 @@ class CompilationContext {
   /**
    * @return The query state.
    */
-  StateDescriptor *GetQueryState() { return &query_state_; }
+  ExecutionState *GetQueryState() { return &query_state_; }
 
   /**
    * @return The translator for the given relational plan node; null if the provided plan node does
@@ -134,8 +134,8 @@ class CompilationContext {
   // Cached identifiers.
   ast::Identifier query_state_var_;
   // The query state and the slot in the state where the execution context is.
-  StateDescriptor query_state_;
-  StateDescriptor::Slot exec_ctx_;
+  ExecutionState query_state_;
+  ExecutionState::Slot exec_ctx_;
   // The operator and expression translators.
   std::unordered_map<const planner::AbstractPlanNode *, std::unique_ptr<OperatorTranslator>>
       operators_;

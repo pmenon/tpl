@@ -10,9 +10,8 @@
 #include "sql/codegen/edsl/struct.h"
 #include "sql/codegen/edsl/value.h"
 #include "sql/codegen/edsl/value_vt.h"
+#include "sql/codegen/execution_state.h"
 #include "sql/codegen/expression/column_value_provider.h"
-#include "sql/codegen/state_descriptor.h"
-#include "util/region_containers.h"
 
 namespace tpl::sql::planner {
 class AbstractPlanNode;
@@ -210,26 +209,26 @@ class OperatorTranslator : public ColumnValueProvider {
   CompilationContext *GetCompilationContext() const { return compilation_ctx_; }
 
  protected:
-  StateDescriptor *GetQueryState() const;
+  ExecutionState *GetQueryState() const;
 
   // Get a pointer to the query state.
   edsl::ValueVT GetQueryStatePtr() const;
 
   // Get an untyped reference to element in the query state at the given index.
-  edsl::ReferenceVT GetQueryStateEntryGeneric(StateDescriptor::Slot slot) const;
+  edsl::ReferenceVT GetQueryStateEntryGeneric(ExecutionState::Slot slot) const;
 
   // Get a typed reference to element in the query state at the given index.
   template <typename T>
-  edsl::Value<T> GetQueryStateEntry(StateDescriptor::Slot slot) const {
+  edsl::Value<T> GetQueryStateEntry(ExecutionState::Slot slot) const {
     return GetQueryState()->GetStateEntry<T>(codegen_, slot);
   }
 
   // Get an untyped pointer to element in the query state at the given index.
-  edsl::ValueVT GetQueryStateEntryPtrGeneric(StateDescriptor::Slot slot) const;
+  edsl::ValueVT GetQueryStateEntryPtrGeneric(ExecutionState::Slot slot) const;
 
   // Get a typed pointer to element in the query state at the given index.
   template <typename T>
-  edsl::Value<T *> GetQueryStateEntryPtr(StateDescriptor::Slot slot) const {
+  edsl::Value<T *> GetQueryStateEntryPtr(ExecutionState::Slot slot) const {
     return GetQueryState()->GetStateEntryPtr<T>(codegen_, slot);
   }
 

@@ -30,10 +30,9 @@ edsl::ValueVT OperatorTranslator::GetOutput(ConsumerContext *context, uint32_t a
   // Check valid output column.
   const auto output_schema = plan_.GetOutputSchema();
   if (attr_idx >= output_schema->NumColumns()) {
-    throw Exception(ExceptionType::CodeGen,
-                    fmt::format("Cannot read column {} from '{}' with output schema {}", attr_idx,
-                                planner::PlanNodeTypeToString(plan_.GetPlanNodeType()),
-                                output_schema->ToString()));
+    throw CodeGenerationException(fmt::format(
+        "Cannot read column {} from '{}' with output schema {}", attr_idx,
+        planner::PlanNodeTypeToString(plan_.GetPlanNodeType()), output_schema->ToString()));
   }
 
   const auto output_expression = output_schema->GetColumn(attr_idx).GetExpr();
@@ -44,9 +43,9 @@ edsl::ValueVT OperatorTranslator::GetChildOutput(ConsumerContext *context, uint3
                                                  uint32_t attr_idx) const {
   // Check valid child.
   if (child_idx >= plan_.GetChildrenSize()) {
-    throw Exception(ExceptionType::CodeGen,
-                    fmt::format("Plan type '{}' does not have child at index {}",
-                                planner::PlanNodeTypeToString(plan_.GetPlanNodeType()), child_idx));
+    throw CodeGenerationException(
+        fmt::format("Plan type '{}' does not have child at index {}",
+                    planner::PlanNodeTypeToString(plan_.GetPlanNodeType()), child_idx));
   }
 
   // Check valid output column from child.
@@ -55,7 +54,7 @@ edsl::ValueVT OperatorTranslator::GetChildOutput(ConsumerContext *context, uint3
   return child_translator->GetOutput(context, attr_idx);
 }
 
-StateDescriptor *OperatorTranslator::GetQueryState() const {
+ExecutionState *OperatorTranslator::GetQueryState() const {
   return compilation_ctx_->GetQueryState();
 }
 
@@ -63,11 +62,11 @@ edsl::ValueVT OperatorTranslator::GetQueryStatePtr() const {
   return GetQueryState()->GetStatePtr(codegen_);
 }
 
-edsl::ReferenceVT OperatorTranslator::GetQueryStateEntryGeneric(StateDescriptor::Slot slot) const {
+edsl::ReferenceVT OperatorTranslator::GetQueryStateEntryGeneric(ExecutionState::Slot slot) const {
   return GetQueryState()->GetStateEntryGeneric(codegen_, slot);
 }
 
-edsl::ValueVT OperatorTranslator::GetQueryStateEntryPtrGeneric(StateDescriptor::Slot slot) const {
+edsl::ValueVT OperatorTranslator::GetQueryStateEntryPtrGeneric(ExecutionState::Slot slot) const {
   return GetQueryState()->GetStateEntryPtrGeneric(codegen_, slot);
 }
 

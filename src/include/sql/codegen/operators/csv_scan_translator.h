@@ -88,9 +88,9 @@ class CSVScanTranslator : public OperatorTranslator, public PipelineDriver {
   // The CSV row; the type of this row is the type of the struct above.
   std::unique_ptr<edsl::VariableVT> row_var_;
   // The slot in pipeline state where the CSV reader is.
-  StateDescriptor::Slot csv_reader_;
+  ExecutionState::Slot csv_reader_;
   // The boolean flag indicating if the reader is valid.
-  StateDescriptor::Slot is_valid_reader_;
+  ExecutionState::Slot is_valid_reader_;
 };
 
 }  // namespace tpl::sql::codegen

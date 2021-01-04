@@ -17,15 +17,15 @@ namespace tpl::sql::codegen {
 class CodeGen;
 
 /**
- * Encapsulates some state in a TPL struct. Typically there is a "build" phase where operators may
- * declare named entries through DeclareStateEntry(), after which the state is "sealed" marking it
- * as frozen. After the state has been sealed, it is immutable.
+ * Encapsulates all execution state needed during query processing. Typically there is a "build"
+ * phase where operators may declare named entries through DeclareStateEntry(), after which
+ * state is "sealed" marking it as frozen. After the state has been sealed, it is immutable.
  *
  * Accessing the state is done through opaque identifiers returned through DeclareStructEntry(). It
  * is not possible, nor should it ever be possible, to reference a state member through name. This
  * is because StateManager is allowed to rename the entries it contains to ensure uniqueness.
  */
-class StateDescriptor {
+class ExecutionState {
  public:
   // A slot in a state structure.
   using Slot = edsl::Struct::MemberId;
@@ -39,7 +39,7 @@ class StateDescriptor {
    * @param name The name to give the final constructed type for this state.
    * @param access A generic accessor to an instance of this state, used to access state elements.
    */
-  StateDescriptor(CodeGen *codegen, std::string_view name, InstanceProvider access);
+  ExecutionState(CodeGen *codegen, std::string_view name, InstanceProvider access);
 
   /**
    * Declare a state entry with the provided name and type in the execution runtime query state.

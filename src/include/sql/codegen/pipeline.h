@@ -9,7 +9,7 @@
 #include "common/common.h"
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/codegen_defs.h"
-#include "sql/codegen/state_descriptor.h"
+#include "sql/codegen/execution_state.h"
 #include "util/region_containers.h"
 
 namespace tpl::sql::codegen {
@@ -44,7 +44,7 @@ class PipelineContext {
    * @param type The TPL type of the element.
    * @return The slot where the inserted state exists.
    */
-  StateDescriptor::Slot DeclarePipelineStateEntry(const std::string &name, ast::Type *type);
+  ExecutionState::Slot DeclarePipelineStateEntry(const std::string &name, ast::Type *type);
 
   /**
    * @return The finalized and constructed state type.
@@ -54,26 +54,26 @@ class PipelineContext {
   /**
    * @return The value of the element at the given slot within this pipeline's state.
    */
-  edsl::ReferenceVT GetStateEntryGeneric(StateDescriptor::Slot slot) const;
+  edsl::ReferenceVT GetStateEntryGeneric(ExecutionState::Slot slot) const;
 
   /**
    * @return A typed reference to the state element at the given slot.
    */
   template <typename T>
-  edsl::Reference<T> GetStateEntry(StateDescriptor::Slot slot) const {
+  edsl::Reference<T> GetStateEntry(ExecutionState::Slot slot) const {
     return state_.GetStateEntry<T>(codegen_, slot);
   }
 
   /**
    * @return A pointer to the element at the given slot within this pipeline's state.
    */
-  edsl::ValueVT GetStateEntryPtrGeneric(StateDescriptor::Slot slot) const;
+  edsl::ValueVT GetStateEntryPtrGeneric(ExecutionState::Slot slot) const;
 
   /**
    * @return A pointer to the element at the given slot within this pipeline's state.
    */
   template <typename T>
-  edsl::Value<T *> GetStateEntryPtr(StateDescriptor::Slot slot) const {
+  edsl::Value<T *> GetStateEntryPtr(ExecutionState::Slot slot) const {
     return state_.GetStateEntryPtr<T>(codegen_, slot);
   }
 
@@ -85,7 +85,7 @@ class PipelineContext {
   /**
    * @return The byte offset of the element at the given slot in the pipeline state.
    */
-  edsl::Value<uint32_t> GetStateEntryByteOffset(StateDescriptor::Slot slot) const;
+  edsl::Value<uint32_t> GetStateEntryByteOffset(ExecutionState::Slot slot) const;
 
   /**
    * @return True if this context is for the provided input pipeline; false otherwise.
@@ -118,7 +118,7 @@ class PipelineContext {
   // Cache of common identifiers.
   ast::Identifier state_var_;
   // The pipeline state.
-  StateDescriptor state_;
+  ExecutionState state_;
 };
 
 /**

@@ -134,8 +134,8 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   Pipeline build_pipeline_;
 
   // States.
-  StateDescriptor::Slot global_aggs_;
-  StateDescriptor::Slot local_aggs_;
+  ExecutionState::Slot global_aggs_;
+  ExecutionState::Slot local_aggs_;
 };
 
 }  // namespace tpl::sql::codegen

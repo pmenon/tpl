@@ -5,10 +5,10 @@
 #include "sql/codegen/edsl/struct.h"
 #include "sql/codegen/edsl/value.h"
 #include "sql/codegen/edsl/value_vt.h"
+#include "sql/codegen/execution_state.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_driver.h"
-#include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
 class AggregatePlanNode;
@@ -183,8 +183,8 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   Pipeline build_pipeline_;
 
   // The global and thread-local aggregation hash tables.
-  StateDescriptor::Slot global_agg_ht_;
-  StateDescriptor::Slot local_agg_ht_;
+  ExecutionState::Slot global_agg_ht_;
+  ExecutionState::Slot local_agg_ht_;
 };
 
 }  // namespace tpl::sql::codegen

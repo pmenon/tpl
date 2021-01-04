@@ -34,24 +34,24 @@ PipelineContext::PipelineContext(const Pipeline &pipeline)
         return func->GetParameterByPosition(1);
       }) {}
 
-StateDescriptor::Slot PipelineContext::DeclarePipelineStateEntry(const std::string &name,
-                                                                 ast::Type *type) {
+ExecutionState::Slot PipelineContext::DeclarePipelineStateEntry(const std::string &name,
+                                                                ast::Type *type) {
   return state_.DeclareStateEntry(name, type);
 }
 
 void PipelineContext::ConstructPipelineStateType() { state_.ConstructFinalType(); }
 
-edsl::ReferenceVT PipelineContext::GetStateEntryGeneric(StateDescriptor::Slot slot) const {
+edsl::ReferenceVT PipelineContext::GetStateEntryGeneric(ExecutionState::Slot slot) const {
   return state_.GetStateEntryGeneric(codegen_, slot);
 }
 
-edsl::ValueVT PipelineContext::GetStateEntryPtrGeneric(StateDescriptor::Slot slot) const {
+edsl::ValueVT PipelineContext::GetStateEntryPtrGeneric(ExecutionState::Slot slot) const {
   return state_.GetStateEntryPtrGeneric(codegen_, slot);
 }
 
 edsl::Value<uint32_t> PipelineContext::GetStateSize() const { return state_.GetSize(); }
 
-edsl::Value<uint32_t> PipelineContext::GetStateEntryByteOffset(StateDescriptor::Slot slot) const {
+edsl::Value<uint32_t> PipelineContext::GetStateEntryByteOffset(ExecutionState::Slot slot) const {
   return state_.GetStateEntryOffset(codegen_, slot);
 }
 

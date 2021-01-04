@@ -3,10 +3,10 @@
 #include <vector>
 
 #include "sql/codegen/edsl/struct.h"
+#include "sql/codegen/execution_state.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
 #include "sql/codegen/pipeline_driver.h"
-#include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
 class OrderByPlanNode;
@@ -144,8 +144,8 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   Pipeline build_pipeline_;
 
   // Where the global and thread-local sorter instances are.
-  StateDescriptor::Slot global_sorter_;
-  StateDescriptor::Slot local_sorter_;
+  ExecutionState::Slot global_sorter_;
+  ExecutionState::Slot local_sorter_;
 
   enum class CurrentRow { Child, Lhs, Rhs };
   CurrentRow current_row_;

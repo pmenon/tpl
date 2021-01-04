@@ -4,9 +4,9 @@
 
 #include "sql/codegen/ast_fwd.h"
 #include "sql/codegen/compact_storage.h"
+#include "sql/codegen/execution_state.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
 class AbstractExpression;
@@ -145,8 +145,8 @@ class HashJoinTranslator : public OperatorTranslator {
   Pipeline left_pipeline_;
 
   // The slots storing the global thread thread-local join hash tables.
-  StateDescriptor::Slot global_join_ht_;
-  StateDescriptor::Slot local_join_ht_;
+  ExecutionState::Slot global_join_ht_;
+  ExecutionState::Slot local_join_ht_;
 };
 
 }  // namespace tpl::sql::codegen

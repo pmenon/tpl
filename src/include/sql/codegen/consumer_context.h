@@ -55,33 +55,33 @@ class ConsumerContext {
   /**
    * @return An untyped reference to the element at the given slot within this pipeline state.
    */
-  edsl::ReferenceVT GetStateEntryGeneric(StateDescriptor::Slot slot) const;
+  edsl::ReferenceVT GetStateEntryGeneric(ExecutionState::Slot slot) const;
 
   /**
    * @return A typed reference to the state element at the given slot in this pipeline's state.
    */
   template <typename T>
-  edsl::Reference<T> GetStateEntry(StateDescriptor::Slot slot) const {
+  edsl::Reference<T> GetStateEntry(ExecutionState::Slot slot) const {
     return pipeline_ctx_.GetStateEntry<T>(slot);
   }
 
   /**
    * @return An untyped pointer to the element at the given slot within this pipeline's state.
    */
-  edsl::ValueVT GetStateEntryPtrGeneric(StateDescriptor::Slot slot) const;
+  edsl::ValueVT GetStateEntryPtrGeneric(ExecutionState::Slot slot) const;
 
   /**
    * @return A typed pointer to the element at the given slot within this pipeline's state.
    */
   template <typename T>
-  edsl::Value<T *> GetStateEntryPtr(StateDescriptor::Slot slot) const {
+  edsl::Value<T *> GetStateEntryPtr(ExecutionState::Slot slot) const {
     return pipeline_ctx_.GetStateEntryPtr<T>(slot);
   }
 
   /**
    * @return The byte offset of the element at the given slot in the pipeline state.
    */
-  edsl::Value<uint32_t> GetByteOffsetOfStateEntry(StateDescriptor::Slot slot) const;
+  edsl::Value<uint32_t> GetByteOffsetOfStateEntry(ExecutionState::Slot slot) const;
 
   /**
    * @return True if the pipeline this work is flowing on is parallel; false otherwise.

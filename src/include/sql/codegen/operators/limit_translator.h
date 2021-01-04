@@ -3,9 +3,9 @@
 #include <vector>
 
 #include "sql/codegen/ast_fwd.h"
+#include "sql/codegen/execution_state.h"
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline.h"
-#include "sql/codegen/state_descriptor.h"
 
 namespace tpl::sql::planner {
 class LimitPlanNode;
@@ -60,7 +60,7 @@ class LimitTranslator : public OperatorTranslator {
 
  private:
   // The tuple counter.
-  StateDescriptor::Slot count_;
+  ExecutionState::Slot count_;
 };
 
 }  // namespace tpl::sql::codegen

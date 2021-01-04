@@ -3,8 +3,8 @@
 #include "common/macros.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
-#include "sql/planner/expressions/cast_expression.h"
 #include "sql/codegen/edsl/ops.h"
+#include "sql/planner/expressions/cast_expression.h"
 
 namespace tpl::sql::codegen {
 

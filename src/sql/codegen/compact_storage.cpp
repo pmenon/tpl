@@ -103,7 +103,8 @@ edsl::ValueVT CompactStorage::ReadSQL(const edsl::ReferenceVT &ptr, uint32_t ind
   return edsl::ValueVT(codegen_, val);
 }
 
-void CompactStorage::WritePrimitive(const edsl::ReferenceVT &ptr, uint32_t index, const edsl::ValueVT &val) const {
+void CompactStorage::WritePrimitive(const edsl::ReferenceVT &ptr, uint32_t index,
+                                    const edsl::ValueVT &val) const {
   auto col_ref = struct_.MemberGeneric(ptr, index);
   ptr.GetCodeGen()->GetCurrentFunction()->Append(edsl::Assign(col_ref, val));
 }

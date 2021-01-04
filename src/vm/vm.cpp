@@ -1039,11 +1039,11 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
   OP(LogicalNotBoolVal) : {
-  auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
-  auto *val = frame->LocalAt<const sql::BoolVal *>(READ_LOCAL_ID());
-  OpLogicalNotBoolVal(result, val);
-  DISPATCH_NEXT();
-}
+    auto *result = frame->LocalAt<sql::BoolVal *>(READ_LOCAL_ID());
+    auto *val = frame->LocalAt<const sql::BoolVal *>(READ_LOCAL_ID());
+    OpLogicalNotBoolVal(result, val);
+    DISPATCH_NEXT();
+  }
 
 #define GEN_MATH_OPS(op)                                            \
   OP(op##Integer) : {                                               \
