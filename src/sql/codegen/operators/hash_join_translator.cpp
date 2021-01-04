@@ -128,9 +128,8 @@ void HashJoinTranslator::WriteBuildRow(ConsumerContext *context, FunctionBuilder
 
 void HashJoinTranslator::InsertIntoJoinHashTable(ConsumerContext *context,
                                                  FunctionBuilder *function) const {
-  auto hash_table = context->IsParallel()
-                        ? context->GetStateEntryPtr<ast::x::JoinHashTable>(local_join_ht_)
-                        : GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
+  auto hash_table = context->IsParallel() ? context->GetStateEntryPtr(local_join_ht_)
+                                          : GetQueryStateEntryPtr(global_join_ht_);
 
   // var hashVal = @hash(...)
   edsl::Variable<hash_t> hash_val = HashKeys(context, function, true);
@@ -156,7 +155,7 @@ bool HashJoinTranslator::ShouldValidateHashOnProbe() const {
 
 void HashJoinTranslator::ProbeJoinHashTable(ConsumerContext *ctx, FunctionBuilder *function) const {
   // The hash table.
-  auto hash_table = GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
+  auto hash_table = GetQueryStateEntryPtr(global_join_ht_);
 
   edsl::Variable<ast::x::HashTableEntry *> entry(codegen_, "entry");
   edsl::Variable<hash_t> hash_val = HashKeys(ctx, function, false);
@@ -252,7 +251,7 @@ void HashJoinTranslator::Consume(ConsumerContext *context, FunctionBuilder *func
 void HashJoinTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                             FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(left_pipeline_)) {
-    auto hash_table = GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
+    auto hash_table = GetQueryStateEntryPtr(global_join_ht_);
     if (left_pipeline_.IsParallel()) {
       auto offset = pipeline_ctx.GetStateEntryByteOffset(local_join_ht_);
       function->Append(hash_table->BuildParallel(GetThreadStateContainer(), offset));

@@ -396,10 +396,10 @@ void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilde
 void HashAggregationTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                                    FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    auto global_agg_ht = GetQueryStateEntryPtr<ast::x::AggregationHashTable>(global_agg_ht_);
-    auto agg_ht_offset = pipeline_ctx.GetStateEntryByteOffset(local_agg_ht_);
-    function->Append(global_agg_ht->MovePartitions(GetThreadStateContainer(), agg_ht_offset,
-                                                   merge_partitions_fn_));
+    auto global_ht = GetQueryStateEntryPtr(global_agg_ht_);
+    auto tls_container = GetThreadStateContainer();
+    auto ht_offset = pipeline_ctx.GetStateEntryByteOffset(local_agg_ht_);
+    function->Append(global_ht->MovePartitions(tls_container, ht_offset, merge_partitions_fn_));
   }
 }
 
@@ -417,7 +417,7 @@ void HashAggregationTranslator::DrivePipeline(const PipelineContext &pipeline_ct
   TPL_ASSERT(pipeline_ctx.IsForPipeline(*GetPipeline()), "Aggregation driving unknown pipeline!");
   if (pipeline_ctx.IsParallel()) {
     const auto dispatch = [&](FunctionBuilder *function, ast::Identifier work_func) {
-      auto hash_table = GetQueryStateEntryPtr<ast::x::AggregationHashTable>(global_agg_ht_);
+      auto hash_table = GetQueryStateEntryPtr(global_agg_ht_);
       auto query_state = GetQueryStatePtr();
       auto tls_container = GetThreadStateContainer();
       function->Append(hash_table->ParallelScan(query_state, tls_container, work_func));
