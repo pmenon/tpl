@@ -21,27 +21,27 @@ edsl::ValueVT UnaryExpressionTranslator::DeriveValue(ConsumerContext *context,
     case KnownOperator::Neg:
       return edsl::Negate(input);
     case KnownOperator::LogicalNot:
-      return !edsl::Value<bool>(input);
+      return !input.As<bool>();
     case KnownOperator::IsNull:
       return edsl::IsValNull(input);
     case KnownOperator::IsNotNull:
       return edsl::IsValNotNull(input);
     case KnownOperator::ExtractYear:
-      return edsl::ExtractYear(edsl::Value<ast::x::DateVal>(input));
+      return edsl::ExtractYear(input.As<ast::x::DateVal>());
     case KnownOperator::ACos:
-      return edsl::ACos(edsl::Value<ast::x::RealVal>(input));
+      return edsl::ACos(input.As<ast::x::RealVal>());
     case KnownOperator::ASin:
-      return edsl::ASin(edsl::Value<ast::x::RealVal>(input));
+      return edsl::ASin(input.As<ast::x::RealVal>());
     case KnownOperator::ATan:
-      return edsl::ATan(edsl::Value<ast::x::RealVal>(input));
+      return edsl::ATan(input.As<ast::x::RealVal>());
     case KnownOperator::Cos:
-      return edsl::Cos(edsl::Value<ast::x::RealVal>(input));
+      return edsl::Cos(input.As<ast::x::RealVal>());
     case KnownOperator::Cot:
-      return edsl::Cot(edsl::Value<ast::x::RealVal>(input));
+      return edsl::Cot(input.As<ast::x::RealVal>());
     case KnownOperator::Sin:
-      return edsl::Sin(edsl::Value<ast::x::RealVal>(input));
+      return edsl::Sin(input.As<ast::x::RealVal>());
     case KnownOperator::Tan:
-      return edsl::Tan(edsl::Value<ast::x::RealVal>(input));
+      return edsl::Tan(input.As<ast::x::RealVal>());
     default:
       throw NotImplementedException(fmt::format("Translation of unary operator expression type {}",
                                                 KnownOperatorToString(op, true)));

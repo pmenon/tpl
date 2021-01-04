@@ -210,6 +210,8 @@ class OperatorTranslator : public ColumnValueProvider {
   CompilationContext *GetCompilationContext() const { return compilation_ctx_; }
 
  protected:
+  StateDescriptor *GetQueryState() const;
+
   // Get a pointer to the query state.
   edsl::ValueVT GetQueryStatePtr() const;
 
@@ -219,7 +221,7 @@ class OperatorTranslator : public ColumnValueProvider {
   // Get a typed reference to element in the query state at the given index.
   template <typename T>
   edsl::Value<T> GetQueryStateEntry(StateDescriptor::Slot slot) const {
-    return edsl::Value<T>(GetQueryStateEntryGeneric(slot));
+    return GetQueryState()->GetStateEntry<T>(codegen_, slot);
   }
 
   // Get an untyped pointer to element in the query state at the given index.
@@ -228,7 +230,7 @@ class OperatorTranslator : public ColumnValueProvider {
   // Get a typed pointer to element in the query state at the given index.
   template <typename T>
   edsl::Value<T *> GetQueryStateEntryPtr(StateDescriptor::Slot slot) const {
-    return edsl::Value<T *>(GetQueryStateEntryPtrGeneric(slot));
+    return GetQueryState()->GetStateEntryPtr<T>(codegen_, slot);
   }
 
   // Get the execution context pointer in the current function.

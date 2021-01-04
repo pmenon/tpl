@@ -31,7 +31,7 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
 
 void NestedLoopJoinTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   if (const auto join_predicate = GetNLJPlan().GetJoinPredicate(); join_predicate != nullptr) {
-    edsl::Value<bool> condition(context->DeriveValue(*join_predicate, this));
+    auto condition = context->DeriveValue(*join_predicate, this).As<bool>();
     If check_condition(function, condition);
     context->Consume(function);
   } else {

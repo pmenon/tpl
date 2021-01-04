@@ -145,8 +145,8 @@ void HashAggregationTranslator::GenerateMergeOverflowPartitionsFunction() {
   FunctionBuilder fn(codegen_, merge_partitions_fn_, std::move(params), codegen_->NilType());
   {
     ast::Type *payload_type = agg_payload_.GetPtrToType();
-    edsl::Value<ast::x::AggregationHashTable *> hash_table(fn.GetParameterByPosition(1));
-    edsl::Value<ast::x::AHTOverflowPartitionIterator *> iter(fn.GetParameterByPosition(2));
+    auto hash_table = fn.GetParameterByPosition(1).As<ast::x::AggregationHashTable *>();
+    auto iter = fn.GetParameterByPosition(2).As<ast::x::AHTOverflowPartitionIterator *>();
     edsl::Variable<hash_t> hash_val(codegen_, "hash_val");
     edsl::VariableVT partial_row(codegen_, "partial_row", payload_type);
     edsl::VariableVT lookup_result(codegen_, "lookup_result", payload_type);
@@ -360,7 +360,7 @@ void HashAggregationTranslator::ScanAggregationHashTable(
         edsl::Declare(*agg_row_, edsl::PtrCast(agg_payload_.GetPtrToType(), iter->GetRow())));
 
     if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
-      If check_having(function, context->DeriveValue(*having, this));
+      If check_having(function, context->DeriveValue(*having, this).As<bool>());
       context->Consume(function);
     } else {
       context->Consume(function);
@@ -388,8 +388,8 @@ void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilde
                "Pipeline is unknown to hash aggregation translator");
     edsl::Variable<ast::x::AggregationHashTable *> hash_table(codegen_, "agg_ht");
     if (context->IsParallel()) {
-      function->Append(edsl::Declare(hash_table, edsl::Value<ast::x::AggregationHashTable *>(
-                                                     function->GetParameterByPosition(2))));
+      function->Append(edsl::Declare(
+          hash_table, function->GetParameterByPosition(2).As<ast::x::AggregationHashTable *>()));
     } else {
       function->Append(edsl::Declare(
           hash_table, GetQueryStateEntryPtr<ast::x::AggregationHashTable>(global_agg_ht_)));

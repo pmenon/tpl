@@ -46,19 +46,9 @@ class ValueVT {
   ast::Type *GetType() const noexcept { return val_->GetType(); }
 
   /**
-   * @return True if the type of this value is a struct; false otherwise.
-   */
-  bool IsStructType() const noexcept { return GetType()->IsStructType(); }
-
-  /**
    * @return True it the type of this value is a SQL type; false otherwise.
    */
   bool IsSQLType() const noexcept { return GetType()->IsSqlValueType(); }
-
-  /**
-   * @return True if the type of this value is a pointer; false otherwise;
-   */
-  bool IsPointerType() const noexcept { return GetType()->IsPointerType(); }
 
   /**
    * @return The raw value.
@@ -77,7 +67,7 @@ class ValueVT {
    * @return The value.
    */
   template <typename T>
-  operator Value<T>() const {
+  Value<T> As() const {
     TPL_ASSERT(GetType() == codegen_->GetType<T>(), "Type mismatch: Cannot recast to typed value!");
     return Value<T>(codegen_, val_);
   }
@@ -137,13 +127,13 @@ class ReferenceVT : public ValueVT {
   }
 
   /**
-   * Implicitly convert this untyped reference into a strongly-styped reference. We can't validate
-   * anything at runtime, but we trigger a runtime assertion if the types do not match up.
+   * Convert this untyped reference into a strongly-typed reference. We can't ensure the conversion
+   * is valid at C++ build-time, but we trigger a runtime assertion if the types do not match up.
    * @tparam T The C++ build-time type to cast to.
    * @return The value.
    */
   template <typename T>
-  operator Reference<T>() const noexcept {
+  Reference<T> As() const noexcept {
     TPL_ASSERT(GetType() == GetCodeGen()->GetType<T>(),
                "Type mismatch: cannot recast to typed reference!");
     return Reference<T>(GetCodeGen(), GetRaw());

@@ -47,8 +47,9 @@ void CaseTranslator::GenerateCases(const edsl::VariableVT &ret, const std::size_
   //   case_result = when_clause_result()
   // }
   auto condition_gen = context->DeriveValue(*expr.GetWhenClauseCondition(clause_idx), provider);
-  auto condition = condition_gen.IsSQLType() ? edsl::ForceTruth(condition_gen)
-                                             : edsl::Value<bool>(condition_gen);
+  auto condition = condition_gen.IsSQLType()
+                       ? edsl::ForceTruth(condition_gen.As<ast::x::BooleanVal>())
+                       : condition_gen.As<bool>();
   If check_condition(function, condition);
   {
     auto when_result = context->DeriveValue(*expr.GetWhenClauseResult(clause_idx), provider);

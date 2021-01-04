@@ -209,20 +209,21 @@ void HashJoinTranslator::CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilde
     If check_condition(function, condition);
     {  // Valid tuple, pass to next pipeline operator.
       if (GetJoinPlan().RequiresLeftMark()) {
-        storage_.WritePrimitive(*build_row_, build_mark_index_, edsl::Literal<bool>(codegen_, false));
+        storage_.WritePrimitive(*build_row_, build_mark_index_,
+                                edsl::Literal<bool>(codegen_, false));
       }
       ctx->Consume(function);
     }
   };
 
   // Derive the value of the join condition.
-  edsl::Value<bool> join_condition = ctx->DeriveValue(*GetJoinPlan().GetJoinPredicate(), this);
+  auto join_condition = ctx->DeriveValue(*GetJoinPlan().GetJoinPredicate(), this).As<bool>();
 
   if (GetJoinPlan().GetLogicalJoinType() == planner::LogicalJoinType::LEFT_SEMI) {
     // For left-semi joins, we also need to make sure the build-side tuple
     // has not already found an earlier join partner. We enforce the check
     // by modifying the join predicate.
-    edsl::Value<bool> left_mark = storage_.ReadPrimitive(*build_row_, build_mark_index_);
+    auto left_mark = storage_.ReadPrimitive(*build_row_, build_mark_index_).As<bool>();
     process(join_condition && left_mark);
   } else {
     process(join_condition);
@@ -232,7 +233,7 @@ void HashJoinTranslator::CheckJoinPredicate(ConsumerContext *ctx, FunctionBuilde
 void HashJoinTranslator::CheckRightMark(ConsumerContext *ctx, FunctionBuilder *function,
                                         const edsl::Variable<bool> &right_mark) const {
   // Derive the value of the join condition.
-  edsl::Value<bool> join_condition(ctx->DeriveValue(*GetJoinPlan().GetJoinPredicate(), this));
+  auto join_condition = ctx->DeriveValue(*GetJoinPlan().GetJoinPredicate(), this).As<bool>();
 
   If check_condition(function, join_condition);
   {  // Set the mark if valid tuple pair.

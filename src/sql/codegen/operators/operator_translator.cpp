@@ -55,16 +55,20 @@ edsl::ValueVT OperatorTranslator::GetChildOutput(ConsumerContext *context, uint3
   return child_translator->GetOutput(context, attr_idx);
 }
 
+StateDescriptor *OperatorTranslator::GetQueryState() const {
+  return compilation_ctx_->GetQueryState();
+}
+
 edsl::ValueVT OperatorTranslator::GetQueryStatePtr() const {
-  return compilation_ctx_->GetQueryState()->GetStatePtr(codegen_);
+  return GetQueryState()->GetStatePtr(codegen_);
 }
 
 edsl::ReferenceVT OperatorTranslator::GetQueryStateEntryGeneric(StateDescriptor::Slot slot) const {
-  return compilation_ctx_->GetQueryState()->GetStateEntryGeneric(codegen_, slot);
+  return GetQueryState()->GetStateEntryGeneric(codegen_, slot);
 }
 
 edsl::ValueVT OperatorTranslator::GetQueryStateEntryPtrGeneric(StateDescriptor::Slot slot) const {
-  return compilation_ctx_->GetQueryState()->GetStateEntryPtrGeneric(codegen_, slot);
+  return GetQueryState()->GetStateEntryPtrGeneric(codegen_, slot);
 }
 
 edsl::Value<ast::x::ExecutionContext *> OperatorTranslator::GetExecutionContext() const {

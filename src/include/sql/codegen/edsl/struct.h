@@ -135,8 +135,8 @@ class Struct {
    * @return A reference to the member in this structure with ID @em member_id.
    */
   template <typename T>
-  Reference<T> Member(const ReferenceVT &ptr, MemberId member) const {
-    return Reference<T>(MemberGeneric(ptr, member));
+  Reference<T> Member(const ValueVT &ptr, MemberId member) const {
+    return MemberGeneric(ptr, member).As<T>();
   }
 
   /**
@@ -148,8 +148,8 @@ class Struct {
    * @return A pointer to the member in the structure pointed to by @em ptr.
    */
   template <typename T>
-  Value<T *> MemberPtr(const ReferenceVT &ptr, MemberId member) const {
-    return Value<T *>(MemberPtrGeneric(ptr, member));
+  Value<T *> MemberPtr(const ValueVT &ptr, MemberId member) const {
+    return MemberPtrGeneric(ptr, member).As<T *>();
   }
 
   /**

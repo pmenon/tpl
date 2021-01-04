@@ -50,7 +50,8 @@ void SeqScanTranslator::GenerateGenericTerm(
     ConsumerContext context(GetCompilationContext(), pipeline_context);
     auto cond_translator = GetCompilationContext()->LookupTranslator(*term);
     auto match_gen = cond_translator->DeriveValue(&context, this);
-    auto match = match_gen.IsSQLType() ? edsl::ForceTruth(match_gen) : edsl::Value<bool>(match_gen);
+    auto match = match_gen.IsSQLType() ? edsl::ForceTruth(match_gen.As<ast::x::BooleanVal>())
+                                       : match_gen.As<bool>();
     function->Append(vpi_->Match(match));
   }
   vpi_loop.EndLoop();
@@ -95,8 +96,8 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
 
   FunctionBuilder builder(codegen_, fn_name, std::move(params), codegen_->GetType<void>());
   {
-    edsl::Value<ast::x::VectorProjection *> vector_proj = builder.GetParameterByPosition(0);
-    edsl::Value<ast::x::TupleIdList *> tid_list = builder.GetParameterByPosition(1);
+    auto vector_proj = builder.GetParameterByPosition(0).As<ast::x::VectorProjection *>();
+    auto tid_list = builder.GetParameterByPosition(1).As<ast::x::TupleIdList *>();
     if (planner::ExpressionUtil::IsColumnCompareWithConst(*predicate) &&
         !planner::ExpressionUtil::IsLikeComparison(*predicate)) {
       auto cmp = static_cast<const planner::ComparisonExpression *>(predicate);
@@ -203,8 +204,8 @@ void SeqScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *funct
   }
 
   // This is a parallel pipeline, a TVI is provided as a function argument.
-  edsl::Value<ast::x::TableVectorIterator *> tvi(
-      function->GetParameterByPosition(function->GetParameterCount() - 1));
+  const auto idx = function->GetParameterCount() - 1;
+  auto tvi = function->GetParameterByPosition(idx).As<ast::x::TableVectorIterator *>();
 
   // Scan it.
   ScanTable(context, function, tvi);

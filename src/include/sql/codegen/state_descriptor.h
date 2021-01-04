@@ -82,7 +82,7 @@ class StateDescriptor {
    */
   template <typename T>
   edsl::Reference<T> GetStateEntry(CodeGen *codegen, Slot slot) const {
-    return edsl::Reference<T>(GetStateEntryGeneric(codegen, slot));
+    return struct_.Member<T>(GetStatePtr(codegen), slot);
   }
 
   /**
@@ -99,7 +99,7 @@ class StateDescriptor {
    */
   template <typename T>
   edsl::Value<T *> GetStateEntryPtr(CodeGen *codegen, Slot slot) const {
-    return edsl::Value<T *>(GetStateEntryPtrGeneric(codegen, slot));
+    return struct_.MemberPtr<T>(GetStatePtr(codegen), slot);
   }
 
   /**

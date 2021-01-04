@@ -22,8 +22,8 @@ ConjunctionTranslator::ConjunctionTranslator(const planner::ConjunctionExpressio
 
 edsl::ValueVT ConjunctionTranslator::DeriveValue(ConsumerContext *context,
                                                  const ColumnValueProvider *provider) const {
-  edsl::Value<bool> left_val = context->DeriveValue(*GetChild(0), provider);
-  edsl::Value<bool> right_val = context->DeriveValue(*GetChild(1), provider);
+  auto left_val = context->DeriveValue(*GetChild(0), provider).As<bool>();
+  auto right_val = context->DeriveValue(*GetChild(1), provider).As<bool>();
 
   switch (auto cmp_kind = GetExpressionAs<planner::ConjunctionExpression>().GetKind(); cmp_kind) {
     case planner::ConjunctionKind::AND:

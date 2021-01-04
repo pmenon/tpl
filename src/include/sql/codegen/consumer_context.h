@@ -62,7 +62,7 @@ class ConsumerContext {
    */
   template <typename T>
   edsl::Reference<T> GetStateEntry(StateDescriptor::Slot slot) const {
-    return edsl::Reference<T>(GetStateEntryGeneric(slot));
+    return pipeline_ctx_.GetStateEntry<T>(slot);
   }
 
   /**
@@ -75,7 +75,7 @@ class ConsumerContext {
    */
   template <typename T>
   edsl::Value<T *> GetStateEntryPtr(StateDescriptor::Slot slot) const {
-    return edsl::Value<T *>(GetStateEntryPtrGeneric(slot));
+    return pipeline_ctx_.GetStateEntryPtr<T>(slot);
   }
 
   /**

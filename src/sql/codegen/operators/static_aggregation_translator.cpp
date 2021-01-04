@@ -136,8 +136,7 @@ void StaticAggregationTranslator::ProduceAggregates(ConsumerContext *context,
   function->Append(edsl::Declare(*agg_row_, GetQueryStateEntryPtrGeneric(global_aggs_)));
 
   if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
-    edsl::Value<bool> condition(context->DeriveValue(*having, this));
-    If check_having(function, condition);
+    If check_having(function, context->DeriveValue(*having, this).As<bool>());
     context->Consume(function);
   } else {
     context->Consume(function);
