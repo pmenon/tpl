@@ -155,8 +155,8 @@ TEST_F(BytecodeGeneratorTest, SimpleArithmeticTest) {
 }
 
 TEST_F(BytecodeGeneratorTest, ComparisonTest) {
-  const auto gen_compare_func = [](auto arg_type_name, auto dummy_arg, auto op, auto cb) {
-    using Type = decltype(dummy_arg);
+  auto gen_compare_func = []<typename T>(std::string_view arg_type_name, std::string_view op,
+                                         auto cb) {
     auto src = fmt::format(R"(
       fun test(a: {0}, b: {0}) -> bool {{
         return a {1} b
@@ -166,7 +166,7 @@ TEST_F(BytecodeGeneratorTest, ComparisonTest) {
     auto module = compiler.CompileToModule(src);
     ASSERT_TRUE(module != nullptr);
 
-    std::function<bool(Type, Type)> fn;
+    std::function<bool(T, T)> fn;
     ASSERT_TRUE(module->GetFunction("test", ExecutionMode::Interpret, fn))
         << "Function 'test' not found in module";
 
@@ -174,11 +174,11 @@ TEST_F(BytecodeGeneratorTest, ComparisonTest) {
     cb(fn);
   };
 
-#define CMP_TEST(cpptype, tpltype, op)                                 \
-  gen_compare_func(tpltype, cpptype{0}, #op, [](auto fn) {             \
-    EXPECT_EQ(cpptype{1} op cpptype{1}, fn(cpptype{1}, cpptype{1}));   \
-    EXPECT_EQ(cpptype{-1} op cpptype{1}, fn(cpptype{-1}, cpptype{1})); \
-    EXPECT_EQ(cpptype{2} op cpptype{1}, fn(cpptype{2}, cpptype{1}));   \
+#define CMP_TEST(cpptype, tpltype, op)                                      \
+  gen_compare_func.template operator()<cpptype>(tpltype, #op, [](auto fn) { \
+    EXPECT_EQ(cpptype{1} op cpptype{1}, fn(cpptype{1}, cpptype{1}));        \
+    EXPECT_EQ(cpptype{-1} op cpptype{1}, fn(cpptype{-1}, cpptype{1}));      \
+    EXPECT_EQ(cpptype{2} op cpptype{1}, fn(cpptype{2}, cpptype{1}));        \
   });
 
 #define TEST_ALL_CMP(cpptype, tpltype) \
