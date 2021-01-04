@@ -179,4 +179,49 @@ inline Value<T> operator%(const Value<T> &lhs, T rhs) {
   return lhs % Literal<T>(lhs.GetCodeGen(), rhs);
 }
 
+/**
+ * Increment the input arithmetic reference by one.
+ * @tparam T The type of the element being added.
+ * @param ref The input to the assignment-addition.
+ * @return A void statement.
+ */
+template <typename T, typename = std::enable_if_t<traits::supports_addsubmul<T>::value>>
+inline Value<void> Increment(const Reference<T> &ref) {
+  return Assign(ref, ref + T{1});
+}
+
+/**
+ * Count the number of leading zeros in the integer value @em val. The returned value will be
+ * dependent on the size of the primitive type T.
+ *
+ * Example:
+ * auto a = Literal<uint8_t>(1);  // Ctlz(a) == 7
+ * auto b = Literal<uint64_t>(1); // Ctlz(b) = 63
+ *
+ * @tparam T The type of the element being added.
+ * @param ref The input to the assignment-addition.
+ * @return A void statement.
+ */
+template <typename T, typename = std::enable_if_t<traits::supports_bit_manipulation<T>::value>>
+inline Value<uint32_t> Ctlz(const Value<T> &val) {
+  CodeGen *codegen = val.GetCodeGen();
+  auto call = codegen->CallBuiltin(ast::Builtin::Ctlz, {val.GetRaw()});
+  call->SetType(codegen->GetType<uint32_t>());
+  return Value<uint32_t>(codegen, call);
+}
+
+/**
+ * Count the number of zeros after the least-significant 1 in the integer value @em val.
+ * @tparam T The type of the element being added.
+ * @param ref The input to the assignment-addition.
+ * @return A void statement.
+ */
+template <typename T, typename = std::enable_if_t<traits::supports_bit_manipulation<T>::value>>
+inline Value<uint32_t> Cttz(const Value<T> &val) {
+  CodeGen *codegen = val.GetCodeGen();
+  auto call = codegen->CallBuiltin(ast::Builtin::Cttz, {val.GetRaw()});
+  call->SetType(codegen->GetType<uint32_t>());
+  return Value<uint32_t>(codegen, call);
+}
+
 }  // namespace tpl::sql::codegen::edsl

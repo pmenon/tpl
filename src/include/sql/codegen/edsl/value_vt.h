@@ -332,4 +332,16 @@ inline Value<T> PtrCast(const ValueVT &ptr) {
   return Value<T>(codegen, codegen->PtrCast(codegen->template GetType<T>(), ptr.GetRaw()));
 }
 
+/**
+ * Perform an integer cast from the input @em val to the template type T.
+ * @tparam T The target (integer) type to cast to.
+ * @param val The integral value to cast.
+ * @return The result of the cast.
+ */
+template <typename T>
+inline Value<T> IntCast(const ValueVT &val) {
+  CodeGen *codegen = val.GetCodeGen();
+  return Value<T>(codegen, codegen->IntCast(codegen->GetType<T>(), val.GetRaw()));
+}
+
 }  // namespace tpl::sql::codegen::edsl

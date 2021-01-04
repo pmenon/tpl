@@ -148,6 +148,14 @@ struct supports_greater
     : std::integral_constant<bool, is_primitive_type<T>::value && !std::is_same_v<T, bool>> {};
 
 /**
+ * Trait to check if the template type supports bit-manipulation.
+ * @tparam T The C++ type to check.
+ */
+template <typename T>
+struct supports_bit_manipulation
+    : std::integral_constant<bool, is_primitive_type<T>::value && std::is_unsigned_v<T>> {};
+
+/**
  * Helper variable for is_builtin_type<T>::value.
  * @tparam T The C++ type to check.
  */
