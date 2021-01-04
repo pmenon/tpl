@@ -5,6 +5,8 @@
 #include "sql/codegen/edsl/value.h"
 #include "sql/codegen/edsl/value_vt.h"
 
+/// TODO(pmenon): All of this can be generated using a registry + template magic.
+
 namespace tpl::sql::codegen::edsl {
 
 /**

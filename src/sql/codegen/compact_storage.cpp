@@ -70,8 +70,8 @@ void CompactStorage::WriteSQL(const edsl::ReferenceVT &ptr, uint32_t index,
 #undef GEN_CASE
 
   // TODO(pmenon): Fix this ...
-  auto col_ptr = struct_.MemberPtrGeneric(ptr, index);
-  auto nulls = struct_.MemberPtrGeneric(ptr, col_types_.size()).As<uint8_t[]>();
+  auto col_ptr = struct_.GetMemberPtr(ptr, index);
+  auto nulls = struct_.GetMemberPtr(ptr, col_types_.size()).As<uint8_t[]>();
   auto call = codegen_->CallBuiltin(
       op, {col_ptr.GetRaw(), nulls.GetRaw(), codegen_->Literal<uint32_t>(index), val.GetRaw()});
   function->Append(edsl::Value<void>(codegen_->MakeStatement(call)));
@@ -95,8 +95,8 @@ edsl::ValueVT CompactStorage::ReadSQL(const edsl::ReferenceVT &ptr, uint32_t ind
 #undef GEN_CASE
 
   // Call.
-  auto col_ptr = struct_.MemberPtrGeneric(ptr, index);
-  auto nulls = struct_.MemberPtrGeneric(ptr, col_types_.size()).As<uint8_t[]>();
+  auto col_ptr = struct_.GetMemberPtr(ptr, index);
+  auto nulls = struct_.GetMemberPtr(ptr, col_types_.size()).As<uint8_t[]>();
   auto val = codegen_->CallBuiltin(
       op, {col_ptr.GetRaw(), nulls.GetRaw(), codegen_->Literal<uint32_t>(index)});
   val->SetType(codegen_->GetTPLType(col_types_[index]));
@@ -105,12 +105,12 @@ edsl::ValueVT CompactStorage::ReadSQL(const edsl::ReferenceVT &ptr, uint32_t ind
 
 void CompactStorage::WritePrimitive(const edsl::ReferenceVT &ptr, uint32_t index,
                                     const edsl::ValueVT &val) const {
-  auto col_ref = struct_.MemberGeneric(ptr, index);
+  auto col_ref = struct_.GetMember(ptr, index);
   ptr.GetCodeGen()->GetCurrentFunction()->Append(edsl::Assign(col_ref, val));
 }
 
 edsl::ValueVT CompactStorage::ReadPrimitive(const edsl::ReferenceVT &ptr, uint32_t index) const {
-  return struct_.MemberGeneric(ptr, index);
+  return struct_.GetMember(ptr, index);
 }
 
 }  // namespace tpl::sql::codegen

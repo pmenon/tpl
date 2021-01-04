@@ -19,12 +19,12 @@ edsl::ValueVT ExecutionState::GetStatePtr(CodeGen *codegen) const {
 }
 
 edsl::ReferenceVT ExecutionState::GetStateEntryGeneric(CodeGen *codegen, RTSlot slot) const {
-  return struct_.MemberGeneric(GetStatePtr(codegen), slot);
+  return struct_.GetMember(GetStatePtr(codegen), slot);
 }
 
 edsl::ValueVT ExecutionState::GetStateEntryPtrGeneric(CodeGen *codegen, RTSlot slot) const {
   TPL_ASSERT(slot < slots_.size(), "Invalid slot");
-  return struct_.MemberPtrGeneric(GetStatePtr(codegen), slot);
+  return struct_.GetMemberPtr(GetStatePtr(codegen), slot);
 }
 
 edsl::Value<uint32_t> ExecutionState::GetStateEntryOffset(CodeGen *codegen, RTSlot slot) const {

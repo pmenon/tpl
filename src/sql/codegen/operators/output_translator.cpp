@@ -32,7 +32,7 @@ void OutputTranslator::Consume(ConsumerContext *context, FunctionBuilder *functi
   //  out.col = col
   const auto child_translator = GetCompilationContext()->LookupTranslator(GetPlan());
   for (uint32_t attr_idx = 0; attr_idx < GetPlan().GetOutputSchema()->NumColumns(); attr_idx++) {
-    auto lhs = out_struct_.MemberGeneric(*out_row_, attr_idx);
+    auto lhs = out_struct_.GetMember(*out_row_, attr_idx);
     auto rhs = child_translator->GetOutput(context, attr_idx);
     function->Append(edsl::Assign(lhs, rhs));
   }

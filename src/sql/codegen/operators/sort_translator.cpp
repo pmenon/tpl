@@ -142,7 +142,7 @@ void SortTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
 
 edsl::ReferenceVT SortTranslator::GetSortRowAttribute(const edsl::ReferenceVT &row_ptr,
                                                       uint32_t attr_idx) const {
-  return row_struct_.MemberGeneric(row_ptr, attr_idx);
+  return row_struct_.GetMember(row_ptr, attr_idx);
 }
 
 void SortTranslator::FillSortRow(ConsumerContext *ctx, FunctionBuilder *function) const {

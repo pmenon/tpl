@@ -45,11 +45,11 @@ void CSVScanTranslator::DefineStructsAndFunctions() {
 }
 
 edsl::Reference<ast::x::StringVal> CSVScanTranslator::GetField(uint32_t field_index) const {
-  return row_struct_.MemberGeneric(*row_var_, field_index).As<ast::x::StringVal>();
+  return row_struct_.GetMember(*row_var_, field_index).As<ast::x::StringVal>();
 }
 
 edsl::Value<ast::x::StringVal *> CSVScanTranslator::GetFieldPtr(uint32_t field_index) const {
-  return row_struct_.MemberPtrGeneric(*row_var_, field_index).As<ast::x::StringVal *>();
+  return row_struct_.GetMemberPtr(*row_var_, field_index).As<ast::x::StringVal *>();
 }
 
 void CSVScanTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {

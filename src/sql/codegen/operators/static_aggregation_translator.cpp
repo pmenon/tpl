@@ -96,10 +96,9 @@ void StaticAggregationTranslator::GenerateAggregateMergeFunction(
   FunctionBuilder function(codegen_, merge_func_, std::move(params), codegen_->GetType<void>());
   {
     for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-      auto lhs =
-          payload_struct_.MemberPtrGeneric(GetQueryStateEntryGeneric(global_aggs_), term_idx);
-      auto rhs = payload_struct_.MemberPtrGeneric(pipeline_ctx.GetStateEntryGeneric(local_aggs_),
-                                                  term_idx);
+      auto lhs = payload_struct_.GetMemberPtr(GetQueryStateEntryGeneric(global_aggs_), term_idx);
+      auto rhs =
+          payload_struct_.GetMemberPtr(pipeline_ctx.GetStateEntryGeneric(local_aggs_), term_idx);
       function.Append(edsl::AggregatorMerge(lhs, rhs));
     }
   }
@@ -115,7 +114,7 @@ void StaticAggregationTranslator::DefinePipelineFunctions(const PipelineContext 
 void StaticAggregationTranslator::InitializeAggregates(FunctionBuilder *function,
                                                        const edsl::ReferenceVT &agg) const {
   for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-    function->Append(edsl::AggregatorInit(payload_struct_.MemberPtrGeneric(agg, term_idx)));
+    function->Append(edsl::AggregatorInit(payload_struct_.GetMemberPtr(agg, term_idx)));
   }
 }
 
@@ -152,15 +151,15 @@ void StaticAggregationTranslator::UpdateAggregate(ConsumerContext *ctx, Function
   // Fill values.
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto lhs = values_struct_.MemberGeneric(agg_values, term_idx++);
+    auto lhs = values_struct_.GetMember(agg_values, term_idx++);
     auto rhs = ctx->DeriveValue(*term->GetChild(0), this);
     function->Append(edsl::Assign(lhs, rhs));
   }
 
   // Update aggregate.
   for (term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-    auto aggregate = payload_struct_.MemberPtrGeneric(agg, term_idx);
-    auto advance_val = values_struct_.MemberPtrGeneric(agg_values, term_idx);
+    auto aggregate = payload_struct_.GetMemberPtr(agg, term_idx);
+    auto advance_val = values_struct_.GetMemberPtr(agg_values, term_idx);
     function->Append(edsl::AggregatorAdvance(aggregate, advance_val));
   }
 }
@@ -192,7 +191,7 @@ edsl::ValueVT StaticAggregationTranslator::GetChildOutput(ConsumerContext *conte
                                                           uint32_t attr_idx) const {
   TPL_ASSERT(child_idx == 0, "Aggregations can only have a single child.");
   if (context->IsForPipeline(*GetPipeline())) {
-    return edsl::AggregatorResult(payload_struct_.MemberPtrGeneric(*agg_row_, attr_idx));
+    return edsl::AggregatorResult(payload_struct_.GetMemberPtr(*agg_row_, attr_idx));
   }
 
   // The request is in the build pipeline. Forward to child translator.

@@ -32,7 +32,7 @@ void Struct::Seal() {
   ptr_to_type_ = type_->PointerTo();
 }
 
-ReferenceVT Struct::MemberGeneric(const ValueVT &ptr, RTSlot slot) const {
+ReferenceVT Struct::GetMember(const ValueVT &ptr, RTSlot slot) const {
   TPL_ASSERT(IsSealed(), "Can only access struct after it's been sealed!");
   TPL_ASSERT(slot < members_.size(), "Out-of-bounds member_id access.");
   TPL_ASSERT(ptr.GetType() == type_->PointerTo(),
@@ -41,12 +41,12 @@ ReferenceVT Struct::MemberGeneric(const ValueVT &ptr, RTSlot slot) const {
   return ReferenceVT(codegen_, codegen_->StructMember(ptr.GetRaw(), member_name.GetView()));
 }
 
-ValueVT Struct::MemberPtrGeneric(const ValueVT &ptr, RTSlot slot) const {
+ValueVT Struct::GetMemberPtr(const ValueVT &ptr, RTSlot slot) const {
   TPL_ASSERT(IsSealed(), "Can only access struct after it's been sealed!");
   TPL_ASSERT(slot < members_.size(), "Out-of-bounds member access.");
   TPL_ASSERT(ptr.GetType() == type_->PointerTo(),
              "Provided pointer doesn't point to type of this structure.");
-  return MemberGeneric(ptr, slot).Addr();
+  return GetMember(ptr, slot).Addr();
 }
 
 std::size_t Struct::GetSizeRaw() const noexcept { return type_->GetSize(); }

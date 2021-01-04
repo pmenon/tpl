@@ -135,7 +135,7 @@ class Struct {
    * @param slot The member_id to access.
    * @return A reference to the member in this structure with ID @em member_id.
    */
-  ReferenceVT MemberGeneric(const ValueVT &ptr, RTSlot slot) const;
+  ReferenceVT GetMember(const ValueVT &ptr, RTSlot slot) const;
 
   /**
    * Generate a pointer to the member with ID @em member_id in the struct pointed to by @em ptr.
@@ -144,7 +144,7 @@ class Struct {
    * @param slot The member to access.
    * @return A pointer to the member in the structure pointed to by @em ptr.
    */
-  ValueVT MemberPtrGeneric(const ValueVT &ptr, RTSlot slot) const;
+  ValueVT GetMemberPtr(const ValueVT &ptr, RTSlot slot) const;
 
   /**
    * Generate a reference to the member with ID @em member_id in the struct pointed to by @em ptr.
@@ -158,8 +158,8 @@ class Struct {
    * @return A reference to the member in this structure with ID @em member_id.
    */
   template <traits::TPLType T>
-  Reference<T> Member(const ValueVT &ptr, Slot<T> slot) const {
-    return MemberGeneric(ptr, slot.idx).template As<T>();
+  Reference<T> GetMember(const ValueVT &ptr, Slot<T> slot) const {
+    return GetMember(ptr, slot.idx).template As<T>();
   }
 
   /**
@@ -171,8 +171,8 @@ class Struct {
    * @return A pointer to the member in the structure pointed to by @em ptr.
    */
   template <traits::TPLType T>
-  Value<T *> MemberPtr(const ValueVT &ptr, Slot<T> slot) const {
-    return MemberPtrGeneric(ptr, slot.idx).template As<T *>();
+  Value<T *> GetMemberPtr(const ValueVT &ptr, Slot<T> slot) const {
+    return GetMemberPtr(ptr, slot.idx).template As<T *>();
   }
 
   /**

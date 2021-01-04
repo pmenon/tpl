@@ -97,7 +97,7 @@ class ExecutionState {
    */
   template <edsl::traits::TPLType T>
   edsl::Reference<T> GetStateEntry(CodeGen *codegen, Slot<T> slot) const {
-    return struct_.Member<T>(GetStatePtr(codegen), slot);
+    return struct_.GetMember<T>(GetStatePtr(codegen), slot);
   }
 
   /**
@@ -114,7 +114,7 @@ class ExecutionState {
    */
   template <edsl::traits::TPLType T>
   edsl::Value<T *> GetStateEntryPtr(CodeGen *codegen, Slot<T> slot) const {
-    return struct_.MemberPtr<T>(GetStatePtr(codegen), slot);
+    return struct_.GetMemberPtr<T>(GetStatePtr(codegen), slot);
   }
 
   /**
