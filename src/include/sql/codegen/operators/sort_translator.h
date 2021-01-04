@@ -144,8 +144,8 @@ class SortTranslator : public OperatorTranslator, public PipelineDriver {
   Pipeline build_pipeline_;
 
   // Where the global and thread-local sorter instances are.
-  ExecutionState::Slot global_sorter_;
-  ExecutionState::Slot local_sorter_;
+  ExecutionState::Slot<ast::x::Sorter> global_sorter_;
+  ExecutionState::Slot<ast::x::Sorter> local_sorter_;
 
   enum class CurrentRow { Child, Lhs, Rhs };
   CurrentRow current_row_;

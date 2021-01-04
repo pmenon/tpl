@@ -36,7 +36,7 @@ namespace tpl::sql::codegen::edsl {
  * <h3>Names and Types:</h3>
  * Although callers may provide names of the members, the implementation does not guarantee that the
  * name of the member in the final constructed type will match that which was provided at the time
- * AddMember() was called. For this reason, users must use the MemberId that was returned when the
+ * AddMember() was called. For this reason, users must use the RTSlot that was returned when the
  * member was initially added.
  *
  * Any valid TPL type can be added as a member of a TPL struct. When using non-primitive types, the
@@ -54,7 +54,19 @@ class Struct {
   /**
    * Typedef used to reference members of the struct.
    */
-  using MemberId = uint32_t;
+  using RTSlot = uint32_t;
+
+  /**
+   * A typed slot in the struct.
+   */
+  template <traits::TPLType T>
+  struct Slot {
+    // The slot.
+    uint32_t idx;
+    // Constructor.
+    Slot() : idx(std::numeric_limits<uint32_t>::max()) {}
+    explicit Slot(uint32_t _idx) : idx(_idx) {}
+  };
 
   /**
    * Create a new struct type with the given name.
@@ -66,12 +78,23 @@ class Struct {
   Struct(CodeGen *codegen, std::string_view name, bool optimize_layout);
 
   /**
-   * Add a member with the given name and type. The given name
+   * Add a member with the given name and type. The given name must be unique in the struct.
    * @param name The name of the member.
    * @param type The type of the member.
    * @return A unique ID used to reference the member in the struct.
    */
-  MemberId AddMember(std::string_view name, ast::Type *type);
+  RTSlot AddMember(std::string_view name, ast::Type *type);
+
+  /**
+   * Add a member with the given name and templated type. The given name must be unique in struct.
+   * @param name The name of the member.
+   * @param type The type of the member.
+   * @return A unique ID used to reference the member in the struct.
+   */
+  template <traits::TPLType T>
+  Slot<T> AddMember(std::string_view name) {
+    return Slot<T>(AddMember(name, codegen_->GetType<T>()));
+  }
 
   /**
    * Seal the struct, making it immutable. Calls to AddMember() will trigger an assertion.
@@ -109,19 +132,19 @@ class Struct {
    *
    * @pre The TPL type of the input pointer must be a pointer to the TPL type of this structure.
    * @param ptr A pointer to the structure.
-   * @param member_id The member_id to access.
+   * @param slot The member_id to access.
    * @return A reference to the member in this structure with ID @em member_id.
    */
-  ReferenceVT MemberGeneric(const ValueVT &ptr, MemberId member_id) const;
+  ReferenceVT MemberGeneric(const ValueVT &ptr, RTSlot slot) const;
 
   /**
    * Generate a pointer to the member with ID @em member_id in the struct pointed to by @em ptr.
    * @pre The TPL type of the input pointer must be a pointer to the TPL type of this structure.
    * @param ptr A pointer to the structure.
-   * @param member The member to access.
+   * @param slot The member to access.
    * @return A pointer to the member in the structure pointed to by @em ptr.
    */
-  ValueVT MemberPtrGeneric(const ValueVT &ptr, MemberId member) const;
+  ValueVT MemberPtrGeneric(const ValueVT &ptr, RTSlot slot) const;
 
   /**
    * Generate a reference to the member with ID @em member_id in the struct pointed to by @em ptr.
@@ -134,9 +157,9 @@ class Struct {
    * @param member_id The member_id to access.
    * @return A reference to the member in this structure with ID @em member_id.
    */
-  template <typename T>
-  Reference<T> Member(const ValueVT &ptr, MemberId member) const {
-    return MemberGeneric(ptr, member).As<T>();
+  template <traits::TPLType T>
+  Reference<T> Member(const ValueVT &ptr, Slot<T> slot) const {
+    return MemberGeneric(ptr, slot.idx).template As<T>();
   }
 
   /**
@@ -147,9 +170,9 @@ class Struct {
    * @param member The member to access.
    * @return A pointer to the member in the structure pointed to by @em ptr.
    */
-  template <typename T>
-  Value<T *> MemberPtr(const ValueVT &ptr, MemberId member) const {
-    return MemberPtrGeneric(ptr, member).As<T *>();
+  template <traits::TPLType T>
+  Value<T *> MemberPtr(const ValueVT &ptr, Slot<T> slot) const {
+    return MemberPtrGeneric(ptr, slot.idx).template As<T *>();
   }
 
   /**
@@ -162,7 +185,7 @@ class Struct {
    * @return An EDSL value representing the byte offset of the member with the given ID @em member
    *         in the structure. This is only available after the type has been sealed through Seal().
    */
-  Value<uint32_t> OffsetOf(MemberId member) const;
+  Value<uint32_t> OffsetOf(RTSlot slot) const;
 
   /**
    * @return The size of the structure in bytes. This is only available after the structure has been
@@ -174,7 +197,7 @@ class Struct {
    * @return The byte offset of the member with the given ID @em member in the structure. This is
    *         only available after the type has been sealed through Seal().
    */
-  std::size_t OffsetOfRaw(MemberId member) const;
+  std::size_t OffsetOfRaw(RTSlot slot) const;
 
  private:
   // The code generator.

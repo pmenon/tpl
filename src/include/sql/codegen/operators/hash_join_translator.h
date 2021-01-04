@@ -145,8 +145,8 @@ class HashJoinTranslator : public OperatorTranslator {
   Pipeline left_pipeline_;
 
   // The slots storing the global thread thread-local join hash tables.
-  ExecutionState::Slot global_join_ht_;
-  ExecutionState::Slot local_join_ht_;
+  ExecutionState::Slot<ast::x::JoinHashTable> global_join_ht_;
+  ExecutionState::Slot<ast::x::JoinHashTable> local_join_ht_;
 };
 
 }  // namespace tpl::sql::codegen

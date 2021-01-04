@@ -104,7 +104,7 @@ class SeqScanTranslator : public OperatorTranslator, public PipelineDriver {
   // The declared VPI.
   edsl::Variable<ast::x::VectorProjectionIterator *> vpi_;
   // Where the filter manager exists.
-  ExecutionState::Slot local_filter_;
+  ExecutionState::Slot<ast::x::FilterManager> local_filter_;
   // The list of filter manager clauses. Populated during helper function
   // definition, but only if there's a predicate.
   std::vector<std::vector<ast::Identifier>> filters_;

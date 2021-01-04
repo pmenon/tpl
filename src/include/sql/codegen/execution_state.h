@@ -28,7 +28,10 @@ class CodeGen;
 class ExecutionState {
  public:
   // A slot in a state structure.
-  using Slot = edsl::Struct::MemberId;
+  using RTSlot = edsl::Struct::RTSlot;
+
+  template <edsl::traits::TPLType T>
+  using Slot = edsl::Struct::Slot<T>;
 
   // Function to provide the instance of a state structure in a given context.
   using InstanceProvider = std::function<edsl::ValueVT(CodeGen *)>;
@@ -42,13 +45,25 @@ class ExecutionState {
   ExecutionState(CodeGen *codegen, std::string_view name, InstanceProvider access);
 
   /**
-   * Declare a state entry with the provided name and type in the execution runtime query state.
+   * Declare a state entry with the provided name and type in the runtime query state.
    * @param codegen The code-generation instance.
    * @param name The name of the element.
    * @param type The type of the element.
    * @return The slot where the inserted state exists.
    */
-  Slot DeclareStateEntry(std::string_view name, ast::Type *type);
+  RTSlot DeclareStateEntry(std::string_view name, ast::Type *type);
+
+  /**
+   * Declare a state entry with the provided name and template type in the runtime query state.
+   * @param codegen The code-generation instance.
+   * @param name The name of the element.
+   * @param type The type of the element.
+   * @return The slot where the inserted state exists.
+   */
+  template <edsl::traits::TPLType T>
+  Slot<T> DeclareStateEntry(std::string_view name) {
+    return struct_.AddMember<T>(name);
+  }
 
   /**
    * Seal the state and build the final structure. After this point, additional state elements
@@ -70,7 +85,7 @@ class ExecutionState {
    * @param slot The slot of the state to read.
    * @return The value of the state entry at the given slot.
    */
-  edsl::ReferenceVT GetStateEntryGeneric(CodeGen *codegen, Slot slot) const;
+  edsl::ReferenceVT GetStateEntryGeneric(CodeGen *codegen, RTSlot slot) const;
 
   /**
    * Return the value of the state entry at the given slot assuming the given templated type. An
@@ -80,8 +95,8 @@ class ExecutionState {
    * @param slot The slot of the state to read.
    * @return The value of the state entry at the given slot.
    */
-  template <typename T>
-  edsl::Reference<T> GetStateEntry(CodeGen *codegen, Slot slot) const {
+  template <edsl::traits::TPLType T>
+  edsl::Reference<T> GetStateEntry(CodeGen *codegen, Slot<T> slot) const {
     return struct_.Member<T>(GetStatePtr(codegen), slot);
   }
 
@@ -90,15 +105,15 @@ class ExecutionState {
    * @param slot The slot of the state to read.
    * @return The a pointer to the state entry at the given slot.
    */
-  edsl::ValueVT GetStateEntryPtrGeneric(CodeGen *codegen, Slot slot) const;
+  edsl::ValueVT GetStateEntryPtrGeneric(CodeGen *codegen, RTSlot slot) const;
 
   /**
    * Return a pointer to the value of the state entry at the given slot.
    * @param slot The slot of the state to read.
    * @return The a pointer to the state entry at the given slot.
    */
-  template <typename T>
-  edsl::Value<T *> GetStateEntryPtr(CodeGen *codegen, Slot slot) const {
+  template <edsl::traits::TPLType T>
+  edsl::Value<T *> GetStateEntryPtr(CodeGen *codegen, Slot<T> slot) const {
     return struct_.MemberPtr<T>(GetStatePtr(codegen), slot);
   }
 
@@ -108,7 +123,7 @@ class ExecutionState {
    * @param slot The slot of the state to read.
    * @return The offset of the state entry at the given slot in this state, in bytes.
    */
-  edsl::Value<uint32_t> GetStateEntryOffset(CodeGen *codegen, Slot slot) const;
+  edsl::Value<uint32_t> GetStateEntryOffset(CodeGen *codegen, RTSlot slot) const;
 
   /**
    * @return The finalized type of the runtime query state; null if the state hasn't been finalized.

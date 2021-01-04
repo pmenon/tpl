@@ -58,8 +58,7 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
   }
 
   // Declare the global hash table.
-  global_agg_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      "agg_ht", codegen_->GetType<ast::x::AggregationHashTable>());
+  global_agg_ht_ = GetQueryState()->DeclareStateEntry<ast::x::AggregationHashTable>("agg_ht");
 }
 
 void HashAggregationTranslator::DeclarePipelineDependencies() const {
@@ -215,26 +214,25 @@ void HashAggregationTranslator::DefinePipelineFunctions(const PipelineContext &p
 }
 
 void HashAggregationTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  auto hash_table = GetQueryStateEntryPtr<ast::x::AggregationHashTable>(global_agg_ht_);
+  auto hash_table = GetQueryStateEntryPtr(global_agg_ht_);
   function->Append(hash_table->Init(GetMemoryPool(), agg_payload_.GetSize()));
 }
 
 void HashAggregationTranslator::TearDownQueryState(FunctionBuilder *function) const {
-  auto hash_table = GetQueryStateEntryPtr<ast::x::AggregationHashTable>(global_agg_ht_);
+  auto hash_table = GetQueryStateEntryPtr(global_agg_ht_);
   function->Append(hash_table->Free());
 }
 
 void HashAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (pipeline_ctx->IsForPipeline(build_pipeline_) && pipeline_ctx->IsParallel()) {
-    local_agg_ht_ = pipeline_ctx->DeclarePipelineStateEntry(
-        "agg_ht", codegen_->GetType<ast::x::AggregationHashTable>());
+    local_agg_ht_ = pipeline_ctx->DeclarePipelineStateEntry<ast::x::AggregationHashTable>("agg_ht");
   }
 }
 
 void HashAggregationTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                                         FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    auto hash_table = pipeline_ctx.GetStateEntryPtr<ast::x::AggregationHashTable>(local_agg_ht_);
+    auto hash_table = pipeline_ctx.GetStateEntryPtr(local_agg_ht_);
     function->Append(hash_table->Init(GetMemoryPool(), agg_payload_.GetSize()));
   }
 }
@@ -242,7 +240,7 @@ void HashAggregationTranslator::InitializePipelineState(const PipelineContext &p
 void HashAggregationTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                                       FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    auto hash_table = pipeline_ctx.GetStateEntryPtr<ast::x::AggregationHashTable>(local_agg_ht_);
+    auto hash_table = pipeline_ctx.GetStateEntryPtr(local_agg_ht_);
     function->Append(hash_table->Free());
   }
 }
@@ -375,12 +373,10 @@ void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilde
   if (context->IsForPipeline(build_pipeline_)) {
     edsl::Variable<ast::x::AggregationHashTable *> hash_table(codegen_, "agg_ht");
     if (context->IsParallel()) {
-      function->Append(edsl::Declare(
-          hash_table, context->GetStateEntryPtr<ast::x::AggregationHashTable>(local_agg_ht_)));
+      function->Append(edsl::Declare(hash_table, context->GetStateEntryPtr(local_agg_ht_)));
       UpdateAggregates(context, function, hash_table);
     } else {
-      function->Append(edsl::Declare(
-          hash_table, GetQueryStateEntryPtr<ast::x::AggregationHashTable>(global_agg_ht_)));
+      function->Append(edsl::Declare(hash_table, GetQueryStateEntryPtr(global_agg_ht_)));
       UpdateAggregates(context, function, hash_table);
     }
   } else {
@@ -391,8 +387,7 @@ void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilde
       function->Append(edsl::Declare(
           hash_table, function->GetParameterByPosition(2).As<ast::x::AggregationHashTable *>()));
     } else {
-      function->Append(edsl::Declare(
-          hash_table, GetQueryStateEntryPtr<ast::x::AggregationHashTable>(global_agg_ht_)));
+      function->Append(edsl::Declare(hash_table, GetQueryStateEntryPtr(global_agg_ht_)));
     }
     ScanAggregationHashTable(context, function, hash_table);
   }

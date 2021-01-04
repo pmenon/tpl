@@ -44,7 +44,18 @@ class PipelineContext {
    * @param type The TPL type of the element.
    * @return The slot where the inserted state exists.
    */
-  ExecutionState::Slot DeclarePipelineStateEntry(const std::string &name, ast::Type *type);
+  ExecutionState::RTSlot DeclarePipelineStateEntry(const std::string &name, ast::Type *type);
+
+  /**
+   * Declare an entry in this pipeline's state.
+   * @param name The name of the element.
+   * @param type The TPL type of the element.
+   * @return The slot where the inserted state exists.
+   */
+  template <typename T>
+  ExecutionState::Slot<T> DeclarePipelineStateEntry(const std::string &name) {
+    return state_.DeclareStateEntry<T>(name);
+  }
 
   /**
    * @return The finalized and constructed state type.
@@ -54,26 +65,26 @@ class PipelineContext {
   /**
    * @return The value of the element at the given slot within this pipeline's state.
    */
-  edsl::ReferenceVT GetStateEntryGeneric(ExecutionState::Slot slot) const;
+  edsl::ReferenceVT GetStateEntryGeneric(ExecutionState::RTSlot slot) const;
 
   /**
    * @return A typed reference to the state element at the given slot.
    */
   template <typename T>
-  edsl::Reference<T> GetStateEntry(ExecutionState::Slot slot) const {
+  edsl::Reference<T> GetStateEntry(ExecutionState::Slot<T> slot) const {
     return state_.GetStateEntry<T>(codegen_, slot);
   }
 
   /**
    * @return A pointer to the element at the given slot within this pipeline's state.
    */
-  edsl::ValueVT GetStateEntryPtrGeneric(ExecutionState::Slot slot) const;
+  edsl::ValueVT GetStateEntryPtrGeneric(ExecutionState::RTSlot slot) const;
 
   /**
    * @return A pointer to the element at the given slot within this pipeline's state.
    */
   template <typename T>
-  edsl::Value<T *> GetStateEntryPtr(ExecutionState::Slot slot) const {
+  edsl::Value<T *> GetStateEntryPtr(ExecutionState::Slot<T> slot) const {
     return state_.GetStateEntryPtr<T>(codegen_, slot);
   }
 
@@ -85,7 +96,15 @@ class PipelineContext {
   /**
    * @return The byte offset of the element at the given slot in the pipeline state.
    */
-  edsl::Value<uint32_t> GetStateEntryByteOffset(ExecutionState::Slot slot) const;
+  edsl::Value<uint32_t> GetStateEntryByteOffset(ExecutionState::RTSlot slot) const;
+
+  /**
+   * @return The byte offset of the element at the given slot in the pipeline state.
+   */
+  template <typename T>
+  edsl::Value<uint32_t> GetStateEntryByteOffset(ExecutionState::Slot<T> slot) const {
+    return GetStateEntryByteOffset(ExecutionState::RTSlot{slot.idx});
+  }
 
   /**
    * @return True if this context is for the provided input pipeline; false otherwise.

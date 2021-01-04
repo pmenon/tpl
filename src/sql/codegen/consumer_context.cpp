@@ -36,15 +36,16 @@ bool ConsumerContext::IsForPipeline(const Pipeline &pipeline) const {
   return pipeline_ctx_.IsForPipeline(pipeline);
 }
 
-edsl::ReferenceVT ConsumerContext::GetStateEntryGeneric(ExecutionState::Slot slot) const {
+edsl::ReferenceVT ConsumerContext::GetStateEntryGeneric(ExecutionState::RTSlot slot) const {
   return pipeline_ctx_.GetStateEntryGeneric(slot);
 }
 
-edsl::ValueVT ConsumerContext::GetStateEntryPtrGeneric(ExecutionState::Slot slot) const {
+edsl::ValueVT ConsumerContext::GetStateEntryPtrGeneric(ExecutionState::RTSlot slot) const {
   return pipeline_ctx_.GetStateEntryPtrGeneric(slot);
 }
 
-edsl::Value<uint32_t> ConsumerContext::GetByteOffsetOfStateEntry(ExecutionState::Slot slot) const {
+edsl::Value<uint32_t> ConsumerContext::GetByteOffsetOfStateEntry(
+    ExecutionState::RTSlot slot) const {
   return pipeline_ctx_.GetStateEntryByteOffset(slot);
 }
 

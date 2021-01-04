@@ -99,8 +99,7 @@ ast::FunctionDeclaration *CompilationContext::GenerateTearDownFunction() {
 }
 
 void CompilationContext::DeclareCommonQueryState() {
-  exec_ctx_ =
-      query_state_.DeclareStateEntry("exec_ctx", codegen_.GetType<ast::x::ExecutionContext *>());
+  exec_ctx_ = query_state_.DeclareStateEntry<ast::x::ExecutionContext *>("exec_ctx");
 }
 
 void CompilationContext::EstablishPipelineDependencies() {
@@ -368,7 +367,7 @@ std::vector<std::pair<ast::Identifier, ast::Type *>> CompilationContext::QueryPa
 }
 
 edsl::Value<ast::x::ExecutionContext *> CompilationContext::GetExecutionContextPtrFromQueryState() {
-  return query_state_.GetStateEntry<ast::x::ExecutionContext *>(&codegen_, exec_ctx_);
+  return query_state_.GetStateEntry(&codegen_, exec_ctx_);
 }
 
 CompilationUnit *CompilationContext::MakeContainer() {

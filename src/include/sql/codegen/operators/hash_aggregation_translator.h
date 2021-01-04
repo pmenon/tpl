@@ -183,8 +183,8 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   Pipeline build_pipeline_;
 
   // The global and thread-local aggregation hash tables.
-  ExecutionState::Slot global_agg_ht_;
-  ExecutionState::Slot local_agg_ht_;
+  ExecutionState::Slot<ast::x::AggregationHashTable> global_agg_ht_;
+  ExecutionState::Slot<ast::x::AggregationHashTable> local_agg_ht_;
 };
 
 }  // namespace tpl::sql::codegen

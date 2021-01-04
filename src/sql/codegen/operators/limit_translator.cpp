@@ -23,12 +23,12 @@ LimitTranslator::LimitTranslator(const planner::LimitPlanNode &plan,
 }
 
 void LimitTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
-  count_ = pipeline_ctx->DeclarePipelineStateEntry("num_tuples", codegen_->GetType<uint64_t>());
+  count_ = pipeline_ctx->DeclarePipelineStateEntry<uint64_t>("num_tuples");
 }
 
 void LimitTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
-  auto count = pipeline_ctx.GetStateEntry<uint64_t>(count_);
+  auto count = pipeline_ctx.GetStateEntry(count_);
   function->Append(edsl::Assign(count, edsl::Literal(codegen_, 0ul)));
 }
 
@@ -36,7 +36,7 @@ void LimitTranslator::Consume(ConsumerContext *context, FunctionBuilder *functio
   const auto &plan = GetPlanAs<planner::LimitPlanNode>();
   const auto offset = plan.GetOffset(), limit = plan.GetLimit();
 
-  const auto count = context->GetStateEntry<uint64_t>(count_);
+  const auto count = context->GetStateEntry(count_);
   if (offset != 0 && limit != 0) {
     If check_limit(function, count >= offset && count < offset + limit);
     context->Consume(function);

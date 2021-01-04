@@ -62,11 +62,11 @@ edsl::ValueVT OperatorTranslator::GetQueryStatePtr() const {
   return GetQueryState()->GetStatePtr(codegen_);
 }
 
-edsl::ReferenceVT OperatorTranslator::GetQueryStateEntryGeneric(ExecutionState::Slot slot) const {
+edsl::ReferenceVT OperatorTranslator::GetQueryStateEntryGeneric(ExecutionState::RTSlot slot) const {
   return GetQueryState()->GetStateEntryGeneric(codegen_, slot);
 }
 
-edsl::ValueVT OperatorTranslator::GetQueryStateEntryPtrGeneric(ExecutionState::Slot slot) const {
+edsl::ValueVT OperatorTranslator::GetQueryStateEntryPtrGeneric(ExecutionState::RTSlot slot) const {
   return GetQueryState()->GetStateEntryPtrGeneric(codegen_, slot);
 }
 

@@ -209,26 +209,27 @@ class OperatorTranslator : public ColumnValueProvider {
   CompilationContext *GetCompilationContext() const { return compilation_ctx_; }
 
  protected:
+  // Access the query execution state.
   ExecutionState *GetQueryState() const;
 
   // Get a pointer to the query state.
   edsl::ValueVT GetQueryStatePtr() const;
 
   // Get an untyped reference to element in the query state at the given index.
-  edsl::ReferenceVT GetQueryStateEntryGeneric(ExecutionState::Slot slot) const;
+  edsl::ReferenceVT GetQueryStateEntryGeneric(ExecutionState::RTSlot slot) const;
 
   // Get a typed reference to element in the query state at the given index.
   template <typename T>
-  edsl::Value<T> GetQueryStateEntry(ExecutionState::Slot slot) const {
+  edsl::Value<T> GetQueryStateEntry(ExecutionState::Slot<T> slot) const {
     return GetQueryState()->GetStateEntry<T>(codegen_, slot);
   }
 
   // Get an untyped pointer to element in the query state at the given index.
-  edsl::ValueVT GetQueryStateEntryPtrGeneric(ExecutionState::Slot slot) const;
+  edsl::ValueVT GetQueryStateEntryPtrGeneric(ExecutionState::RTSlot slot) const;
 
   // Get a typed pointer to element in the query state at the given index.
   template <typename T>
-  edsl::Value<T *> GetQueryStateEntryPtr(ExecutionState::Slot slot) const {
+  edsl::Value<T *> GetQueryStateEntryPtr(ExecutionState::Slot<T> slot) const {
     return GetQueryState()->GetStateEntryPtr<T>(codegen_, slot);
   }
 

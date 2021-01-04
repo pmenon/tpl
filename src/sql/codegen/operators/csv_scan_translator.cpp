@@ -45,31 +45,29 @@ void CSVScanTranslator::DefineStructsAndFunctions() {
 }
 
 edsl::Reference<ast::x::StringVal> CSVScanTranslator::GetField(uint32_t field_index) const {
-  return row_struct_.Member<ast::x::StringVal>(*row_var_, field_index);
+  return row_struct_.MemberGeneric(*row_var_, field_index).As<ast::x::StringVal>();
 }
 
 edsl::Value<ast::x::StringVal *> CSVScanTranslator::GetFieldPtr(uint32_t field_index) const {
-  return row_struct_.MemberPtr<ast::x::StringVal>(*row_var_, field_index);
+  return row_struct_.MemberPtrGeneric(*row_var_, field_index).As<ast::x::StringVal *>();
 }
 
 void CSVScanTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
-  csv_reader_ =
-      pipeline_ctx->DeclarePipelineStateEntry("csv_reader", codegen_->GetType<ast::x::CSVReader>());
-  is_valid_reader_ =
-      pipeline_ctx->DeclarePipelineStateEntry("is_valid_reader", codegen_->GetType<bool>());
+  csv_reader_ = pipeline_ctx->DeclarePipelineStateEntry<ast::x::CSVReader>("csv_reader");
+  is_valid_reader_ = pipeline_ctx->DeclarePipelineStateEntry<bool>("is_valid_reader");
 }
 
 void CSVScanTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                                 FunctionBuilder *function) const {
-  auto csv_reader = pipeline_ctx.GetStateEntryPtr<ast::x::CSVReader>(csv_reader_);
+  auto csv_reader = pipeline_ctx.GetStateEntryPtr(csv_reader_);
   auto success = csv_reader->Init(GetCSVPlan().GetFileName());
-  auto initialized_flag = pipeline_ctx.GetStateEntry<bool>(is_valid_reader_);
+  auto initialized_flag = pipeline_ctx.GetStateEntry(is_valid_reader_);
   function->Append(edsl::Assign(initialized_flag, success));
 }
 
 void CSVScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
-  auto csv_reader = pipeline_ctx.GetStateEntryPtr<ast::x::CSVReader>(csv_reader_);
+  auto csv_reader = pipeline_ctx.GetStateEntryPtr(csv_reader_);
   function->Append(csv_reader->Close());
 }
 
@@ -79,8 +77,7 @@ void CSVScanTranslator::Consume(ConsumerContext *context, FunctionBuilder *funct
   // var csv_row: CSVRow
   // var csv_reader = &q_state.csv_reader
   function->Append(edsl::Declare(*row_var_));
-  function->Append(
-      edsl::Declare(csv_reader, context->GetStateEntryPtr<ast::x::CSVReader>(csv_reader_)));
+  function->Append(edsl::Declare(csv_reader, context->GetStateEntryPtr(csv_reader_)));
 
   // for (@csvReaderAdvance()) { ... }
   Loop scan_loop(function, csv_reader->Advance());

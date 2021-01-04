@@ -124,8 +124,7 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(const planner::AbstractExp
 
 void SeqScanTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (HasPredicate()) {
-    local_filter_ = pipeline_ctx->DeclarePipelineStateEntry(
-        "filter_mgr", codegen_->GetType<ast::x::FilterManager>());
+    local_filter_ = pipeline_ctx->DeclarePipelineStateEntry<ast::x::FilterManager>("filter_mgr");
   }
 }
 
@@ -146,7 +145,7 @@ void SeqScanTranslator::ScanTable(ConsumerContext *context, FunctionBuilder *fun
     function->Append(edsl::Declare(vpi_, tvi->GetVPI()));
 
     if (HasPredicate()) {
-      auto fm = context->GetStateEntryPtr<ast::x::FilterManager>(local_filter_);
+      auto fm = context->GetStateEntryPtr(local_filter_);
       function->Append(fm->RunFilters(vpi_));
     }
 
@@ -168,11 +167,10 @@ void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_
                                                 FunctionBuilder *function) const {
   if (HasPredicate()) {
     // @filterManagerInit()
-    auto fm = pipeline_ctx.GetStateEntryPtr<ast::x::FilterManager>(local_filter_);
+    auto fm = pipeline_ctx.GetStateEntryPtr(local_filter_);
     function->Append(fm->Init());
     // @filterManagerInsert() for each clause.
     for (const auto &clause : filters_) {
-      auto fm = pipeline_ctx.GetStateEntryPtr<ast::x::FilterManager>(local_filter_);
       function->Append(fm->Insert(clause));
     }
   }
@@ -181,7 +179,7 @@ void SeqScanTranslator::InitializePipelineState(const PipelineContext &pipeline_
 void SeqScanTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                               FunctionBuilder *function) const {
   if (HasPredicate()) {
-    auto fm = pipeline_ctx.GetStateEntryPtr<ast::x::FilterManager>(local_filter_);
+    auto fm = pipeline_ctx.GetStateEntryPtr(local_filter_);
     function->Append(fm->Free());
   }
 }

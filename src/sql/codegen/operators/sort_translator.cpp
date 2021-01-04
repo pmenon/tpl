@@ -38,8 +38,7 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan,
   }
 
   // Register a Sorter instance in the global query state.
-  global_sorter_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      "sorter", codegen_->GetType<ast::x::Sorter>());
+  global_sorter_ = GetQueryState()->DeclareStateEntry<ast::x::Sorter>("sorter");
 }
 
 void SortTranslator::DeclarePipelineDependencies() const {
@@ -110,26 +109,25 @@ void SortTranslator::DefineStructsAndFunctions() {
 }
 
 void SortTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  auto sorter = GetQueryStateEntryPtr<ast::x::Sorter>(global_sorter_);
+  auto sorter = GetQueryStateEntryPtr(global_sorter_);
   function->Append(sorter->Init(GetMemoryPool(), compare_func_, row_struct_.GetSize()));
 }
 
 void SortTranslator::TearDownQueryState(FunctionBuilder *function) const {
-  auto sorter = GetQueryStateEntryPtr<ast::x::Sorter>(global_sorter_);
+  auto sorter = GetQueryStateEntryPtr(global_sorter_);
   function->Append(sorter->Free());
 }
 
 void SortTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (pipeline_ctx->IsForPipeline(build_pipeline_) && pipeline_ctx->IsParallel()) {
-    local_sorter_ =
-        pipeline_ctx->DeclarePipelineStateEntry("sorter", codegen_->GetType<ast::x::Sorter>());
+    local_sorter_ = pipeline_ctx->DeclarePipelineStateEntry<ast::x::Sorter>("sorter");
   }
 }
 
 void SortTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                              FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    auto sorter = pipeline_ctx.GetStateEntryPtr<ast::x::Sorter>(local_sorter_);
+    auto sorter = pipeline_ctx.GetStateEntryPtr(local_sorter_);
     function->Append(sorter->Init(GetMemoryPool(), compare_func_, row_struct_.GetSize()));
   }
 }
@@ -137,7 +135,7 @@ void SortTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx
 void SortTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                            FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
-    auto sorter = pipeline_ctx.GetStateEntryPtr<ast::x::Sorter>(local_sorter_);
+    auto sorter = pipeline_ctx.GetStateEntryPtr(local_sorter_);
     function->Append(sorter->Free());
   }
 }
@@ -206,13 +204,13 @@ void SortTranslator::Consume(ConsumerContext *context, FunctionBuilder *function
   edsl::Variable<ast::x::Sorter *> sorter(codegen_, "sorter");
   if (context->IsForPipeline(*GetPipeline())) {
     TPL_ASSERT(!context->IsParallel(), "Producing pipeline cannot be parallel!");
-    function->Append(edsl::Declare(sorter, GetQueryStateEntryPtr<ast::x::Sorter>(global_sorter_)));
+    function->Append(edsl::Declare(sorter, GetQueryStateEntryPtr(global_sorter_)));
     ScanSorter(context, function, sorter);
   } else {
     TPL_ASSERT(IsBuildPipeline(context->GetPipeline()), "Pipeline is unknown to sort translator");
-    function->Append(edsl::Declare(
-        sorter, context->IsParallel() ? context->GetStateEntryPtr<ast::x::Sorter>(local_sorter_)
-                                      : GetQueryStateEntryPtr<ast::x::Sorter>(global_sorter_)));
+    function->Append(edsl::Declare(sorter, context->IsParallel()
+                                               ? context->GetStateEntryPtr(local_sorter_)
+                                               : GetQueryStateEntryPtr(global_sorter_)));
     InsertIntoSorter(context, function, sorter);
   }
 }
@@ -220,7 +218,7 @@ void SortTranslator::Consume(ConsumerContext *context, FunctionBuilder *function
 void SortTranslator::FinishPipelineWork(const PipelineContext &pipeline_ctx,
                                         FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(build_pipeline_)) {
-    auto sorter = GetQueryStateEntryPtr<ast::x::Sorter>(global_sorter_);
+    auto sorter = GetQueryStateEntryPtr(global_sorter_);
     if (pipeline_ctx.IsParallel()) {
       auto tls = GetThreadStateContainer();
       auto offset = pipeline_ctx.GetStateEntryByteOffset(local_sorter_);

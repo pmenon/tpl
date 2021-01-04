@@ -135,7 +135,7 @@ class CompilationContext {
   ast::Identifier query_state_var_;
   // The query state and the slot in the state where the execution context is.
   ExecutionState query_state_;
-  ExecutionState::Slot exec_ctx_;
+  ExecutionState::Slot<ast::x::ExecutionContext *> exec_ctx_;
   // The operator and expression translators.
   std::unordered_map<const planner::AbstractPlanNode *, std::unique_ptr<OperatorTranslator>>
       operators_;

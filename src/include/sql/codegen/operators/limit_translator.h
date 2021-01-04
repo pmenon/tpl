@@ -60,7 +60,7 @@ class LimitTranslator : public OperatorTranslator {
 
  private:
   // The tuple counter.
-  ExecutionState::Slot count_;
+  ExecutionState::Slot<uint64_t> count_;
 };
 
 }  // namespace tpl::sql::codegen

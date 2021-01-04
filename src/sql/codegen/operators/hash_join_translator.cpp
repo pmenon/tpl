@@ -51,8 +51,8 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   storage_.Setup(types);
 
   // Declare global hash table.
-  global_join_ht_ = compilation_context->GetQueryState()->DeclareStateEntry(
-      "join_ht", codegen_->GetType<ast::x::JoinHashTable>());
+  global_join_ht_ =
+      compilation_context->GetQueryState()->DeclareStateEntry<ast::x::JoinHashTable>("join_ht");
 
   // Make the variable we use to hold rows.
   build_row_ = std::make_unique<edsl::VariableVT>(codegen_, "row", storage_.GetPtrToType());
@@ -63,26 +63,25 @@ void HashJoinTranslator::DeclarePipelineDependencies() const {
 }
 
 void HashJoinTranslator::InitializeQueryState(FunctionBuilder *function) const {
-  auto jht = GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
+  auto jht = GetQueryStateEntryPtr(global_join_ht_);
   function->Append(jht->Init(GetMemoryPool(), storage_.GetTypeSize()));
 }
 
 void HashJoinTranslator::TearDownQueryState(FunctionBuilder *function) const {
-  auto jht = GetQueryStateEntryPtr<ast::x::JoinHashTable>(global_join_ht_);
+  auto jht = GetQueryStateEntryPtr(global_join_ht_);
   function->Append(jht->Free());
 }
 
 void HashJoinTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (pipeline_ctx->IsForPipeline(left_pipeline_) && pipeline_ctx->IsParallel()) {
-    local_join_ht_ = pipeline_ctx->DeclarePipelineStateEntry(
-        "join_ht", codegen_->GetType<ast::x::JoinHashTable>());
+    local_join_ht_ = pipeline_ctx->DeclarePipelineStateEntry<ast::x::JoinHashTable>("join_ht");
   }
 }
 
 void HashJoinTranslator::InitializePipelineState(const PipelineContext &pipeline_ctx,
                                                  FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(left_pipeline_) && pipeline_ctx.IsParallel()) {
-    auto jht = pipeline_ctx.GetStateEntryPtr<ast::x::JoinHashTable>(local_join_ht_);
+    auto jht = pipeline_ctx.GetStateEntryPtr(local_join_ht_);
     function->Append(jht->Init(GetMemoryPool(), storage_.GetTypeSize()));
   }
 }
@@ -90,7 +89,7 @@ void HashJoinTranslator::InitializePipelineState(const PipelineContext &pipeline
 void HashJoinTranslator::TearDownPipelineState(const PipelineContext &pipeline_ctx,
                                                FunctionBuilder *function) const {
   if (pipeline_ctx.IsForPipeline(left_pipeline_) && pipeline_ctx.IsParallel()) {
-    auto jht = pipeline_ctx.GetStateEntryPtr<ast::x::JoinHashTable>(local_join_ht_);
+    auto jht = pipeline_ctx.GetStateEntryPtr(local_join_ht_);
     function->Append(jht->Free());
   }
 }
