@@ -194,9 +194,19 @@ ast::Expression *CodeGen::ArrayAccess(ast::Expression *arr, uint64_t idx) {
   return ArrayAccess(arr, Literal<uint64_t>(idx));
 }
 
+ast::Expression *CodeGen::IntCast(ast::Type *type, ast::Expression *input) const {
+  TPL_ASSERT(type->IsIntegerType(), "Target type of @intCast() must be integral!");
+  TPL_ASSERT(input->GetType() != nullptr, "Input argument to @intCast must have resolved type!");
+  TPL_ASSERT(input->GetType()->IsIntegerType(), "Input argument is not an integral type!");
+  auto type_repr = BuildTypeRepresentation(type, false);
+  auto result = CallBuiltin(ast::Builtin::IntCast, {type_repr, input});
+  result->SetType(type);
+  return result;
+}
+
 ast::Expression *CodeGen::PtrCast(ast::Type *type, ast::Expression *input) const {
   TPL_ASSERT(type->IsPointerType(), "Target of @ptrCast() must be pointer type!");
-  TPL_ASSERT(input->GetType() != nullptr, "Input argument to @ptrCast() doesn't have type!");
+  TPL_ASSERT(input->GetType() != nullptr, "Input argument to @ptrCast must have resolved type!");
   TPL_ASSERT(input->GetType()->IsPointerType(), "Input argument is not pointer type!");
   auto type_repr = BuildTypeRepresentation(type, false);
   auto result = CallBuiltin(ast::Builtin::PtrCast, {type_repr, input});

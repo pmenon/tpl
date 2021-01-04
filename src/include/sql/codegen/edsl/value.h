@@ -300,6 +300,19 @@ inline Value<void> Assign(const Reference<T> &lhs, T value) {
 }
 
 /**
+ * Apply an explicit integer cast of the input @em src of type T to a value of type U.
+ * @tparam U The type to cast into.
+ * @tparam T The type of the source.
+ * @param src The value to cast.
+ * @return The result of the cast.
+ */
+template <typename U, typename T, typename = std::enable_if_t<traits::may_int_cast_v<T, U>>>
+Value<U> IntCast(const Value<T> &src) {
+  CodeGen *codegen = src.GetCodeGen();
+  return Value<U>(codegen, codegen->IntCast(codegen->GetType<U>(), src.GetRaw()));
+}
+
+/**
  * Return from the function.
  * @return A void-value.
  */

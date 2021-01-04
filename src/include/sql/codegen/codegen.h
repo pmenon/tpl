@@ -243,6 +243,12 @@ class CodeGen {
   [[nodiscard]] ast::Expression *StructMember(ast::Expression *obj, std::string_view member);
 
   /**
+   * @pre Both the input and target types must be resolved integral types.
+   * @return An expression representing an integer cast of @em input to type @em type.
+   */
+  [[nodiscard]] ast::Expression *IntCast(ast::Type *type, ast::Expression *input) const;
+
+  /**
    * @pre Both the input and target types must be resolved pointer types.
    * @return An expression representing a pointer cast of @em input to type @em type.
    */

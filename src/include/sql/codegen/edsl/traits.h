@@ -99,6 +99,16 @@ BUILTIN_TYPE_LIST(IGNORE_BUILTIN_TYPE, IGNORE_BUILTIN_TYPE, F)
 #undef F
 
 /**
+ * Trait to check if it is possible to explicitly apply an integer cast to convert type T -> type U.
+ * Both T and U must be primitive integer types.
+ * @tparam T The type of the source.
+ * @tparam U The type of the target.
+ */
+template <typename T, typename U>
+struct may_int_cast : std::integral_constant<bool, is_primitive_int_type<T>::value &&
+                                                       is_primitive_int_type<U>::value> {};
+
+/**
  * Trait to check if the template type supports arithmetic addition, subtraction or multiplication.
  * @tparam T The C++ type to check.
  */
@@ -158,6 +168,20 @@ inline constexpr bool is_cpp_class_v = is_cpp_class<T>::value;
 template <typename T>
 inline constexpr bool is_sql_value_class_v = is_sql_value_class<T>::value;
 
+/**
+ * Helper variable for may_int_cast<T,U>::value.
+ * @tparam T The type of the source.
+ * @tparam U The type of the target.
+ */
+template <typename T, typename U>
+inline constexpr bool may_int_cast_v = may_int_cast<T, U>::value;
+
+/**
+ * Concept for all possible value TPL types. A value TPL type is any builtin type, or pointer, or
+ * array type. TPL also allows runtime structures, but we can't use them as template types since
+ * their definitions are not known at C++ build type.
+ * @tparam T The type to check.
+ */
 template <typename T>
 concept TPLType = is_builtin_type_v<T> || std::is_pointer_v<T> || std::is_array_v<T>;
 

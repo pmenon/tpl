@@ -305,11 +305,27 @@ inline ValueVT PtrCast(ast::Type *type, const Value<T> &ptr) {
   return ValueVT(codegen, codegen->PtrCast(type, ptr.GetRaw()));
 }
 
+/**
+ * Re-cast the pointer input @em ptr to the type @em type. Both inputs must be pointer types.
+ * @pre The type of the input and the target type must both be pointers.
+ * @tparam T The type of the pointer to cast.
+ * @param type The (pointer) type to cast the input into.
+ * @param ptr The pointer value to case.
+ * @return The result of the cast operation.
+ */
 inline ValueVT PtrCast(ast::Type *type, const ValueVT &ptr) {
   CodeGen *codegen = ptr.GetCodeGen();
   return ValueVT(codegen, codegen->PtrCast(type, ptr.GetRaw()));
 }
 
+/**
+ * Re-cast the pointer input @em ptr to the templated type. Both inputs must be pointer types.
+ * @pre The type of the input and the target type must both be pointers.
+ * @tparam T The type of the pointer to cast.
+ * @param type The (pointer) type to cast the input into.
+ * @param ptr The pointer value to case.
+ * @return The result of the cast operation.
+ */
 template <typename T, typename = std::enable_if_t<std::is_pointer_v<T>>>
 inline Value<T> PtrCast(const ValueVT &ptr) {
   CodeGen *codegen = ptr.GetCodeGen();

@@ -51,6 +51,7 @@ TEST_F(ElementTest, SimpleCheck) {
     func.Append(edsl::Assign(x, y.Addr()));
     func.Append(edsl::Assign(zz, x.Addr()));
     func.Append(edsl::Assign(*zz, x));
+    func.Append(edsl::Assign(y, edsl::IntCast<int>(hash)));
 
     func.Append(edsl::Declare(row, yy[0]->Insert(hash)));
     func.Append(edsl::Assign(y, y + y - y * y / y % y));
