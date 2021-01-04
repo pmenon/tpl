@@ -38,6 +38,11 @@ class HashJoinTranslator : public OperatorTranslator {
   void DeclarePipelineDependencies() const override;
 
   /**
+   * Declare compression functions.
+   */
+  void DefineStructsAndFunctions() override;
+
+  /**
    * Initialize the global hash table.
    */
   void InitializeQueryState(FunctionBuilder *function) const override;
@@ -133,6 +138,10 @@ class HashJoinTranslator : public OperatorTranslator {
   // as it can perform early termination.
   bool ShouldValidateHashOnProbe() const;
 
+  // Compression-related functions.
+  void GenerateHashTableAnalysisFunction();
+  void GenerateHashTableCompressionFunction();
+
  private:
   // Storage used to read/write rows into/from hash table.
   CompactStorage storage_;
@@ -140,6 +149,10 @@ class HashJoinTranslator : public OperatorTranslator {
   std::unique_ptr<edsl::VariableVT> build_row_;
   // For mark-based joins. The index in the row where the mark is stored.
   uint32_t build_mark_index_;
+
+  // The name of the analysis and compression functions.
+  ast::Identifier analysis_fn_name_;
+  ast::Identifier compress_fn_name_;
 
   // The left build-side pipeline.
   Pipeline left_pipeline_;

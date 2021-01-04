@@ -2,9 +2,12 @@
 
 #include <algorithm>
 
+#include "spdlog/fmt/fmt.h"
+
 #include "ast/type.h"
 #include "sql/codegen/compilation_context.h"
 #include "sql/codegen/consumer_context.h"
+#include "sql/codegen/edsl/arithmetic_ops.h"
 #include "sql/codegen/edsl/boolean_ops.h"
 #include "sql/codegen/edsl/comparison_ops.h"
 #include "sql/codegen/edsl/ops.h"
@@ -22,6 +25,8 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
     : OperatorTranslator(plan, compilation_context, pipeline),
       storage_(codegen_, "BuildRow"),
       build_mark_index_(plan.GetChild(0)->GetOutputSchema()->NumColumns()),
+      analysis_fn_name_(codegen_->MakeFreshIdentifier("AnalyzeHT")),
+      compress_fn_name_(codegen_->MakeFreshIdentifier("CompressHT")),
       left_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(!plan.GetLeftHashKeys().empty(), "Hash-join must have join keys from left input");
   TPL_ASSERT(!plan.GetRightHashKeys().empty(), "Hash-join must have join keys from right input");
@@ -270,6 +275,80 @@ edsl::ValueVT HashJoinTranslator::GetChildOutput(ConsumerContext *context, uint3
     return GetBuildRowAttribute(attr_idx);
   }
   return OperatorTranslator::GetChildOutput(context, child_idx, attr_idx);
+}
+
+void HashJoinTranslator::GenerateHashTableAnalysisFunction() {
+  std::vector<std::pair<edsl::VariableVT, uint32_t>> vars;
+  for (uint32_t idx = 0; const auto &col : GetChildOutputSchema(0)->GetColumns()) {
+    if (const auto type_id = col.GetType(); IsTypeIntegral(type_id)) {
+      ast::Type *type = codegen_->GetPrimitiveTPLType(type_id);
+      vars.emplace_back(edsl::VariableVT(codegen_, fmt::format("bits_{}", idx), type), idx);
+    }
+    idx++;
+  }
+
+  std::vector<FunctionBuilder::Param> args = {
+      {codegen_->MakeIdentifier("n"), codegen_->GetType<uint32_t>()},
+      {codegen_->MakeIdentifier("in"), codegen_->ArrayType(0, storage_.GetPtrToType())},
+      {codegen_->MakeIdentifier("stats"), codegen_->GetType<ast::x::AnalysisStats *>()},
+  };
+
+  FunctionBuilder function(codegen_, analysis_fn_name_, std::move(args), codegen_->NilType());
+  {
+    edsl::Variable<uint32_t> i(codegen_, "i");
+    edsl::VariableVT row(codegen_, "row", storage_.GetPtrToType());
+    auto n = function.GetParameterByPosition(0).As<uint32_t>();
+    auto rows = function.GetParameterByPosition(1);
+    auto stats = function.GetParameterByPosition(2).As<ast::x::AnalysisStats *>();
+
+    for (const auto &[var, _] : vars) function.Append(edsl::Declare(var));
+
+    Loop loop(&function, edsl::Declare(i, 0u), i < n, edsl::Increment(i));
+    {
+      // var row = rows[i]
+      function.Append(edsl::Declare(row, rows[i]));
+      // Read integral columns for analysis.
+      for (const auto &[var, idx] : vars) {
+        auto raw_val = storage_.ReadPrimitive(row, idx);
+        auto mixed = edsl::ArithmeticOp(parsing::Token::Type::BIT_OR, var, raw_val);
+        function.Append(edsl::Assign(var, mixed));
+      }
+    }
+    loop.EndLoop();
+
+    function.Append(stats->SetColumnCount(edsl::Literal<uint32_t>(codegen_, vars.size())));
+    for (uint32_t idx = 0; const auto &[var, var_idx] : vars) {
+      for (; idx < var_idx; idx++) {
+        const auto type_id = GetChildOutputSchema(0)->GetColumn(idx).GetType();
+        auto col_idx = edsl::Literal<uint32_t>(codegen_, idx);
+        auto num_bits = edsl::Literal<uint32_t>(codegen_, GetTypeIdSize(type_id) * kBitsPerByte);
+        function.Append(stats->SetColumnBits(col_idx, num_bits));
+      }
+      auto col_idx = edsl::Literal<uint32_t>(codegen_, idx);
+      auto avail_bits = 64u - edsl::Ctlz(edsl::IntCast<uint32_t>(var));
+      function.Append(stats->SetColumnBits(col_idx, avail_bits));
+      idx++;
+    }
+  }
+  function.Finish();
+}
+
+void HashJoinTranslator::GenerateHashTableCompressionFunction() {
+  std::vector<FunctionBuilder::Param> args = {
+      {codegen_->MakeIdentifier("n"), codegen_->GetType<uint32_t>()},
+      {codegen_->MakeIdentifier("in"), codegen_->ArrayType(0, storage_.GetPtrToType())},
+      {codegen_->MakeIdentifier("out"), codegen_->ArrayType(0, storage_.GetPtrToType())},
+  };
+
+  FunctionBuilder function(codegen_, compress_fn_name_, std::move(args), codegen_->NilType());
+  {  // Body.
+  }
+  function.Finish();
+}
+
+void HashJoinTranslator::DefineStructsAndFunctions() {
+  GenerateHashTableAnalysisFunction();
+  GenerateHashTableCompressionFunction();
 }
 
 }  // namespace tpl::sql::codegen

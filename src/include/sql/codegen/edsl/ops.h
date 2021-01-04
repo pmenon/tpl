@@ -756,6 +756,35 @@ class Reference<ast::x::SorterIterator> {
 };
 
 /**
+ * Specialization for references to sql::AnalysisStats.
+ */
+template <>
+class Reference<ast::x::AnalysisStats> {
+ public:
+  Reference(CodeGen *codegen, ast::Expression *val) : codegen_(codegen), val_(val) {}
+
+  Value<void> SetColumnCount(const Value<uint32_t> &column_count) {
+    auto call = codegen_->CallBuiltin(ast::Builtin::AnalysisStatsSetColumnCount,
+                                      {val_, column_count.GetRaw()});
+    call->SetType(codegen_->NilType());
+    return Value<void>(codegen_->MakeStatement(call));
+  }
+
+  Value<void> SetColumnBits(const Value<uint32_t> &column, const Value<uint32_t> &bits) {
+    auto call = codegen_->CallBuiltin(ast::Builtin::AnalysisStatsSetColumnBits,
+                                      {val_, column.GetRaw(), bits.GetRaw()});
+    call->SetType(codegen_->NilType());
+    return Value<void>(codegen_->MakeStatement(call));
+  }
+
+ private:
+  // The code generator instance.
+  CodeGen *codegen_;
+  // The expression producing the execution context.
+  ast::Expression *val_;
+};
+
+/**
  * Perform a parallel table scan.
  * @param table_name The name of the table to scan.
  * @param query_state The global query state to pass onto the work function as the first argument.
