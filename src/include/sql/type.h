@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "sql/sql.h"
 
 namespace tpl::sql {

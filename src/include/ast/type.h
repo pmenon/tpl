@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "llvm/Support/Casting.h"
 
@@ -73,6 +74,7 @@ class Context;
   NON_PRIM(Timestamp, tpl::sql::Timestamp)                                       \
   NON_PRIM(TupleIdList, tpl::sql::TupleIdList)                                   \
   NON_PRIM(VarlenEntry, tpl::sql::VarlenEntry)                                   \
+  NON_PRIM(VarlenHeap, tpl::sql::VarlenHeap)                                     \
   NON_PRIM(VectorProjection, tpl::sql::VectorProjection)                         \
   NON_PRIM(VectorProjectionIterator, tpl::sql::VectorProjectionIterator)         \
                                                                                  \
@@ -744,7 +746,7 @@ class StructType : public Type {
   class LayoutHelper {
    public:
     // Constructor given the list of fields making up the struct.
-    LayoutHelper(const util::RegionVector<Field> &fields);
+    explicit LayoutHelper(const util::RegionVector<Field> &fields);
     // The final size of the struct.
     std::uint32_t GetSize() const noexcept { return size_; }
     // The final alignment of the struct.

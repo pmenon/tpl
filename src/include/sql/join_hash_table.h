@@ -73,7 +73,7 @@ class JoinHashTable {
     AnalysisStats() = default;
 
     /** Constructor with specified column count. */
-    AnalysisStats(std::size_t num_cols) : bits_(num_cols, 0) {}
+    explicit AnalysisStats(std::size_t num_cols) : bits_(num_cols, 0) {}
 
     /** Explicitly set column counts. */
     void SetNumCols(std::size_t num_cols) { bits_.resize(num_cols); }

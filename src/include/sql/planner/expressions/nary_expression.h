@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "sql/planner/expressions/abstract_expression.h"
 
 namespace tpl::sql::planner {

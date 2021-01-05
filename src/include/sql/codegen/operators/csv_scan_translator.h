@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "sql/codegen/operators/operator_translator.h"
 #include "sql/codegen/pipeline_driver.h"
 

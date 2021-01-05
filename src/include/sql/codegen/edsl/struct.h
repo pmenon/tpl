@@ -1,6 +1,8 @@
 #pragma once
 
+#include <limits>
 #include <string_view>
+#include <vector>
 
 #include "sql/codegen/edsl/ops.h"
 #include "sql/codegen/edsl/value.h"

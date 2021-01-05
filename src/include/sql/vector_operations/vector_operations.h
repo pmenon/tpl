@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <utility>
 
 #include "common/common.h"
 #include "sql/generic_value.h"

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <vector>
+
 #include "ast/type_proxy.h"
 #include "sql/codegen/edsl/boolean_ops.h"
 #include "sql/codegen/edsl/value.h"

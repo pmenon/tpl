@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/consumer_context.h"
 #include "sql/codegen/edsl/struct.h"
