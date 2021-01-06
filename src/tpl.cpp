@@ -22,7 +22,6 @@
 #include "sql/catalog.h"
 #include "sql/execution_context.h"
 #include "sql/printing_consumer.h"
-#include "sql/tablegen/table_generator.h"
 #include "tpl.h"  // NOLINT
 #include "util/timer.h"
 #include "vm/bytecode_generator.h"
@@ -41,8 +40,6 @@ llvm::cl::opt<bool> kPrintAst("print-ast", llvm::cl::desc("Print the programs AS
 llvm::cl::opt<bool> kPrintTbc("print-tbc", llvm::cl::desc("Print the generated TPL Bytecode"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kPrettyPrint("pretty-print", llvm::cl::desc("Pretty-print the source from the parsed AST"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<bool> kIsSQL("sql", llvm::cl::desc("Is the input a SQL query?"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
-llvm::cl::opt<bool> kTpch("tpch", llvm::cl::desc("Should the TPCH database be loaded? Requires '-schema' and '-data' directories."), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
-llvm::cl::opt<std::string> kDataDir("data", llvm::cl::desc("Where to find data files of tables to load"), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 llvm::cl::opt<std::string> kInputFile(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(kTplOptionsCategory));  // NOLINT
 // clang-format on
 
@@ -62,11 +59,6 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
 
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
-
-  sql::tablegen::TPCHOutputSchemas schemas;
-  const sql::planner::OutputSchema *schema = schemas.GetSchema(
-      llvm::sys::path::filename(name).take_until([](char x) { return x == '.'; }).str());
-  sql::PrintingConsumer consumer(std::cout, schema);
 
   double parse_ms = 0.0,       // Time to parse the source
       typecheck_ms = 0.0,      // Time to perform semantic analysis
@@ -148,7 +140,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
         return;
       }
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
+      sql::ExecutionContext exec_ctx(&memory, nullptr, nullptr);
       LOG_INFO("VM main() returned: {}", main(&exec_ctx));
     } else {
       std::function<uint32_t()> main;
@@ -174,7 +166,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
         return;
       }
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
+      sql::ExecutionContext exec_ctx(&memory, nullptr, nullptr);
       LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
     } else {
       std::function<uint32_t()> main;
@@ -201,7 +193,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
       util::Timer<std::milli> x;
       x.Start();
       sql::MemoryPool memory(nullptr);
-      sql::ExecutionContext exec_ctx(&memory, schema, &consumer);
+      sql::ExecutionContext exec_ctx(&memory, nullptr, nullptr);
       LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
       x.Stop();
       LOG_INFO("Jit exec: {} ms", x.GetElapsed());
@@ -336,15 +328,6 @@ int main(int argc, char **argv) {
 
   // Init TPL
   tpl::InitTPL();
-
-  if (kTpch) {
-    if (kDataDir.empty()) {
-      LOG_ERROR("Must specify '-data' directories when loading TPC-H");
-      return -1;
-    }
-
-    tpl::sql::tablegen::TableGenerator::GenerateTPCHTables(tpl::sql::Catalog::Instance(), kDataDir);
-  }
 
   LOG_INFO("\n{}", tpl::CpuInfo::Instance()->PrettyPrintInfo());
 
