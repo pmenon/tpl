@@ -45,19 +45,18 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   }
 
   // Setup compact storage.
-  std::vector<TypeId> types;
+  std::vector<Type> types;
   types.reserve(GetChildOutputSchema(0)->NumColumns());
   for (const auto &col : GetChildOutputSchema(0)->GetColumns()) {
-    types.push_back(col.GetType().GetPrimitiveTypeId());
+    types.push_back(col.GetType());
   }
   if (plan.RequiresLeftMark()) {
-    types.push_back(TypeId::Boolean);
+    types.push_back(Type::BooleanType(false));
   }
   storage_.Setup(types);
 
   // Declare global hash table.
-  global_join_ht_ =
-      compilation_context->GetQueryState()->DeclareStateEntry<ast::x::JoinHashTable>("join_ht");
+  global_join_ht_ = GetQueryState()->DeclareStateEntry<ast::x::JoinHashTable>("join_ht");
 
   // Make the variable we use to hold rows.
   build_row_ = std::make_unique<edsl::VariableVT>(codegen_, "row", storage_.GetPtrToType());

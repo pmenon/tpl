@@ -51,13 +51,12 @@ void CaseTranslator::GenerateCases(const edsl::VariableVT &ret, const std::size_
                        ? edsl::ForceTruth(condition_gen.As<ast::x::BooleanVal>())
                        : condition_gen.As<bool>();
   If check_condition(function, condition);
-  {
+  {  // Case-match.
     auto when_result = context->DeriveValue(*expr.GetWhenClauseResult(clause_idx), provider);
     function->Append(edsl::Assign(ret, when_result));
   }
   check_condition.Else();
-  {
-    // Recurse.
+  {  // Recurse.
     GenerateCases(ret, clause_idx + 1, context, provider);
   }
   check_condition.EndIf();
@@ -68,8 +67,8 @@ edsl::ValueVT CaseTranslator::DeriveValue(ConsumerContext *context,
   FunctionBuilder *function = codegen_->GetCurrentFunction();
 
   // var case_result: TYPE
-  auto ret_type_id = GetExpression().GetReturnValueType().GetPrimitiveTypeId();
-  edsl::VariableVT ret(codegen_, "ret", codegen_->GetTPLType(ret_type_id));
+  const auto &ret_type = GetExpression().GetReturnValueType();
+  edsl::VariableVT ret(codegen_, "ret", codegen_->GetTPLType(ret_type.GetTypeId()));
   function->Append(edsl::Declare(ret));
 
   // Generate all clauses.

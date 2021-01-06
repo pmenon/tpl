@@ -69,7 +69,7 @@ class CodeGen {
   /**
    * @return The TPL type of the SQL type with type id @em type_id.
    */
-  [[nodiscard]] ast::Type *GetTPLType(TypeId type_id);
+  [[nodiscard]] ast::Type *GetTPLType(SqlTypeId type_id);
 
   /**
    * @return The primitive TPL type underlying the SQL type with type @em type_id.

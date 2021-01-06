@@ -48,8 +48,7 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
   agg_row_ =
       std::make_unique<edsl::VariableVT>(codegen_, "agg_row", payload_struct_.GetPtrToType());
 
-  global_aggs_ =
-      compilation_context->GetQueryState()->DeclareStateEntry("aggs", payload_struct_.GetType());
+  global_aggs_ = GetQueryState()->DeclareStateEntry("aggs", payload_struct_.GetType());
 }
 
 void StaticAggregationTranslator::DeclarePipelineDependencies() const {
@@ -71,7 +70,7 @@ void StaticAggregationTranslator::GenerateValuesStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto name = fmt::format("{}{}", kAggAttrPrefix, term_idx++);
-    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType().GetPrimitiveTypeId());
+    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType().GetTypeId());
     values_struct_.AddMember(name, type);
   }
   values_struct_.Seal();

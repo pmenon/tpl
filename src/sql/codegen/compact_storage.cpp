@@ -8,35 +8,35 @@
 
 namespace tpl::sql::codegen {
 
-#define CODE_LIST(F)                                                              \
-  F(TypeId::Boolean, CompactStorageWriteBool, CompactStorageReadBool)             \
-  F(TypeId::TinyInt, CompactStorageWriteTinyInt, CompactStorageReadTinyInt)       \
-  F(TypeId::SmallInt, CompactStorageWriteSmallInt, CompactStorageReadSmallInt)    \
-  F(TypeId::Integer, CompactStorageWriteInteger, CompactStorageReadInteger)       \
-  F(TypeId::BigInt, CompactStorageWriteBigInt, CompactStorageReadBigInt)          \
-  F(TypeId::Float, CompactStorageWriteReal, CompactStorageReadReal)               \
-  F(TypeId::Double, CompactStorageWriteDouble, CompactStorageReadDouble)          \
-  F(TypeId::Date, CompactStorageWriteDate, CompactStorageReadDate)                \
-  F(TypeId::Timestamp, CompactStorageWriteTimestamp, CompactStorageReadTimestamp) \
-  F(TypeId::Varchar, CompactStorageWriteString, CompactStorageReadString)
+#define CODE_LIST(F)                                                                 \
+  F(SqlTypeId::Boolean, CompactStorageWriteBool, CompactStorageReadBool)             \
+  F(SqlTypeId::TinyInt, CompactStorageWriteTinyInt, CompactStorageReadTinyInt)       \
+  F(SqlTypeId::SmallInt, CompactStorageWriteSmallInt, CompactStorageReadSmallInt)    \
+  F(SqlTypeId::Integer, CompactStorageWriteInteger, CompactStorageReadInteger)       \
+  F(SqlTypeId::BigInt, CompactStorageWriteBigInt, CompactStorageReadBigInt)          \
+  F(SqlTypeId::Real, CompactStorageWriteReal, CompactStorageReadReal)                \
+  F(SqlTypeId::Double, CompactStorageWriteDouble, CompactStorageReadDouble)          \
+  F(SqlTypeId::Date, CompactStorageWriteDate, CompactStorageReadDate)                \
+  F(SqlTypeId::Timestamp, CompactStorageWriteTimestamp, CompactStorageReadTimestamp) \
+  F(SqlTypeId::Varchar, CompactStorageWriteString, CompactStorageReadString)
 
 CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name)
     : codegen_(codegen), struct_(codegen, fmt::format("{}_Compact", name), true) {}
 
 CompactStorage::CompactStorage(CodeGen *codegen, std::string_view name,
-                               const std::vector<TypeId> &schema)
+                               const std::vector<Type> &schema)
     : CompactStorage(codegen, name) {
   Setup(schema);
 }
 
-void CompactStorage::Setup(const std::vector<TypeId> &schema) {
+void CompactStorage::Setup(const std::vector<Type> &schema) {
   // Set the types.
   col_types_ = schema;
 
   // Add the fields as described in the schema.
   for (uint32_t i = 0; i < schema.size(); i++) {
     const auto name = fmt::format("member{}", i);
-    const auto type = codegen_->GetPrimitiveTPLType(schema[i]);
+    const auto type = codegen_->GetPrimitiveTPLType(schema[i].GetPrimitiveTypeId());
     struct_.AddMember(name, type);
   }
 
@@ -62,7 +62,7 @@ void CompactStorage::WriteSQL(const edsl::ReferenceVT &ptr, uint32_t index,
   case (Type):                              \
     op = ast::Builtin::WriteCall;           \
     break;
-  switch (col_types_[index]) {
+  switch (col_types_[index].GetTypeId()) {
     CODE_LIST(GEN_CASE)
     default:
       UNREACHABLE("Impossible type in CompactStorage::Write() call!");
@@ -87,7 +87,7 @@ edsl::ValueVT CompactStorage::ReadSQL(const edsl::ReferenceVT &ptr, uint32_t ind
   case (Type):                              \
     op = ast::Builtin::ReadCall;            \
     break;
-  switch (col_types_[index]) {
+  switch (col_types_[index].GetTypeId()) {
     CODE_LIST(GEN_CASE)
     default:
       UNREACHABLE("Impossible type in CompactStorage::Read() call!");
@@ -99,7 +99,7 @@ edsl::ValueVT CompactStorage::ReadSQL(const edsl::ReferenceVT &ptr, uint32_t ind
   auto nulls = struct_.GetMemberPtr(ptr, col_types_.size()).As<uint8_t[]>();
   auto val = codegen_->CallBuiltin(
       op, {col_ptr.GetRaw(), nulls.GetRaw(), codegen_->Literal<uint32_t>(index)});
-  val->SetType(codegen_->GetTPLType(col_types_[index]));
+  val->SetType(codegen_->GetTPLType(col_types_[index].GetTypeId()));
   return edsl::ValueVT(codegen_, val);
 }
 

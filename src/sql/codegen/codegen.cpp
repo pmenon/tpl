@@ -14,23 +14,23 @@ namespace tpl::sql::codegen {
 CodeGen::CodeGen(CompilationUnit *container)
     : container_(container), position_{0, 0}, function_(nullptr) {}
 
-ast::Type *CodeGen::GetTPLType(TypeId type_id) {
+ast::Type *CodeGen::GetTPLType(SqlTypeId type_id) {
   switch (type_id) {
-    case sql::TypeId::Boolean:
+    case sql::SqlTypeId::Boolean:
       return GetType<ast::x::BooleanVal>();
-    case sql::TypeId::TinyInt:
-    case sql::TypeId::SmallInt:
-    case sql::TypeId::Integer:
-    case sql::TypeId::BigInt:
+    case sql::SqlTypeId::TinyInt:
+    case sql::SqlTypeId::SmallInt:
+    case sql::SqlTypeId::Integer:
+    case sql::SqlTypeId::BigInt:
       return GetType<ast::x::IntegerVal>();
-    case sql::TypeId::Date:
+    case sql::SqlTypeId::Date:
       return GetType<ast::x::DateVal>();
-    case sql::TypeId::Timestamp:
+    case sql::SqlTypeId::Timestamp:
       return GetType<ast::x::TimestampVal>();
-    case sql::TypeId::Double:
-    case sql::TypeId::Float:
+    case sql::SqlTypeId::Real:
+    case sql::SqlTypeId::Double:
       return GetType<ast::x::RealVal>();
-    case sql::TypeId::Varchar:
+    case sql::SqlTypeId::Varchar:
       return GetType<ast::x::StringVal>();
     default:
       UNREACHABLE("Cannot codegen unsupported type.");

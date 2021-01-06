@@ -8,7 +8,7 @@
 #include "sql/codegen/edsl/struct.h"
 #include "sql/codegen/edsl/value.h"
 #include "sql/codegen/edsl/value_vt.h"
-#include "sql/sql.h"
+#include "sql/type.h"
 
 namespace tpl::sql::codegen {
 
@@ -27,13 +27,13 @@ class CompactStorage {
    * @param schema The schema of the row to be stored.
    */
   explicit CompactStorage(CodeGen *codegen, std::string_view name,
-                          const std::vector<TypeId> &schema);
+                          const std::vector<Type> &schema);
 
   /**
    * Setup the storage to store rows with the given schema.
    * @param schema The schema of the rows to materialize.
    */
-  void Setup(const std::vector<TypeId> &schema);
+  void Setup(const std::vector<Type> &schema);
 
   /**
    * Write the value, @em val, into the attribute index @em index in the row pointed to by @em ptr.
@@ -93,7 +93,7 @@ class CompactStorage {
   // Code generation instance.
   CodeGen *codegen_;
   // The types of each column.
-  std::vector<TypeId> col_types_;
+  std::vector<Type> col_types_;
   // The compact structure.
   edsl::Struct struct_;
 };
