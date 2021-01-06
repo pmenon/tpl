@@ -22,12 +22,11 @@ class OutputSchema {
    public:
     /**
      * Instantiates a Column object.
-     * @param type The SQL type for this column.
-     * @param nullable Is column nullable.
      * @param expr The expression used to generate this column.
      */
-    Column(const sql::TypeId type, const bool nullable, const planner::AbstractExpression *expr)
-        : type_(type), nullable_(nullable), expr_(expr) {}
+    Column(const planner::AbstractExpression *expr) : expr_(expr) {
+      TPL_ASSERT(expr != nullptr, "NULL expression provided for column.");
+    }
 
     /**
      * Default constructor used for deserialization.
@@ -37,12 +36,12 @@ class OutputSchema {
     /**
      * @return The SQL type for this column.
      */
-    sql::TypeId GetType() const { return type_; }
+    const Type &GetType() const { return expr_->GetReturnValueType(); }
 
     /**
      * @return True if the column is nullable, false otherwise.
      */
-    bool GetNullable() const { return nullable_; }
+    bool GetNullable() const { return expr_->HasNullableValue(); }
 
     /**
      * @return The expression used to produce the value of the column.
@@ -50,10 +49,6 @@ class OutputSchema {
     const planner::AbstractExpression *GetExpr() const { return expr_; }
 
    private:
-    // SQL type.
-    sql::TypeId type_;
-    // NULL-able flag.
-    bool nullable_;
     // Producing expression.
     const planner::AbstractExpression *expr_;
   };
@@ -76,14 +71,11 @@ class OutputSchema {
     /**
      * Append an output column with the given type, NULL-able flag and producing expression to this
      * output schema. The column is added to the end of the list of columns.
-     * @param type The SQL type of the column.
-     * @param nullable The NULL-able flag.
      * @param expr The producing expression.
      * @return This builder.
      */
-    Builder &AddColumn(const sql::TypeId type, const bool nullable,
-                       const planner::AbstractExpression *expr) {
-      return AddColumn(OutputSchema::Column(type, nullable, expr));
+    Builder &AddColumn(const planner::AbstractExpression *expr) {
+      return AddColumn(OutputSchema::Column(expr));
     }
 
     /**

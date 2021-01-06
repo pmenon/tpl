@@ -15,7 +15,7 @@ class CastExpression : public AbstractExpression {
    * @param target_type The type to cast the input into.
    * @param input The input to the cast expression.
    */
-  CastExpression(const TypeId target_type, const AbstractExpression *input)
+  CastExpression(const Type &target_type, const AbstractExpression *input)
       : AbstractExpression(ExpressionType::CAST, target_type, {input}) {}
 
   /**
@@ -26,12 +26,12 @@ class CastExpression : public AbstractExpression {
   /**
    * @return The target type of the cast.
    */
-  TypeId GetTargetType() const { return GetReturnValueType(); }
+  const Type &GetTargetType() const { return GetReturnValueType(); }
 
   /**
    * @return The input type of the cast.
    */
-  TypeId GetInputType() const { return GetInput()->GetReturnValueType(); }
+  const Type &GetInputType() const { return GetInput()->GetReturnValueType(); }
 };
 
 }  // namespace tpl::sql::planner

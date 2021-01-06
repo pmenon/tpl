@@ -32,8 +32,8 @@ TEST_F(SeqScanTranslatorTest, ScanTest) {
   planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
   {
     // Get Table columns
-    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA").oid, sql::TypeId::Integer);
-    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA"));
+    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB"));
     // Make New Column
     auto col3 = expr_maker.OpMul(col1, col2);
     auto col4 = expr_maker.CompareGe(col1, expr_maker.OpMul(expr_maker.Constant(100), col2));
@@ -78,10 +78,10 @@ TEST_F(SeqScanTranslatorTest, ScanWithNullCheckTest) {
     sql::Table *table = accessor->LookupTableByName("test_1");
     const auto &table_schema = table->GetSchema();
     // Get table columns.
-    auto colb = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    auto colb = expr_maker.CVE(table_schema.GetColumnInfo("colB"));
     seq_scan_out.AddOutput("colb", colb);
     // Predicate.
-    auto predicate = expr_maker.UnaryOperator(KnownOperator::IsNull, TypeId::Boolean, colb);
+    auto predicate = expr_maker.UnaryOperator(KnownOperator::IsNull, Type::BooleanType(false), colb);
     // Build plan.
     seq_scan = planner::SeqScanPlanNode::Builder()
                    .SetOutputSchema(seq_scan_out.MakeSchema())
@@ -112,8 +112,8 @@ TEST_F(SeqScanTranslatorTest, ScanWithNonVectorizedFilterTest) {
   planner::OutputSchemaHelper seq_scan_out(&expr_maker, 0);
   {
     // Get Table columns
-    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA").oid, sql::TypeId::Integer);
-    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA"));
+    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB"));
     // Make New Column
     auto col3 = expr_maker.OpMul(col1, col2);
     auto col4 = expr_maker.CompareGe(col1, expr_maker.OpMul(expr_maker.Constant(100), col2));
@@ -173,8 +173,8 @@ TEST_F(SeqScanTranslatorTest, ScanWithProjection) {
   planner::OutputSchemaHelper seq_scan_out(&expr_maker, 0);
   {
     // Get Table columns
-    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA").oid, sql::TypeId::Integer);
-    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA"));
+    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB"));
     // Make New Column
     seq_scan_out.AddOutput("col1", col1);
     seq_scan_out.AddOutput("col2", col2);
@@ -244,13 +244,13 @@ TEST_F(SeqScanTranslatorTest, ScanWithAllColumnTypes) {
   {
     const auto &table_schema = table->GetSchema();
     // Get all columns.
-    auto a = expr_maker.CVE(table_schema.GetColumnInfo("a").oid, sql::TypeId::Boolean);
-    auto b = expr_maker.CVE(table_schema.GetColumnInfo("b").oid, sql::TypeId::TinyInt);
-    auto c = expr_maker.CVE(table_schema.GetColumnInfo("c").oid, sql::TypeId::SmallInt);
-    auto d = expr_maker.CVE(table_schema.GetColumnInfo("d").oid, sql::TypeId::Integer);
-    auto e = expr_maker.CVE(table_schema.GetColumnInfo("e").oid, sql::TypeId::BigInt);
-    auto f = expr_maker.CVE(table_schema.GetColumnInfo("f").oid, sql::TypeId::Float);
-    auto g = expr_maker.CVE(table_schema.GetColumnInfo("g").oid, sql::TypeId::Double);
+    auto a = expr_maker.CVE(table_schema.GetColumnInfo("a"));
+    auto b = expr_maker.CVE(table_schema.GetColumnInfo("b"));
+    auto c = expr_maker.CVE(table_schema.GetColumnInfo("c"));
+    auto d = expr_maker.CVE(table_schema.GetColumnInfo("d"));
+    auto e = expr_maker.CVE(table_schema.GetColumnInfo("e"));
+    auto f = expr_maker.CVE(table_schema.GetColumnInfo("f"));
+    auto g = expr_maker.CVE(table_schema.GetColumnInfo("g"));
     // Set outputs.
     seq_scan_out.AddOutput("a", a);
     seq_scan_out.AddOutput("b", b);

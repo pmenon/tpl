@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "sql/planner/expressions/expression_defs.h"
-#include "sql/sql.h"
+#include "sql/type.h"
 
 namespace tpl::sql::planner {
 
@@ -16,11 +16,11 @@ class AbstractExpression {
   /**
    * Instantiates a new abstract expression. Because these are logical expressions, everything
    * should be known at the time of instantiation, i.e. the resulting object is immutable.
-   * @param expression_type what type of expression we have
-   * @param return_value_type the type of the expression's value
-   * @param children the list of children for this node
+   * @param expression_type The type of expression we have.
+   * @param return_value_type The type of the expression's value.
+   * @param children The list of children for this node.
    */
-  AbstractExpression(ExpressionType expression_type, TypeId return_value_type,
+  AbstractExpression(ExpressionType expression_type, Type return_value_type,
                      std::vector<const AbstractExpression *> &&children)
       : expression_type_(expression_type),
         return_value_type_(return_value_type),
@@ -32,60 +32,42 @@ class AbstractExpression {
    */
   AbstractExpression(const AbstractExpression &other) = default;
 
-  /**
-   * @param return_value_type Set the return value type of the current expression
-   */
-  void SetReturnValueType(TypeId return_value_type) { return_value_type_ = return_value_type; }
+  /** @param return_value_type Set the return value type of the current expression */
+  void SetReturnValueType(const Type &return_value_type) { return_value_type_ = return_value_type; }
 
  public:
-  /**
-   * Destructor.
-   */
+  /** Destructor. */
   virtual ~AbstractExpression() = default;
 
-  /**
-   * @return The type of this expression.
-   */
+  /** * @return The type of this expression. */
   ExpressionType GetExpressionType() const { return expression_type_; }
 
-  /**
-   * @return True if this expression is of the provided template type; false otherwise.
-   */
+  /** @return True if this expression is of the provided template type; false otherwise. */
   template <ExpressionType Type>
   bool Is() const noexcept {
     return expression_type_ == Type;
   }
 
-  /**
-   * @return The SQL type of value this expression produces and returns.
-   */
-  TypeId GetReturnValueType() const { return return_value_type_; }
+  /** @return The SQL type of value this expression produces and returns. */
+  const Type &GetReturnValueType() const { return return_value_type_; }
 
-  /**
-   * @return The number of children the expression has.
-   */
-  size_t GetChildrenSize() const { return children_.size(); }
+  /** @return True if the return type is NULL-able; false otherwise. */
+  bool HasNullableValue() const { return return_value_type_.IsNullable(); }
 
-  /**
-   * @return A const view of this expression's children.
-   */
-  const std::vector<const AbstractExpression *> &GetChildren() const { return children_; }
+  /** @return The number of children the expression has. */
+  std::size_t NumChildren() const { return children_.size(); }
 
-  /**
-   * @return The n-th child of this expression.
-   */
+  /** @return The n-th child of this expression. */
   const AbstractExpression *GetChild(uint64_t index) const {
     TPL_ASSERT(index < children_.size(), "Index must be in bounds.");
     return children_[index];
   }
 
-  virtual void DeriveReturnValueType() {}
-
  private:
   // The expression type.
   ExpressionType expression_type_;
   // The expression's return type.
-  TypeId return_value_type_;
+  Type return_value_type_;
   // List fo children expressions.
   std::vector<const AbstractExpression *> children_;
 };

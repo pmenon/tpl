@@ -17,7 +17,7 @@ class DerivedValueExpression : public AbstractExpression {
    * @param tuple_idx The index of the tuple.
    * @param value_idx The offset of the value in the tuple.
    */
-  DerivedValueExpression(sql::TypeId type, int32_t tuple_idx, int32_t value_idx)
+  DerivedValueExpression(const Type &type, int32_t tuple_idx, int32_t value_idx)
       : AbstractExpression(ExpressionType::DERIVED_VALUE, type, {}),
         tuple_idx_(tuple_idx),
         value_idx_(value_idx) {}

@@ -60,12 +60,12 @@ TEST_F(CSVScanTranslatorTest, ManyTypesTest) {
   std::unique_ptr<planner::AbstractPlanNode> csv_scan;
   planner::OutputSchemaHelper seq_scan_out(&expr_maker, 0);
   {
-    auto col1 = expr_maker.CVE(0, sql::TypeId::TinyInt);
-    auto col2 = expr_maker.CVE(1, sql::TypeId::SmallInt);
-    auto col3 = expr_maker.CVE(2, sql::TypeId::Integer);
-    auto col4 = expr_maker.CVE(3, sql::TypeId::BigInt);
-    auto col5 = expr_maker.CVE(4, sql::TypeId::Float);
-    auto col6 = expr_maker.CVE(5, sql::TypeId::Varchar);
+    auto col1 = expr_maker.CVE(0, Type::TinyIntType(false));
+    auto col2 = expr_maker.CVE(1, Type::SmallIntType(false));
+    auto col3 = expr_maker.CVE(2, Type::IntegerType(false));
+    auto col4 = expr_maker.CVE(3, Type::BigIntType(false));
+    auto col5 = expr_maker.CVE(4, Type::RealType(false));
+    auto col6 = expr_maker.CVE(5, Type::VarcharType(false, 20));
 
     seq_scan_out.AddOutput("col1", col1);
     seq_scan_out.AddOutput("col2", col2);

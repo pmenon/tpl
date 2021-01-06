@@ -14,7 +14,7 @@ ExpressionTranslator::ExpressionTranslator(const planner::AbstractExpression &ex
 }
 
 const planner::AbstractExpression *ExpressionTranslator::GetChild(uint32_t idx) const {
-  TPL_ASSERT(idx < expr_.GetChildrenSize(), "Out-of-bounds child access");
+  TPL_ASSERT(idx < expr_.NumChildren(), "Out-of-bounds child access");
   return expr_.GetChild(idx);
 }
 

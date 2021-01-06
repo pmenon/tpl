@@ -65,8 +65,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 0};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make the predicate: d_year=1993
     auto _1993 = expr_maker.Constant(1993);
     auto predicate = expr_maker.CompareEq(d_year, _1993);
@@ -84,14 +84,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_extendedprice =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_extendedprice").oid, sql::TypeId::Integer);
-    auto lo_discount =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_discount").oid, sql::TypeId::Integer);
-    auto lo_quantity =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_quantity").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_extendedprice = expr_maker.CVE(lo_schema.GetColumnInfo("lo_extendedprice"));
+    auto lo_discount = expr_maker.CVE(lo_schema.GetColumnInfo("lo_discount"));
+    auto lo_quantity = expr_maker.CVE(lo_schema.GetColumnInfo("lo_quantity"));
     // Make predicate: lo_discount between 1 and 3 AND lo_quantity < 25
     auto predicate = expr_maker.ConjunctionAnd(
         expr_maker.CompareBetween(lo_discount, expr_maker.Constant(1), expr_maker.Constant(3)),
@@ -188,9 +184,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 0};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_yearmonthnum =
-        expr_maker.CVE(d_schema.GetColumnInfo("d_yearmonthnum").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_yearmonthnum = expr_maker.CVE(d_schema.GetColumnInfo("d_yearmonthnum"));
     // Make the predicate: d_yearmonthnum = 199401
     auto predicate = expr_maker.CompareEq(d_yearmonthnum, expr_maker.Constant(199401));
     // Make output schema.
@@ -207,14 +202,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_extendedprice =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_extendedprice").oid, sql::TypeId::Integer);
-    auto lo_discount =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_discount").oid, sql::TypeId::Integer);
-    auto lo_quantity =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_quantity").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_extendedprice = expr_maker.CVE(lo_schema.GetColumnInfo("lo_extendedprice"));
+    auto lo_discount = expr_maker.CVE(lo_schema.GetColumnInfo("lo_discount"));
+    auto lo_quantity = expr_maker.CVE(lo_schema.GetColumnInfo("lo_quantity"));
     // Make predicate: lo_discount between 4 and 6 AND lo_quantity between 26 and 35
     auto predicate = expr_maker.ConjunctionAnd(
         expr_maker.CompareBetween(lo_discount, expr_maker.Constant(4), expr_maker.Constant(6)),
@@ -311,10 +302,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 0};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_weeknuminyear =
-        expr_maker.CVE(d_schema.GetColumnInfo("d_weeknuminyear").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_weeknuminyear = expr_maker.CVE(d_schema.GetColumnInfo("d_weeknuminyear"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make the predicate: d_weeknuminyear = 6 AND d_year = 1994
     auto predicate =
         expr_maker.ConjunctionAnd(expr_maker.CompareEq(d_weeknuminyear, expr_maker.Constant(6)),
@@ -333,14 +323,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q1_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_extendedprice =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_extendedprice").oid, sql::TypeId::Integer);
-    auto lo_discount =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_discount").oid, sql::TypeId::Integer);
-    auto lo_quantity =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_quantity").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_extendedprice = expr_maker.CVE(lo_schema.GetColumnInfo("lo_extendedprice"));
+    auto lo_discount = expr_maker.CVE(lo_schema.GetColumnInfo("lo_discount"));
+    auto lo_quantity = expr_maker.CVE(lo_schema.GetColumnInfo("lo_quantity"));
     // Make predicate: lo_discount between 5 and 7 AND lo_quantity between 26 and 35
     auto predicate = expr_maker.ConjunctionAnd(
         expr_maker.CompareBetween(lo_discount, expr_maker.Constant(5), expr_maker.Constant(7)),
@@ -443,8 +429,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 1};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -460,10 +446,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
   {
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1").oid, sql::TypeId::Varchar);
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1"));
     auto p_category =
-        expr_maker.CVE(p_schema.GetColumnInfo("p_category").oid, sql::TypeId::Varchar);
+        expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
     // Make the predicate: p_category = 'MFGR#12'
     auto predicate = expr_maker.CompareEq(p_category, expr_maker.Constant("MFGR#12"));
     // Make output schema.
@@ -481,8 +467,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region"));
     // Make the predicate: s_region = 'AMERICA'
     auto predicate = expr_maker.CompareEq(s_region, expr_maker.Constant("AMERICA"));
     // Make output schema.
@@ -499,14 +485,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_partkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_partkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_partkey", lo_partkey);
@@ -694,8 +676,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 1};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -711,8 +693,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
   {
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1").oid, sql::TypeId::Varchar);
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1"));
     // Make the predicate: p_brand1 between 'MFGR#2221' and 'MFGR#2228'
     auto predicate = expr_maker.CompareBetween(p_brand1, expr_maker.Constant("MFGR#2221"),
                                                expr_maker.Constant("MFGR#2228"));
@@ -731,8 +713,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region"));
     // Make the predicate: s_region = 'ASIA'
     auto predicate = expr_maker.CompareEq(s_region, expr_maker.Constant("ASIA"));
     // Make output schema.
@@ -749,14 +731,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_partkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_partkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_partkey", lo_partkey);
@@ -944,8 +922,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 1};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -961,8 +939,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
   {
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1").oid, sql::TypeId::Varchar);
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1"));
     // Make the predicate: p_brand1 = 'MFGR#2221'
     auto predicate = expr_maker.CompareEq(p_brand1, expr_maker.Constant("MFGR#2221"));
     // Make output schema.
@@ -980,8 +958,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region"));
     // Make the predicate: s_region = 'EUROPE'
     auto predicate = expr_maker.CompareEq(s_region, expr_maker.Constant("EUROPE"));
     // Make output schema.
@@ -998,14 +976,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_partkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_partkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_partkey", lo_partkey);
@@ -1193,8 +1167,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 0};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -1213,9 +1187,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> c_seq_scan;
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
   {
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_nation = expr_maker.CVE(c_schema.GetColumnInfo("c_nation").oid, sql::TypeId::Varchar);
-    auto c_region = expr_maker.CVE(c_schema.GetColumnInfo("c_region").oid, sql::TypeId::Varchar);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_nation = expr_maker.CVE(c_schema.GetColumnInfo("c_nation"));
+    auto c_region = expr_maker.CVE(c_schema.GetColumnInfo("c_region"));
     // Make the predicate: c_region = 'ASIA'
     auto predicate = expr_maker.CompareEq(c_region, expr_maker.Constant("ASIA"));
     // Make output schema.
@@ -1233,9 +1207,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_nation = expr_maker.CVE(s_schema.GetColumnInfo("s_nation").oid, sql::TypeId::Varchar);
-    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_nation = expr_maker.CVE(s_schema.GetColumnInfo("s_nation"));
+    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region"));
     // Make the predicate: s_region = 'ASIA'
     auto predicate = expr_maker.CompareEq(s_region, expr_maker.Constant("ASIA"));
     // Make output schema.
@@ -1253,14 +1227,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_custkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_custkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_custkey", lo_custkey);
@@ -1458,8 +1428,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 0};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -1478,9 +1448,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> c_seq_scan;
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
   {
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_nation = expr_maker.CVE(c_schema.GetColumnInfo("c_nation").oid, sql::TypeId::Varchar);
-    auto c_city = expr_maker.CVE(c_schema.GetColumnInfo("c_city").oid, sql::TypeId::Varchar);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_nation = expr_maker.CVE(c_schema.GetColumnInfo("c_nation"));
+    auto c_city = expr_maker.CVE(c_schema.GetColumnInfo("c_city"));
     // Make the predicate: c_nation = 'UNITED STATES'
     auto predicate = expr_maker.CompareEq(c_nation, expr_maker.Constant("UNITED STATES"));
     // Make output schema.
@@ -1498,9 +1468,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_nation = expr_maker.CVE(s_schema.GetColumnInfo("s_nation").oid, sql::TypeId::Varchar);
-    auto s_city = expr_maker.CVE(s_schema.GetColumnInfo("s_city").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_nation = expr_maker.CVE(s_schema.GetColumnInfo("s_nation"));
+    auto s_city = expr_maker.CVE(s_schema.GetColumnInfo("s_city"));
     // Make the predicate: s_nation = 'UNITED STATES'
     auto predicate = expr_maker.CompareEq(s_nation, expr_maker.Constant("UNITED STATES"));
     // Make output schema.
@@ -1518,14 +1488,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_custkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_custkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_custkey", lo_custkey);
@@ -1723,8 +1689,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 0};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -1743,8 +1709,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> c_seq_scan;
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
   {
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_city = expr_maker.CVE(c_schema.GetColumnInfo("c_city").oid, sql::TypeId::Varchar);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_city = expr_maker.CVE(c_schema.GetColumnInfo("c_city"));
     // Make the predicate: c_city='UNITED KI1' or c_city='UNITED KI5'
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(c_city, expr_maker.Constant("UNITED KI1")),
@@ -1764,8 +1730,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_city = expr_maker.CVE(s_schema.GetColumnInfo("s_city").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_city = expr_maker.CVE(s_schema.GetColumnInfo("s_city"));
     // Make the predicate: s_city='UNITED KI1' or s_city='UNITED KI5'
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(s_city, expr_maker.Constant("UNITED KI1")),
@@ -1785,14 +1751,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_custkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_custkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_custkey", lo_custkey);
@@ -1990,10 +1952,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_4)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 0};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     auto d_yearmonth =
-        expr_maker.CVE(d_schema.GetColumnInfo("d_yearmonth").oid, sql::TypeId::Varchar);
+        expr_maker.CVE(d_schema.GetColumnInfo("d_yearmonth"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -2011,8 +1973,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_4)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> c_seq_scan;
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
   {
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_city = expr_maker.CVE(c_schema.GetColumnInfo("c_city").oid, sql::TypeId::Varchar);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_city = expr_maker.CVE(c_schema.GetColumnInfo("c_city"));
     // Make the predicate: c_city='UNITED KI1' or c_city='UNITED KI5'
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(c_city, expr_maker.Constant("UNITED KI1")),
@@ -2032,8 +1994,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_4)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_city = expr_maker.CVE(s_schema.GetColumnInfo("s_city").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_city = expr_maker.CVE(s_schema.GetColumnInfo("s_city"));
     // Make the predicate: s_city='UNITED KI1' or s_city='UNITED KI5'
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(s_city, expr_maker.Constant("UNITED KI1")),
@@ -2053,14 +2015,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_4)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_custkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_custkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_custkey", lo_custkey);
@@ -2261,8 +2219,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 1};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -2278,9 +2236,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> c_seq_scan;
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
   {
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_nation = expr_maker.CVE(c_schema.GetColumnInfo("c_nation").oid, sql::TypeId::Varchar);
-    auto c_region = expr_maker.CVE(c_schema.GetColumnInfo("c_region").oid, sql::TypeId::Varchar);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_nation = expr_maker.CVE(c_schema.GetColumnInfo("c_nation"));
+    auto c_region = expr_maker.CVE(c_schema.GetColumnInfo("c_region"));
     // Make the predicate: c_region = 'AMERICA'
     auto predicate = expr_maker.CompareEq(c_region, expr_maker.Constant("AMERICA"));
     // Make output schema.
@@ -2298,8 +2256,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region"));
     // Make the predicate: s_region = 'AMERICA'
     auto predicate = expr_maker.CompareEq(s_region, expr_maker.Constant("AMERICA"));
     // Make output schema.
@@ -2316,8 +2274,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
   {
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_mfgr = expr_maker.CVE(p_schema.GetColumnInfo("p_mfgr").oid, sql::TypeId::Varchar);
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_mfgr = expr_maker.CVE(p_schema.GetColumnInfo("p_mfgr"));
     // Make the predicate: p_mfgr = 'MFGR#1' or p_mfgr = 'MFGR#2'
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(p_mfgr, expr_maker.Constant("MFGR#1")),
@@ -2336,18 +2294,12 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_1)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_custkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_partkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
-    auto lo_supplycost =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_supplycost").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_custkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_partkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
+    auto lo_supplycost = expr_maker.CVE(lo_schema.GetColumnInfo("lo_supplycost"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_custkey", lo_custkey);
@@ -2578,8 +2530,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 1};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make predicate: d_year = 1997 or d_year = 1998
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(d_year, expr_maker.Constant(1997)),
@@ -2599,8 +2551,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> c_seq_scan;
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
   {
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_region = expr_maker.CVE(c_schema.GetColumnInfo("c_region").oid, sql::TypeId::Varchar);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_region = expr_maker.CVE(c_schema.GetColumnInfo("c_region"));
     // Make the predicate: c_region = 'AMERICA'
     auto predicate = expr_maker.CompareEq(c_region, expr_maker.Constant("AMERICA"));
     // Make output schema.
@@ -2617,9 +2569,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region").oid, sql::TypeId::Varchar);
-    auto s_nation = expr_maker.CVE(s_schema.GetColumnInfo("s_nation").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_region = expr_maker.CVE(s_schema.GetColumnInfo("s_region"));
+    auto s_nation = expr_maker.CVE(s_schema.GetColumnInfo("s_nation"));
     // Make the predicate: s_region = 'AMERICA'
     auto predicate = expr_maker.CompareEq(s_region, expr_maker.Constant("AMERICA"));
     // Make output schema.
@@ -2637,10 +2589,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
   {
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_mfgr = expr_maker.CVE(p_schema.GetColumnInfo("p_mfgr").oid, sql::TypeId::Varchar);
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_mfgr = expr_maker.CVE(p_schema.GetColumnInfo("p_mfgr"));
     auto p_category =
-        expr_maker.CVE(p_schema.GetColumnInfo("p_category").oid, sql::TypeId::Varchar);
+        expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
     // Make the predicate: p_mfgr = 'MFGR#1' or p_mfgr = 'MFGR#2'
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(p_mfgr, expr_maker.Constant("MFGR#1")),
@@ -2660,18 +2612,12 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_2)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_custkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_partkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
-    auto lo_supplycost =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_supplycost").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_custkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_partkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
+    auto lo_supplycost = expr_maker.CVE(lo_schema.GetColumnInfo("lo_supplycost"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_custkey", lo_custkey);
@@ -2915,8 +2861,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> d_seq_scan;
   planner::OutputSchemaHelper d_seq_scan_out{&expr_maker, 1};
   {
-    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey").oid, sql::TypeId::Integer);
-    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year").oid, sql::TypeId::Integer);
+    auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
+    auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
     // Make predicate: d_year = 1997 or d_year = 1998
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(d_year, expr_maker.Constant(1997)),
@@ -2936,8 +2882,8 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> c_seq_scan;
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
   {
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_region = expr_maker.CVE(c_schema.GetColumnInfo("c_region").oid, sql::TypeId::Varchar);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_region = expr_maker.CVE(c_schema.GetColumnInfo("c_region"));
     // Make the predicate: c_region = 'AMERICA'
     auto predicate = expr_maker.CompareEq(c_region, expr_maker.Constant("AMERICA"));
     // Make output schema.
@@ -2954,9 +2900,9 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> s_seq_scan;
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_city = expr_maker.CVE(s_schema.GetColumnInfo("s_city").oid, sql::TypeId::Varchar);
-    auto s_nation = expr_maker.CVE(s_schema.GetColumnInfo("s_nation").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_city = expr_maker.CVE(s_schema.GetColumnInfo("s_city"));
+    auto s_nation = expr_maker.CVE(s_schema.GetColumnInfo("s_nation"));
     // Make the predicate: s_nation = 'UNITED STATES'
     auto predicate = expr_maker.CompareEq(s_nation, expr_maker.Constant("UNITED STATES"));
     // Make output schema.
@@ -2974,10 +2920,10 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> p_seq_scan;
   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
   {
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1").oid, sql::TypeId::Varchar);
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1"));
     auto p_category =
-        expr_maker.CVE(p_schema.GetColumnInfo("p_category").oid, sql::TypeId::Varchar);
+        expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
     // Make the predicate: p_category = 'MFGR#14'
     auto predicate = expr_maker.CompareEq(p_category, expr_maker.Constant("MFGR#14"));
     // Make output schema.
@@ -2995,18 +2941,12 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
   std::unique_ptr<planner::AbstractPlanNode> lo_seq_scan;
   planner::OutputSchemaHelper lo_seq_scan_out{&expr_maker, 1};
   {
-    auto lo_orderdate =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate").oid, sql::TypeId::Integer);
-    auto lo_custkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey").oid, sql::TypeId::Integer);
-    auto lo_suppkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey").oid, sql::TypeId::Integer);
-    auto lo_partkey =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey").oid, sql::TypeId::Integer);
-    auto lo_revenue =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue").oid, sql::TypeId::Integer);
-    auto lo_supplycost =
-        expr_maker.CVE(lo_schema.GetColumnInfo("lo_supplycost").oid, sql::TypeId::Integer);
+    auto lo_orderdate = expr_maker.CVE(lo_schema.GetColumnInfo("lo_orderdate"));
+    auto lo_custkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_custkey"));
+    auto lo_suppkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_suppkey"));
+    auto lo_partkey = expr_maker.CVE(lo_schema.GetColumnInfo("lo_partkey"));
+    auto lo_revenue = expr_maker.CVE(lo_schema.GetColumnInfo("lo_revenue"));
+    auto lo_supplycost = expr_maker.CVE(lo_schema.GetColumnInfo("lo_supplycost"));
     // Make output schema.
     lo_seq_scan_out.AddOutput("lo_orderdate", lo_orderdate);
     lo_seq_scan_out.AddOutput("lo_custkey", lo_custkey);

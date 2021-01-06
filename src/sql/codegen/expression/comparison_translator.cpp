@@ -13,7 +13,7 @@ namespace tpl::sql::codegen {
 ComparisonTranslator::ComparisonTranslator(const planner::ComparisonExpression &expr,
                                            CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {
-  for (uint32_t i = 0; i < expr.GetChildrenSize(); i++) {
+  for (uint32_t i = 0; i < expr.NumChildren(); i++) {
     compilation_context->Prepare(*expr.GetChild(i));
   }
 }

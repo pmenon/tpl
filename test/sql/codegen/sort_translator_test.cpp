@@ -33,8 +33,8 @@ class SortTranslatorTest : public CodegenBasedTest {
     planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
     {
       // Get Table columns
-      auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("col1").oid, sql::TypeId::Integer);
-      auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("col2").oid, sql::TypeId::Integer);
+      auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("col1"));
+      auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("col2"));
       seq_scan_out.AddOutput("col1", col1);
       seq_scan_out.AddOutput("col2", col2);
       auto schema = seq_scan_out.MakeSchema();
@@ -106,8 +106,8 @@ TEST_F(SortTranslatorTest, SimpleSortTest) {
   planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
   {
     // Get Table columns
-    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA").oid, sql::TypeId::Integer);
-    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA"));
+    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB"));
     seq_scan_out.AddOutput("col1", col1);
     seq_scan_out.AddOutput("col2", col2);
     auto schema = seq_scan_out.MakeSchema();
@@ -162,8 +162,8 @@ TEST_F(SortTranslatorTest, TwoColumnSortTest) {
   planner::OutputSchemaHelper seq_scan_out{&expr_maker, 0};
   {
     // Get Table columns
-    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA").oid, sql::TypeId::Integer);
-    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("colA"));
+    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("colB"));
     seq_scan_out.AddOutput("col1", col1);
     seq_scan_out.AddOutput("col2", col2);
     auto schema = seq_scan_out.MakeSchema();

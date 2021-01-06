@@ -48,7 +48,7 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan,
   std::vector<TypeId> types;
   types.reserve(GetChildOutputSchema(0)->NumColumns());
   for (const auto &col : GetChildOutputSchema(0)->GetColumns()) {
-    types.push_back(col.GetType());
+    types.push_back(col.GetType().GetPrimitiveTypeId());
   }
   if (plan.RequiresLeftMark()) {
     types.push_back(TypeId::Boolean);
@@ -154,7 +154,9 @@ bool HashJoinTranslator::ShouldValidateHashOnProbe() const {
   // For now, only string keys are the only complex type.
   // Modify 'is_complex()' as more complex types are supported.
   const auto &keys = GetJoinPlan().GetRightHashKeys();
-  const auto is_complex = [](auto key) { return key->GetReturnValueType() == TypeId::Varchar; };
+  const auto is_complex = [](auto key) {
+    return key->GetReturnValueType().GetTypeId() == SqlTypeId::Varchar;
+  };
   return keys.size() > 1 || std::ranges::any_of(keys, is_complex);
 }
 
@@ -280,7 +282,7 @@ edsl::ValueVT HashJoinTranslator::GetChildOutput(ConsumerContext *context, uint3
 void HashJoinTranslator::GenerateHashTableAnalysisFunction() {
   std::vector<std::pair<edsl::VariableVT, uint32_t>> vars;
   for (uint32_t idx = 0; const auto &col : GetChildOutputSchema(0)->GetColumns()) {
-    if (const auto type_id = col.GetType(); IsTypeIntegral(type_id)) {
+    if (const auto type_id = col.GetType().GetPrimitiveTypeId(); IsTypeIntegral(type_id)) {
       ast::Type *type = codegen_->GetPrimitiveTPLType(type_id);
       vars.emplace_back(edsl::VariableVT(codegen_, fmt::format("bits_{}", idx), type), idx);
     }
@@ -319,7 +321,7 @@ void HashJoinTranslator::GenerateHashTableAnalysisFunction() {
     function.Append(stats->SetColumnCount(edsl::Literal<uint32_t>(codegen_, vars.size())));
     for (uint32_t idx = 0; const auto &[var, var_idx] : vars) {
       for (; idx < var_idx; idx++) {
-        const auto type_id = GetChildOutputSchema(0)->GetColumn(idx).GetType();
+        const auto type_id = GetChildOutputSchema(0)->GetColumn(idx).GetType().GetPrimitiveTypeId();
         auto col_idx = edsl::Literal<uint32_t>(codegen_, idx);
         auto num_bits = edsl::Literal<uint32_t>(codegen_, GetTypeIdSize(type_id) * kBitsPerByte);
         function.Append(stats->SetColumnBits(col_idx, num_bits));

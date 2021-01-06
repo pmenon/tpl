@@ -6,6 +6,10 @@
 
 namespace tpl::sql {
 
+namespace planner {
+class ConstantValueExpression;
+}  // namespace planner
+
 /**
  * This class captures schema information about a SQL type. SQL types have a dedicated type ID, a
  * boolean NULL indication flag, and auxiliary type-based information. These types are meant to be
@@ -142,6 +146,8 @@ class Type {
   };
 
  private:
+  friend class planner::ConstantValueExpression;
+
   // Private constructors to force factory functions.
   Type(SqlTypeId type, bool nullable);
   Type(SqlTypeId type, bool nullable, VarcharInfo varchar_info);

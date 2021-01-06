@@ -97,15 +97,11 @@ edsl::ValueVT CSVScanTranslator::GetTableColumn(uint16_t col_oid) const {
                     fmt::format("out-of-bounds CSV column access at idx={}", col_oid));
   }
 
-  edsl::Value<ast::x::StringVal> field = GetField(col_oid);
-
-  if (auto col_type = output_schema->GetColumn(col_oid).GetType(); col_type == TypeId::Varchar) {
-    return field;
-  } else {
-    return edsl::ConvertSql(field, col_type);
-  }
-
-  return edsl::ConvertSql(field, GetPlan().GetOutputSchema()->GetColumn(col_oid).GetType());
+  const auto field_ref = GetField(col_oid);
+  const auto field_type = output_schema->GetColumn(col_oid).GetType();
+  return field_type.GetTypeId() == SqlTypeId::Varchar
+             ? field_ref
+             : edsl::ConvertSql(field_ref, field_type.GetPrimitiveTypeId());
 }
 
 void CSVScanTranslator::DrivePipeline(const PipelineContext &pipeline_ctx) const {

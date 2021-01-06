@@ -24,7 +24,7 @@ void PrintingConsumer::PrintTuple(const byte *const tuple) const {
     const byte *const col_ptr = tuple + col_offsets[i];
 
     // Column value
-    switch (GetSqlTypeFromInternalType(cols[i].GetType())) {
+    switch (cols[i].GetType().GetTypeId()) {
       case SqlTypeId::Boolean: {
         const auto val = reinterpret_cast<const BoolVal *>(col_ptr);
         os_ << (val->is_null ? "NULL" : val->val ? "True" : "False");

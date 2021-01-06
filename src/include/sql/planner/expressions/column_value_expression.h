@@ -9,12 +9,10 @@ namespace tpl::sql::planner {
  */
 class ColumnValueExpression : public AbstractExpression {
  public:
-  ColumnValueExpression(uint16_t column_oid, TypeId type)
+  ColumnValueExpression(uint16_t column_oid, const Type &type)
       : AbstractExpression(ExpressionType::COLUMN_VALUE, type, {}), column_oid_(column_oid) {}
 
-  /**
-   * @return column oid
-   */
+  /** @return The ID of the column this expression refers to. */
   uint16_t GetColumnOid() const { return column_oid_; }
 
  private:

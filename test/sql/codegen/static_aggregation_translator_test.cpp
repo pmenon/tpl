@@ -31,7 +31,7 @@ TEST_F(StaticAggregationTranslatorTest, SimpleTest) {
   std::unique_ptr<planner::AbstractPlanNode> seq_scan;
   planner::OutputSchemaHelper seq_scan_out(&expr_maker, 0);
   {
-    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("col2").oid, sql::TypeId::Integer);
+    auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("col2"));
     seq_scan_out.AddOutput("col2", col2);
     auto schema = seq_scan_out.MakeSchema();
     // Build

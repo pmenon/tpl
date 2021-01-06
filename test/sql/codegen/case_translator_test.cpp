@@ -41,7 +41,7 @@ TEST_F(CaseTranslatorTest, CasesWithDefault) {
   planner::OutputSchemaHelper seq_scan_out(&expr_maker, 0);
   {
     // Columns.
-    auto colb = expr_maker.CVE(table_schema.GetColumnInfo("colB").oid, sql::TypeId::Integer);
+    auto colb = expr_maker.CVE(table_schema.GetColumnInfo("colB"));
 
     // Case.
     std::vector<std::pair<Expr, Expr>> clauses;

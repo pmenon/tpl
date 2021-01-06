@@ -68,7 +68,8 @@ edsl::ValueVT CaseTranslator::DeriveValue(ConsumerContext *context,
   FunctionBuilder *function = codegen_->GetCurrentFunction();
 
   // var case_result: TYPE
-  edsl::VariableVT ret(codegen_, "ret", codegen_->GetTPLType(GetExpression().GetReturnValueType()));
+  auto ret_type_id = GetExpression().GetReturnValueType().GetPrimitiveTypeId();
+  edsl::VariableVT ret(codegen_, "ret", codegen_->GetTPLType(ret_type_id));
   function->Append(edsl::Declare(ret));
 
   // Generate all clauses.

@@ -64,16 +64,13 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q1)(benchmark::State &state) {
   planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto l_returnflag =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_returnflag").oid, sql::TypeId::Varchar);
-    auto l_linestatus =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_linestatus").oid, sql::TypeId::Varchar);
-    auto l_extendedprice =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-    auto l_tax = expr_maker.CVE(l_schema.GetColumnInfo("l_tax").oid, sql::TypeId::Float);
-    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
+    auto l_returnflag = expr_maker.CVE(l_schema.GetColumnInfo("l_returnflag"));
+    auto l_linestatus = expr_maker.CVE(l_schema.GetColumnInfo("l_linestatus"));
+    auto l_extendedprice = expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice"));
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount"));
+    auto l_tax = expr_maker.CVE(l_schema.GetColumnInfo("l_tax"));
+    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity"));
+    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate"));
     // Make the output schema
     l_seq_scan_out.AddOutput("l_returnflag", l_returnflag);
     l_seq_scan_out.AddOutput("l_linestatus", l_linestatus);
@@ -223,11 +220,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q4)(benchmark::State &state) {
   planner::OutputSchemaHelper o_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto o_orderkey =
-        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
-    auto o_orderpriority =
-        expr_maker.CVE(o_schema.GetColumnInfo("o_orderpriority").oid, sql::TypeId::Varchar);
-    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date);
+    auto o_orderkey = expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey"));
+    auto o_orderpriority = expr_maker.CVE(o_schema.GetColumnInfo("o_orderpriority"));
+    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate"));
     // Make the output schema
     o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
     o_seq_scan_out.AddOutput("o_orderpriority", o_orderpriority);
@@ -250,12 +245,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q4)(benchmark::State &state) {
   planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto l_orderkey =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
-    auto l_commitdate =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_commitdate").oid, sql::TypeId::Date);
-    auto l_receiptdate =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_receiptdate").oid, sql::TypeId::Date);
+    auto l_orderkey = expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey"));
+    auto l_commitdate = expr_maker.CVE(l_schema.GetColumnInfo("l_commitdate"));
+    auto l_receiptdate = expr_maker.CVE(l_schema.GetColumnInfo("l_receiptdate"));
     // Make the output schema
     l_seq_scan_out.AddOutput("l_orderkey", l_orderkey);
     auto schema = l_seq_scan_out.MakeSchema();
@@ -378,9 +370,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   planner::OutputSchemaHelper r_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto r_name = expr_maker.CVE(r_schema.GetColumnInfo("r_name").oid, sql::TypeId::Varchar);
-    auto r_regionkey =
-        expr_maker.CVE(r_schema.GetColumnInfo("r_regionkey").oid, sql::TypeId::Integer);
+    auto r_name = expr_maker.CVE(r_schema.GetColumnInfo("r_name"));
+    auto r_regionkey = expr_maker.CVE(r_schema.GetColumnInfo("r_regionkey"));
     // Make the output schema
     r_seq_scan_out.AddOutput("r_regionkey", r_regionkey);
     auto schema = r_seq_scan_out.MakeSchema();
@@ -399,11 +390,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   planner::OutputSchemaHelper n_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto n_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name").oid, sql::TypeId::Varchar);
-    auto n_nationkey =
-        expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey").oid, sql::TypeId::Integer);
-    auto n_regionkey =
-        expr_maker.CVE(n_schema.GetColumnInfo("n_regionkey").oid, sql::TypeId::Integer);
+    auto n_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name"));
+    auto n_nationkey = expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey"));
+    auto n_regionkey = expr_maker.CVE(n_schema.GetColumnInfo("n_regionkey"));
     // Make the output schema
     n_seq_scan_out.AddOutput("n_name", n_name);
     n_seq_scan_out.AddOutput("n_nationkey", n_nationkey);
@@ -421,9 +410,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_nationkey =
-        expr_maker.CVE(c_schema.GetColumnInfo("c_nationkey").oid, sql::TypeId::Integer);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_nationkey = expr_maker.CVE(c_schema.GetColumnInfo("c_nationkey"));
     // Make the output schema
     c_seq_scan_out.AddOutput("c_custkey", c_custkey);
     c_seq_scan_out.AddOutput("c_nationkey", c_nationkey);
@@ -440,10 +428,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   planner::OutputSchemaHelper o_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto o_orderkey =
-        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
-    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid, sql::TypeId::Integer);
-    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date);
+    auto o_orderkey = expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey"));
+    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey"));
+    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate"));
     // Make the output schema
     o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
     o_seq_scan_out.AddOutput("o_custkey", o_custkey);
@@ -466,12 +453,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto l_extendedprice =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-    auto l_orderkey =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
-    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey").oid, sql::TypeId::Integer);
+    auto l_extendedprice = expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice"));
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount"));
+    auto l_orderkey = expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey"));
+    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey"));
     // Make the output schema
     l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
     l_seq_scan_out.AddOutput("l_discount", l_discount);
@@ -490,9 +475,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q5)(benchmark::State &state) {
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_nationkey =
-        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_nationkey = expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey"));
     // Make the output schema
     s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
     s_seq_scan_out.AddOutput("s_nationkey", s_nationkey);
@@ -731,11 +715,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q6)(benchmark::State &state) {
   planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto l_extendedprice =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
-    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
+    auto l_extendedprice = expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice"));
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount"));
+    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate"));
+    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity"));
     // Make the output schema
     l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
     l_seq_scan_out.AddOutput("l_discount", l_discount);
@@ -824,9 +807,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   planner::OutputSchemaHelper n1_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto n1_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name").oid, sql::TypeId::Varchar);
-    auto n1_nationkey =
-        expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey").oid, sql::TypeId::Integer);
+    auto n1_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name"));
+    auto n1_nationkey = expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey"));
     // Make the output schema
     n1_seq_scan_out.AddOutput("n1_name", n1_name);
     n1_seq_scan_out.AddOutput("n1_nationkey", n1_nationkey);
@@ -848,9 +830,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   planner::OutputSchemaHelper n2_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto n2_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name").oid, sql::TypeId::Varchar);
-    auto n2_nationkey =
-        expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey").oid, sql::TypeId::Integer);
+    auto n2_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name"));
+    auto n2_nationkey = expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey"));
     // Make the output schema
     n2_seq_scan_out.AddOutput("n2_name", n2_name);
     n2_seq_scan_out.AddOutput("n2_nationkey", n2_nationkey);
@@ -906,9 +887,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_nationkey =
-        expr_maker.CVE(c_schema.GetColumnInfo("c_nationkey").oid, sql::TypeId::Integer);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_nationkey = expr_maker.CVE(c_schema.GetColumnInfo("c_nationkey"));
     // Make the output schema
     c_seq_scan_out.AddOutput("c_custkey", c_custkey);
     c_seq_scan_out.AddOutput("c_nationkey", c_nationkey);
@@ -959,9 +939,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   planner::OutputSchemaHelper o_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto o_orderkey =
-        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
-    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid, sql::TypeId::Integer);
+    auto o_orderkey = expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey"));
+    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey"));
     // Make the output schema
     o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
     o_seq_scan_out.AddOutput("o_custkey", o_custkey);
@@ -1012,13 +991,11 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto l_extendedprice =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-    auto l_orderkey =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
-    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey").oid, sql::TypeId::Integer);
-    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
+    auto l_extendedprice = expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice"));
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount"));
+    auto l_orderkey = expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey"));
+    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey"));
+    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate"));
     // Make the output schema
     auto const_one = expr_maker.Constant(1.0f);
     auto volume = expr_maker.OpMul(l_extendedprice, expr_maker.OpMin(const_one, l_discount));
@@ -1026,7 +1003,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
     l_seq_scan_out.AddOutput("l_orderkey", l_orderkey);
     l_seq_scan_out.AddOutput("l_suppkey", l_suppkey);
     auto extract_year =
-        expr_maker.UnaryOperator(KnownOperator::ExtractYear, sql::TypeId::Integer, l_shipdate);
+        expr_maker.UnaryOperator(KnownOperator::ExtractYear, Type::IntegerType(false), l_shipdate);
     l_seq_scan_out.AddOutput("l_year", extract_year);
     auto schema = l_seq_scan_out.MakeSchema();
     // Predicate
@@ -1085,9 +1062,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q7)(benchmark::State &state) {
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_nationkey =
-        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_nationkey = expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey"));
     // Make the output schema
     s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
     s_seq_scan_out.AddOutput("s_nationkey", s_nationkey);
@@ -1231,9 +1207,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     const auto &n_schema = n_table->GetSchema();
 
     // Read all needed columns.
-    auto n_nationkey =
-        expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey").oid, sql::TypeId::Integer);
-    auto n_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name").oid, sql::TypeId::Varchar);
+    auto n_nationkey = expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey"));
+    auto n_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name"));
     // Make the output schema.
     n_seq_scan_out.AddOutput("n_nationkey", n_nationkey);
     n_seq_scan_out.AddOutput("n_name", n_name);
@@ -1253,9 +1228,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     const auto &s_schema = s_table->GetSchema();
 
     // Read all needed columns
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_nationkey =
-        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_nationkey = expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey"));
     // Make the output schema.
     s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
     s_seq_scan_out.AddOutput("s_nationkey", s_nationkey);
@@ -1275,8 +1249,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     const auto &p_schema = p_table->GetSchema();
 
     // Read all needed columns.
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_name = expr_maker.CVE(p_schema.GetColumnInfo("p_name").oid, sql::TypeId::Varchar);
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_name = expr_maker.CVE(p_schema.GetColumnInfo("p_name"));
     // Make the output schema.
     p_seq_scan_out.AddOutput("p_partkey", p_partkey);
     // Predicate.
@@ -1297,12 +1271,9 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     const auto &ps_schema = ps_table->GetSchema();
 
     // Read all needed columns.
-    auto ps_partkey =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_partkey").oid, sql::TypeId::Integer);
-    auto ps_suppkey =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_suppkey").oid, sql::TypeId::Integer);
-    auto ps_supplycost =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_supplycost").oid, sql::TypeId::Float);
+    auto ps_partkey = expr_maker.CVE(ps_schema.GetColumnInfo("ps_partkey"));
+    auto ps_suppkey = expr_maker.CVE(ps_schema.GetColumnInfo("ps_suppkey"));
+    auto ps_supplycost = expr_maker.CVE(ps_schema.GetColumnInfo("ps_supplycost"));
     // Make the output schema.
     ps_seq_scan_out.AddOutput("ps_partkey", ps_partkey);
     ps_seq_scan_out.AddOutput("ps_suppkey", ps_suppkey);
@@ -1323,14 +1294,12 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     const auto &l_schema = l_table->GetSchema();
 
     // Read all needed columns.
-    auto l_extendedprice =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey").oid, sql::TypeId::Integer);
-    auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey").oid, sql::TypeId::Integer);
-    auto l_orderkey =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
+    auto l_extendedprice = expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice"));
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount"));
+    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity"));
+    auto l_suppkey = expr_maker.CVE(l_schema.GetColumnInfo("l_suppkey"));
+    auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey"));
+    auto l_orderkey = expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey"));
     // Make the output schema.
     l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
     l_seq_scan_out.AddOutput("l_discount", l_discount);
@@ -1354,9 +1323,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     const auto &o_schema = o_table->GetSchema();
 
     // Read all needed columns.
-    auto o_orderkey =
-        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
-    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date);
+    auto o_orderkey = expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey"));
+    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate"));
     // Make the output schema.
     o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
     o_seq_scan_out.AddOutput("o_orderdate", o_orderdate);
@@ -1542,7 +1510,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q9)(benchmark::State &state) {
     // Output Schema.
     proj_out.AddOutput("n_name", n_name);
     proj_out.AddOutput("o_year", expr_maker.UnaryOperator(KnownOperator::ExtractYear,
-                                                          TypeId::Integer, o_orderdate));
+                                                          Type::IntegerType(false), o_orderdate));
     proj_out.AddOutput(
         "amount", expr_maker.OpMin(
                       // l_extendedprice * (1.0 - l_discount)
@@ -1644,9 +1612,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   planner::OutputSchemaHelper n_seq_scan_out1{&expr_maker, 0};
   {
     // Read all needed columns
-    auto n_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name").oid, sql::TypeId::Varchar);
-    auto n_nationkey =
-        expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey").oid, sql::TypeId::Integer);
+    auto n_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name"));
+    auto n_nationkey = expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey"));
     // Make the output schema
     n_seq_scan_out1.AddOutput("n_nationkey", n_nationkey);
     auto schema = n_seq_scan_out1.MakeSchema();
@@ -1665,9 +1632,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   planner::OutputSchemaHelper n_seq_scan_out2{&expr_maker, 0};
   {
     // Read all needed columns
-    auto n_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name").oid, sql::TypeId::Varchar);
-    auto n_nationkey =
-        expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey").oid, sql::TypeId::Integer);
+    auto n_name = expr_maker.CVE(n_schema.GetColumnInfo("n_name"));
+    auto n_nationkey = expr_maker.CVE(n_schema.GetColumnInfo("n_nationkey"));
     // Make the output schema
     n_seq_scan_out2.AddOutput("n_nationkey", n_nationkey);
     auto schema = n_seq_scan_out2.MakeSchema();
@@ -1687,9 +1653,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   planner::OutputSchemaHelper s_seq_scan_out1{&expr_maker, 1};
   {
     // Read all needed columns
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_nationkey =
-        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_nationkey = expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey"));
     // Make the output schema
     s_seq_scan_out1.AddOutput("s_suppkey", s_suppkey);
     s_seq_scan_out1.AddOutput("s_nationkey", s_nationkey);
@@ -1707,9 +1672,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   planner::OutputSchemaHelper s_seq_scan_out2{&expr_maker, 1};
   {
     // Read all needed columns
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_nationkey =
-        expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey").oid, sql::TypeId::Integer);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_nationkey = expr_maker.CVE(s_schema.GetColumnInfo("s_nationkey"));
     // Make the output schema
     s_seq_scan_out2.AddOutput("s_suppkey", s_suppkey);
     s_seq_scan_out2.AddOutput("s_nationkey", s_nationkey);
@@ -1728,14 +1692,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   planner::OutputSchemaHelper ps_seq_scan_out1{&expr_maker, 1};
   {
     // Read all needed columns
-    auto ps_suppkey =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_suppkey").oid, sql::TypeId::Integer);
-    auto ps_partkey =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_partkey").oid, sql::TypeId::Integer);
-    auto ps_supplycost =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_supplycost").oid, sql::TypeId::Float);
-    auto ps_availqty =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_availqty").oid, sql::TypeId::Integer);
+    auto ps_suppkey = expr_maker.CVE(ps_schema.GetColumnInfo("ps_suppkey"));
+    auto ps_partkey = expr_maker.CVE(ps_schema.GetColumnInfo("ps_partkey"));
+    auto ps_supplycost = expr_maker.CVE(ps_schema.GetColumnInfo("ps_supplycost"));
+    auto ps_availqty = expr_maker.CVE(ps_schema.GetColumnInfo("ps_availqty"));
 
     // Make the output schema
     ps_seq_scan_out1.AddOutput("ps_suppkey", ps_suppkey);
@@ -1755,14 +1715,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   planner::OutputSchemaHelper ps_seq_scan_out2{&expr_maker, 1};
   {
     // Read all needed columns
-    auto ps_suppkey =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_suppkey").oid, sql::TypeId::Integer);
-    auto ps_partkey =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_partkey").oid, sql::TypeId::Integer);
-    auto ps_supplycost =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_supplycost").oid, sql::TypeId::Float);
-    auto ps_availqty =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_availqty").oid, sql::TypeId::Integer);
+    auto ps_suppkey = expr_maker.CVE(ps_schema.GetColumnInfo("ps_suppkey"));
+    auto ps_partkey = expr_maker.CVE(ps_schema.GetColumnInfo("ps_partkey"));
+    auto ps_supplycost = expr_maker.CVE(ps_schema.GetColumnInfo("ps_supplycost"));
+    auto ps_availqty = expr_maker.CVE(ps_schema.GetColumnInfo("ps_availqty"));
 
     // Make the output schema
     ps_seq_scan_out2.AddOutput("ps_suppkey", ps_suppkey);
@@ -1897,7 +1853,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
     auto ps_availqty = hash_join_out2_1.GetOutput("ps_availqty");
     // Make the aggregate expressions
     auto value =
-        expr_maker.OpMul(ps_supplycost, expr_maker.OpCast(ps_availqty, sql::TypeId::Float));
+        expr_maker.OpMul(ps_supplycost, expr_maker.OpCast(ps_availqty, Type::RealType(false)));
     auto value_sum = expr_maker.AggSum(value);
     // Add them to the helper.
     agg_out1.AddAggTerm("value_sum", value_sum);
@@ -1923,7 +1879,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
     auto ps_partkey = hash_join_out2_2.GetOutput("ps_partkey");
     // Make the aggregate expressions
     auto value =
-        expr_maker.OpMul(ps_supplycost, expr_maker.OpCast(ps_availqty, sql::TypeId::Float));
+        expr_maker.OpMul(ps_supplycost, expr_maker.OpCast(ps_availqty, Type::RealType(false)));
     auto value_sum = expr_maker.AggSum(value);
     // Add them to the helper.
     agg_out2.AddGroupByTerm("ps_partkey", ps_partkey);
@@ -2018,11 +1974,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q14)(benchmark::State &state) {
     const auto &l_schema = l_table->GetSchema();
 
     // Read all needed columns.
-    auto l_extendedprice =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate").oid, sql::TypeId::Date);
-    auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey").oid, sql::TypeId::Integer);
+    auto l_extendedprice = expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice"));
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount"));
+    auto l_shipdate = expr_maker.CVE(l_schema.GetColumnInfo("l_shipdate"));
+    auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey"));
     // Make the output schema.
     l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
     l_seq_scan_out.AddOutput("l_discount", l_discount);
@@ -2047,8 +2002,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q14)(benchmark::State &state) {
     const auto &p_schema = p_table->GetSchema();
 
     // Read all needed columns.
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_type = expr_maker.CVE(p_schema.GetColumnInfo("p_type").oid, sql::TypeId::Varchar);
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_type = expr_maker.CVE(p_schema.GetColumnInfo("p_type"));
     // Make the output schema.
     p_seq_scan_out.AddOutput("p_partkey", p_partkey);
     p_seq_scan_out.AddOutput("p_type", p_type);
@@ -2171,10 +2126,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto p_brand = expr_maker.CVE(p_schema.GetColumnInfo("p_brand").oid, sql::TypeId::Varchar);
-    auto p_type = expr_maker.CVE(p_schema.GetColumnInfo("p_type").oid, sql::TypeId::Varchar);
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_size = expr_maker.CVE(p_schema.GetColumnInfo("p_size").oid, sql::TypeId::Integer);
+    auto p_brand = expr_maker.CVE(p_schema.GetColumnInfo("p_brand"));
+    auto p_type = expr_maker.CVE(p_schema.GetColumnInfo("p_type"));
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_size = expr_maker.CVE(p_schema.GetColumnInfo("p_size"));
     // Make the output schema
     p_seq_scan_out.AddOutput("p_brand", p_brand);
     p_seq_scan_out.AddOutput("p_type", p_type);
@@ -2215,8 +2170,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
   planner::OutputSchemaHelper s_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey").oid, sql::TypeId::Integer);
-    auto s_comment = expr_maker.CVE(s_schema.GetColumnInfo("s_comment").oid, sql::TypeId::Varchar);
+    auto s_suppkey = expr_maker.CVE(s_schema.GetColumnInfo("s_suppkey"));
+    auto s_comment = expr_maker.CVE(s_schema.GetColumnInfo("s_comment"));
     // Make the output schema
     s_seq_scan_out.AddOutput("s_suppkey", s_suppkey);
     auto schema = s_seq_scan_out.MakeSchema();
@@ -2236,10 +2191,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q16)(benchmark::State &state) {
   planner::OutputSchemaHelper ps_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto ps_suppkey =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_suppkey").oid, sql::TypeId::Integer);
-    auto ps_partkey =
-        expr_maker.CVE(ps_schema.GetColumnInfo("ps_partkey").oid, sql::TypeId::Integer);
+    auto ps_suppkey = expr_maker.CVE(ps_schema.GetColumnInfo("ps_suppkey"));
+    auto ps_partkey = expr_maker.CVE(ps_schema.GetColumnInfo("ps_partkey"));
     // Make the output schema
     ps_seq_scan_out.AddOutput("ps_suppkey", ps_suppkey);
     ps_seq_scan_out.AddOutput("ps_partkey", ps_partkey);
@@ -2414,8 +2367,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q18)(benchmark::State &state) {
   planner::OutputSchemaHelper c_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey").oid, sql::TypeId::Integer);
-    auto c_name = expr_maker.CVE(c_schema.GetColumnInfo("c_name").oid, sql::TypeId::Varchar);
+    auto c_custkey = expr_maker.CVE(c_schema.GetColumnInfo("c_custkey"));
+    auto c_name = expr_maker.CVE(c_schema.GetColumnInfo("c_name"));
     // Make the output schema
     c_seq_scan_out.AddOutput("c_custkey", c_custkey);
     c_seq_scan_out.AddOutput("c_name", c_name);
@@ -2432,12 +2385,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q18)(benchmark::State &state) {
   planner::OutputSchemaHelper o_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto o_orderkey =
-        expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey").oid, sql::TypeId::Integer);
-    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey").oid, sql::TypeId::Integer);
-    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate").oid, sql::TypeId::Date);
-    auto o_totalprice =
-        expr_maker.CVE(o_schema.GetColumnInfo("o_totalprice").oid, sql::TypeId::Float);
+    auto o_orderkey = expr_maker.CVE(o_schema.GetColumnInfo("o_orderkey"));
+    auto o_custkey = expr_maker.CVE(o_schema.GetColumnInfo("o_custkey"));
+    auto o_orderdate = expr_maker.CVE(o_schema.GetColumnInfo("o_orderdate"));
+    auto o_totalprice = expr_maker.CVE(o_schema.GetColumnInfo("o_totalprice"));
     // Make the output schema
     o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
     o_seq_scan_out.AddOutput("o_custkey", o_custkey);
@@ -2456,9 +2407,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q18)(benchmark::State &state) {
   planner::OutputSchemaHelper l_seq_scan_out1{&expr_maker, 0};
   {
     // Read all needed columns
-    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-    auto l_orderkey =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
+    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity"));
+    auto l_orderkey = expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey"));
     // Make the output schema
     l_seq_scan_out1.AddOutput("l_quantity", l_quantity);
     l_seq_scan_out1.AddOutput("l_orderkey", l_orderkey);
@@ -2475,9 +2425,8 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q18)(benchmark::State &state) {
   planner::OutputSchemaHelper l_seq_scan_out2{&expr_maker, 1};
   {
     // Read all needed columns
-    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-    auto l_orderkey =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey").oid, sql::TypeId::Integer);
+    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity"));
+    auto l_orderkey = expr_maker.CVE(l_schema.GetColumnInfo("l_orderkey"));
     // Make the output schema
     l_seq_scan_out2.AddOutput("l_quantity", l_quantity);
     l_seq_scan_out2.AddOutput("l_orderkey", l_orderkey);
@@ -2716,15 +2665,12 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
   planner::OutputSchemaHelper l_seq_scan_out{&expr_maker, 1};
   {
     // Read all needed columns
-    auto l_extendedprice =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice").oid, sql::TypeId::Float);
-    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount").oid, sql::TypeId::Float);
-    auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey").oid, sql::TypeId::Integer);
-    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity").oid, sql::TypeId::Float);
-    auto l_shipmode =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_shipmode").oid, sql::TypeId::Varchar);
-    auto l_shipinstruct =
-        expr_maker.CVE(l_schema.GetColumnInfo("l_shipinstruct").oid, sql::TypeId::Varchar);
+    auto l_extendedprice = expr_maker.CVE(l_schema.GetColumnInfo("l_extendedprice"));
+    auto l_discount = expr_maker.CVE(l_schema.GetColumnInfo("l_discount"));
+    auto l_partkey = expr_maker.CVE(l_schema.GetColumnInfo("l_partkey"));
+    auto l_quantity = expr_maker.CVE(l_schema.GetColumnInfo("l_quantity"));
+    auto l_shipmode = expr_maker.CVE(l_schema.GetColumnInfo("l_shipmode"));
+    auto l_shipinstruct = expr_maker.CVE(l_schema.GetColumnInfo("l_shipinstruct"));
     // Make the output schema
     l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
     l_seq_scan_out.AddOutput("l_discount", l_discount);
@@ -2754,11 +2700,10 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
   planner::OutputSchemaHelper p_seq_scan_out{&expr_maker, 0};
   {
     // Read all needed columns
-    auto p_brand = expr_maker.CVE(p_schema.GetColumnInfo("p_brand").oid, sql::TypeId::Varchar);
-    auto p_container =
-        expr_maker.CVE(p_schema.GetColumnInfo("p_container").oid, sql::TypeId::Varchar);
-    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey").oid, sql::TypeId::Integer);
-    auto p_size = expr_maker.CVE(p_schema.GetColumnInfo("p_size").oid, sql::TypeId::Integer);
+    auto p_brand = expr_maker.CVE(p_schema.GetColumnInfo("p_brand"));
+    auto p_container = expr_maker.CVE(p_schema.GetColumnInfo("p_container"));
+    auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
+    auto p_size = expr_maker.CVE(p_schema.GetColumnInfo("p_size"));
     // Make the output schema
     p_seq_scan_out.AddOutput("p_brand", p_brand);
     p_seq_scan_out.AddOutput("p_container", p_container);

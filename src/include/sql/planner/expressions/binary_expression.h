@@ -17,7 +17,7 @@ class BinaryExpression : public AbstractExpression {
    * @param lhs The left input to the binary expression.
    * @param rhs The right input to the binary expression.
    */
-  BinaryExpression(const TypeId return_type, KnownOperator op, const AbstractExpression *lhs,
+  BinaryExpression(const Type &return_type, KnownOperator op, const AbstractExpression *lhs,
                    const AbstractExpression *rhs)
       : AbstractExpression(ExpressionType::BINARY_OPERATOR, return_type, {lhs, rhs}), op_(op) {}
 
@@ -37,6 +37,7 @@ class BinaryExpression : public AbstractExpression {
   KnownOperator GetOp() const { return op_; }
 
  private:
+  // The operator.
   KnownOperator op_;
 };
 

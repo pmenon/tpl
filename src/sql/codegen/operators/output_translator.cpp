@@ -47,7 +47,8 @@ void OutputTranslator::DefineStructsAndFunctions() {
   const auto output_schema = GetPlan().GetOutputSchema();
   for (uint32_t i = 0; i < output_schema->NumColumns(); i++) {
     auto name = fmt::format("{}{}", kOutputColPrefix, i);
-    auto type = codegen_->GetTPLType(output_schema->GetColumn(i).GetExpr()->GetReturnValueType());
+    auto type = codegen_->GetTPLType(
+        output_schema->GetColumn(i).GetExpr()->GetReturnValueType().GetPrimitiveTypeId());
     out_struct_.AddMember(name, type);
   }
   out_struct_.Seal();

@@ -18,6 +18,7 @@
 #include "sql/planner/expressions/derived_value_expression.h"
 #include "sql/planner/expressions/unary_expression.h"
 #include "sql/value.h"
+#include "sql/schema.h"
 
 namespace tpl::sql::planner {
 
@@ -37,7 +38,7 @@ class ExpressionMaker {
    */
   Expression ConstantBool(bool val) {
     return Alloc(
-        std::make_unique<planner::ConstantValueExpression>(sql::GenericValue::CreateBoolean(val)));
+        std::make_unique<planner::ConstantValueExpression>(GenericValue::CreateBoolean(val)));
   }
 
   /**
@@ -45,7 +46,7 @@ class ExpressionMaker {
    */
   Expression Constant(int32_t val) {
     return Alloc(
-        std::make_unique<planner::ConstantValueExpression>(sql::GenericValue::CreateInteger(val)));
+        std::make_unique<planner::ConstantValueExpression>(GenericValue::CreateInteger(val)));
   }
 
   /**
@@ -53,7 +54,7 @@ class ExpressionMaker {
    */
   Expression Constant(float val) {
     return Alloc(
-        std::make_unique<planner::ConstantValueExpression>(sql::GenericValue::CreateFloat(val)));
+        std::make_unique<planner::ConstantValueExpression>(GenericValue::CreateFloat(val)));
   }
 
   /**
@@ -61,7 +62,7 @@ class ExpressionMaker {
    */
   Expression Constant(int16_t year, uint8_t month, uint8_t day) {
     return Alloc(std::make_unique<planner::ConstantValueExpression>(
-        sql::GenericValue::CreateDate(static_cast<uint32_t>(year), month, day)));
+        GenericValue::CreateDate(static_cast<uint32_t>(year), month, day)));
   }
 
   /**
@@ -69,20 +70,27 @@ class ExpressionMaker {
    */
   Expression Constant(const std::string &str) {
     return Alloc(
-        std::make_unique<planner::ConstantValueExpression>(sql::GenericValue::CreateVarchar(str)));
+        std::make_unique<planner::ConstantValueExpression>(GenericValue::CreateVarchar(str)));
   }
 
   /**
    * Create a column value expression
    */
-  Expression CVE(uint16_t column_oid, sql::TypeId type) {
-    return Alloc(std::make_unique<planner::ColumnValueExpression>(column_oid, type));
+  Expression CVE(const Schema::ColumnInfo &col) {
+    return Alloc(std::make_unique<planner::ColumnValueExpression>(col.oid, col.type));
+  }
+
+  /**
+   * Create a column value expression
+   */
+  Expression CVE(uint16_t col_oid, const Type &type) {
+    return Alloc(std::make_unique<planner::ColumnValueExpression>(col_oid, type));
   }
 
   /**
    * Create a derived value expression
    */
-  Expression DVE(sql::TypeId type, int tuple_idx, int value_idx) {
+  Expression DVE(const Type &type, int tuple_idx, int value_idx) {
     return Alloc(std::make_unique<planner::DerivedValueExpression>(type, tuple_idx, value_idx));
   }
 
@@ -161,14 +169,14 @@ class ExpressionMaker {
   /**
    * Create a unary operation expression
    */
-  Expression UnaryOperator(KnownOperator op, sql::TypeId ret_type, Expression child) {
+  Expression UnaryOperator(KnownOperator op, const Type &ret_type, Expression child) {
     return Alloc(std::make_unique<planner::UnaryExpression>(ret_type, op, child));
   }
 
   /**
    * Create a binary operation expression
    */
-  Expression BinaryOperator(KnownOperator op, sql::TypeId ret_type, Expression child1,
+  Expression BinaryOperator(KnownOperator op, const Type &ret_type, Expression child1,
                             Expression child2) {
     return Alloc(std::make_unique<planner::BinaryExpression>(ret_type, op, child1, child2));
   }
@@ -176,7 +184,7 @@ class ExpressionMaker {
   /**
    * Cast the input expression to the given type.
    */
-  Expression OpCast(Expression input, sql::TypeId to_type) {
+  Expression OpCast(Expression input, const Type &to_type) {
     return Alloc(std::make_unique<planner::CastExpression>(to_type, input));
   }
 
@@ -212,7 +220,8 @@ class ExpressionMaker {
    * Create expression for NOT(child)
    */
   Expression OpNot(Expression child) {
-    return UnaryOperator(KnownOperator::LogicalNot, sql::TypeId::Boolean, child);
+    return UnaryOperator(KnownOperator::LogicalNot, Type::BooleanType(child->HasNullableValue()),
+                         child);
   }
 
   /**

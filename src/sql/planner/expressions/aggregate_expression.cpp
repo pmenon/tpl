@@ -14,17 +14,17 @@ AggregateExpression::AggregateExpression(AggregateKind kind,
       kind_(kind),
       distinct_(distinct) {}
 
-TypeId AggregateExpression::DerivedReturnType(AggregateKind kind, TypeId input_type) {
+Type AggregateExpression::DerivedReturnType(AggregateKind kind, const Type &input_type) {
   switch (kind) {
     case AggregateKind::COUNT:
     case AggregateKind::COUNT_STAR:
-      return TypeId::BigInt;
+      return Type::BigIntType(false);
     case AggregateKind::SUM:
     case AggregateKind::MIN:
     case AggregateKind::MAX:
       return input_type;
     case AggregateKind::AVG:
-      return TypeId::Double;
+      return Type::DoubleType(input_type.IsNullable());
   }
   UNREACHABLE("Impossible to reach. All aggregate kinds handled.");
 }

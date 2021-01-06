@@ -91,7 +91,7 @@ void OperatorTranslator::GetAllChildOutputFields(uint32_t child_idx, std::string
   uint32_t attr_idx = 0;
   for (const auto &col : plan_.GetChild(child_idx)->GetOutputSchema()->GetColumns()) {
     auto name = fmt::format("{}{}", prefix, attr_idx++);
-    auto type = codegen_->GetTPLType(col.GetExpr()->GetReturnValueType());
+    auto type = codegen_->GetTPLType(col.GetExpr()->GetReturnValueType().GetPrimitiveTypeId());
     s->AddMember(name, type);
   }
 }

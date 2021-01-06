@@ -32,8 +32,8 @@ class LimitTranslatorTest : public CodegenBasedTest {
     std::unique_ptr<planner::AbstractPlanNode> seq_scan;
     planner::OutputSchemaHelper seq_scan_out(&expr_maker, 0);
     {
-      auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("col1").oid, sql::TypeId::Integer);
-      auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("col2").oid, sql::TypeId::Integer);
+      auto col1 = expr_maker.CVE(table_schema.GetColumnInfo("col1"));
+      auto col2 = expr_maker.CVE(table_schema.GetColumnInfo("col2"));
       seq_scan_out.AddOutput("col1", col1);
       seq_scan_out.AddOutput("col2", col2);
       auto schema = seq_scan_out.MakeSchema();

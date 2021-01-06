@@ -28,14 +28,14 @@ class OutputSchemaHelper {
   void AddOutput(const std::string &col_name, ExpressionMaker::Expression expr) {
     auto idx = uint32_t(cols_.size());
     name_to_idx_.emplace(col_name, idx);
-    cols_.emplace_back(expr->GetReturnValueType(), true, expr);
+    cols_.emplace_back(expr);
   }
 
   void AddOutput(const std::string &col_name, ExpressionMaker::Expression expr,
                  sql::TypeId col_type) {
     auto idx = uint32_t(cols_.size());
     name_to_idx_.emplace(col_name, idx);
-    cols_.emplace_back(col_type, true, expr);
+    cols_.emplace_back(expr);
   }
 
   ExpressionMaker::Expression GetAggTermForOutput(const std::string &agg_name) {

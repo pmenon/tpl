@@ -40,7 +40,7 @@ OutputSchema::OutputSchema(std::vector<Column> columns) : columns_(std::move(col
   std::size_t offset = 0;
   // Compute offset for each column.
   for (std::size_t i = 0; i < columns_.size(); i++) {
-    const auto sql_type_id = GetSqlTypeFromInternalType(columns_[i].GetType());
+    const auto sql_type_id = columns_[i].GetType().GetTypeId();
     const auto [size, align] = GetTypeSizeAndAlignment(sql_type_id);
     if (i != 0) {
       offset = util::MathUtil::AlignTo(offset, align);
@@ -60,7 +60,7 @@ const std::vector<OutputSchema::Column> &OutputSchema::GetColumns() const { retu
 const std::vector<std::size_t> &OutputSchema::GetColumnOffsets() const { return column_offsets_; }
 
 std::size_t OutputSchema::ComputeOutputRowSize() const {
-  const auto sql_type_id = GetSqlTypeFromInternalType(columns_.back().GetType());
+  const auto sql_type_id = columns_.back().GetType().GetTypeId();
   const auto [size, align] = GetTypeSizeAndAlignment(sql_type_id);
   return column_offsets_.back() + size;
 }
@@ -73,7 +73,7 @@ std::string OutputSchema::ToString() const {
   for (const auto &col : columns_) {
     if (!first) result += ",";
     first = false;
-    result += TypeIdToString(col.GetType()) + (col.GetNullable() ? "(NULLABLE)" : "");
+    result += col.GetType().ToString();
   }
   result += "]";
   return result;

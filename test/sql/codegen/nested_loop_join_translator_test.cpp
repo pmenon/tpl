@@ -36,8 +36,8 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
     auto table1 = accessor->LookupTableByName("small_1");
     auto &table_schema1 = table1->GetSchema();
     // Add col1 and col2 to output.
-    auto col1 = expr_maker.CVE(table_schema1.GetColumnInfo("col1").oid, TypeId::Integer);
-    auto col2 = expr_maker.CVE(table_schema1.GetColumnInfo("col2").oid, TypeId::Integer);
+    auto col1 = expr_maker.CVE(table_schema1.GetColumnInfo("col1"));
+    auto col2 = expr_maker.CVE(table_schema1.GetColumnInfo("col2"));
     seq_scan_out1.AddOutput("col1", col1);
     seq_scan_out1.AddOutput("col2", col2);
     auto schema = seq_scan_out1.MakeSchema();
@@ -53,8 +53,8 @@ TEST_F(NestedLoopJoinTranslatorTest, SimpleNestedLoopJoinTest) {
     auto table2 = accessor->LookupTableByName("small_1");
     auto &table_schema2 = table2->GetSchema();
     // Add col1 and col2 to output.
-    auto col1 = expr_maker.CVE(table_schema2.GetColumnInfo("col1").oid, TypeId::Integer);
-    auto col2 = expr_maker.CVE(table_schema2.GetColumnInfo("col2").oid, TypeId::Integer);
+    auto col1 = expr_maker.CVE(table_schema2.GetColumnInfo("col1"));
+    auto col2 = expr_maker.CVE(table_schema2.GetColumnInfo("col2"));
     seq_scan_out2.AddOutput("col1", col1);
     seq_scan_out2.AddOutput("col2", col2);
     auto schema = seq_scan_out2.MakeSchema();

@@ -70,7 +70,7 @@ void HashAggregationTranslator::GeneratePayloadStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetGroupByTerms()) {
     auto name = fmt::format("{}{}", kGroupByKeyPrefix, term_idx++);
-    auto type = codegen_->GetTPLType(term->GetReturnValueType());
+    auto type = codegen_->GetTPLType(term->GetReturnValueType().GetPrimitiveTypeId());
     agg_payload_.AddMember(name, type);
   }
 
@@ -78,7 +78,8 @@ void HashAggregationTranslator::GeneratePayloadStruct() {
   term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto name = fmt::format("{}{}", kAggregateTermPrefix, term_idx++);
-    auto type = codegen_->AggregateType(term->GetKind(), term->GetReturnValueType());
+    auto type =
+        codegen_->AggregateType(term->GetKind(), term->GetReturnValueType().GetPrimitiveTypeId());
     agg_payload_.AddMember(name, type);
   }
 
@@ -90,7 +91,7 @@ void HashAggregationTranslator::GenerateInputValuesStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetGroupByTerms()) {
     auto name = fmt::format("{}{}", kGroupByKeyPrefix, term_idx++);
-    auto type = codegen_->GetTPLType(term->GetReturnValueType());
+    auto type = codegen_->GetTPLType(term->GetReturnValueType().GetPrimitiveTypeId());
     agg_values_.AddMember(name, type);
   }
 
@@ -98,7 +99,7 @@ void HashAggregationTranslator::GenerateInputValuesStruct() {
   term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto name = fmt::format("{}{}", kAggregateTermPrefix, term_idx++);
-    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType());
+    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType().GetPrimitiveTypeId());
     agg_values_.AddMember(name, type);
   }
 

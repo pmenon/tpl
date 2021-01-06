@@ -18,12 +18,13 @@ class ConjunctionExpression : public AbstractExpression {
    * @param children vector containing exactly two children, left then right.
    */
   ConjunctionExpression(ConjunctionKind kind, std::vector<const AbstractExpression *> &&children)
-      : AbstractExpression(ExpressionType::CONJUNCTION, sql::TypeId::Boolean, std::move(children)),
+      : AbstractExpression(ExpressionType::CONJUNCTION,
+                           Type::BooleanType(std::ranges::any_of(
+                               children, [](auto e) { return e->HasNullableValue(); })),
+                           std::move(children)),
         kind_(kind) {}
 
-  /**
-   * @return The kind of conjunction.
-   */
+  /** @return The kind of conjunction. */
   ConjunctionKind GetKind() const { return kind_; }
 
  private:

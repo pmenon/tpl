@@ -39,7 +39,7 @@ class AggregateExpression : public AbstractExpression {
    * @param input_type The type of the input to the aggregation.
    * @return The return type.
    */
-  static TypeId DerivedReturnType(AggregateKind kind, TypeId input_type);
+  static Type DerivedReturnType(AggregateKind kind, const Type &input_type);
 
  private:
   // The kind of aggregate.

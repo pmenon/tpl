@@ -60,7 +60,8 @@ void StaticAggregationTranslator::GeneratePayloadStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto name = fmt::format("{}{}", kAggAttrPrefix, term_idx++);
-    auto type = codegen_->AggregateType(term->GetKind(), term->GetReturnValueType());
+    auto type =
+        codegen_->AggregateType(term->GetKind(), term->GetReturnValueType().GetPrimitiveTypeId());
     payload_struct_.AddMember(name, type);
   }
   payload_struct_.Seal();
@@ -70,7 +71,7 @@ void StaticAggregationTranslator::GenerateValuesStruct() {
   uint32_t term_idx = 0;
   for (const auto &term : GetAggPlan().GetAggregateTerms()) {
     auto name = fmt::format("{}{}", kAggAttrPrefix, term_idx++);
-    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType());
+    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType().GetPrimitiveTypeId());
     values_struct_.AddMember(name, type);
   }
   values_struct_.Seal();

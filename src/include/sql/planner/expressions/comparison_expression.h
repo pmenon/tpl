@@ -1,6 +1,6 @@
 #pragma once
 
-#include <utility>
+#include <algorithm>
 #include <vector>
 
 #include "sql/planner/expressions/abstract_expression.h"
@@ -17,9 +17,14 @@ class ComparisonExpression : public AbstractExpression {
    * @param cmp_kind The kind of comparison.
    * @param children vector containing exactly two children, left then right.
    */
-  ComparisonExpression(ComparisonKind cmp_kind, std::vector<const AbstractExpression *> &&children)
-      : AbstractExpression(ExpressionType::COMPARISON, sql::TypeId::Boolean, std::move(children)),
-        cmp_kind_(cmp_kind) {}
+  explicit ComparisonExpression(ComparisonKind cmp_kind,
+                                std::vector<const AbstractExpression *> &&children)
+      : AbstractExpression(ExpressionType::COMPARISON, Type::BooleanType(false),
+                           std::move(children)),
+        cmp_kind_(cmp_kind) {
+    bool nullable = std::ranges::any_of(children, [](auto e) { return e->HasNullableValue(); });
+    SetReturnValueType(Type::BooleanType(nullable));
+  }
 
   /**
    * @return The kind of the comparison.
