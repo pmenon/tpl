@@ -7,6 +7,7 @@
 
 #include "sql/codegen/codegen.h"
 #include "sql/codegen/compilation_context.h"
+#include "sql/codegen/edsl/comparison_ops.h"
 #include "sql/codegen/edsl/ops.h"
 #include "sql/codegen/function_builder.h"
 #include "sql/codegen/if.h"
@@ -25,11 +26,6 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
                                                      Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
       agg_payload_(codegen_, "AggPayload", true),
-      agg_values_(codegen_, "AggValues", true),
-      key_check_fn_(
-          codegen_->MakeFreshIdentifier(pipeline->CreatePipelineFunctionName("KeyCheck"))),
-      key_check_partial_fn_(
-          codegen_->MakeFreshIdentifier(pipeline->CreatePipelineFunctionName("KeyCheckPartial"))),
       merge_partitions_fn_(
           codegen_->MakeFreshIdentifier(pipeline->CreatePipelineFunctionName("MergePartitions"))),
       build_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
@@ -67,67 +63,27 @@ void HashAggregationTranslator::DeclarePipelineDependencies() const {
 
 void HashAggregationTranslator::GeneratePayloadStruct() {
   // Create a field for every group by term.
-  uint32_t term_idx = 0;
-  for (const auto &term : GetAggPlan().GetGroupByTerms()) {
-    auto name = fmt::format("{}{}", kGroupByKeyPrefix, term_idx++);
+  for (uint32_t idx = 0; const auto term : GetAggPlan().GetGroupByTerms()) {
+    auto name = fmt::format("{}{}", kGroupByKeyPrefix, idx++);
     auto type = codegen_->GetTPLType(term->GetReturnValueType().GetTypeId());
     agg_payload_.AddMember(name, type);
   }
 
   // Create a field for every aggregate term.
-  term_idx = 0;
-  for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto name = fmt::format("{}{}", kAggregateTermPrefix, term_idx++);
-    auto type =
-        codegen_->AggregateType(term->GetKind(), term->GetReturnValueType().GetPrimitiveTypeId());
+  for (uint32_t idx = 0; const auto term : GetAggPlan().GetAggregateTerms()) {
+    auto name = fmt::format("{}{}", kAggregateTermPrefix, idx++);
+    auto sql_type = term->GetReturnValueType();
+    auto type = codegen_->AggregateType(term->GetKind(), sql_type.GetPrimitiveTypeId());
     agg_payload_.AddMember(name, type);
   }
 
   agg_payload_.Seal();
 }
 
-void HashAggregationTranslator::GenerateInputValuesStruct() {
-  // Create a field for every group by term.
-  uint32_t term_idx = 0;
-  for (const auto &term : GetAggPlan().GetGroupByTerms()) {
-    auto name = fmt::format("{}{}", kGroupByKeyPrefix, term_idx++);
-    auto type = codegen_->GetTPLType(term->GetReturnValueType().GetTypeId());
-    agg_values_.AddMember(name, type);
-  }
-
-  // Create a field for every aggregate term.
-  term_idx = 0;
-  for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto name = fmt::format("{}{}", kAggregateTermPrefix, term_idx++);
-    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType().GetTypeId());
-    agg_values_.AddMember(name, type);
-  }
-
-  agg_values_.Seal();
-}
-
 std::size_t HashAggregationTranslator::KeyId(std::size_t id) const { return id; }
 
 std::size_t HashAggregationTranslator::AggId(std::size_t id) const {
   return id + GetAggPlan().NumGroupByTerms();
-}
-
-void HashAggregationTranslator::GeneratePartialKeyCheckFunction() {
-  std::vector<FunctionBuilder::Param> params = {
-      {codegen_->MakeIdentifier("lhs"), agg_payload_.GetPtrToType()},
-      {codegen_->MakeIdentifier("rhs"), agg_payload_.GetPtrToType()},
-  };
-  FunctionBuilder fn(codegen_, key_check_partial_fn_, std::move(params), codegen_->GetType<bool>());
-  {
-    for (uint32_t i = 0; i < GetAggPlan().NumGroupByTerms(); i++) {
-      auto lhs = agg_payload_.GetMember(fn.GetParameterByPosition(0), KeyId(i));
-      auto rhs = agg_payload_.GetMember(fn.GetParameterByPosition(1), KeyId(i));
-      If check_match(&fn, edsl::ComparisonOp(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
-      fn.Append(edsl::Return(codegen_, false));
-    }
-    fn.Append(edsl::Return(codegen_, true));
-  }
-  fn.Finish();
 }
 
 void HashAggregationTranslator::GenerateMergeOverflowPartitionsFunction() {
@@ -144,31 +100,36 @@ void HashAggregationTranslator::GenerateMergeOverflowPartitionsFunction() {
 
   FunctionBuilder fn(codegen_, merge_partitions_fn_, std::move(params), codegen_->NilType());
   {
-    ast::Type *payload_type = agg_payload_.GetPtrToType();
     auto hash_table = fn.GetParameterByPosition(1).As<ast::x::AggregationHashTable *>();
     auto iter = fn.GetParameterByPosition(2).As<ast::x::AHTOverflowPartitionIterator *>();
-    edsl::Variable<hash_t> hash_val(codegen_, "hash_val");
-    edsl::VariableVT partial_row(codegen_, "partial_row", payload_type);
-    edsl::VariableVT lookup_result(codegen_, "lookup_result", payload_type);
+    auto hash_val = edsl::Variable<hash_t>(codegen_, "hash_val");
+    auto partial = edsl::VariableVT(codegen_, "partial", agg_payload_.GetPtrToType());
     Loop loop(&fn, nullptr, iter->HasNext(), iter->Next());
     {
       fn.Append(edsl::Declare(hash_val, iter->GetHash()));
-      fn.Append(edsl::Declare(partial_row, edsl::PtrCast(payload_type, iter->GetRow())));
-      fn.Append(edsl::Declare(
-          lookup_result,
-          edsl::PtrCast(payload_type,
-                        hash_table->Lookup(hash_val, key_check_partial_fn_, partial_row))));
+      fn.Append(edsl::Declare(partial, edsl::PtrCast(agg_payload_.GetPtrToType(), iter->GetRow())));
 
-      If check_found(&fn, edsl::IsNilPtr(lookup_result));
-      {  // Entry doesn't exist in table, link in this entry.
+      std::vector<edsl::ReferenceVT> keys, vals;
+      keys.reserve(GetAggPlan().NumGroupByTerms());
+      vals.reserve(GetAggPlan().NumAggregateTerms());
+      for (uint32_t i = 0; i < GetAggPlan().NumGroupByTerms(); i++) {
+        keys.emplace_back(agg_payload_.GetMember(partial, KeyId(i)));
+      }
+      for (uint32_t i = 0; i < GetAggPlan().NumAggregateTerms(); i++) {
+        vals.emplace_back(agg_payload_.GetMember(partial, AggId(i)));
+      }
+
+      // Lookup.
+      PerformLookup(&fn, hash_table, hash_val, keys);
+      If check_found(&fn, edsl::IsNilPtr(*agg_row_));
+      {  // Entry doesn't exist in table, link it in directly.
         fn.Append(hash_table->LinkEntry(iter->GetRowEntry()));
       }
       check_found.Else();
       {  // Entry exists, merge the partial aggregate.
         for (uint32_t i = 0; i < GetAggPlan().NumAggregateTerms(); i++) {
-          auto lhs = agg_payload_.GetMemberPtr(lookup_result, AggId(i));
-          auto rhs = agg_payload_.GetMemberPtr(partial_row, AggId(i));
-          fn.Append(edsl::AggregatorMerge(lhs, rhs));
+          auto agg = agg_payload_.GetMemberPtr(*agg_row_, AggId(i));
+          fn.Append(edsl::AggregatorMerge(agg, vals[i].Addr()));
         }
       }
       check_found.EndIf();
@@ -177,40 +138,14 @@ void HashAggregationTranslator::GenerateMergeOverflowPartitionsFunction() {
   fn.Finish();
 }
 
-void HashAggregationTranslator::GenerateKeyCheckFunction() {
-  // Key-check function:
-  // (candidate: *AggPayload, probe_tuple: *AggValues) -> bool
-
-  std::vector<FunctionBuilder::Param> params = {
-      {codegen_->MakeIdentifier("agg_payload"), agg_payload_.GetType()->PointerTo()},
-      {codegen_->MakeIdentifier("agg_values"), agg_values_.GetType()->PointerTo()},
-  };
-  FunctionBuilder fn(codegen_, key_check_fn_, std::move(params), codegen_->BoolType());
-  {
-    for (uint32_t i = 0; i < GetAggPlan().NumGroupByTerms(); i++) {
-      auto lhs = agg_payload_.GetMember(fn.GetParameterByPosition(0), KeyId(i));
-      auto rhs = agg_values_.GetMember(fn.GetParameterByPosition(1), KeyId(i));
-      If check_match(&fn, edsl::ComparisonOp(parsing::Token::Type::BANG_EQUAL, lhs, rhs));
-      fn.Append(edsl::Return(codegen_, false));
-    }
-    fn.Append(edsl::Return(codegen_, true));
-  }
-  fn.Finish();
-}
-
 void HashAggregationTranslator::DefineStructsAndFunctions() {
   GeneratePayloadStruct();
-  GenerateInputValuesStruct();
   agg_row_ = std::make_unique<edsl::VariableVT>(codegen_, "agg_row", agg_payload_.GetPtrToType());
 }
 
 void HashAggregationTranslator::DefinePipelineFunctions(const PipelineContext &pipeline_ctx) {
-  if (pipeline_ctx.IsForPipeline(build_pipeline_)) {
-    GenerateKeyCheckFunction();
-    if (pipeline_ctx.IsParallel()) {
-      GeneratePartialKeyCheckFunction();
-      GenerateMergeOverflowPartitionsFunction();
-    }
+  if (pipeline_ctx.IsForPipeline(build_pipeline_) && pipeline_ctx.IsParallel()) {
+    GenerateMergeOverflowPartitionsFunction();
   }
 }
 
@@ -246,108 +181,119 @@ void HashAggregationTranslator::TearDownPipelineState(const PipelineContext &pip
   }
 }
 
-edsl::VariableVT HashAggregationTranslator::FillInputValues(FunctionBuilder *function,
-                                                            ConsumerContext *context) const {
-  // var input_values : AggValues
-  edsl::VariableVT input_values(codegen_, "input_values", agg_values_.GetType());
-  function->Append(edsl::Declare(input_values));
-
-  // Populate the grouping terms.
-  uint32_t term_idx = 0;
-  for (const auto &term : GetAggPlan().GetGroupByTerms()) {
-    auto lhs = agg_values_.GetMember(input_values, KeyId(term_idx++));
-    auto rhs = context->DeriveValue(*term, this);
-    function->Append(edsl::Assign(lhs, rhs));
-  }
-
-  // Populate the raw aggregate values.
-  term_idx = 0;
-  for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto lhs = agg_values_.GetMember(input_values, AggId(term_idx++));
-    auto rhs = context->DeriveValue(*term->GetChild(0), this);
-    function->Append(edsl::Assign(lhs, rhs));
-  }
-
-  return input_values;
-}
-
-edsl::Variable<hash_t> HashAggregationTranslator::HashInputKeys(
-    FunctionBuilder *function, const edsl::ValueVT &input_values) const {
-  std::vector<edsl::ValueVT> keys;
-  for (uint32_t i = 0; i < GetAggPlan().NumGroupByTerms(); i++) {
-    keys.emplace_back(agg_values_.GetMember(input_values, KeyId(i)));
-  }
-
-  // var hashVal = @hash(...)
-  edsl::Variable<hash_t> hash_val(codegen_, "hash_val");
-  function->Append(edsl::Declare(hash_val, edsl::Hash(keys)));
-  return hash_val;
-}
-
-edsl::VariableVT HashAggregationTranslator::PerformLookup(
+template <typename T>
+void HashAggregationTranslator::PerformLookup(
     FunctionBuilder *function, const edsl::Value<ast::x::AggregationHashTable *> &hash_table,
-    const edsl::Value<hash_t> &hash_val, const edsl::ReferenceVT &agg_values) const {
-  // var aggPayload = @ptrCast(*AggPayload, @aggHTLookup())
-  edsl::VariableVT result(codegen_, "lookup_result", agg_payload_.GetPtrToType());
-  auto raw_lookup = hash_table->Lookup(hash_val, key_check_fn_, agg_values.Addr());
-  function->Append(edsl::Declare(result, edsl::PtrCast(result.GetType(), raw_lookup)));
-  return result;
+    const edsl::Value<hash_t> &hash_val, const std::vector<T> &keys) const {
+  auto entry = edsl::Variable<ast::x::HashTableEntry *>(codegen_, "entry");
+  auto temp = edsl::VariableVT(codegen_, "temp", agg_payload_.GetPtrToType());
+
+  function->Append(edsl::Declare(*agg_row_, edsl::Nil(codegen_, agg_payload_.GetPtrToType())));
+  Loop entry_loop(function, edsl::Declare(entry, hash_table->Lookup(hash_val)),
+                  edsl::ComparisonOp(parsing::Token::Type::EQUAL_EQUAL, *agg_row_,
+                                     edsl::Nil(codegen_, agg_payload_.GetPtrToType())) &&
+                      entry != nullptr,
+                  edsl::Assign(entry, entry->Next()));
+  {
+    If check_hash(function, hash_val == entry->GetHash());
+    {  // Hash match. Check key.
+      function->Append(edsl::Declare(temp, edsl::PtrCast(temp.GetType(), entry->GetRow())));
+      std::vector<edsl::Value<bool>> cmps;
+      for (uint32_t i = 0; i < GetAggPlan().NumGroupByTerms(); i++) {
+        auto lhs = agg_payload_.GetMember(temp, KeyId(i));
+        auto result = edsl::ComparisonOp(parsing::Token::Type::EQUAL_EQUAL, lhs, keys[i]);
+        if (cmps.empty()) {
+          cmps.emplace_back(result);
+        } else {
+          cmps.emplace_back(cmps.back() && result);
+        }
+      }
+      If check_key(function, cmps.back());
+      {  // Found match!
+        function->Append(edsl::Assign(*agg_row_, temp));
+      }
+    }
+  }
+  entry_loop.EndLoop();
 }
 
+template <typename T>
 void HashAggregationTranslator::ConstructNewAggregate(
     FunctionBuilder *function, const edsl::Value<ast::x::AggregationHashTable *> &hash_table,
-    const edsl::ReferenceVT &agg_payload, const edsl::ValueVT &input_values,
-    const edsl::Value<hash_t> &hash_val) const {
+    const edsl::Value<hash_t> &hash_val, const std::vector<T> &keys) const {
   const bool partitioned = build_pipeline_.IsParallel();
   const auto bytes = hash_table->Insert(hash_val, edsl::Literal<bool>(codegen_, partitioned));
-  function->Append(edsl::Assign(agg_payload, edsl::PtrCast(agg_payload_.GetPtrToType(), bytes)));
+  function->Append(edsl::Assign(*agg_row_, edsl::PtrCast(agg_payload_.GetPtrToType(), bytes)));
 
   // Copy the grouping keys.
   for (uint32_t i = 0; i < GetAggPlan().NumGroupByTerms(); i++) {
-    auto lhs = agg_payload_.GetMember(agg_payload, KeyId(i));
-    auto rhs = agg_values_.GetMember(input_values, KeyId(i));
-    function->Append(edsl::Assign(lhs, rhs));
+    auto key = agg_payload_.GetMember(*agg_row_, KeyId(i));
+    function->Append(edsl::Assign(key, keys[i]));
   }
 
   // Initialize all aggregate terms.
   for (uint32_t i = 0; i < GetAggPlan().NumAggregateTerms(); i++) {
-    auto agg = agg_payload_.GetMemberPtr(agg_payload, AggId(i));
+    auto agg = agg_payload_.GetMemberPtr(*agg_row_, AggId(i));
     function->Append(edsl::AggregatorInit(agg));
   }
 }
 
+template <typename T>
 void HashAggregationTranslator::AdvanceAggregate(FunctionBuilder *function,
-                                                 const edsl::ReferenceVT &agg_payload,
-                                                 const edsl::ReferenceVT &input_values) const {
+                                                 const std::vector<T> &vals) const {
   for (uint32_t i = 0; i < GetAggPlan().NumAggregateTerms(); i++) {
-    auto agg = agg_payload_.GetMemberPtr(agg_payload, AggId(i));
-    auto val = agg_values_.GetMemberPtr(input_values, AggId(i));
-    function->Append(edsl::AggregatorAdvance(agg, val));
+    auto agg = agg_payload_.GetMemberPtr(*agg_row_, AggId(i));
+    function->Append(edsl::AggregatorAdvance(agg, vals[i]));
   }
 }
 
 void HashAggregationTranslator::UpdateAggregates(
     ConsumerContext *context, FunctionBuilder *function,
     const edsl::Variable<ast::x::AggregationHashTable *> &hash_table) const {
-  auto input_values = FillInputValues(function, context);
-  auto hash_val = HashInputKeys(function, input_values);
-  auto agg_payload = PerformLookup(function, hash_table, hash_val, input_values);
+  // Construct variables for all keys and values.
+  std::vector<edsl::VariableVT> keys, vals;
+  keys.reserve(GetAggPlan().NumGroupByTerms());
+  vals.reserve(GetAggPlan().NumAggregateTerms());
+  for (uint32_t idx = 0; const auto &term : GetAggPlan().GetGroupByTerms()) {
+    auto key_name = fmt::format("{}{}", kGroupByKeyPrefix, idx++);
+    auto key_type = codegen_->GetTPLType(term->GetReturnValueType().GetTypeId());
+    keys.emplace_back(codegen_, key_name, key_type);
+  }
+  for (uint32_t idx = 0; const auto &term : GetAggPlan().GetAggregateTerms()) {
+    auto val_name = fmt::format("{}{}", kAggregateTermPrefix, idx++);
+    auto val_type = codegen_->GetTPLType(term->GetReturnValueType().GetTypeId());
+    vals.emplace_back(codegen_, val_name, val_type);
+  }
 
-  If check_new_agg(function, edsl::IsNilPtr(agg_payload));
+  // Assign keys and values to locals.
+  for (uint32_t idx = 0; const auto &term : GetAggPlan().GetGroupByTerms()) {
+    function->Append(edsl::Declare(keys[idx++], context->DeriveValue(*term, this)));
+  }
+  for (uint32_t idx = 0; const auto &term : GetAggPlan().GetAggregateTerms()) {
+    function->Append(edsl::Declare(vals[idx++], context->DeriveValue(*term->GetChild(0), this)));
+  }
+
+  // Hash the keys.
+  auto hash_val = edsl::Variable<hash_t>(codegen_, "hash_val");
+  function->Append(edsl::Declare(hash_val, edsl::Hash(keys)));
+
+  // Lookup.
+  PerformLookup(function, hash_table, hash_val, keys);
+  If check_new_agg(function, edsl::IsNilPtr(*agg_row_));
   {  // New aggregate.
-    ConstructNewAggregate(function, hash_table, agg_payload, input_values, hash_val);
+    ConstructNewAggregate(function, hash_table, hash_val, keys);
   }
   check_new_agg.EndIf();
 
   // Advance aggregate.
-  AdvanceAggregate(function, agg_payload, input_values);
+  AdvanceAggregate(function, vals);
 }
 
 void HashAggregationTranslator::ScanAggregationHashTable(
     ConsumerContext *context, FunctionBuilder *function,
     const edsl::Variable<ast::x::AggregationHashTable *> &hash_table) const {
-  edsl::Variable<ast::x::AHTIterator> iter_base(codegen_, "iter_base");
-  edsl::Variable<ast::x::AHTIterator *> iter(codegen_, "iter");
+  auto iter = edsl::Variable<ast::x::AHTIterator *>(codegen_, "iter");
+  auto iter_base = edsl::Variable<ast::x::AHTIterator>(codegen_, "iter_base");
 
   function->Append(edsl::Declare(iter_base));
   function->Append(edsl::Declare(iter, iter_base.Addr()));
@@ -372,7 +318,7 @@ void HashAggregationTranslator::ScanAggregationHashTable(
 
 void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilder *function) const {
   if (context->IsForPipeline(build_pipeline_)) {
-    edsl::Variable<ast::x::AggregationHashTable *> hash_table(codegen_, "agg_ht");
+    auto hash_table = edsl::Variable<ast::x::AggregationHashTable *>(codegen_, "agg_ht");
     if (context->IsParallel()) {
       function->Append(edsl::Declare(hash_table, context->GetStateEntryPtr(local_agg_ht_)));
       UpdateAggregates(context, function, hash_table);
@@ -383,10 +329,10 @@ void HashAggregationTranslator::Consume(ConsumerContext *context, FunctionBuilde
   } else {
     TPL_ASSERT(context->IsForPipeline(*GetPipeline()),
                "Pipeline is unknown to hash aggregation translator");
-    edsl::Variable<ast::x::AggregationHashTable *> hash_table(codegen_, "agg_ht");
+    auto hash_table = edsl::Variable<ast::x::AggregationHashTable *>(codegen_, "agg_ht");
     if (context->IsParallel()) {
-      function->Append(edsl::Declare(
-          hash_table, function->GetParameterByPosition(2).As<ast::x::AggregationHashTable *>()));
+      auto param = function->GetParameterByPosition(2);
+      function->Append(edsl::Declare(hash_table, param.As<ast::x::AggregationHashTable *>()));
     } else {
       function->Append(edsl::Declare(hash_table, GetQueryStateEntryPtr(global_agg_ht_)));
     }

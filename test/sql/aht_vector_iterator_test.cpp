@@ -46,14 +46,6 @@ struct AggTuple {
   }
 };
 
-// The function to determine whether an aggregate stored in the hash table and
-// an input have equivalent keys.
-static bool AggTupleKeyEq(const void *table_tuple, const void *probe_tuple) {
-  auto *lhs = reinterpret_cast<const AggTuple *>(table_tuple);
-  auto *rhs = reinterpret_cast<const InputTuple *>(probe_tuple);
-  return lhs->key == rhs->key;
-}
-
 static void Transpose(const HashTableEntry *agg_entries[], const uint64_t size,
                       VectorProjectionIterator *const vpi) {
   for (uint32_t i = 0; i < size; i++, vpi->Advance()) {
@@ -92,8 +84,15 @@ class AggregationHashTableVectorIteratorTest : public TplTest {
                             const uint32_t num_rows, uint32_t cola = 1) {
     for (uint32_t i = 0; i < num_rows; i++) {
       auto input = InputTuple(i % num_aggs, cola);
-      auto existing =
-          reinterpret_cast<AggTuple *>(aht->Lookup(input.Hash(), AggTupleKeyEq, &input));
+      AggTuple *existing = nullptr;
+      for (auto *entry = aht->Lookup(input.Hash()); entry != nullptr; entry = entry->next) {
+        auto tmp = entry->PayloadAs<AggTuple>();
+        if (tmp->key == input.key) {
+          existing = tmp;
+          break;
+        }
+      }
+
       if (existing == nullptr) {
         new (aht->AllocInputTuple(input.Hash())) AggTuple(input);
       } else {

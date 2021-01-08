@@ -306,9 +306,7 @@ void Sema::CheckBuiltinAggHashTableCall(ast::CallExpression *call, ast::Builtin 
       GenericBuiltinCheck<void(ast::x::AggregationHashTable *, ast::x::HashTableEntry *)>(call);
       break;
     case ast::Builtin::AggHashTableLookup:
-      using KeyCheckFunc = Function<bool(AnyPointer, AnyPointer)>;
-      GenericBuiltinCheck<byte *(ast::x::AggregationHashTable *, hash_t, KeyCheckFunc, AnyPointer)>(
-          call);
+      GenericBuiltinCheck<ast::x::HashTableEntry *(ast::x::AggregationHashTable *, hash_t)>(call);
       break;
     case ast::Builtin::AggHashTableProcessBatch:
       using VectorProcFunc =
@@ -406,9 +404,8 @@ void Sema::CheckBuiltinAggregatorCall(ast::CallExpression *call, ast::Builtin bu
                                 args[0]->GetType());
         return;
       }
-      if (!IsPointerToSQLValue(args[1]->GetType())) {
-        error_reporter_->Report(call->Position(), ErrorMessages::kNotASQLAggregate,
-                                args[1]->GetType());
+      if (!args[1]->GetType()->IsSqlValueType()) {
+        ReportIncorrectCallArg(call, 1, "expected SQL value");
         return;
       }
       // Advance returns nil

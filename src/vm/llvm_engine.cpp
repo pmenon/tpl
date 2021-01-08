@@ -260,8 +260,8 @@ llvm::StructType *LLVMEngine::TypeMap::GetLLVMStructType(const ast::StructType *
 
   llvm::StructType *llvm_type;
   if (struct_type->IsNamed()) {
-    llvm_type =
-        llvm::StructType::create(module_->getContext(), fields, struct_type->GetName().GetView());
+    const auto name = struct_type->GetName().GetView();
+    llvm_type = llvm::StructType::create(module_->getContext(), fields, name);
   } else {
     llvm_type = llvm::StructType::create(module_->getContext(), fields, "anon.TPL");
   }

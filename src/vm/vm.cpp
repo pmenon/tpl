@@ -1105,15 +1105,10 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   }
 
   OP(AggregationHashTableLookup) : {
-    auto *result = frame->LocalAt<byte **>(READ_LOCAL_ID());
+    auto *result = frame->LocalAt<sql::HashTableEntry **>(READ_LOCAL_ID());
     auto *agg_hash_table = frame->LocalAt<sql::AggregationHashTable *>(READ_LOCAL_ID());
     auto hash = frame->LocalAt<hash_t>(READ_LOCAL_ID());
-    auto key_eq_fn_id = READ_FUNC_ID();
-    auto *probe_tuple = frame->LocalAt<void *>(READ_LOCAL_ID());
-
-    auto key_eq_fn = reinterpret_cast<sql::AggregationHashTable::KeyEqFn>(
-        module_->GetRawFunctionImpl(key_eq_fn_id));
-    OpAggregationHashTableLookup(result, agg_hash_table, hash, key_eq_fn, probe_tuple);
+    OpAggregationHashTableLookup(result, agg_hash_table, hash);
     DISPATCH_NEXT();
   }
 

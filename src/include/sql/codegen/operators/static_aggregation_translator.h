@@ -112,28 +112,26 @@ class StaticAggregationTranslator : public OperatorTranslator, public PipelineDr
   }
 
   void GeneratePayloadStruct();
-  void GenerateValuesStruct();
 
-  void InitializeAggregates(FunctionBuilder *function, const edsl::ReferenceVT &agg) const;
+  void InitializeAggregates(FunctionBuilder *fn, const edsl::ReferenceVT &agg) const;
 
-  void UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *function,
+  void UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *fn,
                        const edsl::ReferenceVT &agg) const;
 
-  void ProduceAggregates(ConsumerContext *context, FunctionBuilder *function) const;
+  void ProduceAggregates(ConsumerContext *ctx, FunctionBuilder *fn) const;
 
   void GenerateAggregateMergeFunction(const PipelineContext &pipeline_ctx) const;
 
  private:
+  // A variable storing a pointer to an aggregation payload struct.
+  // Used across functions, so stored here for convenience.
   std::unique_ptr<edsl::VariableVT> agg_row_;
+  // The structure storing aggregation keys and values.
   edsl::Struct payload_struct_;
-  edsl::Struct values_struct_;
-
   // The name of the merging function.
   ast::Identifier merge_func_;
-
   // The build pipeline.
   Pipeline build_pipeline_;
-
   // States.
   ExecutionState::RTSlot global_aggs_;
   ExecutionState::RTSlot local_aggs_;

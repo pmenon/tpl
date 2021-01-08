@@ -220,6 +220,19 @@ class VariableVT : public ReferenceVT {
 };
 
 /**
+ * Create a NIL value.
+ * @param codegen The code generator.
+ * @param type The type of NIL to create.
+ * @return A typed NIL value.
+ */
+inline ValueVT Nil(CodeGen *codegen, ast::Type *type) {
+  // TODO(pmenon): HACK HACK HACK
+  auto nil = codegen->Nil();
+  nil->SetType(type);
+  return ValueVT(codegen, nil);
+}
+
+/**
  * Declare the given value.
  * @param var The variable to declare.
  * @return A void value representing the declaration.

@@ -752,12 +752,10 @@ VM_OP_HOT void OpAggregationHashTableLinkHashTableEntry(
   agg_hash_table->Insert(entry);
 }
 
-VM_OP_HOT void OpAggregationHashTableLookup(byte **result,
-                                            tpl::sql::AggregationHashTable *const agg_hash_table,
-                                            const hash_t hash_val,
-                                            const tpl::sql::AggregationHashTable::KeyEqFn key_eq_fn,
-                                            const void *probe_tuple) {
-  *result = agg_hash_table->Lookup(hash_val, key_eq_fn, probe_tuple);
+VM_OP_HOT void OpAggregationHashTableLookup(tpl::sql::HashTableEntry **result,
+                                            tpl::sql::AggregationHashTable *agg_hash_table,
+                                            hash_t hash_val) {
+  *result = agg_hash_table->Lookup(hash_val);
 }
 
 VM_OP_HOT void OpAggregationHashTableProcessBatch(

@@ -20,7 +20,6 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
                                                          Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline),
       payload_struct_(codegen_, "AggPayload", false),
-      values_struct_(codegen_, "AggValues", false),
       merge_func_(codegen_->MakeFreshIdentifier("MergeAggregates")),
       build_pipeline_(this, pipeline->GetPipelineGraph(), Pipeline::Parallelism::Parallel) {
   TPL_ASSERT(plan.GetGroupByTerms().empty(), "Global aggregations shouldn't have grouping keys");
@@ -43,7 +42,6 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
 
   // Build up the structure.
   GeneratePayloadStruct();
-  GenerateValuesStruct();
 
   agg_row_ =
       std::make_unique<edsl::VariableVT>(codegen_, "agg_row", payload_struct_.GetPtrToType());
@@ -66,23 +64,7 @@ void StaticAggregationTranslator::GeneratePayloadStruct() {
   payload_struct_.Seal();
 }
 
-void StaticAggregationTranslator::GenerateValuesStruct() {
-  uint32_t term_idx = 0;
-  for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto name = fmt::format("{}{}", kAggAttrPrefix, term_idx++);
-    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType().GetTypeId());
-    values_struct_.AddMember(name, type);
-  }
-  values_struct_.Seal();
-}
-
-void StaticAggregationTranslator::DefineStructsAndFunctions() {
-  //  GeneratePayloadStruct();
-  //  GenerateValuesStruct();
-  //  agg_row_ =
-  //      std::make_unique<edsl::VariableVT>(codegen_, "agg_row",
-  //      payload_struct_.GetPtrToType());
-}
+void StaticAggregationTranslator::DefineStructsAndFunctions() {}
 
 void StaticAggregationTranslator::DeclarePipelineState(PipelineContext *pipeline_ctx) {
   if (pipeline_ctx->IsForPipeline(build_pipeline_) && pipeline_ctx->IsParallel()) {
@@ -111,10 +93,10 @@ void StaticAggregationTranslator::DefinePipelineFunctions(const PipelineContext 
   }
 }
 
-void StaticAggregationTranslator::InitializeAggregates(FunctionBuilder *function,
+void StaticAggregationTranslator::InitializeAggregates(FunctionBuilder *fn,
                                                        const edsl::ReferenceVT &agg) const {
   for (uint32_t term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
-    function->Append(edsl::AggregatorInit(payload_struct_.GetMemberPtr(agg, term_idx)));
+    fn->Append(edsl::AggregatorInit(payload_struct_.GetMemberPtr(agg, term_idx)));
   }
 }
 
@@ -129,38 +111,39 @@ void StaticAggregationTranslator::InitializePipelineState(const PipelineContext 
   }
 }
 
-void StaticAggregationTranslator::ProduceAggregates(ConsumerContext *context,
-                                                    FunctionBuilder *function) const {
+void StaticAggregationTranslator::ProduceAggregates(ConsumerContext *ctx,
+                                                    FunctionBuilder *fn) const {
   // var agg_row = &state.aggs
-  function->Append(edsl::Declare(*agg_row_, GetQueryStateEntryPtrGeneric(global_aggs_)));
+  fn->Append(edsl::Declare(*agg_row_, GetQueryStateEntryPtrGeneric(global_aggs_)));
 
   if (const auto having = GetAggPlan().GetHavingClausePredicate(); having != nullptr) {
-    If check_having(function, context->DeriveValue(*having, this).As<bool>());
-    context->Consume(function);
+    If check_having(fn, ctx->DeriveValue(*having, this).As<bool>());
+    ctx->Consume(fn);
   } else {
-    context->Consume(function);
+    ctx->Consume(fn);
   }
 }
 
-void StaticAggregationTranslator::UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *function,
+void StaticAggregationTranslator::UpdateAggregate(ConsumerContext *ctx, FunctionBuilder *fn,
                                                   const edsl::ReferenceVT &agg) const {
-  // var agg_values: AggValues
-  edsl::VariableVT agg_values(codegen_, "agg_values", values_struct_.GetType());
-  function->Append(edsl::Declare(agg_values));
+  // Create variables storing all input values.
+  std::vector<edsl::VariableVT> vals;
+  vals.reserve(GetAggPlan().NumAggregateTerms());
+  for (uint32_t idx = 0; const auto &term : GetAggPlan().GetAggregateTerms()) {
+    auto name = fmt::format("{}{}", kAggAttrPrefix, idx++);
+    auto type = codegen_->GetTPLType(term->GetChild(0)->GetReturnValueType().GetTypeId());
+    vals.emplace_back(codegen_, name, type);
+  }
 
-  // Fill values.
-  uint32_t term_idx = 0;
-  for (const auto &term : GetAggPlan().GetAggregateTerms()) {
-    auto lhs = values_struct_.GetMember(agg_values, term_idx++);
-    auto rhs = ctx->DeriveValue(*term->GetChild(0), this);
-    function->Append(edsl::Assign(lhs, rhs));
+  // Store the input values.
+  for (uint32_t idx = 0; const auto &term : GetAggPlan().GetAggregateTerms()) {
+    fn->Append(edsl::Declare(vals[idx++], ctx->DeriveValue(*term->GetChild(0), this)));
   }
 
   // Update aggregate.
-  for (term_idx = 0; term_idx < GetAggPlan().GetAggregateTerms().size(); term_idx++) {
+  for (uint32_t term_idx = 0; term_idx < GetAggPlan().NumAggregateTerms(); term_idx++) {
     auto aggregate = payload_struct_.GetMemberPtr(agg, term_idx);
-    auto advance_val = values_struct_.GetMemberPtr(agg_values, term_idx);
-    function->Append(edsl::AggregatorAdvance(aggregate, advance_val));
+    fn->Append(edsl::AggregatorAdvance(aggregate, vals[term_idx]));
   }
 }
 

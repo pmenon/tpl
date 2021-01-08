@@ -255,13 +255,10 @@ class Reference<ast::x::AggregationHashTable> {
     return Value<void>(codegen_->MakeStatement(call));
   }
 
-  Value<uint8_t *> Lookup(const Value<hash_t> &hash_val, ast::Identifier key_check,
-                          const ValueVT &input) const {
-    auto call = codegen_->CallBuiltin(
-        ast::Builtin::AggHashTableLookup,
-        {val_, hash_val.GetRaw(), codegen_->MakeExpr(key_check), input.GetRaw()});
-    call->SetType(codegen_->GetType<uint8_t *>());
-    return Value<uint8_t *>(codegen_, call);
+  Value<ast::x::HashTableEntry *> Lookup(const Value<hash_t> &hash_val) const {
+    auto call = codegen_->CallBuiltin(ast::Builtin::AggHashTableLookup, {val_, hash_val.GetRaw()});
+    call->SetType(codegen_->GetType<ast::x::HashTableEntry *>());
+    return Value<ast::x::HashTableEntry *>(codegen_, call);
   }
 
   Value<uint8_t *> Insert(const Value<hash_t> &hash_val, const Value<bool> &partitioned) const {
@@ -1023,7 +1020,8 @@ inline Value<ast::x::BooleanVal> NotLike(const Value<ast::x::StringVal> &str,
  * @param values The values to hash.
  * @return The value of the hash.
  */
-inline Value<hash_t> Hash(const std::vector<ValueVT> &values) {
+template <typename T, typename = std::enable_if_t<std::is_base_of_v<ValueVT, T>>>
+inline Value<hash_t> Hash(const std::vector<T> &values) {
   TPL_ASSERT(!values.empty(), "Keys must be non-empty!");
   CodeGen *codegen = values[0].GetCodeGen();
   // Build the list of raw expressions from the input values.

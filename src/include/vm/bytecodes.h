@@ -307,8 +307,7 @@ namespace tpl::vm {
   F(AggregationHashTableAllocTuple, OperandType::Local, OperandType::Local, OperandType::Local)                        \
   F(AggregationHashTableAllocTuplePartitioned, OperandType::Local, OperandType::Local, OperandType::Local)             \
   F(AggregationHashTableLinkHashTableEntry, OperandType::Local, OperandType::Local)                                    \
-  F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::FunctionId,   \
-      OperandType::Local)                                                                                              \
+  F(AggregationHashTableLookup, OperandType::Local, OperandType::Local, OperandType::Local)                            \
   F(AggregationHashTableProcessBatch, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Local,  \
       OperandType::FunctionId, OperandType::FunctionId, OperandType::Local)                                            \
   F(AggregationHashTableTransferPartitions, OperandType::Local, OperandType::Local, OperandType::Local,                \

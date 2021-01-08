@@ -610,7 +610,7 @@ class VarlenEntry {
   byte prefix_[kPrefixLength];
   // Pointer to the content when not inlined.
   const byte *content_;
-} PACKED;
+};
 
 static_assert(sizeof(VarlenEntry) == 16U, "VarlenEntry expected to be 16 bytes");
 

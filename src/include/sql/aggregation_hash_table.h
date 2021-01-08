@@ -57,12 +57,6 @@ class AggregationHashTable {
   using TupleBufferVector = MemPoolVector<TupleBuffer>;
 
   /**
-   * Function to check the key equality of an input tuple and an existing entry in the hash table.
-   * Convention: First argument is the aggregate entry, second argument is the input tuple.
-   */
-  using KeyEqFn = bool (*)(const void *, const void *);
-
-  /**
    * Function to initialize a new aggregate.
    * Convention: First argument is the aggregate to initialize, second argument is the input tuple
    *             to initialize the aggregate with.
@@ -154,14 +148,14 @@ class AggregationHashTable {
   void Insert(HashTableEntry *entry) { hash_table_.Insert<false>(entry); }
 
   /**
-   * Lookup and return an entry in the aggregation table that matches a given hash and key. The hash
-   * value is provided here, keys are checked using the provided callback function.
+   * Lookup and return the first entry in the aggregation table that matches a given hash. It is the
+   * caller's responsibility to resolve hash and key collisions.
    * @param hash The hash value to use for early filtering.
    * @param key_eq_fn The key-equality function to resolve hash collisions.
    * @param probe_tuple The probe tuple.
    * @return A pointer to the matching entry payload; null if no entry is found.
    */
-  byte *Lookup(hash_t hash, KeyEqFn key_eq_fn, const void *probe_tuple);
+  HashTableEntry *Lookup(hash_t hash);
 
   /**
    * Ingest and process a batch of input into the aggregation table.
@@ -403,16 +397,8 @@ class AggregationHashTable {
 // Aggregation Hash Table implementation below
 // ---------------------------------------------------------
 
-inline byte *AggregationHashTable::Lookup(hash_t hash, AggregationHashTable::KeyEqFn key_eq_fn,
-                                          const void *probe_tuple) {
-  HashTableEntry *entry = hash_table_.FindChainHead(hash);
-  while (entry != nullptr) {
-    if (entry->hash == hash && key_eq_fn(entry->payload, probe_tuple)) {
-      return entry->payload;
-    }
-    entry = entry->next;
-  }
-  return nullptr;
+inline HashTableEntry *AggregationHashTable::Lookup(hash_t hash) {
+  return hash_table_.FindChainHead(hash);
 }
 
 //===----------------------------------------------------------------------===//

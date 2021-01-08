@@ -1042,10 +1042,7 @@ void BytecodeGenerator::VisitBuiltinAggHashTableCall(ast::CallExpression *call,
       LocalVar dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
       LocalVar agg_ht = VisitExpressionForRValue(call->GetArguments()[0]);
       LocalVar hash = VisitExpressionForRValue(call->GetArguments()[1]);
-      auto key_eq_fn = LookupFuncIdByName(
-          call->GetArguments()[2]->As<ast::IdentifierExpression>()->GetName().ToString());
-      LocalVar arg = VisitExpressionForRValue(call->GetArguments()[3]);
-      GetEmitter()->EmitAggHashTableLookup(dest, agg_ht, hash, key_eq_fn, arg);
+      GetEmitter()->Emit(Bytecode::AggregationHashTableLookup, dest, agg_ht, hash);
       GetExecutionResult()->SetDestination(dest.ValueOf());
       break;
     }
@@ -1333,13 +1330,13 @@ void BytecodeGenerator::VisitBuiltinAggregatorCall(ast::CallExpression *call,
       const auto &args = call->GetArguments();
       const auto agg_kind = args[0]->GetType()->GetPointeeType()->As<ast::BuiltinType>()->GetKind();
       LocalVar agg = VisitExpressionForRValue(args[0]);
-      LocalVar input = VisitExpressionForRValue(args[1]);
+      LocalVar input = VisitExpressionForSQLValue(args[1]);
       Bytecode bytecode = OpForAgg<AggOpKind::Advance>(agg_kind);
 
       // Hack to handle advancing AvgAggregates with float/double precision numbers. The default
       // behavior in OpForAgg() is to use AvgAggregateAdvanceInteger.
       if (agg_kind == ast::BuiltinType::AvgAggregate &&
-          args[1]->GetType()->GetPointeeType()->IsSpecificBuiltin(ast::BuiltinType::RealVal)) {
+          args[1]->GetType()->IsSpecificBuiltin(ast::BuiltinType::RealVal)) {
         bytecode = Bytecode::AvgAggregateAdvanceReal;
       }
 
@@ -2174,7 +2171,7 @@ void BytecodeGenerator::VisitLiteralExpression(ast::LiteralExpression *node) {
 
   switch (node->GetLiteralKind()) {
     case ast::LiteralExpression::LiteralKind::Nil: {
-      // Do nothing
+      GetEmitter()->EmitAssignImm8(target, 0);
       break;
     }
     case ast::LiteralExpression::LiteralKind::Boolean: {

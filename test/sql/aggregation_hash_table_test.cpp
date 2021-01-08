@@ -55,22 +55,6 @@ struct AggTuple {
   }
 };
 
-// The function to determine whether an aggregate stored in the hash table and
-// an input have equivalent keys.
-static inline bool AggTupleKeyEq(const void *table_tuple, const void *probe_tuple) {
-  auto *lhs = reinterpret_cast<const AggTuple *>(table_tuple);
-  auto *rhs = reinterpret_cast<const InputTuple *>(probe_tuple);
-  return lhs->key == rhs->key;
-}
-
-// The function to determine whether two aggregates stored in overflow
-// partitions or hash tables have equivalent keys.
-static inline bool AggAggKeyEq(const void *agg_tuple_1, const void *agg_tuple_2) {
-  auto *lhs = reinterpret_cast<const AggTuple *>(agg_tuple_1);
-  auto *rhs = reinterpret_cast<const AggTuple *>(agg_tuple_2);
-  return lhs->key == rhs->key;
-}
-
 class AggregationHashTableTest : public TplTest {
  public:
   AggregationHashTableTest() : memory_(nullptr), agg_table_(&memory_, sizeof(AggTuple)) {}
@@ -97,8 +81,14 @@ TEST_F(AggregationHashTableTest, SimpleRandomInsertionTest) {
   for (uint32_t idx = 0; idx < num_tuples; idx++) {
     auto input = InputTuple(distribution(generator), 1);
     auto hash_val = input.Hash();
-    auto *existing = reinterpret_cast<AggTuple *>(
-        AggTable()->Lookup(hash_val, AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
+    AggTuple *existing = nullptr;
+    for (auto *entry = AggTable()->Lookup(hash_val); entry != nullptr; entry = entry->next) {
+      auto tmp = entry->PayloadAs<AggTuple>();
+      if (tmp->key == input.key) {
+        existing = tmp;
+        break;
+      }
+    }
 
     if (existing != nullptr) {
       // The reference table should have an equivalent aggregate tuple
@@ -135,8 +125,14 @@ TEST_F(AggregationHashTableTest, IterationTest) {
   {
     for (uint32_t idx = 0; idx < num_inserts; idx++) {
       InputTuple input(idx % num_groups, 1);
-      auto *existing = reinterpret_cast<AggTuple *>(
-          AggTable()->Lookup(input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
+      AggTuple *existing = nullptr;
+      for (auto *entry = AggTable()->Lookup(input.Hash()); entry != nullptr; entry = entry->next) {
+        auto tmp = entry->PayloadAs<AggTuple>();
+        if (tmp->key == input.key) {
+          existing = tmp;
+          break;
+        }
+      }
 
       if (existing != nullptr) {
         existing->Advance(input);
@@ -170,8 +166,14 @@ TEST_F(AggregationHashTableTest, SimplePartitionedInsertionTest) {
 
   for (uint32_t idx = 0; idx < num_tuples; idx++) {
     InputTuple input(idx, 1);
-    auto *existing = reinterpret_cast<AggTuple *>(
-        AggTable()->Lookup(input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
+    AggTuple *existing = nullptr;
+    for (auto *entry = AggTable()->Lookup(input.Hash()); entry != nullptr; entry = entry->next) {
+      auto tmp = entry->PayloadAs<AggTuple>();
+      if (tmp->key == input.key) {
+        existing = tmp;
+        break;
+      }
+    }
 
     if (existing != nullptr) {
       existing->Advance(input);
@@ -384,8 +386,14 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
 
     for (uint32_t idx = 0; idx < 10000; idx++) {
       InputTuple input(distribution(generator), 1);
-      auto *existing = reinterpret_cast<AggTuple *>(
-          agg_table->Lookup(input.Hash(), AggTupleKeyEq, reinterpret_cast<const void *>(&input)));
+      AggTuple *existing = nullptr;
+      for (auto *entry = AggTable()->Lookup(input.Hash()); entry != nullptr; entry = entry->next) {
+        auto tmp = entry->PayloadAs<AggTuple>();
+        if (tmp->key == input.key) {
+          existing = tmp;
+          break;
+        }
+      }
       if (existing != nullptr) {
         existing->Advance(input);
       } else {
@@ -405,8 +413,15 @@ TEST_F(AggregationHashTableTest, ParallelAggregationTest) {
       [](void *ctx, AggregationHashTable *table, AHTOverflowPartitionIterator *iter) {
         for (; iter->HasNext(); iter->Next()) {
           auto *partial_agg = iter->GetRowAs<AggTuple>();
-          auto *existing = reinterpret_cast<AggTuple *>(
-              table->Lookup(iter->GetRowHash(), AggAggKeyEq, partial_agg));
+          AggTuple *existing = nullptr;
+          for (auto entry = table->Lookup(iter->GetRowHash()); entry != nullptr;
+               entry = entry->next) {
+            auto tmp = entry->PayloadAs<AggTuple>();
+            if (tmp->key == partial_agg->key) {
+              existing = tmp;
+              break;
+            }
+          }
           if (existing != nullptr) {
             existing->Merge(*partial_agg);
           } else {

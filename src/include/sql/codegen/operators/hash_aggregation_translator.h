@@ -129,34 +129,22 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
 
   // Declare the payload and input structures. Called from DefineHelperStructs().
   void GeneratePayloadStruct();
-  void GenerateInputValuesStruct();
 
   // Generate the overflow partition merging process.
-  void GenerateKeyCheckFunction();
-  void GeneratePartialKeyCheckFunction();
   void GenerateMergeOverflowPartitionsFunction();
 
-  // These functions define steps in the "build" phase of the aggregation.
-  // 1. Filling input values.
-  // 2. Probing aggregation hash table.
-  //   2a. Hashing input.
-  //   2b. Performing lookup.
-  // 3. Initializing new aggregates.
-  // 4. Advancing existing aggregates.
-  edsl::VariableVT FillInputValues(FunctionBuilder *function, ConsumerContext *context) const;
-  edsl::Variable<hash_t> HashInputKeys(FunctionBuilder *function,
-                                       const edsl::ValueVT &input_values) const;
-  edsl::VariableVT PerformLookup(FunctionBuilder *function,
-                                 const edsl::Value<ast::x::AggregationHashTable *> &hash_table,
-                                 const edsl::Value<hash_t> &hash_val,
-                                 const edsl::ReferenceVT &agg_values) const;
+  template <typename T>
+  void PerformLookup(FunctionBuilder *function,
+                     const edsl::Value<ast::x::AggregationHashTable *> &hash_table,
+                     const edsl::Value<hash_t> &hash_val, const std::vector<T> &keys) const;
+
+  template <typename T>
   void ConstructNewAggregate(FunctionBuilder *function,
                              const edsl::Value<ast::x::AggregationHashTable *> &hash_table,
-                             const edsl::ReferenceVT &agg_payload,
-                             const edsl::ValueVT &input_values,
-                             const edsl::Value<hash_t> &hash_val) const;
-  void AdvanceAggregate(FunctionBuilder *function, const edsl::ReferenceVT &agg_payload,
-                        const edsl::ReferenceVT &input_values) const;
+                             const edsl::Value<hash_t> &hash_val, const std::vector<T> &keys) const;
+
+  template <typename T>
+  void AdvanceAggregate(FunctionBuilder *function, const std::vector<T> &vals) const;
 
   // Merge the input row into the aggregation hash table.
   void UpdateAggregates(ConsumerContext *context, FunctionBuilder *function,
@@ -174,11 +162,8 @@ class HashAggregationTranslator : public OperatorTranslator, public PipelineDriv
   std::unique_ptr<edsl::VariableVT> agg_row_;
   // The names of the payload and input values struct.
   edsl::Struct agg_payload_;
-  edsl::Struct agg_values_;
   // The names of the full key-check function, the partial key check function
   // and the overflow partition merging functions, respectively.
-  ast::Identifier key_check_fn_;
-  ast::Identifier key_check_partial_fn_;
   ast::Identifier merge_partitions_fn_;
 
   // The build pipeline.
