@@ -73,10 +73,6 @@ std::unique_ptr<vm::Module> CompilationUnit::Compile() {
   // Create the file we're to compile.
   ast::File *generated_file = ctx_->GetNodeFactory()->NewFile({0, 0}, std::move(declarations));
 
-  std::stringstream ss;
-  ast::AstPrettyPrint::Dump(ss, generated_file);
-  LOG_INFO("{}", ss.str());
-
   // Compile it!
   compiler::Compiler::Input input(name_, ctx_, generated_file);
   Callbacks callbacks;
