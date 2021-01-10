@@ -81,6 +81,12 @@ enum class KnownOperator : uint16_t {
 
   // Logical
   LogicalNot,
+  LogicalAnd,
+  LogicalOr,
+
+  // Strings
+  Like,
+  NotLike,
 
   // Dates
   ExtractYear,

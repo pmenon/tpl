@@ -224,28 +224,32 @@ std::string TypeIdToString(TypeId type) {
 std::string KnownOperatorToString(KnownOperator op, bool short_str) {
   // clang-format off
   switch (op) {
-    case KnownOperator::Neg:        return "Negate";
-    case KnownOperator::Add:        return short_str ? "+" : "Add";
-    case KnownOperator::Sub:        return short_str ? "-" : "Subtract";
-    case KnownOperator::Mul:        return short_str ? "*" : "Multiply";
-    case KnownOperator::Div:        return short_str ? "/" : "Divide";
-    case KnownOperator::Rem:        return short_str ? "%" : "Modulo";
-    case KnownOperator::BitAnd:     return short_str ? "&" : "Bit And";
-    case KnownOperator::BitOr:      return short_str ? "|" : "Bit Or";
-    case KnownOperator::BitShl:     return short_str ? "<<" : "Bit Shift Left";
-    case KnownOperator::BitShr:     return short_str ? ">>" : "Bit Shift Right";
-    case KnownOperator::IsNull:     return "Is NULL";
-    case KnownOperator::IsNotNull:  return "Is Not NULL";
-    case KnownOperator::LogicalNot: return "LogicalNot";
+    case KnownOperator::Neg:         return "Negate";
+    case KnownOperator::Add:         return short_str ? "+" : "Add";
+    case KnownOperator::Sub:         return short_str ? "-" : "Subtract";
+    case KnownOperator::Mul:         return short_str ? "*" : "Multiply";
+    case KnownOperator::Div:         return short_str ? "/" : "Divide";
+    case KnownOperator::Rem:         return short_str ? "%" : "Modulo";
+    case KnownOperator::BitAnd:      return short_str ? "&" : "Bit And";
+    case KnownOperator::BitOr:       return short_str ? "|" : "Bit Or";
+    case KnownOperator::BitShl:      return short_str ? "<<" : "Bit Shift Left";
+    case KnownOperator::BitShr:      return short_str ? ">>" : "Bit Shift Right";
+    case KnownOperator::IsNull:      return "Is NULL";
+    case KnownOperator::IsNotNull:   return "Is Not NULL";
+    case KnownOperator::LogicalAnd:  return "Logical And";
+    case KnownOperator::LogicalOr:   return "Logical Or";
+    case KnownOperator::LogicalNot:  return "Logical Not";
+    case KnownOperator::Like:        return "Like";
+    case KnownOperator::NotLike:     return "NotLike";
     case KnownOperator::ExtractYear: return "Extract Year";
-    case KnownOperator::ACos:       return "ACos";
-    case KnownOperator::ASin:       return "ASin";
-    case KnownOperator::ATan:       return "ATan";
-    case KnownOperator::ATan2:      return "ATan2";
-    case KnownOperator::Cos:        return "Cos";
-    case KnownOperator::Cot:        return "Cot";
-    case KnownOperator::Tan:        return "Tan";
-    case KnownOperator::Sin:        return "Sin";
+    case KnownOperator::ACos:        return "ACos";
+    case KnownOperator::ASin:        return "ASin";
+    case KnownOperator::ATan:        return "ATan";
+    case KnownOperator::ATan2:       return "ATan2";
+    case KnownOperator::Cos:         return "Cos";
+    case KnownOperator::Cot:         return "Cot";
+    case KnownOperator::Tan:         return "Tan";
+    case KnownOperator::Sin:         return "Sin";
   }
   // clang-format on
   UNREACHABLE("Impossible known operator. All cases handled above.");
