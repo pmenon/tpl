@@ -46,11 +46,10 @@ class ExpressionTranslator {
   /**
    * Derive the TPL value of the expression.
    * @param ctx The context the derivation of expression is occurring in.
-   * @param provider A provider for specific column values.
+   * @param cvp A cvp for specific column values.
    * @return The TPL value of the expression.
    */
-  virtual edsl::ValueVT DeriveValue(ConsumerContext *ctx,
-                                    const ColumnValueProvider *provider) const = 0;
+  virtual edsl::ValueVT DeriveValue(ConsumerContext *ctx, const ColumnValueProvider *cvp) const = 0;
 
   /**
    * @return The expression being translated.

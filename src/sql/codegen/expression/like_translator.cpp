@@ -20,10 +20,10 @@ LikeTranslator::LikeTranslator(const planner::ComparisonExpression &expr,
   }
 }
 
-edsl::ValueVT LikeTranslator::DeriveValue(ConsumerContext *context,
-                                          const ColumnValueProvider *provider) const {
-  auto left_val = context->DeriveValue(*GetChild(0), provider).As<ast::x::StringVal>();
-  auto right_val = context->DeriveValue(*GetChild(1), provider).As<ast::x::StringVal>();
+edsl::ValueVT LikeTranslator::DeriveValue(ConsumerContext *ctx,
+                                          const ColumnValueProvider *cvp) const {
+  auto left_val = ctx->DeriveValue(*GetChild(0), cvp).As<ast::x::StringVal>();
+  auto right_val = ctx->DeriveValue(*GetChild(1), cvp).As<ast::x::StringVal>();
 
   switch (const auto cmp_kind = GetComparisonExpression().GetKind(); cmp_kind) {
     case planner::ComparisonKind::LIKE:

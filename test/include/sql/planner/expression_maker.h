@@ -17,7 +17,6 @@
 #include "sql/planner/expressions/constant_value_expression.h"
 #include "sql/planner/expressions/derived_value_expression.h"
 #include "sql/planner/expressions/unary_expression.h"
-#include "sql/value.h"
 #include "sql/schema.h"
 
 namespace tpl::sql::planner {

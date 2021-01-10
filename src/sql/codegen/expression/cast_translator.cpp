@@ -15,10 +15,10 @@ CastTranslator::CastTranslator(const planner::CastExpression &expr,
   compilation_context->Prepare(*expr.GetInput());
 }
 
-edsl::ValueVT CastTranslator::DeriveValue(ConsumerContext *context,
-                                          const ColumnValueProvider *provider) const {
+edsl::ValueVT CastTranslator::DeriveValue(ConsumerContext *ctx,
+                                          const ColumnValueProvider *cvp) const {
   const auto &expr = GetCastExpression();
-  const auto input = context->DeriveValue(*expr.GetInput(), provider);
+  const auto input = ctx->DeriveValue(*expr.GetInput(), cvp);
   return edsl::ConvertSql(input, expr.GetTargetType().GetPrimitiveTypeId());
 }
 

@@ -20,10 +20,10 @@ ConjunctionTranslator::ConjunctionTranslator(const planner::ConjunctionExpressio
   compilation_context->Prepare(*expr.GetChild(1));
 }
 
-edsl::ValueVT ConjunctionTranslator::DeriveValue(ConsumerContext *context,
-                                                 const ColumnValueProvider *provider) const {
-  auto left_val = context->DeriveValue(*GetChild(0), provider).As<bool>();
-  auto right_val = context->DeriveValue(*GetChild(1), provider).As<bool>();
+edsl::ValueVT ConjunctionTranslator::DeriveValue(ConsumerContext *ctx,
+                                                 const ColumnValueProvider *cvp) const {
+  auto left_val = ctx->DeriveValue(*GetChild(0), cvp).As<bool>();
+  auto right_val = ctx->DeriveValue(*GetChild(1), cvp).As<bool>();
 
   switch (auto cmp_kind = GetExpressionAs<planner::ConjunctionExpression>().GetKind(); cmp_kind) {
     case planner::ConjunctionKind::AND:

@@ -17,10 +17,10 @@ BinaryExpressionTranslator::BinaryExpressionTranslator(const planner::BinaryExpr
   compilation_context->Prepare(*expr.GetRight());
 }
 
-edsl::ValueVT BinaryExpressionTranslator::DeriveValue(ConsumerContext *context,
-                                                      const ColumnValueProvider *provider) const {
-  auto left_val = context->DeriveValue(*GetBinaryExpression().GetLeft(), provider);
-  auto right_val = context->DeriveValue(*GetBinaryExpression().GetRight(), provider);
+edsl::ValueVT BinaryExpressionTranslator::DeriveValue(ConsumerContext *ctx,
+                                                      const ColumnValueProvider *cvp) const {
+  auto left_val = ctx->DeriveValue(*GetBinaryExpression().GetLeft(), cvp);
+  auto right_val = ctx->DeriveValue(*GetBinaryExpression().GetRight(), cvp);
 
   switch (const auto op = GetExpressionAs<planner::BinaryExpression>().GetOp(); op) {
     case KnownOperator::Add:

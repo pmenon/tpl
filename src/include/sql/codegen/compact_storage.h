@@ -26,8 +26,7 @@ class CompactStorage {
    * Create an instance for a row with the provided schema.
    * @param schema The schema of the row to be stored.
    */
-  explicit CompactStorage(CodeGen *codegen, std::string_view name,
-                          const std::vector<Type> &schema);
+  explicit CompactStorage(CodeGen *codegen, std::string_view name, const std::vector<Type> &schema);
 
   /**
    * Setup the storage to store rows with the given schema.

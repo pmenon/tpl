@@ -448,8 +448,7 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q2_1)(benchmark::State &state) {
   {
     auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
     auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1"));
-    auto p_category =
-        expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
+    auto p_category = expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
     // Make the predicate: p_category = 'MFGR#12'
     auto predicate = expr_maker.CompareEq(p_category, expr_maker.Constant("MFGR#12"));
     // Make output schema.
@@ -1954,8 +1953,7 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q3_4)(benchmark::State &state) {
   {
     auto d_datekey = expr_maker.CVE(d_schema.GetColumnInfo("d_datekey"));
     auto d_year = expr_maker.CVE(d_schema.GetColumnInfo("d_year"));
-    auto d_yearmonth =
-        expr_maker.CVE(d_schema.GetColumnInfo("d_yearmonth"));
+    auto d_yearmonth = expr_maker.CVE(d_schema.GetColumnInfo("d_yearmonth"));
     // Make output schema.
     d_seq_scan_out.AddOutput("d_datekey", d_datekey);
     d_seq_scan_out.AddOutput("d_year", d_year);
@@ -2591,8 +2589,7 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_2)(benchmark::State &state) {
   {
     auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
     auto p_mfgr = expr_maker.CVE(p_schema.GetColumnInfo("p_mfgr"));
-    auto p_category =
-        expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
+    auto p_category = expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
     // Make the predicate: p_mfgr = 'MFGR#1' or p_mfgr = 'MFGR#2'
     auto predicate =
         expr_maker.ConjunctionOr(expr_maker.CompareEq(p_mfgr, expr_maker.Constant("MFGR#1")),
@@ -2922,8 +2919,7 @@ BENCHMARK_DEFINE_F(StarSchemaBenchmark, Q4_3)(benchmark::State &state) {
   {
     auto p_partkey = expr_maker.CVE(p_schema.GetColumnInfo("p_partkey"));
     auto p_brand1 = expr_maker.CVE(p_schema.GetColumnInfo("p_brand1"));
-    auto p_category =
-        expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
+    auto p_category = expr_maker.CVE(p_schema.GetColumnInfo("p_category"));
     // Make the predicate: p_category = 'MFGR#14'
     auto predicate = expr_maker.CompareEq(p_category, expr_maker.Constant("MFGR#14"));
     // Make output schema.

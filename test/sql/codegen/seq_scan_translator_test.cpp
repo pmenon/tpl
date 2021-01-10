@@ -81,7 +81,8 @@ TEST_F(SeqScanTranslatorTest, ScanWithNullCheckTest) {
     auto colb = expr_maker.CVE(table_schema.GetColumnInfo("colB"));
     seq_scan_out.AddOutput("colb", colb);
     // Predicate.
-    auto predicate = expr_maker.UnaryOperator(KnownOperator::IsNull, Type::BooleanType(false), colb);
+    auto predicate =
+        expr_maker.UnaryOperator(KnownOperator::IsNull, Type::BooleanType(false), colb);
     // Build plan.
     seq_scan = planner::SeqScanPlanNode::Builder()
                    .SetOutputSchema(seq_scan_out.MakeSchema())

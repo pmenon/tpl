@@ -14,9 +14,9 @@ UnaryExpressionTranslator::UnaryExpressionTranslator(const planner::UnaryExpress
   compilation_context->Prepare(*expr.GetInput());
 }
 
-edsl::ValueVT UnaryExpressionTranslator::DeriveValue(ConsumerContext *context,
-                                                     const ColumnValueProvider *provider) const {
-  auto input = context->DeriveValue(*GetUnaryExpression().GetInput(), provider);
+edsl::ValueVT UnaryExpressionTranslator::DeriveValue(ConsumerContext *ctx,
+                                                     const ColumnValueProvider *cvp) const {
+  auto input = ctx->DeriveValue(*GetUnaryExpression().GetInput(), cvp);
   switch (const auto op = GetUnaryExpression().GetOp()) {
     case KnownOperator::Neg:
       return edsl::Negate(input);

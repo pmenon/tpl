@@ -13,8 +13,8 @@ ConstantTranslator::ConstantTranslator(const planner::ConstantValueExpression &e
                                        CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {}
 
-edsl::ValueVT ConstantTranslator::DeriveValue(ConsumerContext *context,
-                                              const ColumnValueProvider *provider) const {
+edsl::ValueVT ConstantTranslator::DeriveValue(ConsumerContext *ctx,
+                                              const ColumnValueProvider *cvp) const {
   const auto &val = GetExpressionAs<const planner::ConstantValueExpression>().GetValue();
   switch (val.GetTypeId()) {
     case TypeId::Boolean:

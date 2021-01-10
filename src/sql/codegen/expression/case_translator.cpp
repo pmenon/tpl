@@ -62,8 +62,8 @@ void CaseTranslator::GenerateCases(const edsl::VariableVT &ret, const std::size_
   check_condition.EndIf();
 }
 
-edsl::ValueVT CaseTranslator::DeriveValue(ConsumerContext *context,
-                                          const ColumnValueProvider *provider) const {
+edsl::ValueVT CaseTranslator::DeriveValue(ConsumerContext *ctx,
+                                          const ColumnValueProvider *cvp) const {
   FunctionBuilder *function = codegen_->GetCurrentFunction();
 
   // var case_result: TYPE
@@ -72,7 +72,7 @@ edsl::ValueVT CaseTranslator::DeriveValue(ConsumerContext *context,
   function->Append(edsl::Declare(ret));
 
   // Generate all clauses.
-  GenerateCases(ret, 0, context, provider);
+  GenerateCases(ret, 0, ctx, cvp);
 
   // Done.
   return std::move(ret);

@@ -18,10 +18,10 @@ ComparisonTranslator::ComparisonTranslator(const planner::ComparisonExpression &
   }
 }
 
-edsl::ValueVT ComparisonTranslator::DeriveValue(ConsumerContext *context,
-                                                const ColumnValueProvider *provider) const {
-  auto left_val = context->DeriveValue(*GetChild(0), provider);
-  auto right_val = context->DeriveValue(*GetChild(1), provider);
+edsl::ValueVT ComparisonTranslator::DeriveValue(ConsumerContext *ctx,
+                                                const ColumnValueProvider *cvp) const {
+  auto left_val = ctx->DeriveValue(*GetChild(0), cvp);
+  auto right_val = ctx->DeriveValue(*GetChild(1), cvp);
 
   switch (auto cmp_kind = GetExpressionAs<planner::ComparisonExpression>().GetKind(); cmp_kind) {
     case planner::ComparisonKind::EQUAL:
@@ -38,7 +38,7 @@ edsl::ValueVT ComparisonTranslator::DeriveValue(ConsumerContext *context,
       return edsl::ComparisonOp(parsing::Token::Type::BANG_EQUAL, left_val, right_val);
 #if 0
       {
-      auto lo = right_val, hi = context->DeriveValue(*GetExpression().GetChild(2), provider);
+      auto lo = right_val, hi = ctx->DeriveValue(*GetExpression().GetChild(2), cvp);
       return codegen_->BinaryOp(
           parsing::Token::Type::AND,
           codegen_->Compare(parsing::Token::Type::GREATER_EQUAL, left_val, lo),

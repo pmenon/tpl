@@ -22,13 +22,9 @@ class CaseTranslator : public ExpressionTranslator {
   CaseTranslator(const planner::CaseExpression &expr, CompilationContext *compilation_context);
 
   /**
-   * Derive the value of the expression.
-   * @param context The context containing collected subexpressions.
-   * @param provider A provider for specific column values.
-   * @return The value of the expression.
+   * @copydoc ExpressionTranslator::DeriveValue().
    */
-  edsl::ValueVT DeriveValue(ConsumerContext *context,
-                            const ColumnValueProvider *provider) const override;
+  edsl::ValueVT DeriveValue(ConsumerContext *ctx, const ColumnValueProvider *cvp) const override;
 
  private:
   void GenerateCases(const edsl::VariableVT &ret, std::size_t clause_idx, ConsumerContext *context,

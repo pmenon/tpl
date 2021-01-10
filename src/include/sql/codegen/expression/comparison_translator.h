@@ -19,13 +19,9 @@ class ComparisonTranslator : public ExpressionTranslator {
                        CompilationContext *compilation_context);
 
   /**
-   * Derive the value of the expression.
-   * @param context The context containing collected subexpressions.
-   * @param provider A provider for specific column values.
-   * @return The value of the expression.
+   * @copydoc ExpressionTranslator::DeriveValue().
    */
-  edsl::ValueVT DeriveValue(ConsumerContext *context,
-                            const ColumnValueProvider *provider) const override;
+  edsl::ValueVT DeriveValue(ConsumerContext *ctx, const ColumnValueProvider *cvp) const override;
 };
 
 }  // namespace tpl::sql::codegen
