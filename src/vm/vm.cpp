@@ -683,25 +683,11 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
     OpVPIGet##NAME(result, vpi, col_idx);                                         \
     DISPATCH_NEXT();                                                              \
   }                                                                               \
-  OP(VPIGet##NAME##Null) : {                                                      \
-    auto *result = frame->LocalAt<CPP_TYPE *>(READ_LOCAL_ID());                   \
-    auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
-    auto col_idx = READ_UIMM4();                                                  \
-    OpVPIGet##NAME##Null(result, vpi, col_idx);                                   \
-    DISPATCH_NEXT();                                                              \
-  }                                                                               \
   OP(VPISet##NAME) : {                                                            \
     auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
     auto *input = frame->LocalAt<CPP_TYPE *>(READ_LOCAL_ID());                    \
     auto col_idx = READ_UIMM4();                                                  \
     OpVPISet##NAME(vpi, input, col_idx);                                          \
-    DISPATCH_NEXT();                                                              \
-  }                                                                               \
-  OP(VPISet##NAME##Null) : {                                                      \
-    auto *vpi = frame->LocalAt<sql::VectorProjectionIterator *>(READ_LOCAL_ID()); \
-    auto *input = frame->LocalAt<CPP_TYPE *>(READ_LOCAL_ID());                    \
-    auto col_idx = READ_UIMM4();                                                  \
-    OpVPISet##NAME##Null(vpi, input, col_idx);                                    \
     DISPATCH_NEXT();                                                              \
   }
   GEN_VPI_ACCESS(Bool, sql::BoolVal)
