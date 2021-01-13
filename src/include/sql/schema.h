@@ -75,7 +75,7 @@ class Schema {
         return c;
       }
     }
-    throw std::out_of_range("Column name doesn't exist");
+    throw std::out_of_range("Column '" + name + "' does not exist in table");
   }
 
   /**

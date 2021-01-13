@@ -158,6 +158,22 @@ class AggregationHashTable {
   HashTableEntry *Lookup(hash_t hash);
 
   /**
+   * Lookup and return the first entry in the aggregation table that matches a given hash and where
+   * the given check function returns true.
+   *
+   * @tparam T The type of the payload stored in the hash table.
+   * @tparam F The predicate check function whose signature must be: bool(constT *)
+   *
+   * @param hash The hash value to use for early filtering.
+   * @param key_eq_fn The key-equality function to resolve hash collisions.
+   * @param probe_tuple The probe tuple.
+   * @return A pointer to the matching entry payload; null if no entry is found.
+   */
+  template <typename T, typename F,
+            typename = std::enable_if<std::is_invocable_r_v<bool, F, const T *>>>
+  T *Lookup(hash_t hash, F check);
+
+  /**
    * Ingest and process a batch of input into the aggregation table.
    * @param input_batch The vector projection to process.
    * @param key_indexes The ordered list of key indexes in the input batch.
@@ -401,6 +417,19 @@ inline HashTableEntry *AggregationHashTable::Lookup(hash_t hash) {
   return hash_table_.FindChainHead(hash);
 }
 
+template <typename T, typename F, typename>
+inline T *AggregationHashTable::Lookup(hash_t hash, F check) {
+  for (auto entry = Lookup(hash); entry != nullptr; entry = entry->next) {
+    if (entry->hash == hash) {
+      auto tmp = entry->PayloadAs<T>();
+      if (check(tmp)) {
+        return tmp;
+      }
+    }
+  }
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Aggregation Hash Table Iterator
@@ -435,6 +464,14 @@ class AHTIterator {
   const byte *GetCurrentAggregateRow() const {
     auto *ht_entry = iter_.GetCurrentEntry();
     return ht_entry->payload;
+  }
+
+  /**
+   * @return A pointer to the current row as the given templated type.
+   */
+  template <typename T>
+  const T *GetCurrentAggregateRowAs() const {
+    return reinterpret_cast<const T *>(GetCurrentAggregateRow());
   }
 
  private:
