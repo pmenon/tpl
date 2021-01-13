@@ -37,7 +37,7 @@ namespace {
 constexpr auto kExecutionMode = vm::ExecutionMode::Interpret;
 
 // Change this path to where your TPC-H data is.
-constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-1";
+constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-0.1";
 
 // Flag used to ensure the TPCH database is only loaded once.
 std::once_flag kLoadTpchDatabaseOnce{};
