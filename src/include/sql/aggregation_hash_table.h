@@ -151,11 +151,9 @@ class AggregationHashTable {
    * Lookup and return the first entry in the aggregation table that matches a given hash. It is the
    * caller's responsibility to resolve hash and key collisions.
    * @param hash The hash value to use for early filtering.
-   * @param key_eq_fn The key-equality function to resolve hash collisions.
-   * @param probe_tuple The probe tuple.
    * @return A pointer to the matching entry payload; null if no entry is found.
    */
-  HashTableEntry *Lookup(hash_t hash);
+  HashTableEntry *Lookup(hash_t hash) { return hash_table_.FindChainHead(hash); }
 
   /**
    * Lookup and return the first entry in the aggregation table that matches a given hash and where
@@ -165,8 +163,7 @@ class AggregationHashTable {
    * @tparam F The predicate check function whose signature must be: bool(constT *)
    *
    * @param hash The hash value to use for early filtering.
-   * @param key_eq_fn The key-equality function to resolve hash collisions.
-   * @param probe_tuple The probe tuple.
+   * @param check The key-collision resolution function.
    * @return A pointer to the matching entry payload; null if no entry is found.
    */
   template <typename T, typename F,
@@ -412,10 +409,6 @@ class AggregationHashTable {
 // ---------------------------------------------------------
 // Aggregation Hash Table implementation below
 // ---------------------------------------------------------
-
-inline HashTableEntry *AggregationHashTable::Lookup(hash_t hash) {
-  return hash_table_.FindChainHead(hash);
-}
 
 template <typename T, typename F, typename>
 inline T *AggregationHashTable::Lookup(hash_t hash, F check) {
