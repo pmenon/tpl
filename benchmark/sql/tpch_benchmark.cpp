@@ -2499,6 +2499,183 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q11)(benchmark::State &state) {
   }
 }
 
+BENCHMARK_DEFINE_F(TpchBenchmark, Q12)(benchmark::State &state) {
+  auto accessor = sql::Catalog::Instance();
+  planner::ExpressionMaker expr_maker;
+
+  // Scan lineitem.
+  std::unique_ptr<planner::AbstractScanPlanNode> l_seq_scan;
+  planner::OutputSchemaHelper l_seq_scan_out(&expr_maker, 0);
+  {
+    sql::Table *table = accessor->LookupTableByName("tpch.lineitem");
+    const auto &schema = table->GetSchema();
+
+    // Read all needed columns.
+    auto l_orderkey = expr_maker.CVE(schema.GetColumnInfo("l_orderkey"));
+    auto l_shipmode = expr_maker.CVE(schema.GetColumnInfo("l_shipmode"));
+    auto l_commitdate = expr_maker.CVE(schema.GetColumnInfo("l_commitdate"));
+    auto l_shipdate = expr_maker.CVE(schema.GetColumnInfo("l_shipdate"));
+    auto l_receiptdate = expr_maker.CVE(schema.GetColumnInfo("l_receiptdate"));
+    // Make the output schema.
+    l_seq_scan_out.AddOutput("l_orderkey", l_orderkey);
+    l_seq_scan_out.AddOutput("l_shipmode", l_shipmode);
+    // Predicate.
+    auto pred_shipmode =
+        expr_maker.ConjunctionOr(expr_maker.CompareEq(l_shipmode, expr_maker.Constant("MAIL")),
+                                 expr_maker.CompareEq(l_shipmode, expr_maker.Constant("SHIP")));
+    auto pred_commitdate = expr_maker.CompareLt(l_commitdate, l_receiptdate);
+    auto pred_shipdate = expr_maker.CompareLt(l_shipdate, l_commitdate);
+    auto pred_receiptdate = expr_maker.ConjunctionAnd(
+        expr_maker.CompareGe(l_receiptdate, expr_maker.Constant(1994, 01, 01)),
+        expr_maker.CompareLt(l_receiptdate, expr_maker.Constant(1995, 01, 01)));
+    auto predicate = expr_maker.ConjunctionAnd(
+        pred_shipmode,
+        expr_maker.ConjunctionAnd(pred_commitdate,
+                                  expr_maker.ConjunctionAnd(pred_shipdate, pred_receiptdate)));
+    // Build.
+    l_seq_scan = planner::SeqScanPlanNode::Builder{}
+        .SetOutputSchema(l_seq_scan_out.MakeSchema())
+        .SetScanPredicate(predicate)
+        .SetTableOid(table->GetId())
+        .Build();
+  }
+  
+  // Scan orders.
+  std::unique_ptr<planner::AbstractScanPlanNode> o_seq_scan;
+  planner::OutputSchemaHelper o_seq_scan_out(&expr_maker, 1);
+  {
+    sql::Table *table = accessor->LookupTableByName("tpch.orders");
+    const auto &schema = table->GetSchema();
+
+    // Read all needed columns.
+    auto o_orderkey = expr_maker.CVE(schema.GetColumnInfo("o_orderkey"));
+    auto o_orderpriority = expr_maker.CVE(schema.GetColumnInfo("o_orderpriority"));
+    auto o_high_line_count = expr_maker.Case(
+        {
+            // when o_orderpriority = '1-URGENT' or o_orderpriority = '2-HIGH' then 1
+            {expr_maker.ConjunctionOr(
+                 expr_maker.CompareEq(o_orderpriority, expr_maker.Constant("1-URGENT")),
+                 expr_maker.CompareEq(o_orderpriority, expr_maker.Constant("2-HIGH"))),
+             expr_maker.Constant(1)},
+        },
+        // else 0
+        expr_maker.Constant(0));
+    auto o_low_line_count = expr_maker.Case(
+        {
+            // when o_orderpriority <> '1-URGENT' and o_orderpriority <> '2-HIGH' then 1
+            {expr_maker.ConjunctionAnd(
+                 expr_maker.CompareNeq(o_orderpriority, expr_maker.Constant("1-URGENT")),
+                 expr_maker.CompareNeq(o_orderpriority, expr_maker.Constant("2-HIGH"))),
+             expr_maker.Constant(1)},
+        },
+        // else 0
+        expr_maker.Constant(0));
+    // Make the output schema.
+    o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
+    o_seq_scan_out.AddOutput("o_high_line_count", o_high_line_count);
+    o_seq_scan_out.AddOutput("o_low_line_count", o_low_line_count);
+    // Build.
+    o_seq_scan = planner::SeqScanPlanNode::Builder{}
+                     .SetOutputSchema(o_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(nullptr)
+                     .SetTableOid(table->GetId())
+                     .Build();
+  }
+
+  // Make HJ1: lineitem x orders
+  std::unique_ptr<planner::AbstractPlanNode> hash_join1;
+  planner::OutputSchemaHelper hash_join_out1(&expr_maker, 0);
+  {
+    // Left columns.
+    auto l_orderkey = l_seq_scan_out.GetOutput("l_orderkey");
+    auto l_shipmode = l_seq_scan_out.GetOutput("l_shipmode");
+    // Right columns.
+    auto o_orderkey = o_seq_scan_out.GetOutput("o_orderkey");
+    auto o_high_line_count = o_seq_scan_out.GetOutput("o_high_line_count");
+    auto o_low_line_count = o_seq_scan_out.GetOutput("o_low_line_count");
+    // Output Schema.
+    hash_join_out1.AddOutput("l_shipmode", l_shipmode);
+    hash_join_out1.AddOutput("o_high_line_count", o_high_line_count);
+    hash_join_out1.AddOutput("o_low_line_count", o_low_line_count);
+    // Predicate.
+    auto predicate = expr_maker.CompareEq(l_orderkey, o_orderkey);
+    // Build.
+    hash_join1 = planner::HashJoinPlanNode::Builder{}
+                     .AddChild(std::move(l_seq_scan))
+                     .AddChild(std::move(o_seq_scan))
+                     .SetOutputSchema(hash_join_out1.MakeSchema())
+                     .AddLeftHashKey(l_orderkey)
+                     .AddRightHashKey(o_orderkey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(predicate)
+                     .Build();
+  }
+
+  // Make the aggregate
+  std::unique_ptr<planner::AbstractPlanNode> agg;
+  planner::OutputSchemaHelper agg_out(&expr_maker, 0);
+  {
+    // Read previous layer's output
+    auto l_shipmode = hash_join_out1.GetOutput("l_shipmode");
+    auto o_high_line_count = hash_join_out1.GetOutput("o_high_line_count");
+    auto o_low_line_count = hash_join_out1.GetOutput("o_low_line_count");
+    // Make the aggregate expressions
+    auto high_line_count = expr_maker.AggSum(o_high_line_count);
+    auto low_line_count = expr_maker.AggSum(o_low_line_count);
+    // Add them to the helper.
+    agg_out.AddGroupByTerm("l_shipmode", l_shipmode);
+    agg_out.AddAggTerm("high_line_count", high_line_count);
+    agg_out.AddAggTerm("low_line_count", low_line_count);
+    // Make the output schema
+    agg_out.AddOutput("l_shipmode", agg_out.GetGroupByTermForOutput("l_shipmode"));
+    agg_out.AddOutput("high_line_count", agg_out.GetAggTermForOutput("high_line_count"));
+    agg_out.AddOutput("low_line_count", agg_out.GetAggTermForOutput("low_line_count"));
+    // Build
+    planner::AggregatePlanNode::Builder builder;
+    agg = builder.SetOutputSchema(agg_out.MakeSchema())
+              .AddGroupByTerm(l_shipmode)
+              .AddAggregateTerm(high_line_count)
+              .AddAggregateTerm(low_line_count)
+              .AddChild(std::move(hash_join1))
+              .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
+              .SetHavingClausePredicate(nullptr)
+              .Build();
+  }
+
+  // Make final sort
+  std::unique_ptr<planner::AbstractPlanNode> order_by;
+  planner::OutputSchemaHelper order_by_out(&expr_maker, 0);
+  {
+    // Output colums
+    auto l_shipmode = agg_out.GetOutput("l_shipmode");
+    auto high_line_count = agg_out.GetOutput("high_line_count");
+    auto low_line_count = agg_out.GetOutput("low_line_count");
+    order_by_out.AddOutput("l_shipmode", l_shipmode);
+    order_by_out.AddOutput("high_line_count", high_line_count);
+    order_by_out.AddOutput("low_line_count", low_line_count);
+    // Build
+    planner::OrderByPlanNode::Builder builder;
+    order_by = builder.SetOutputSchema(order_by_out.MakeSchema())
+                   .AddChild(std::move(agg))
+                   .AddSortKey(l_shipmode, planner::OrderByOrderingType::ASC)
+                   .Build();
+  }
+
+  // Compile plan
+  auto last_op = order_by.get();
+  NoOpResultConsumer consumer;
+  sql::MemoryPool memory(nullptr);
+  sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
+  auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx, kExecutionMode);
+
+  // Only time execution
+  for (auto _ : state) {
+    query->Run(&exec_ctx, kExecutionMode);
+  }
+}
+
 BENCHMARK_DEFINE_F(TpchBenchmark, Q14)(benchmark::State &state) {
   auto accessor = sql::Catalog::Instance();
   planner::ExpressionMaker expr_maker;
@@ -3399,6 +3576,7 @@ BENCHMARK_REGISTER_F(TpchBenchmark, Q7)->Iterations(10)->Unit(benchmark::kMillis
 BENCHMARK_REGISTER_F(TpchBenchmark, Q9)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q10)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q11)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q12)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q14)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q16)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q18)->Iterations(10)->Unit(benchmark::kMillisecond);
