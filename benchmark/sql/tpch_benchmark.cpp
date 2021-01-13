@@ -37,7 +37,7 @@ namespace {
 constexpr auto kExecutionMode = vm::ExecutionMode::Interpret;
 
 // Change this path to where your TPC-H data is.
-constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-0.1";
+constexpr char kTpchDataDir[] = "/home/pmenon/tools/TPC-H/data/sf-1";
 
 // Flag used to ensure the TPCH database is only loaded once.
 std::once_flag kLoadTpchDatabaseOnce{};
@@ -191,6 +191,220 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q1)(benchmark::State &state) {
                    .AddSortKey(clause2.first, clause2.second)
                    .Build();
   }
+  // Compile plan
+  auto last_op = order_by.get();
+  NoOpResultConsumer consumer;
+  sql::MemoryPool memory(nullptr);
+  sql::ExecutionContext exec_ctx(&memory, last_op->GetOutputSchema(), &consumer);
+  auto query = CompilationContext::Compile(*last_op);
+  // Run Once to force compilation
+  query->Run(&exec_ctx, kExecutionMode);
+
+  // Only time execution
+  for (auto _ : state) {
+    query->Run(&exec_ctx, kExecutionMode);
+  }
+}
+
+BENCHMARK_DEFINE_F(TpchBenchmark, Q3)(benchmark::State &state) {
+  auto accessor = sql::Catalog::Instance();
+  planner::ExpressionMaker expr_maker;
+
+  // Scan customer.
+  std::unique_ptr<planner::AbstractScanPlanNode> cust_seq_scan;
+  planner::OutputSchemaHelper cust_seq_scan_out(&expr_maker, 0);
+  {
+    sql::Table *table = accessor->LookupTableByName("tpch.customer");
+    const auto &schema = table->GetSchema();
+
+    // Read all needed columns.
+    auto c_custkey = expr_maker.CVE(schema.GetColumnInfo("c_custkey"));
+    auto c_mktsegment = expr_maker.CVE(schema.GetColumnInfo("c_mktsegment"));
+    // Make the output schema.
+    cust_seq_scan_out.AddOutput("c_custkey", c_custkey);
+    // Predicate.
+    auto predicate = expr_maker.CompareEq(c_mktsegment, expr_maker.Constant("BUILDING"));
+    // Build.
+    cust_seq_scan = planner::SeqScanPlanNode::Builder{}
+                        .SetOutputSchema(cust_seq_scan_out.MakeSchema())
+                        .SetScanPredicate(predicate)
+                        .SetTableOid(table->GetId())
+                        .Build();
+  }
+
+  // Scan orders.
+  std::unique_ptr<planner::AbstractScanPlanNode> o_seq_scan;
+  planner::OutputSchemaHelper o_seq_scan_out(&expr_maker, 1);
+  {
+    sql::Table *table = accessor->LookupTableByName("tpch.orders");
+    const auto &schema = table->GetSchema();
+
+    // Read all needed columns.
+    auto o_custkey = expr_maker.CVE(schema.GetColumnInfo("o_custkey"));
+    auto o_orderkey = expr_maker.CVE(schema.GetColumnInfo("o_orderkey"));
+    auto o_orderdate = expr_maker.CVE(schema.GetColumnInfo("o_orderdate"));
+    auto o_shippriority = expr_maker.CVE(schema.GetColumnInfo("o_shippriority"));
+    // Make the output schema.
+    o_seq_scan_out.AddOutput("o_custkey", o_custkey);
+    o_seq_scan_out.AddOutput("o_orderkey", o_orderkey);
+    o_seq_scan_out.AddOutput("o_orderdate", o_orderdate);
+    o_seq_scan_out.AddOutput("o_shippriority", o_shippriority);
+    // Predicate.
+    auto predicate = expr_maker.CompareLt(o_orderdate, expr_maker.Constant(1995, 03, 15));
+    // Build.
+    o_seq_scan = planner::SeqScanPlanNode::Builder{}
+                     .SetOutputSchema(o_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(table->GetId())
+                     .Build();
+  }
+
+  // Scan lineitem.
+  std::unique_ptr<planner::AbstractScanPlanNode> l_seq_scan;
+  planner::OutputSchemaHelper l_seq_scan_out(&expr_maker, 1);
+  {
+    sql::Table *table = accessor->LookupTableByName("tpch.lineitem");
+    const auto &schema = table->GetSchema();
+
+    // Read all needed columns.
+    auto l_orderkey = expr_maker.CVE(schema.GetColumnInfo("l_orderkey"));
+    auto l_shipdate = expr_maker.CVE(schema.GetColumnInfo("l_shipdate"));
+    auto l_extendedprice = expr_maker.CVE(schema.GetColumnInfo("l_extendedprice"));
+    auto l_discount = expr_maker.CVE(schema.GetColumnInfo("l_discount"));
+    // Make the output schema.
+    l_seq_scan_out.AddOutput("l_orderkey", l_orderkey);
+    l_seq_scan_out.AddOutput("l_extendedprice", l_extendedprice);
+    l_seq_scan_out.AddOutput("l_discount", l_discount);
+    // Predicate.
+    auto predicate = expr_maker.CompareGt(l_shipdate, expr_maker.Constant(1995, 03, 15));
+    // Build.
+    l_seq_scan = planner::SeqScanPlanNode::Builder{}
+                     .SetOutputSchema(l_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(table->GetId())
+                     .Build();
+  }
+
+  // Make HJ1: customer x orders
+  std::unique_ptr<planner::AbstractPlanNode> hash_join1;
+  planner::OutputSchemaHelper hash_join_out1(&expr_maker, 0);
+  {
+    // Left columns.
+    auto c_custkey = cust_seq_scan_out.GetOutput("c_custkey");
+    // Right columns.
+    auto o_custkey = o_seq_scan_out.GetOutput("o_custkey");
+    auto o_orderkey = o_seq_scan_out.GetOutput("o_orderkey");
+    auto o_orderdate = o_seq_scan_out.GetOutput("o_orderdate");
+    auto o_shippriority = o_seq_scan_out.GetOutput("o_shippriority");
+    // Output Schema.
+    hash_join_out1.AddOutput("o_orderkey", o_orderkey);
+    hash_join_out1.AddOutput("o_orderdate", o_orderdate);
+    hash_join_out1.AddOutput("o_shippriority", o_shippriority);
+    // Predicate.
+    auto predicate = expr_maker.CompareEq(c_custkey, o_custkey);
+    // Build.
+    hash_join1 = planner::HashJoinPlanNode::Builder{}
+                     .AddChild(std::move(cust_seq_scan))
+                     .AddChild(std::move(o_seq_scan))
+                     .SetOutputSchema(hash_join_out1.MakeSchema())
+                     .AddLeftHashKey(c_custkey)
+                     .AddRightHashKey(o_custkey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(predicate)
+                     .Build();
+  }
+
+  // Make HJ2: HJ1 x lineitem
+  std::unique_ptr<planner::AbstractPlanNode> hash_join2;
+  planner::OutputSchemaHelper hash_join_out2(&expr_maker, 0);
+  {
+    // Left columns.
+    auto o_orderkey = hash_join_out1.GetOutput("o_orderkey");
+    auto o_orderdate = hash_join_out1.GetOutput("o_orderdate");
+    auto o_shippriority = hash_join_out1.GetOutput("o_shippriority");
+    // Right columns.
+    auto l_orderkey = l_seq_scan_out.GetOutput("l_orderkey");
+    auto l_extendedprice = l_seq_scan_out.GetOutput("l_extendedprice");
+    auto l_discount = l_seq_scan_out.GetOutput("l_discount");
+    // Output Schema.
+    hash_join_out2.AddOutput("o_orderdate", o_orderdate);
+    hash_join_out2.AddOutput("o_shippriority", o_shippriority);
+    hash_join_out2.AddOutput("l_orderkey", l_orderkey);
+    hash_join_out2.AddOutput("l_extendedprice", l_extendedprice);
+    hash_join_out2.AddOutput("l_discount", l_discount);
+    // Predicate.
+    auto predicate = expr_maker.CompareEq(o_orderkey, l_orderkey);
+    // Build.
+    hash_join2 = planner::HashJoinPlanNode::Builder{}
+                     .AddChild(std::move(hash_join1))
+                     .AddChild(std::move(l_seq_scan))
+                     .SetOutputSchema(hash_join_out2.MakeSchema())
+                     .AddLeftHashKey(o_orderkey)
+                     .AddRightHashKey(l_orderkey)
+                     .SetJoinType(planner::LogicalJoinType::INNER)
+                     .SetJoinPredicate(predicate)
+                     .Build();
+  }
+
+  // Make the aggregate
+  std::unique_ptr<planner::AbstractPlanNode> agg;
+  planner::OutputSchemaHelper agg_out(&expr_maker, 0);
+  {
+    // Read previous layer's output
+    auto o_orderdate = hash_join_out2.GetOutput("o_orderdate");
+    auto o_shippriority = hash_join_out2.GetOutput("o_shippriority");
+    auto l_orderkey = hash_join_out2.GetOutput("l_orderkey");
+    auto l_extendedprice = hash_join_out2.GetOutput("l_extendedprice");
+    auto l_discount = hash_join_out2.GetOutput("l_discount");
+    // Make the aggregate expressions
+    auto revenue = expr_maker.AggSum(
+        expr_maker.OpMul(l_extendedprice, expr_maker.OpMin(expr_maker.Constant(1.0f), l_discount)));
+    // Add them to the helper.
+    agg_out.AddGroupByTerm("l_orderkey", l_orderkey);
+    agg_out.AddGroupByTerm("o_orderdate", o_orderdate);
+    agg_out.AddGroupByTerm("o_shippriority", o_shippriority);
+    agg_out.AddAggTerm("revenue", revenue);
+    // Make the output schema
+    agg_out.AddOutput("l_orderkey", agg_out.GetGroupByTermForOutput("l_orderkey"));
+    agg_out.AddOutput("o_orderdate", agg_out.GetGroupByTermForOutput("o_orderdate"));
+    agg_out.AddOutput("o_shippriority", agg_out.GetGroupByTermForOutput("o_shippriority"));
+    agg_out.AddOutput("revenue", agg_out.GetAggTermForOutput("revenue"));
+    // Build
+    planner::AggregatePlanNode::Builder builder;
+    agg = builder.SetOutputSchema(agg_out.MakeSchema())
+              .AddGroupByTerm(l_orderkey)
+              .AddGroupByTerm(o_orderdate)
+              .AddGroupByTerm(o_shippriority)
+              .AddAggregateTerm(revenue)
+              .AddChild(std::move(hash_join2))
+              .SetAggregateStrategyType(planner::AggregateStrategyType::HASH)
+              .SetHavingClausePredicate(nullptr)
+              .Build();
+  }
+
+  // Make final sort
+  std::unique_ptr<planner::AbstractPlanNode> order_by;
+  planner::OutputSchemaHelper order_by_out(&expr_maker, 0);
+  {
+    // Output colums
+    auto l_orderkey = agg_out.GetOutput("l_orderkey");
+    auto o_orderdate = agg_out.GetOutput("o_orderdate");
+    auto o_shippriority = agg_out.GetOutput("o_shippriority");
+    auto revenue = agg_out.GetOutput("revenue");
+    order_by_out.AddOutput("l_orderkey", l_orderkey);
+    order_by_out.AddOutput("revenue", revenue);
+    order_by_out.AddOutput("o_orderdate", o_orderdate);
+    order_by_out.AddOutput("o_shippriority", o_shippriority);
+    // Build
+    planner::OrderByPlanNode::Builder builder;
+    order_by = builder.SetOutputSchema(order_by_out.MakeSchema())
+                   .AddChild(std::move(agg))
+                   .AddSortKey(revenue, planner::OrderByOrderingType::DESC)
+                   .AddSortKey(o_orderdate, planner::OrderByOrderingType::ASC)
+                   .SetLimit(10)
+                   .Build();
+  }
+
   // Compile plan
   auto last_op = order_by.get();
   NoOpResultConsumer consumer;
@@ -3177,6 +3391,7 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q19)(benchmark::State &state) {
 // ---------------------------------------------------------
 
 BENCHMARK_REGISTER_F(TpchBenchmark, Q1)->Iterations(10)->Unit(benchmark::kMillisecond);
+BENCHMARK_REGISTER_F(TpchBenchmark, Q3)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q4)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q5)->Iterations(10)->Unit(benchmark::kMillisecond);
 BENCHMARK_REGISTER_F(TpchBenchmark, Q6)->Iterations(10)->Unit(benchmark::kMillisecond);
