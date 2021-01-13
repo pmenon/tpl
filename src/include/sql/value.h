@@ -9,12 +9,6 @@
 
 namespace tpl::sql {
 
-//===----------------------------------------------------------------------===//
-//
-// Base SQL Value
-//
-//===----------------------------------------------------------------------===//
-
 /**
  * A generic base catch-all SQL value. Used to represent a NULL-able SQL value.
  */
@@ -29,12 +23,6 @@ struct Val {
   explicit Val(bool is_null) noexcept : is_null(is_null) {}
 };
 
-//===----------------------------------------------------------------------===//
-//
-// Boolean
-//
-//===----------------------------------------------------------------------===//
-
 /**
  * A NULL-able SQL boolean value.
  */
@@ -43,10 +31,17 @@ struct BoolVal : public Val {
   bool val;
 
   /**
+   * Construct a potentially NULL boolean with the given initial vale.
+   * @param val The value of the boolean.
+   * @param is_null The NULL indication.
+   */
+  explicit BoolVal(bool val, bool is_null) noexcept : Val(is_null), val(val) {}
+
+  /**
    * Construct a non-NULL boolean with the given value.
    * @param val The value of the boolean.
    */
-  explicit BoolVal(bool val) noexcept : Val(false), val(val) {}
+  explicit BoolVal(bool val) noexcept : BoolVal(val, false) {}
 
   /**
    * Convert this SQL boolean into a primitive boolean. Thanks to SQL's
@@ -65,27 +60,23 @@ struct BoolVal : public Val {
   /**
    * @return The logical compliment of this value.
    */
-  BoolVal LogicalNot() const noexcept {
-    BoolVal result(!val);
-    result.is_null = is_null;
-    return result;
-  }
+  BoolVal LogicalNot() const noexcept { return BoolVal(!val, is_null); }
+
+  /**
+   * @return The logical conjunction of @em this and @em o.
+   */
+  BoolVal LogicalAnd(const BoolVal &o) const { return BoolVal(val && o.val, is_null || o.is_null); }
+
+  /**
+   * @return The logical disjunction of @em this and @em o.
+   */
+  BoolVal LogicalOr(const BoolVal &o) const { return BoolVal(val || o.val, is_null || o.is_null); }
 
   /**
    * @return A NULL boolean value.
    */
-  static BoolVal Null() {
-    BoolVal val(false);
-    val.is_null = true;
-    return val;
-  }
+  static BoolVal Null() { return BoolVal(false, true); }
 };
-
-//===----------------------------------------------------------------------===//
-//
-// Integer
-//
-//===----------------------------------------------------------------------===//
 
 /**
  * A NULL-able integral SQL value. Captures tinyint, smallint, integer and bigint.
@@ -95,26 +86,23 @@ struct Integer : public Val {
   int64_t val;
 
   /**
+   * Construct a potentially NULL integer with the given initial vale.
+   * @param val The value of the boolean.
+   * @param is_null The NULL indication.
+   */
+  explicit Integer(int64_t val, bool is_null) noexcept : Val(is_null), val(val) {}
+
+  /**
    * Construct a non-NULL integer with the given value.
    * @param val The value to set.
    */
-  explicit Integer(int64_t val) noexcept : Val(false), val(val) {}
+  explicit Integer(int64_t val) noexcept : Integer(val, false) {}
 
   /**
    * @return A NULL integer.
    */
-  static Integer Null() {
-    Integer val(0);
-    val.is_null = true;
-    return val;
-  }
+  static Integer Null() { return Integer(0, true); }
 };
-
-//===----------------------------------------------------------------------===//
-//
-// Real
-//
-//===----------------------------------------------------------------------===//
 
 /**
  * A NULL-able single- and double-precision floating point SQL value.
@@ -124,32 +112,29 @@ struct Real : public Val {
   double val;
 
   /**
+   * Construct a potentially NULL real value from a 64-bit floating point value
+   * @param val The initial value.
+   * @param is_null The NULL indication.
+   */
+  explicit Real(double val, bool is_null) noexcept : Val(is_null), val(val) {}
+
+  /**
    * Construct a non-NULL real value from a 32-bit floating point value.
    * @param val The initial value.
    */
-  explicit Real(float val) noexcept : Val(false), val(val) {}
+  explicit Real(float val) noexcept : Real(val, false) {}
 
   /**
    * Construct a non-NULL real value from a 64-bit floating point value
    * @param val The initial value.
    */
-  explicit Real(double val) noexcept : Val(false), val(val) {}
+  explicit Real(double val) noexcept : Real(val, false) {}
 
   /**
    * @return A NULL Real value.
    */
-  static Real Null() {
-    Real real(0.0);
-    real.is_null = true;
-    return real;
-  }
+  static Real Null() { return Real(0.0, true); }
 };
-
-//===----------------------------------------------------------------------===//
-//
-// Decimal
-//
-//===----------------------------------------------------------------------===//
 
 /**
  * A NULL-able fixed-point decimal SQL value.
@@ -159,10 +144,17 @@ struct DecimalVal : public Val {
   Decimal64 val;
 
   /**
+   * Construct a potentially NULL decimal value from the given 64-bit decimal value.
+   * @param val The raw decimal value.
+   * @param is_null The NULL indication.
+   */
+  explicit DecimalVal(Decimal64 val, bool is_null) noexcept : Val(is_null), val(val) {}
+
+  /**
    * Construct a non-NULL decimal value from the given 64-bit decimal value.
    * @param val The decimal value.
    */
-  explicit DecimalVal(Decimal64 val) noexcept : Val(false), val(val) {}
+  explicit DecimalVal(Decimal64 val) noexcept : DecimalVal(val, false) {}
 
   /**
    * Construct a non-NULL decimal value from the given 64-bit decimal value.
@@ -173,18 +165,8 @@ struct DecimalVal : public Val {
   /**
    * @return A NULL decimal value.
    */
-  static DecimalVal Null() {
-    DecimalVal val(0);
-    val.is_null = true;
-    return val;
-  }
+  static DecimalVal Null() { return DecimalVal(Decimal64{0}, true); }
 };
-
-//===----------------------------------------------------------------------===//
-//
-// String
-//
-//===----------------------------------------------------------------------===//
 
 /**
  * A NULL-able SQL string. These strings are always <b>views</b> onto externally managed memory.
@@ -196,10 +178,17 @@ struct StringVal : public Val {
   VarlenEntry val;
 
   /**
+   * Construct a potentially NULL string from the given string value.
+   * @param val The string.
+   * @param is_null The NULL indication.
+   */
+  explicit StringVal(VarlenEntry val, bool is_null) noexcept : Val(is_null), val(val) {}
+
+  /**
    * Construct a non-NULL string from the given string value.
    * @param val The string.
    */
-  explicit StringVal(VarlenEntry val) noexcept : Val(false), val(val) {}
+  explicit StringVal(VarlenEntry val) noexcept : StringVal(val, false) {}
 
   /**
    * Create a non-NULL string value (i.e., a view) over the given (potentially non-null terminated)
@@ -208,7 +197,7 @@ struct StringVal : public Val {
    * @param len The length of the sequence.
    */
   StringVal(const char *str, uint32_t len) noexcept
-      : Val(false), val(VarlenEntry::Create(reinterpret_cast<const byte *>(str), len)) {
+      : StringVal(VarlenEntry::Create(reinterpret_cast<const byte *>(str), len), false) {
     TPL_ASSERT(str != nullptr, "String input cannot be NULL");
   }
 
@@ -265,12 +254,6 @@ struct StringVal : public Val {
   }
 };
 
-//===----------------------------------------------------------------------===//
-//
-// Date
-//
-//===----------------------------------------------------------------------===//
-
 /**
  * A NULL-able SQL date value.
  */
@@ -281,8 +264,15 @@ struct DateVal : public Val {
   /**
    * Construct a non-NULL date with the given date value.
    * @param val The value.
+   * @param is_null The NULL indication.
    */
-  explicit DateVal(Date val) noexcept : Val(false), val(val) {}
+  explicit DateVal(Date val, bool is_null) noexcept : Val(is_null), val(val) {}
+
+  /**
+   * Construct a non-NULL date with the given date value.
+   * @param val The value.
+   */
+  explicit DateVal(Date val) noexcept : DateVal(val, false) {}
 
   /**
    * Construct a non-NULL date with the given date value.
@@ -293,18 +283,8 @@ struct DateVal : public Val {
   /**
    * @return A NULL date.
    */
-  static DateVal Null() {
-    DateVal date(Date{});
-    date.is_null = true;
-    return date;
-  }
+  static DateVal Null() { return DateVal(Date{}, true); }
 };
-
-//===----------------------------------------------------------------------===//
-//
-// Timestamp
-//
-//===----------------------------------------------------------------------===//
 
 /**
  * A NULL-able SQL timestamp value.
@@ -316,8 +296,15 @@ struct TimestampVal : public Val {
   /**
    * Construct a non-NULL timestamp with the given value.
    * @param val The timestamp.
+   * @param is_null The NULL indication.
    */
-  explicit TimestampVal(Timestamp val) noexcept : Val(false), val(val) {}
+  explicit TimestampVal(Timestamp val, bool is_null) noexcept : Val(is_null), val(val) {}
+
+  /**
+   * Construct a non-NULL timestamp with the given value.
+   * @param val The timestamp.
+   */
+  explicit TimestampVal(Timestamp val) noexcept : TimestampVal(val, false) {}
 
   /**
    * Construct a non-NULL timestamp with the given raw timestamp value
@@ -328,11 +315,7 @@ struct TimestampVal : public Val {
   /**
    * @return A NULL timestamp.
    */
-  static TimestampVal Null() {
-    TimestampVal timestamp(Timestamp{0});
-    timestamp.is_null = true;
-    return timestamp;
-  }
+  static TimestampVal Null() { return TimestampVal(Timestamp{0}, true); }
 };
 
 }  // namespace tpl::sql
