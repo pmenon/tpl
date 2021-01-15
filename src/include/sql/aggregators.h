@@ -9,38 +9,41 @@
 
 namespace tpl::sql {
 
-//===----------------------------------------------------------------------===//
-//
-// Count
-//
-//===----------------------------------------------------------------------===//
-
-class CountAggregate {
+/**
+ * Base class for COUNT() aggregates. If the template parameter is true, this aggregator only counts
+ * non-NULL SQL values. If the template parameter is false, this aggregator will count all inputs.
+ * @tparam SkipNulls Boolean template flag controlling whether NULL SQL inputs are counted.
+ */
+template <bool SkipNulls, typename T = uint64_t>
+class CountAggregateBase {
  public:
+  static_assert(!std::is_same_v<T, bool> && std::is_integral_v<T> && std::is_unsigned_v<T>,
+                "Invalid count type.");
+
   /**
    * Constructor.
    */
-  CountAggregate() : count_(0) {}
+  CountAggregateBase() : count_(0) {}
 
   /**
    * This class cannot be copied or moved.
    */
-  DISALLOW_COPY_AND_MOVE(CountAggregate);
+  DISALLOW_COPY_AND_MOVE(CountAggregateBase);
 
   /**
    * Advance the count based on the NULL-ness of the input value.
    */
-  void Advance(const Val &val) { count_ += !val.is_null; }
+  void Advance(const Val &val) { count_ += (SkipNulls ? !val.is_null : T{1}); }
 
   /**
    * Merge this count with the @em that count.
    */
-  void Merge(const CountAggregate &that) { count_ += that.count_; }
+  void Merge(const CountAggregateBase &that) { count_ += that.count_; }
 
   /**
    * Reset the aggregate.
    */
-  void Reset() { count_ = 0; }
+  void Reset() { count_ = T{0}; }
 
   /**
    * Return the current value of the count.
@@ -48,63 +51,25 @@ class CountAggregate {
   Integer GetCountResult() const { return Integer(count_); }
 
  private:
-  uint64_t count_;
+  T count_;
 };
 
-//===----------------------------------------------------------------------===//
-//
-// Count Star
-//
-//===----------------------------------------------------------------------===//
+/**
+ * A COUNT(col) aggregate. Only counts non-NULL inputs.
+ */
+class CountAggregate : public CountAggregateBase<true> {};
 
-class CountStarAggregate {
- public:
-  /**
-   * Constructor.
-   */
-  CountStarAggregate() : count_(0) {}
-
-  /**
-   * This class cannot be copied or moved.
-   */
-  DISALLOW_COPY_AND_MOVE(CountStarAggregate);
-
-  /**
-   * Advance the aggregate by one.
-   */
-  void Advance(UNUSED const Val &val) { count_++; }
-
-  /**
-   * Merge this count with the @em that count.
-   */
-  void Merge(const CountStarAggregate &that) { count_ += that.count_; }
-
-  /**
-   * Reset the aggregate.
-   */
-  void Reset() { count_ = 0; }
-
-  /**
-   * Return the current value of the count.
-   */
-  Integer GetCountResult() const { return Integer(count_); }
-
- private:
-  uint64_t count_;
-};
-
-//===----------------------------------------------------------------------===//
-//
-// Sums
-//
-//===----------------------------------------------------------------------===//
+/**
+ * A COUNT(*) aggregate. Counts all inputs.
+ */
+class CountStarAggregate : public CountAggregateBase<false> {};
 
 /**
  * Generic summations.
  */
 template <typename T>
 class SumAggregate {
-  static_assert(std::is_base_of_v<Val, T>, "Template type must subclass value");
+  static_assert(std::is_base_of_v<Val, T>, "Type must be a SQL value, i.e., derive from sql::Val");
 
  public:
   /**
@@ -123,9 +88,7 @@ class SumAggregate {
    * @param val The (potentially NULL) value to advance the sum by.
    */
   void Advance(const T &val) {
-    if (val.is_null) {
-      return;
-    }
+    if (val.is_null) return;
     sum_.is_null = false;
     sum_.val += val.val;
   }
@@ -171,12 +134,6 @@ class IntegerSumAggregate : public SumAggregate<Integer> {};
  */
 class RealSumAggregate : public SumAggregate<Real> {};
 
-//===----------------------------------------------------------------------===//
-//
-// Max
-//
-//===----------------------------------------------------------------------===//
-
 /**
  * Generic max.
  */
@@ -199,9 +156,7 @@ class MaxAggregate {
    * Advance the aggregate by the input value @em val.
    */
   void Advance(const T &val) {
-    if (val.is_null) {
-      return;
-    }
+    if (val.is_null) return;
     max_.is_null = false;
     max_.val = std::max(val.val, max_.val);
   }
@@ -259,12 +214,6 @@ class TimestampMaxAggregate : public MaxAggregate<TimestampVal> {};
  */
 class StringMaxAggregate : public MaxAggregate<StringVal> {};
 
-//===----------------------------------------------------------------------===//
-//
-// Min
-//
-//===----------------------------------------------------------------------===//
-
 /**
  * Generic min.
  */
@@ -287,9 +236,7 @@ class MinAggregate {
    * Advance the aggregate by the input value @em val.
    */
   void Advance(const T &val) {
-    if (val.is_null) {
-      return;
-    }
+    if (val.is_null) return;
     min_.is_null = false;
     min_.val = std::min(val.val, min_.val);
   }
@@ -347,12 +294,6 @@ class TimestampMinAggregate : public MinAggregate<TimestampVal> {};
  */
 class StringMinAggregate : public MinAggregate<StringVal> {};
 
-//===----------------------------------------------------------------------===//
-//
-// Average
-//
-//===----------------------------------------------------------------------===//
-
 /**
  * Average aggregate.
  */
@@ -373,9 +314,7 @@ class AvgAggregate {
    */
   template <typename T>
   void Advance(const T &val) {
-    if (val.is_null) {
-      return;
-    }
+    if (val.is_null) return;
     sum_ += val.val;
     count_++;
   }
