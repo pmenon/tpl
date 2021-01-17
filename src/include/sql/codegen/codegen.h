@@ -94,59 +94,16 @@ class CodeGen {
 
  private:
   // Return a constant boolean expression.
-  [[nodiscard]] ast::Expression *ConstBool(bool v);
+  [[nodiscard]] ast::Expression *ConstBool(bool val);
 
   // Return a constant integer expression.
-  [[nodiscard]] ast::Expression *ConstInt(int64_t v);
+  [[nodiscard]] ast::Expression *ConstInt(int64_t val);
 
   // Return a constant FP expression.
-  [[nodiscard]] ast::Expression *ConstFloat(double v);
+  [[nodiscard]] ast::Expression *ConstFloat(double val);
 
   // Return a constant string expression.
-  [[nodiscard]] ast::Expression *ConstString(std::string_view v);
-
-  template <typename T, typename Enable = void>
-  struct LiteralHelper;
-
-  // This is dumb, I can't specialize for bool specifically ...
-  template <typename T>
-  struct LiteralHelper<T, std::enable_if_t<std::is_same_v<bool, T>>> {
-    static ast::Expression *Make(CodeGen *codegen, bool val) {
-      auto result = codegen->ConstBool(val);
-      result->SetType(codegen->BoolType());
-      return result;
-    }
-  };
-
-  // Specialization for integers.
-  template <typename T>
-  struct LiteralHelper<T, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<bool, T>>> {
-    static ast::Expression *Make(CodeGen *codegen, T val) {
-      auto result = codegen->ConstInt(val);
-      result->SetType(codegen->template GetType<T>());
-      return result;
-    }
-  };
-
-  // Specialization for floating-point numbers.
-  template <typename T>
-  struct LiteralHelper<T, std::enable_if_t<std::is_floating_point_v<T>>> {
-    static ast::Expression *Make(CodeGen *codegen, T val) {
-      auto result = codegen->ConstFloat(val);
-      result->SetType(codegen->template GetType<T>());
-      return result;
-    }
-  };
-
-  // Specialization for strings.
-  template <typename T>
-  struct LiteralHelper<T, std::enable_if_t<std::is_convertible_v<T, std::string_view>>> {
-    static ast::Expression *Make(CodeGen *codegen, T val) {
-      auto result = codegen->ConstString(val);
-      result->SetType(codegen->template GetType<T>());
-      return result;
-    }
-  };
+  [[nodiscard]] ast::Expression *ConstString(std::string_view val);
 
  public:
   /**
@@ -159,7 +116,21 @@ class CodeGen {
    */
   template <typename T>
   [[nodiscard]] ast::Expression *Literal(T val) {
-    return LiteralHelper<T>::Make(this, val);
+    // TODO(pmenon): Support 128-bit integers.
+    ast::Expression *result = nullptr;
+    if constexpr (std::is_same_v<bool, T>) {
+      result = ConstBool(val);
+    } else if constexpr (std::is_integral_v<T> && !std::is_same_v<bool, T>) {
+      result = ConstInt(val);
+    } else if constexpr (std::is_floating_point_v<T>) {
+      result = ConstFloat(val);
+    } else if constexpr (std::is_convertible_v<T, std::string_view>) {
+      result = ConstString(val);
+    } else {
+      static_assert("Unhandled literal type.");
+    }
+    result->SetType(GetType<T>());
+    return result;
   }
 
   /**

@@ -114,20 +114,22 @@ ast::ArrayType *CodeGen::ArrayType(uint32_t size, ast::Type *elem_type) {
   return ast::ArrayType::Get(size, elem_type);
 }
 
-ast::Expression *CodeGen::ConstBool(bool v) {
-  auto result = NodeFactory()->NewBoolLiteral(position_, v);
+ast::Expression *CodeGen::ConstBool(bool val) {
+  auto result = NodeFactory()->NewBoolLiteral(position_, val);
   result->SetType(BoolType());
   return result;
 }
 
-ast::Expression *CodeGen::ConstInt(int64_t v) { return NodeFactory()->NewIntLiteral(position_, v); }
-
-ast::Expression *CodeGen::ConstFloat(double v) {
-  return NodeFactory()->NewFloatLiteral(position_, v);
+ast::Expression *CodeGen::ConstInt(int64_t val) {
+  return NodeFactory()->NewIntLiteral(position_, val);
 }
 
-ast::Expression *CodeGen::ConstString(std::string_view v) {
-  return NodeFactory()->NewStringLiteral(position_, MakeIdentifier(v));
+ast::Expression *CodeGen::ConstFloat(double val) {
+  return NodeFactory()->NewFloatLiteral(position_, val);
+}
+
+ast::Expression *CodeGen::ConstString(std::string_view val) {
+  return NodeFactory()->NewStringLiteral(position_, MakeIdentifier(val));
 }
 
 ast::Expression *CodeGen::Nil() const {
