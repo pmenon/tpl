@@ -2534,12 +2534,12 @@ BENCHMARK_DEFINE_F(TpchBenchmark, Q12)(benchmark::State &state) {
                                   expr_maker.ConjunctionAnd(pred_shipdate, pred_receiptdate)));
     // Build.
     l_seq_scan = planner::SeqScanPlanNode::Builder{}
-        .SetOutputSchema(l_seq_scan_out.MakeSchema())
-        .SetScanPredicate(predicate)
-        .SetTableOid(table->GetId())
-        .Build();
+                     .SetOutputSchema(l_seq_scan_out.MakeSchema())
+                     .SetScanPredicate(predicate)
+                     .SetTableOid(table->GetId())
+                     .Build();
   }
-  
+
   // Scan orders.
   std::unique_ptr<planner::AbstractScanPlanNode> o_seq_scan;
   planner::OutputSchemaHelper o_seq_scan_out(&expr_maker, 1);
