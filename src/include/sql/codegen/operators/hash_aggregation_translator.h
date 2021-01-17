@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "sql/codegen/compilation_unit.h"
 #include "sql/codegen/consumer_context.h"

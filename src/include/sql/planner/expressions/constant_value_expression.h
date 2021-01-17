@@ -14,7 +14,7 @@ class ConstantValueExpression : public AbstractExpression {
    * Instantiate a new constant value expression.
    * @param value value to be held.
    */
-  ConstantValueExpression(const GenericValue &value)
+  explicit ConstantValueExpression(const GenericValue &value)
       : AbstractExpression(ExpressionType::CONSTANT,
                            Type(GetSqlTypeFromInternalType(value.GetTypeId()), value.IsNull()), {}),
         value_(value) {}

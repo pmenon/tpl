@@ -12,8 +12,6 @@
 
 namespace tpl::sql::codegen {
 
-using namespace std::chrono_literals;
-
 class CSVScanTranslatorTest : public CodegenBasedTest {
  protected:
   void SetUp() override {

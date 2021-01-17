@@ -228,7 +228,7 @@ class Variable : public Reference<T> {
  * generates the following TPL code:
  *
  * @code
- * var x: int32_t = -100
+ * var x: int32 = -100
  * @endcode
  *
  * @tparam T The C++ type of the literal.

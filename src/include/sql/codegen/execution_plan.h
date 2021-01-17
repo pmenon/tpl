@@ -66,7 +66,7 @@ class ExecutionPlan {
   /**
    * Empty plan.
    */
-  explicit ExecutionPlan() = default;
+  ExecutionPlan() = default;
 
   /**
    * Create a new execution plan composed of the provided steps.

@@ -86,7 +86,8 @@ class CastException : public Exception {
  */
 class CodeGenerationException : public Exception {
  public:
-  CodeGenerationException(const std::string &msg) : Exception(ExceptionType::CodeGen, msg) {}
+  explicit CodeGenerationException(const std::string &msg)
+      : Exception(ExceptionType::CodeGen, msg) {}
 };
 
 /**

@@ -34,6 +34,11 @@ class AggregateExpression : public AbstractExpression {
   bool IsDistinct() const { return distinct_; }
 
   /**
+   * @return The type of the input to the aggregate expression.
+   */
+  Type GetInputValueType() const { return GetChild(0)->GetReturnValueType(); }
+
+  /**
    * Derive the return type of an aggregate with the given kind and input type.
    * @param kind The kind of aggregate.
    * @param input_type The type of the input to the aggregation.

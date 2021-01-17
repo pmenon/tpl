@@ -2,7 +2,6 @@
 
 #include "sql/catalog.h"
 #include "sql/planner/plannodes/seq_scan_plan_node.h"
-#include "sql/schema.h"
 #include "sql/table.h"
 
 // Tests
@@ -12,8 +11,6 @@
 #include "util/codegen_test_harness.h"
 
 namespace tpl::sql::codegen {
-
-using namespace std::chrono_literals;
 
 using Expr = planner::ExpressionMaker::Expression;
 

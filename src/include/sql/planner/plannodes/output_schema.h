@@ -24,7 +24,7 @@ class OutputSchema {
      * Instantiates a Column object.
      * @param expr The expression used to generate this column.
      */
-    Column(const planner::AbstractExpression *expr) : expr_(expr) {
+    explicit Column(const planner::AbstractExpression *expr) : expr_(expr) {
       TPL_ASSERT(expr != nullptr, "NULL expression provided for column.");
     }
 

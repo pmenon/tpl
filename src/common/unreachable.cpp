@@ -1,4 +1,4 @@
-#include "common/macros.h"
+#include "common/macros.h" // NOLINT(build/include_order)
 
 #include <cstdio>
 #include <cstdlib>
