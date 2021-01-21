@@ -2,7 +2,7 @@
 
 #include "common/exception.h"
 #include "common/macros.h"
-#include "sql/operators/like_operators.h"
+#include "sql/operators/string_operators.h"
 #include "sql/tuple_id_list.h"
 
 namespace tpl::sql {
