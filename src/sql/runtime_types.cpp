@@ -53,16 +53,18 @@ constexpr int64_t kJulianMaxMonth = 6;
 // constexpr int64_t kJulianMaxDay = 3;
 
 // Is the provided year a leap year?
-bool IsLeapYear(int32_t year) { return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0); }
+constexpr bool IsLeapYear(int32_t year) {
+  return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+}
 
 // Does the provided date fall into the Julian date range?
-bool IsValidJulianDate(int32_t y, int32_t m, int32_t d) {
+constexpr bool IsValidJulianDate(int32_t y, int32_t m, int32_t d) {
   return (y > kJulianMinYear || (y == kJulianMinYear && m >= kJulianMinMonth)) &&
          (y < kJulianMaxYear || (y == kJulianMaxYear && m < kJulianMaxMonth));
 }
 
 // Is the provided date a valid calendar date?
-bool IsValidCalendarDate(int32_t year, int32_t month, int32_t day) {
+constexpr bool IsValidCalendarDate(int32_t year, int32_t month, int32_t day) {
   // There isn't a year 0. We represent 1 BC as year zero, 2 BC as -1, etc.
   if (year == 0) return false;
 
@@ -77,7 +79,7 @@ bool IsValidCalendarDate(int32_t year, int32_t month, int32_t day) {
 }
 
 // Based on date2j().
-uint32_t BuildJulianDate(uint32_t year, uint32_t month, uint32_t day) {
+constexpr uint32_t BuildJulianDate(uint32_t year, uint32_t month, uint32_t day) {
   if (month > 2) {
     month += 1;
     year += 4800;
@@ -95,7 +97,7 @@ uint32_t BuildJulianDate(uint32_t year, uint32_t month, uint32_t day) {
 }
 
 // Based on j2date().
-void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_t *day) {
+constexpr void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_t *day) {
   uint32_t julian = jd;
   julian += 32044;
   uint32_t quad = julian / 146097;
@@ -113,7 +115,7 @@ void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_t *day) {
 }
 
 // Based on j2day()
-int32_t JulianDateToDay(int32_t date) {
+constexpr int32_t JulianDateToDay(int32_t date) {
   date += 1;
   date %= 7;
 
@@ -125,20 +127,20 @@ int32_t JulianDateToDay(int32_t date) {
 
 // Split a Julian time (i.e., Julian date in microseconds) into a time and date
 // component.
-void StripTime(int64_t jd, int64_t *date, int64_t *time) {
+constexpr void StripTime(int64_t jd, int64_t *date, int64_t *time) {
   *date = jd / kMicroSecondsPerDay;
   *time = jd - (*date * kMicroSecondsPerDay);
 }
 
 // Given hour, minute, and second components, build a time in microseconds.
-int64_t BuildTime(int32_t hour, int32_t min, int32_t sec) {
+constexpr int64_t BuildTime(int32_t hour, int32_t min, int32_t sec) {
   return (((hour * kMinutesPerHour + min) * kSecondsPerMinute) * kMicroSecondsPerSecond) +
          sec * kMicroSecondsPerSecond;
 }
 
 // Given a time in microseconds, split it into hour, minute, second, and
 // fractional second components.
-void SplitTime(int64_t jd, int32_t *hour, int32_t *min, int32_t *sec, int32_t *fsec) {
+constexpr void SplitTime(int64_t jd, int32_t *hour, int32_t *min, int32_t *sec, int32_t *fsec) {
   int64_t time = jd;
 
   *hour = time / kMicroSecondsPerHour;
