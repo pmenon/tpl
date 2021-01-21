@@ -19,6 +19,7 @@ TEST_F(FileTest, CreateTemporaryFile) {
   ASSERT_FALSE(f.HasError());
   ASSERT_EQ(written, s.length());
   ASSERT_TRUE(f.Flush());
+  ASSERT_EQ(s.size(), f.Length());
 
   char r[100];
   auto chars_read = f.ReadFullFromPosition(0, reinterpret_cast<byte *>(r), s.length());
@@ -102,6 +103,7 @@ TEST_F(FileTest, ReadAndWrite) {
   auto written = file.WriteFull(reinterpret_cast<const byte *>(text.data()), text.length());
   EXPECT_EQ(written, text.length());
   EXPECT_TRUE(file.Flush());
+  EXPECT_EQ(text.size(), file.Length());
 
   // Read it back in
   char text_back[100];
