@@ -601,31 +601,31 @@ VM_OP_WARM void OpStringToTimestamp(tpl::sql::TimestampVal *result,
   VM_OP_HOT void OpGreaterThan##NAME(tpl::sql::BoolVal *const result,                             \
                                      const tpl::sql::TYPE *const left,                            \
                                      const tpl::sql::TYPE *const right) {                         \
-    tpl::sql::ComparisonFunctions::Gt##TYPE(result, *left, *right);                               \
+    tpl::sql::ComparisonFunctions::GreaterThan(result, *left, *right);                            \
   }                                                                                               \
   VM_OP_HOT void OpGreaterThanEqual##NAME(tpl::sql::BoolVal *const result,                        \
                                           const tpl::sql::TYPE *const left,                       \
                                           const tpl::sql::TYPE *const right) {                    \
-    tpl::sql::ComparisonFunctions::Ge##TYPE(result, *left, *right);                               \
+    tpl::sql::ComparisonFunctions::GreaterEqual(result, *left, *right);                           \
   }                                                                                               \
   VM_OP_HOT void OpEqual##NAME(tpl::sql::BoolVal *const result, const tpl::sql::TYPE *const left, \
                                const tpl::sql::TYPE *const right) {                               \
-    tpl::sql::ComparisonFunctions::Eq##TYPE(result, *left, *right);                               \
+    tpl::sql::ComparisonFunctions::Equal(result, *left, *right);                                  \
   }                                                                                               \
   VM_OP_HOT void OpLessThan##NAME(tpl::sql::BoolVal *const result,                                \
                                   const tpl::sql::TYPE *const left,                               \
                                   const tpl::sql::TYPE *const right) {                            \
-    tpl::sql::ComparisonFunctions::Lt##TYPE(result, *left, *right);                               \
+    tpl::sql::ComparisonFunctions::LessThan(result, *left, *right);                               \
   }                                                                                               \
   VM_OP_HOT void OpLessThanEqual##NAME(tpl::sql::BoolVal *const result,                           \
                                        const tpl::sql::TYPE *const left,                          \
                                        const tpl::sql::TYPE *const right) {                       \
-    tpl::sql::ComparisonFunctions::Le##TYPE(result, *left, *right);                               \
+    tpl::sql::ComparisonFunctions::LessEqual(result, *left, *right);                              \
   }                                                                                               \
   VM_OP_HOT void OpNotEqual##NAME(tpl::sql::BoolVal *const result,                                \
                                   const tpl::sql::TYPE *const left,                               \
                                   const tpl::sql::TYPE *const right) {                            \
-    tpl::sql::ComparisonFunctions::Ne##TYPE(result, *left, *right);                               \
+    tpl::sql::ComparisonFunctions::NotEqual(result, *left, *right);                               \
   }
 
 GEN_SQL_COMPARISONS(Bool, BoolVal)

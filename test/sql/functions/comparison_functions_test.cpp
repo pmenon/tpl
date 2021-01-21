@@ -13,21 +13,20 @@ namespace tpl::sql {
 class ComparisonFunctionsTests : public TplTest {};
 
 TEST_F(ComparisonFunctionsTests, NullComparison) {
-// Nulls
-#define CHECK_NULL(TYPE, OP, INITIAL)             \
-  {                                               \
-    TYPE a = TYPE::Null(), b(INITIAL);            \
-    BoolVal result(false);                        \
-    ComparisonFunctions::OP##TYPE(&result, a, b); \
-    EXPECT_TRUE(result.is_null);                  \
+#define CHECK_NULL(TYPE, OP, INITIAL)       \
+  {                                         \
+    TYPE a = TYPE::Null(), b(INITIAL);      \
+    BoolVal result(false);                  \
+    ComparisonFunctions::OP(&result, a, b); \
+    EXPECT_TRUE(result.is_null);            \
   }
 #define CHECK_NULL_FOR_ALL_COMPARISONS(TYPE, INITIAL) \
-  CHECK_NULL(TYPE, Eq, INITIAL)                       \
-  CHECK_NULL(TYPE, Ge, INITIAL)                       \
-  CHECK_NULL(TYPE, Gt, INITIAL)                       \
-  CHECK_NULL(TYPE, Le, INITIAL)                       \
-  CHECK_NULL(TYPE, Lt, INITIAL)                       \
-  CHECK_NULL(TYPE, Ne, INITIAL)
+  CHECK_NULL(TYPE, Equal, INITIAL)                    \
+  CHECK_NULL(TYPE, GreaterEqual, INITIAL)             \
+  CHECK_NULL(TYPE, GreaterThan, INITIAL)              \
+  CHECK_NULL(TYPE, LessEqual, INITIAL)                \
+  CHECK_NULL(TYPE, LessThan, INITIAL)                 \
+  CHECK_NULL(TYPE, NotEqual, INITIAL)
 
   CHECK_NULL_FOR_ALL_COMPARISONS(BoolVal, true);
   CHECK_NULL_FOR_ALL_COMPARISONS(Integer, 0);
@@ -42,17 +41,17 @@ TEST_F(ComparisonFunctionsTests, NullComparison) {
   {                                                  \
     TYPE a(INPUT1), b(INPUT2);                       \
     BoolVal result(false);                           \
-    ComparisonFunctions::OP##TYPE(&result, a, b);    \
+    ComparisonFunctions::OP(&result, a, b);          \
     EXPECT_FALSE(result.is_null);                    \
     EXPECT_EQ(EXPECTED, result.val);                 \
   }
-#define CHECK_ALL_COMPARISONS(TYPE, INPUT1, INPUT2)      \
-  CHECK_OP(TYPE, Eq, INPUT1, INPUT2, (INPUT1 == INPUT2)) \
-  CHECK_OP(TYPE, Ge, INPUT1, INPUT2, (INPUT1 >= INPUT2)) \
-  CHECK_OP(TYPE, Gt, INPUT1, INPUT2, (INPUT1 > INPUT2))  \
-  CHECK_OP(TYPE, Le, INPUT1, INPUT2, (INPUT1 <= INPUT2)) \
-  CHECK_OP(TYPE, Lt, INPUT1, INPUT2, (INPUT1 < INPUT2))  \
-  CHECK_OP(TYPE, Ne, INPUT1, INPUT2, (INPUT1 != INPUT2))
+#define CHECK_ALL_COMPARISONS(TYPE, INPUT1, INPUT2)                \
+  CHECK_OP(TYPE, Equal, INPUT1, INPUT2, (INPUT1 == INPUT2))        \
+  CHECK_OP(TYPE, GreaterEqual, INPUT1, INPUT2, (INPUT1 >= INPUT2)) \
+  CHECK_OP(TYPE, GreaterThan, INPUT1, INPUT2, (INPUT1 > INPUT2))   \
+  CHECK_OP(TYPE, LessEqual, INPUT1, INPUT2, (INPUT1 <= INPUT2))    \
+  CHECK_OP(TYPE, LessThan, INPUT1, INPUT2, (INPUT1 < INPUT2))      \
+  CHECK_OP(TYPE, NotEqual, INPUT1, INPUT2, (INPUT1 != INPUT2))
 
 TEST_F(ComparisonFunctionsTests, IntegerComparison) {
   CHECK_ALL_COMPARISONS(Integer, 10, 20);
@@ -79,52 +78,52 @@ TEST_F(ComparisonFunctionsTests, BoolValComparison) {
 #undef CHECK_NULL
 
 TEST_F(ComparisonFunctionsTests, StringComparison) {
-#define CHECK(INPUT1, INPUT2, OP, EXPECTED)            \
-  {                                                    \
-    BoolVal result = BoolVal::Null();                  \
-    StringVal x(INPUT1), y(INPUT2);                    \
-    ComparisonFunctions::OP##StringVal(&result, x, y); \
-    EXPECT_FALSE(result.is_null);                      \
-    EXPECT_EQ(EXPECTED, result.val);                   \
+#define CHECK(INPUT1, INPUT2, OP, EXPECTED) \
+  {                                         \
+    BoolVal result = BoolVal::Null();       \
+    StringVal x(INPUT1), y(INPUT2);         \
+    ComparisonFunctions::OP(&result, x, y); \
+    EXPECT_FALSE(result.is_null);           \
+    EXPECT_EQ(EXPECTED, result.val);        \
   }
 
   // Same sizes
-  CHECK("test", "test", Eq, true);
-  CHECK("test", "test", Ge, true);
-  CHECK("test", "test", Gt, false);
-  CHECK("test", "test", Le, true);
-  CHECK("test", "test", Lt, false);
-  CHECK("test", "test", Ne, false);
+  CHECK("test", "test", Equal, true);
+  CHECK("test", "test", GreaterEqual, true);
+  CHECK("test", "test", GreaterThan, false);
+  CHECK("test", "test", LessEqual, true);
+  CHECK("test", "test", LessThan, false);
+  CHECK("test", "test", NotEqual, false);
 
   // Different sizes
-  CHECK("test", "testholla", Eq, false);
-  CHECK("test", "testholla", Ge, false);
-  CHECK("test", "testholla", Gt, false);
-  CHECK("test", "testholla", Le, true);
-  CHECK("test", "testholla", Lt, true);
-  CHECK("test", "testholla", Ne, true);
+  CHECK("test", "testholla", Equal, false);
+  CHECK("test", "testholla", GreaterEqual, false);
+  CHECK("test", "testholla", GreaterThan, false);
+  CHECK("test", "testholla", LessEqual, true);
+  CHECK("test", "testholla", LessThan, true);
+  CHECK("test", "testholla", NotEqual, true);
 
   // Different sizes
-  CHECK("testholla", "test", Eq, false);
-  CHECK("testholla", "test", Ge, true);
-  CHECK("testholla", "test", Gt, true);
-  CHECK("testholla", "test", Le, false);
-  CHECK("testholla", "test", Lt, false);
-  CHECK("testholla", "test", Ne, true);
+  CHECK("testholla", "test", Equal, false);
+  CHECK("testholla", "test", GreaterEqual, true);
+  CHECK("testholla", "test", GreaterThan, true);
+  CHECK("testholla", "test", LessEqual, false);
+  CHECK("testholla", "test", LessThan, false);
+  CHECK("testholla", "test", NotEqual, true);
 
-  CHECK("testholla", "", Eq, false);
-  CHECK("testholla", "", Ge, true);
-  CHECK("testholla", "", Gt, true);
-  CHECK("testholla", "", Le, false);
-  CHECK("testholla", "", Lt, false);
-  CHECK("testholla", "", Ne, true);
+  CHECK("testholla", "", Equal, false);
+  CHECK("testholla", "", GreaterEqual, true);
+  CHECK("testholla", "", GreaterThan, true);
+  CHECK("testholla", "", LessEqual, false);
+  CHECK("testholla", "", LessThan, false);
+  CHECK("testholla", "", NotEqual, true);
 
-  CHECK("", "", Eq, true);
-  CHECK("", "", Ge, true);
-  CHECK("", "", Gt, false);
-  CHECK("", "", Le, true);
-  CHECK("", "", Lt, false);
-  CHECK("", "", Ne, false);
+  CHECK("", "", Equal, true);
+  CHECK("", "", GreaterEqual, true);
+  CHECK("", "", GreaterThan, false);
+  CHECK("", "", LessEqual, true);
+  CHECK("", "", LessThan, false);
+  CHECK("", "", NotEqual, false);
 
 #undef CHECK
 }
