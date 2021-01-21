@@ -144,7 +144,7 @@ struct TypeBuilder<T, std::enable_if_t<std::is_convertible_v<T, std::string_view
 /**
  * Specialize for functions.
  */
-template <typename Ret, typename...Args>
+template <typename Ret, typename... Args>
 struct TypeBuilder<Ret(Args...)> {
   static ast::Type *Get(Context *context) {
     auto ret_type = TypeBuilder<Ret>::Get(context);
