@@ -665,13 +665,13 @@ VM_OP_HOT void OpMulInteger(tpl::sql::Integer *const result, const tpl::sql::Int
 VM_OP_HOT void OpDivInteger(tpl::sql::Integer *const result, const tpl::sql::Integer *const left,
                             const tpl::sql::Integer *const right) {
   UNUSED bool div_by_zero = false;
-  tpl::sql::ArithmeticFunctions::IntDiv(result, *left, *right, &div_by_zero);
+  tpl::sql::ArithmeticFunctions::Div(result, *left, *right, &div_by_zero);
 }
 
 VM_OP_HOT void OpRemInteger(tpl::sql::Integer *const result, const tpl::sql::Integer *const left,
                             const tpl::sql::Integer *const right) {
   UNUSED bool div_by_zero = false;
-  tpl::sql::ArithmeticFunctions::IntMod(result, *left, *right, &div_by_zero);
+  tpl::sql::ArithmeticFunctions::Mod(result, *left, *right, &div_by_zero);
 }
 
 VM_OP_HOT void OpAddReal(tpl::sql::Real *const result, const tpl::sql::Real *const left,

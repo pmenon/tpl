@@ -33,7 +33,7 @@ TEST_F(ArithmeticFunctionsTests, IntegerValue) {
 
     bool div_by_zero = false;
     result = Integer(0);
-    ArithmeticFunctions::IntDiv(&result, a, b, &div_by_zero);
+    ArithmeticFunctions::Div(&result, a, b, &div_by_zero);
     EXPECT_TRUE(result.is_null);
   }
 
@@ -58,7 +58,7 @@ TEST_F(ArithmeticFunctionsTests, IntegerValue) {
 
     bool div_by_zero = false;
     result = Integer(0);
-    ArithmeticFunctions::IntDiv(&result, a, b, &div_by_zero);
+    ArithmeticFunctions::Div(&result, a, b, &div_by_zero);
     EXPECT_FALSE(result.is_null);
     EXPECT_EQ(aval / bval, result.val);
   }

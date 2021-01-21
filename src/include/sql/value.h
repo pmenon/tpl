@@ -318,4 +318,11 @@ struct TimestampVal : public Val {
   static TimestampVal Null() { return TimestampVal(Timestamp{0}, true); }
 };
 
+/**
+ * Concept to determine if the given template type is a SQL value type, i.e., derived from sql::Val.
+ * @tparam T The type to check.
+ */
+template <typename T>
+concept SQLValueType = std::is_base_of_v<Val, T>;
+
 }  // namespace tpl::sql

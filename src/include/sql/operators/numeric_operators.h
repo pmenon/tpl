@@ -32,7 +32,7 @@ struct E {
 
 template <typename T>
 struct Abs {
-  constexpr T operator()(T input) const { return input < 0 ? -input : input; }
+  constexpr T operator()(T input) const { return std::abs(input); }
 };
 
 template <typename T>
@@ -157,7 +157,9 @@ struct RoundUpTo<void, void> {
 
 template <typename T>
 struct Sign {
-  constexpr T operator()(T input) const { return (input > 0) ? 1 : ((input < 0) ? -1.0 : 0); }
+  constexpr T operator()(T input) const {
+    return (input > T{0}) ? T{1} : ((input < T{0}) ? T{-1} : T{0});
+  }
 };
 
 template <typename T>
