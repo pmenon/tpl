@@ -1,122 +1,52 @@
 #include "sql/functions/date_time_functions.h"
 
+#include "sql/functions/helpers.h"
+#include "sql/operators/datetime_operators.h"
+
 namespace tpl::sql {
 
 void DateTimeFunctions::Century(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-
-  const auto year = time.val.ExtractYear();
-  if (year > 0) {
-    *result = Integer((year + 99) / 100);
-  } else {
-    *result = Integer(-((99 - (year - 1)) / 100));
-  }
+  UnaryFunction::EvalHideNull(result, time, tpl::sql::Century{});
 }
 
 void DateTimeFunctions::Decade(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-
-  const auto year = time.val.ExtractYear();
-  if (year >= 0) {
-    *result = Integer(year / 10);
-  } else {
-    *result = Integer(-((8 - (year - 1)) / 10));
-  }
-}
-
-void DateTimeFunctions::Year(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractYear());
+  UnaryFunction::EvalHideNull(result, time, tpl::sql::Decade{});
 }
 
 void DateTimeFunctions::Quarter(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  const auto month = time.val.ExtractMonth();
-  *result = Integer((month - 1) / 3 + 1);
-}
-
-void DateTimeFunctions::Month(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractMonth());
+  UnaryFunction::EvalHideNull(result, time, tpl::sql::Quarter{});
 }
 
 void DateTimeFunctions::Day(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractDay());
+  UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractDay(); });
 }
 
 void DateTimeFunctions::DayOfWeek(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractDayOfWeek());
+  UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractDayOfWeek(); });
 }
 
 void DateTimeFunctions::DayOfYear(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractDayOfYear());
+  UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractDayOfYear(); });
 }
 
 void DateTimeFunctions::Hour(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractHour());
+  UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractHour(); });
 }
 
 void DateTimeFunctions::Minute(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractMinute());
+  UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractMinute(); });
 }
 
 void DateTimeFunctions::Second(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractSecond());
+  UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractSecond(); });
 }
 
 void DateTimeFunctions::Millisecond(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractMillis());
+  UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractMillis(); });
 }
 
 void DateTimeFunctions::Microseconds(Integer *result, const TimestampVal &time) noexcept {
-  if (time.is_null) {
-    *result = Integer::Null();
-    return;
-  }
-  *result = Integer(time.val.ExtractMicros());
+  UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractMicros(); });
 }
 
 }  // namespace tpl::sql

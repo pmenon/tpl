@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sql/value.h"
+#include "sql/functions/helpers.h"
 
 namespace tpl::sql {
 
@@ -29,7 +30,10 @@ class DateTimeFunctions : public AllStatic {
    * @param[out] result Where the result is written to.
    * @param time The input timestamp.
    */
-  static void Year(Integer *result, const TimestampVal &time) noexcept;
+  static void Year(Integer *result, const TimestampVal &time) noexcept {
+    // Inlined for performance.
+    UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractYear(); });
+  }
 
   /**
    * Compute the quarter (1-4) the NULL-able SQL timestamp falls into.
@@ -44,7 +48,10 @@ class DateTimeFunctions : public AllStatic {
    * @param[out] result Where the result is written to.
    * @param time The input timestamp.
    */
-  static void Month(Integer *result, const TimestampVal &time) noexcept;
+  static void Month(Integer *result, const TimestampVal &time) noexcept {
+    // Inlined for performance.
+    UnaryFunction::EvalHideNull(result, time, [](auto t) { return t.ExtractMonth(); });
+  }
 
   /**
    * Compute the date component (1-31) of the NULL-able SQL timestamp. Note that the returned day is

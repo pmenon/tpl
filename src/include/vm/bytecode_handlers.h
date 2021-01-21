@@ -23,6 +23,7 @@
 #include "sql/vector_filter_executor.h"
 #include "util/bit_util.h"
 #include "util/csv_reader.h"
+#include "sql/functions/date_time_functions.h"
 
 // All VM bytecode op handlers must use this macro
 #define VM_OP
@@ -1518,12 +1519,8 @@ VM_OP_WARM void OpUpper(tpl::sql::StringVal *result, tpl::sql::ExecutionContext 
 // ---------------------------------
 
 VM_OP_WARM void OpExtractYear(tpl::sql::Integer *result, tpl::sql::DateVal *input) {
-  if (input->is_null) {
-    result->is_null = true;
-  } else {
-    result->is_null = false;
-    result->val = input->val.ExtractYear();
-  }
+  tpl::sql::TimestampVal temp(input->val.ConvertToTimestamp(), input->is_null);
+  tpl::sql::DateTimeFunctions::Year(result, temp);
 }
 
 // Macro hygiene
