@@ -94,13 +94,6 @@ class BytecodeEmitter {
             LocalVar operand_4);
   void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
             LocalVar operand_4, LocalVar operand_5);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
-            LocalVar operand_4, LocalVar operand_5, LocalVar operand_6);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
-            LocalVar operand_4, LocalVar operand_5, LocalVar operand_6, LocalVar operand_7);
-  void Emit(Bytecode bytecode, LocalVar operand_1, LocalVar operand_2, LocalVar operand_3,
-            LocalVar operand_4, LocalVar operand_5, LocalVar operand_6, LocalVar operand_7,
-            LocalVar operand_8);
 
   // -------------------------------------------------------
   // Special
@@ -135,10 +128,6 @@ class BytecodeEmitter {
   // Special JHT initialization.
   void EmitJoinHashTableInit(LocalVar jht, LocalVar memory, LocalVar entry_size,
                              FunctionId analysis_fn, FunctionId compress_fn);
-
-  // Lookup a single entry in the aggregation hash table.
-  void EmitAggHashTableLookup(LocalVar dest, LocalVar agg_ht, LocalVar hash, FunctionId key_eq_fn,
-                              LocalVar arg);
 
   // Emit code to process a batch of input into the aggregation hash table.
   void EmitAggHashTableProcessBatch(LocalVar agg_ht, LocalVar vpi, uint32_t num_keys,
