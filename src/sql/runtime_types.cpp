@@ -79,7 +79,7 @@ constexpr bool IsValidCalendarDate(int32_t year, int32_t month, int32_t day) {
 }
 
 // Based on date2j().
-constexpr uint32_t BuildJulianDate(uint32_t year, uint32_t month, uint32_t day) {
+constexpr uint32_t BuildJulianDate(uint32_t year, uint32_t month, uint32_t day) noexcept {
   if (month > 2) {
     month += 1;
     year += 4800;
@@ -97,7 +97,7 @@ constexpr uint32_t BuildJulianDate(uint32_t year, uint32_t month, uint32_t day) 
 }
 
 // Based on j2date().
-constexpr void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_t *day) {
+constexpr void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_t *day) noexcept {
   uint32_t julian = jd;
   julian += 32044;
   uint32_t quad = julian / 146097;
@@ -115,7 +115,7 @@ constexpr void SplitJulianDate(int32_t jd, int32_t *year, int32_t *month, int32_
 }
 
 // Based on j2day()
-constexpr int32_t JulianDateToDay(int32_t date) {
+constexpr int32_t JulianDateToDay(int32_t date) noexcept {
   date += 1;
   date %= 7;
 
@@ -127,7 +127,7 @@ constexpr int32_t JulianDateToDay(int32_t date) {
 
 // Split a Julian time (i.e., Julian date in microseconds) into a time and date
 // component.
-constexpr void StripTime(int64_t jd, int64_t *date, int64_t *time) {
+constexpr void StripTime(int64_t jd, int64_t *date, int64_t *time) noexcept {
   *date = jd / kMicroSecondsPerDay;
   *time = jd - (*date * kMicroSecondsPerDay);
 }
@@ -140,7 +140,8 @@ constexpr int64_t BuildTime(int32_t hour, int32_t min, int32_t sec) {
 
 // Given a time in microseconds, split it into hour, minute, second, and
 // fractional second components.
-constexpr void SplitTime(int64_t jd, int32_t *hour, int32_t *min, int32_t *sec, int32_t *fsec) {
+constexpr void SplitTime(int64_t jd, int32_t *hour, int32_t *min, int32_t *sec,
+                         int32_t *fsec) noexcept {
   int64_t time = jd;
 
   *hour = time / kMicroSecondsPerHour;
@@ -372,19 +373,19 @@ std::string Date::ToString() const {
   return std::string(buf.data());
 }
 
-int32_t Date::ExtractYear() const {
+int32_t Date::ExtractYear() const noexcept {
   int32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return year;
 }
 
-int32_t Date::ExtractMonth() const {
+int32_t Date::ExtractMonth() const noexcept {
   int32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return month;
 }
 
-int32_t Date::ExtractDay() const {
+int32_t Date::ExtractDay() const noexcept {
   int32_t year, month, day;
   SplitJulianDate(value_, &year, &month, &day);
   return day;
@@ -466,7 +467,7 @@ Date Date::FromYMD(int32_t year, int32_t month, int32_t day) {
 //
 //===----------------------------------------------------------------------===//
 
-int32_t Timestamp::ExtractYear() const {
+int32_t Timestamp::ExtractYear() const noexcept {
   // Extract date component.
   int64_t date, time;
   StripTime(value_, &date, &time);
@@ -477,7 +478,7 @@ int32_t Timestamp::ExtractYear() const {
   return year;
 }
 
-int32_t Timestamp::ExtractMonth() const {
+int32_t Timestamp::ExtractMonth() const noexcept {
   // Extract date component.
   int64_t date, time;
   StripTime(value_, &date, &time);
@@ -488,7 +489,7 @@ int32_t Timestamp::ExtractMonth() const {
   return month;
 }
 
-int32_t Timestamp::ExtractDay() const {
+int32_t Timestamp::ExtractDay() const noexcept {
   // Extract date component.
   int64_t date, time;
   StripTime(value_, &date, &time);
@@ -499,7 +500,7 @@ int32_t Timestamp::ExtractDay() const {
   return day;
 }
 
-int32_t Timestamp::ExtractHour() const {
+int32_t Timestamp::ExtractHour() const noexcept {
   // Extract date component.
   int64_t date, time;
   StripTime(value_, &date, &time);
@@ -510,7 +511,7 @@ int32_t Timestamp::ExtractHour() const {
   return hour;
 }
 
-int32_t Timestamp::ExtractMinute() const {
+int32_t Timestamp::ExtractMinute() const noexcept {
   // Extract date component.
   int64_t date, time;
   StripTime(value_, &date, &time);
@@ -521,7 +522,7 @@ int32_t Timestamp::ExtractMinute() const {
   return min;
 }
 
-int32_t Timestamp::ExtractSecond() const {
+int32_t Timestamp::ExtractSecond() const noexcept {
   // Extract date component.
   int64_t date, time;
   StripTime(value_, &date, &time);
@@ -532,7 +533,7 @@ int32_t Timestamp::ExtractSecond() const {
   return sec;
 }
 
-int32_t Timestamp::ExtractMillis() const {
+int32_t Timestamp::ExtractMillis() const noexcept {
   // Extract date component.
   int64_t date, time;
   StripTime(value_, &date, &time);
@@ -543,7 +544,7 @@ int32_t Timestamp::ExtractMillis() const {
   return sec * 1000.0 + fsec / 1000.0;
 }
 
-int32_t Timestamp::ExtractMicros() const {
+int32_t Timestamp::ExtractMicros() const noexcept {
   // Extract date component.
   int64_t date, time;
   StripTime(value_, &date, &time);
@@ -554,7 +555,7 @@ int32_t Timestamp::ExtractMicros() const {
   return sec + fsec / 1000000.0;
 }
 
-int32_t Timestamp::ExtractDayOfWeek() const {
+int32_t Timestamp::ExtractDayOfWeek() const noexcept {
   int64_t date, time;
   StripTime(value_, &date, &time);
 
@@ -564,7 +565,7 @@ int32_t Timestamp::ExtractDayOfWeek() const {
   return date;
 }
 
-int32_t Timestamp::ExtractDayOfYear() const {
+int32_t Timestamp::ExtractDayOfYear() const noexcept {
   int64_t date, time;
   StripTime(value_, &date, &time);
 

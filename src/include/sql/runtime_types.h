@@ -41,17 +41,17 @@ class Date {
   /**
    * @return The year of this date.
    */
-  int32_t ExtractYear() const;
+  int32_t ExtractYear() const noexcept;
 
   /**
    * @return The month of this date.
    */
-  int32_t ExtractMonth() const;
+  int32_t ExtractMonth() const noexcept;
 
   /**
    * @return The day of this date.
    */
-  int32_t ExtractDay() const;
+  int32_t ExtractDay() const noexcept;
 
   /**
    * Convert this date object into its year, month, and day parts.
@@ -65,7 +65,7 @@ class Date {
    * Convert this date instance into a timestamp instance.
    * @return The timestamp instance representing this date.
    */
-  Timestamp ConvertToTimestamp() const;
+  Timestamp ConvertToTimestamp() const noexcept;
 
   /**
    * Compute the hash value of this date instance.
@@ -140,7 +140,7 @@ class Date {
   friend struct DateVal;
 
   // Private constructor to force static factories.
-  explicit Date(NativeType value) : value_(value) {}
+  explicit Date(NativeType value) noexcept : value_(value) {}
 
  private:
   // Date value
@@ -168,52 +168,52 @@ class Timestamp {
   /**
    * @return The year of this timestamp.
    */
-  int32_t ExtractYear() const;
+  int32_t ExtractYear() const noexcept;
 
   /**
    * @return The month of this timestamp.
    */
-  int32_t ExtractMonth() const;
+  int32_t ExtractMonth() const noexcept;
 
   /**
    * @return The day of this timestamp.
    */
-  int32_t ExtractDay() const;
+  int32_t ExtractDay() const noexcept;
 
   /**
    * @return The year of this timestamp.
    */
-  int32_t ExtractHour() const;
+  int32_t ExtractHour() const noexcept;
 
   /**
    * @return The month of this timestamp.
    */
-  int32_t ExtractMinute() const;
+  int32_t ExtractMinute() const noexcept;
 
   /**
    * @return The day of this timestamp.
    */
-  int32_t ExtractSecond() const;
+  int32_t ExtractSecond() const noexcept;
 
   /**
    * @return The milliseconds of this timestamp.
    */
-  int32_t ExtractMillis() const;
+  int32_t ExtractMillis() const noexcept;
 
   /**
    * @return The microseconds of this timestamp.
    */
-  int32_t ExtractMicros() const;
+  int32_t ExtractMicros() const noexcept;
 
   /**
    * @return The day-of-the-week (0-6 Sun-Sat) this timestamp falls on.
    */
-  int32_t ExtractDayOfWeek() const;
+  int32_t ExtractDayOfWeek() const noexcept;
 
   /**
    * @return THe day-of-the-year this timestamp falls on.
    */
-  int32_t ExtractDayOfYear() const;
+  int32_t ExtractDayOfYear() const noexcept;
 
   /**
    * Extract all components of this timestamp
@@ -231,7 +231,7 @@ class Timestamp {
    * Convert this timestamp instance into a date instance.
    * @return The date instance representing this timestamp.
    */
-  Date ConvertToDate() const;
+  Date ConvertToDate() const noexcept;
 
   /**
    * Compute the hash value of this timestamp instance.
@@ -315,7 +315,7 @@ class Timestamp {
   friend class Date;
   friend struct TimestampVal;
 
-  explicit Timestamp(NativeType value) : value_(value) {}
+  explicit Timestamp(NativeType value) noexcept : value_(value) {}
 
  private:
   // Timestamp value
@@ -769,10 +769,10 @@ class Blob {
 // Implementation below
 // ---------------------------------------------------------
 
-inline Timestamp Date::ConvertToTimestamp() const {
+inline Timestamp Date::ConvertToTimestamp() const noexcept {
   return Timestamp(value_ * kMicroSecondsPerDay);
 }
 
-inline Date Timestamp::ConvertToDate() const { return Date(value_ / kMicroSecondsPerDay); }
+inline Date Timestamp::ConvertToDate() const noexcept { return Date(value_ / kMicroSecondsPerDay); }
 
 }  // namespace tpl::sql
