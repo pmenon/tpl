@@ -141,4 +141,17 @@ struct TypeBuilder<T, std::enable_if_t<std::is_convertible_v<T, std::string_view
   static ast::Type *Get(Context *context) { return ast::StringType::Get(context); }
 };
 
+/**
+ * Specialize for functions.
+ */
+template <typename Ret, typename...Args>
+struct TypeBuilder<Ret(Args...)> {
+  static ast::Type *Get(Context *context) {
+    auto ret_type = TypeBuilder<Ret>::Get(context);
+    if (sizeof...(Args) == 0) {
+      return FunctionType::Get(ret_type);
+    }
+  }
+};
+
 }  // namespace tpl::ast
