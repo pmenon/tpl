@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
+#include "sql/functions/helpers.h"
 #include "sql/operators/boolean_operators.h"
 #include "sql/operators/comparison_operators.h"
 #include "sql/value.h"
-#include "sql/functions/helpers.h"
 
 namespace tpl::sql {
 

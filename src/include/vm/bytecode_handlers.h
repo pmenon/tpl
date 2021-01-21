@@ -13,6 +13,7 @@
 #include "sql/functions/arithmetic_functions.h"
 #include "sql/functions/casting_fuctions.h"
 #include "sql/functions/comparison_functions.h"
+#include "sql/functions/date_time_functions.h"
 #include "sql/functions/is_null_predicate.h"
 #include "sql/functions/string_functions.h"
 #include "sql/join_hash_table.h"
@@ -23,7 +24,6 @@
 #include "sql/vector_filter_executor.h"
 #include "util/bit_util.h"
 #include "util/csv_reader.h"
-#include "sql/functions/date_time_functions.h"
 
 // All VM bytecode op handlers must use this macro
 #define VM_OP
