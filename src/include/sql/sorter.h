@@ -76,9 +76,13 @@ class Sorter {
   static constexpr uint64_t kDefaultMinTuplesForParallelSort = 10000;
 #endif
 
-  /**
-   * The comparison function used to sort tuples in a Sorter.
-   */
+  /** The structure used to materialized build tuples. */
+  using TupleBuffer = util::ChunkedVector<MemoryPoolAllocator<byte>>;
+
+  /** A vector of tuple buffers. */
+  using TupleBufferVector = MemPoolVector<TupleBuffer>;
+
+  /** The comparison function used to sort tuples in a Sorter. */
   using ComparisonFunction = bool (*)(const void *lhs, const void *rhs);
 
   /**
@@ -178,22 +182,18 @@ class Sorter {
   friend class SorterIterator;
   friend class SorterVectorIterator;
 
-  // Memory pool
+  // Memory pool used for all allocations.
   MemoryPool *memory_;
-
-  // The vector that stores tuple data
-  util::ChunkedVector<MemoryPoolAllocator<byte>> tuple_storage_;
-
-  // All tuples this sorter has taken ownership of from thread-local sorters, if any
-  MemPoolVector<decltype(tuple_storage_)> owned_tuples_;
-
-  // The function used to compare two tuples
+  // The vector that stores tuple data.
+  TupleBuffer tuple_storage_;
+  // List of buffers this sorter has taken ownership of from other threads.
+  // Used in parallel execution, so may be empty.
+  TupleBufferVector owned_tuples_;
+  // The function used to compare two tuples.
   ComparisonFunction cmp_fn_;
-
   // Vector of pointers to each entry. This is the vector that's sorted.
   MemPoolVector<const byte *> tuples_;
-
-  // Flag indicating if the contents of the sorter have been sorted
+  // Flag indicating if the contents of the sorter have been sorted.
   bool sorted_;
 };
 
