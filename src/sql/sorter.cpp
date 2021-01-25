@@ -17,11 +17,11 @@
 
 namespace tpl::sql {
 
-//===----------------------------------------------------------------------===//
-//
-// Sorter
-//
-//===----------------------------------------------------------------------===//
+///==============================================================================================///
+///
+/// Sorter
+///
+///==============================================================================================///
 
 Sorter::Sorter(MemoryPool *memory, ComparisonFunction cmp_fn, uint32_t tuple_size)
     : memory_(memory),
@@ -102,21 +102,13 @@ void Sorter::HeapSiftDown() {
 }
 
 void Sorter::Sort() {
-  // Exit if the input tuples have already been sorted
-  if (IsSorted()) {
-    return;
-  }
+  // Exit if sorted or empty.
+  if (IsSorted() || IsEmpty()) return;
 
-  // Exit if there are no input tuples
-  if (tuples_.empty()) {
-    return;
-  }
-
-  // Time it
   util::Timer<std::milli> timer;
   timer.Start();
 
-  // Sort the sucker
+  // Sort the sucker!
   ips4o::sort(tuples_.begin(), tuples_.end(), cmp_fn_);
 
   timer.Stop();
@@ -368,11 +360,11 @@ void Sorter::SortTopKParallel(const ThreadStateContainer *thread_state_container
   }
 }
 
-//===----------------------------------------------------------------------===//
-//
-// Sorter Iterator
-//
-//===----------------------------------------------------------------------===//
+///==============================================================================================///
+///
+/// Sorter Iterator
+///
+///==============================================================================================///
 
 SorterIterator::SorterIterator(const Sorter &sorter)
     : iter_(sorter.tuples_.begin()), end_(sorter.tuples_.end()) {}
