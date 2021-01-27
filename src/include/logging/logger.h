@@ -2,12 +2,10 @@
 
 #include <memory>
 
-#include "spdlog/sinks/stdout_sinks.h"
 #include "spdlog/spdlog.h"
 
 namespace tpl::logging {
 
-extern std::shared_ptr<spdlog::sinks::stdout_sink_mt> default_sink;
 extern std::shared_ptr<spdlog::logger> logger;
 
 /**
