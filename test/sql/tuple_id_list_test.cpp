@@ -278,10 +278,10 @@ TEST_F(TupleIdListTest, ToString) {
   list = {0};
   EXPECT_EQ("TIDs(1/4)=[0]", list.ToString());
 
-  list = {0,2};
+  list = {0, 2};
   EXPECT_EQ("TIDs(2/4)=[0,2]", list.ToString());
 
-  list = {0,1,2,3};
+  list = {0, 1, 2, 3};
   EXPECT_EQ("TIDs(4/4)=[0,1,2,3]", list.ToString());
 
   {
