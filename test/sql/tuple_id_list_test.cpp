@@ -1,3 +1,5 @@
+#include <span>
+
 #include "sql/tuple_id_list.h"
 #include "util/test_harness.h"
 
@@ -266,6 +268,27 @@ TEST_F(TupleIdListTest, BuildFromSelectionVector) {
     sel_t sel[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     list.BuildFromSelectionVector(sel, sizeof(sel) / sizeof(sel[0]));
     EXPECT_TRUE(list.IsFull());
+  }
+}
+
+TEST_F(TupleIdListTest, ToString) {
+  TupleIdList list(4);
+  EXPECT_EQ("TIDs(0/4)=[]", list.ToString());
+
+  list = {0};
+  EXPECT_EQ("TIDs(1/4)=[0]", list.ToString());
+
+  list = {0,2};
+  EXPECT_EQ("TIDs(2/4)=[0,2]", list.ToString());
+
+  list = {0,1,2,3};
+  EXPECT_EQ("TIDs(4/4)=[0,1,2,3]", list.ToString());
+
+  {
+    std::stringstream ss;
+    list.Dump(ss);
+    ss.flush();
+    EXPECT_EQ("TIDs(4/4)=[0,1,2,3]\n", ss.str());
   }
 }
 
